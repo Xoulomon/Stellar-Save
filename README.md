@@ -47,6 +47,35 @@ Stellar-Save is a rotating savings and credit association (ROSCA) common in Nige
 ./scripts/test.sh
 ```
 
+### Setup Environment
+
+1. Copy the example environment file:
+```bash
+cp .env.example .env
+```
+
+2. Configure your environment variables in `.env`:
+```bash
+# Network configuration
+STELLAR_NETWORK=testnet
+STELLAR_RPC_URL=https://soroban-testnet.stellar.org
+
+# Contract addresses (after deployment)
+CONTRACT_GUESS_THE_NUMBER=<your-contract-id>
+CONTRACT_FUNGIBLE_ALLOWLIST=<your-contract-id>
+CONTRACT_NFT_ENUMERABLE=<your-contract-id>
+
+# Frontend configuration
+VITE_STELLAR_NETWORK=testnet
+VITE_STELLAR_RPC_URL=https://soroban-testnet.stellar.org
+```
+
+3. Network configurations are defined in `environments.toml`:
+   - `testnet` - Stellar testnet
+   - `mainnet` - Stellar mainnet
+   - `futurenet` - Stellar futurenet
+   - `standalone` - Local development
+
 ### Deploy to Testnet
 
 ```bash
