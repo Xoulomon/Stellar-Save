@@ -1,0 +1,23 @@
+# Transaction History Wireframe
+I have completed the wireframes for the new Stellar-Save transaction history and activity log interface. 
+
+## Implementation Details
+The interface was designed with modern web aesthetic principles, focusing on high-quality visuals alongside functional components:
+- **Glassmorphism Theme**: Utilized `backdrop-filter: blur` with semi-transparent background cards.
+- **Dark Mode Palette**: Deep slate backgrounds with vibrant accents (`#3b82f6` blue and `#8b5cf6` violet) and animated radial gradients.
+- **Dynamic Interactions**: Created responsive sidebars, hover animations on table rows, and button scale effects.
+- **Functional Components**:
+  - **Transaction List**: Clean table view with animated load-in, status pills, and clear typography.
+  - **Filters/Search**: Search bar and dropdown filters explicitly styled for the dark theme.
+  - **Details Modal**: A smooth slide-in/fade-in modal overlay for providing detailed data on a specific transaction.
+  - **Export UI**: A mocked export button that triggers a toast notification to demonstrate the intended user experience.
+
+## Proof of Work
+Here is a demonstration recording showing the interactive UI, hovering, searching, opening modals, and simulating an export action.
+
+![Transaction Wireframe Demo](./transaction_wireframe_demo_1771622525414.webp)
+
+You can also view and interact with the physical files located here:
+- [index.html](file:///home/gabriel/Stellar-Save/wireframe/index.html)
+- [styles.css](file:///home/gabriel/Stellar-Save/wireframe/styles.css)
+- [script.js](file:///home/gabriel/Stellar-Save/wireframe/script.js)

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction History - Stellar Save</title>
+    <!-- Google Fonts for Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">✨</span>
+                <h2>Stellar Save</h2>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-link"><span class="icon">📊</span> Dashboard</a>
+                <a href="#" class="nav-link"><span class="icon">💼</span> Portfolio</a>
+                <a href="#" class="nav-link active"><span class="icon">📋</span> Transactions</a>
+                <a href="#" class="nav-link"><span class="icon">🔐</span> Security</a>
+                <a href="#" class="nav-link"><span class="icon">⚙️</span> Settings</a>
+            </nav>
+            <div class="user-profile">
+                <div class="avatar">GS</div>
+                <div class="user-info">
+                    <p class="name">Gabriel S.</p>
+                    <p class="wallet">0x12Fa...89Bc</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="topbar">
+                <h1>Transaction History</h1>
+                <div class="topbar-actions">
+                    <button class="btn btn-icon notification-btn" title="Notifications">
+                        🔔
+                        <span class="badge">3</span>
+                    </button>
+                    <button class="btn btn-primary" onclick="triggerExport()">
+                        <span class="icon">⬇️</span> Export CSV
+                    </button>
+                </div>
+            </header>
+
+            <!-- Filters & Search -->
+            <section class="controls-section glass-card">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" placeholder="Search by TxID, Address, or Description...">
+                </div>
+                
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>Date Range</label>
+                        <select class="filter-select">
+                            <option>Last 7 Days</option>
+                            <option>Last 30 Days</option>
+                            <option>This Year</option>
+                            <option>Custom Range</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Status</label>
+                        <select class="filter-select">
+                            <option value="all">All</option>
+                            <option value="completed">Completed</option>
+                            <option value="pending">Pending</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Type</label>
+                        <select class="filter-select">
+                            <option value="all">All</option>
+                            <option value="deposit">Deposit</option>
+                            <option value="withdrawal">Withdrawal</option>
+                            <option value="swap">Swap</option>
+                            <option value="staking">Staking</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-secondary clear-filters">Clear All</button>
+            </section>
+
+            <!-- Transaction List -->
+            <section class="transaction-list glass-card">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionTableBody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                <div class="pagination">
+                    <span class="page-info">Showing 1 to 5 of 24 entries</span>
+                    <div class="page-controls">
+                        <button class="btn btn-icon disabled">◀</button>
+                        <button class="btn btn-page active">1</button>
+                        <button class="btn btn-page">2</button>
+                        <button class="btn btn-page">3</button>
+                        <span class="ellipsis">...</span>
+                        <button class="btn btn-page">5</button>
+                        <button class="btn btn-icon">▶</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Transaction Detail Modal -->
+    <div class="modal-overlay" id="txModal">
+        <div class="modal-card glass-card">
+            <header class="modal-header">
+                <h2>Transaction Details</h2>
+                <button class="btn-close" onclick="closeModal()">✕</button>
+            </header>
+            <div class="modal-body" id="modalContent">
+                <!-- Content populated by JS -->
+            </div>
+            <footer class="modal-footer">
+                <a href="#" target="_blank" class="btn btn-view-explorer" id="viewExplorerBtn">View on Explorer ↗</a>
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Toast Notification for Export -->
+    <div class="toast" id="toastMessage">
+        <span class="icon">✅</span> Export started successfully
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
