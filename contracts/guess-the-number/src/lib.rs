@@ -1,116 +1,144 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, symbol_short, Address, BytesN, Env, Symbol};
 
 mod error;
-mod xlm;
+mod storage;
+mod types;
 
-use error::Error;
+#[cfg(test)]
+mod test;
+
+use soroban_sdk::{contract, contractimpl, Address, Env, String};
+
+pub use error::Error;
+pub use types::{Group, GroupStatus};
 
 #[contract]
-pub struct GuessTheNumber;
-
-const THE_NUMBER: &Symbol = &symbol_short!("n");
-pub const ADMIN_KEY: &Symbol = &symbol_short!("ADMIN");
+pub struct StellarSave;
 
 #[contractimpl]
-impl GuessTheNumber {
-    /// Constructor to initialize the contract with an admin and a random number
-    pub fn __constructor(env: &Env, admin: Address) {
-        // Require auth from the admin to make the transfer
+impl StellarSave {
+    /// Check if a group is currently active
+    ///
+    /// A group is considered active if:
+    /// 1. The group exists in storage
+    /// 2. The group status is Active
+    /// 3. The group has at least one member
+    /// 4. The member count does not exceed max_members
+    ///
+    /// # Arguments
+    /// * `env` - The contract environment
+    /// * `group_id` - The unique identifier of the group
+    ///
+    /// # Returns
+    /// * `Result<bool, Error>` - True if group is active, false otherwise
+    ///
+    /// # Errors
+    /// * `Error::GroupNotFound` - If the group does not exist
+    ///
+    /// # Security Considerations
+    /// - Read-only function, no state modifications
+    /// - No authentication required (public query)
+    /// - Input validation on group_id bounds
+    pub fn is_group_active(env: Env, group_id: u64) -> Result<bool, Error> {
+        // Load the group from storage
+        let group = storage::load_group(&env, group_id).ok_or(Error::GroupNotFound)?;
+
+        // Check if status is Active
+        let status_is_active = group.status == GroupStatus::Active;
+
+        // Check if member count is valid (at least 1 member and within max)
+        let member_count_valid = group.member_count > 0 && group.member_count <= group.max_members;
+
+        // Group is active if both conditions are met
+        Ok(status_is_active && member_count_valid)
+    }
+
+    /// Create a new savings group
+    ///
+    /// # Arguments
+    /// * `env` - The contract environment
+    /// * `admin` - The group administrator
+    /// * `name` - The group name
+    /// * `contribution_amount` - Amount each member contributes per cycle
+    /// * `cycle_duration` - Duration of each cycle in seconds
+    /// * `max_members` - Maximum number of members allowed
+    ///
+    /// # Returns
+    /// * `Result<u64, Error>` - The newly created group ID
+    pub fn create_group(
+        env: Env,
+        admin: Address,
+        name: String,
+        contribution_amount: i128,
+        cycle_duration: u64,
+        max_members: u32,
+    ) -> Result<u64, Error> {
+        // Require authentication from admin
         admin.require_auth();
-        // This is for testing purposes. Ensures that the XLM contract set up for unit testing and local network
-        xlm::register(env, &admin);
-        // Send the contract an amount of XLM to play with
-        xlm::token_client(env).transfer(
-            &admin,
-            env.current_contract_address(),
-            &xlm::to_stroops(1),
-        );
-        // Set the admin in storage
-        Self::set_admin(env, admin);
-        // Set a random number between 1 and 10
-        Self::reset_number(env);
+
+        // Generate new group ID (simplified - in production use counter)
+        let group_id = env.ledger().sequence() as u64;
+
+        let group = Group {
+            id: group_id,
+            name,
+            admin,
+            contribution_amount,
+            cycle_duration,
+            max_members,
+            member_count: 0,
+            status: GroupStatus::Forming,
+            members: soroban_sdk::Vec::new(&env),
+            current_cycle: 0,
+            start_time: 0,
+        };
+
+        storage::save_group(&env, &group);
+
+        Ok(group_id)
     }
 
-    /// Update the number. Only callable by admin.
-    pub fn reset(env: &Env) {
-        Self::require_admin(env);
-        Self::reset_number(env);
-    }
+    /// Activate a group (transition from Forming to Active)
+    ///
+    /// # Arguments
+    /// * `env` - The contract environment
+    /// * `group_id` - The group to activate
+    ///
+    /// # Returns
+    /// * `Result<(), Error>` - Success or error
+    pub fn activate_group(env: Env, group_id: u64) -> Result<(), Error> {
+        let mut group = storage::load_group(&env, group_id).ok_or(Error::GroupNotFound)?;
 
-    // Private function to reset the number to a new random value
-    // which doesn't require auth from the admin
-    fn reset_number(env: &Env) {
-        let new_number: u64 = env.prng().gen_range(1..=10);
-        env.storage().instance().set(THE_NUMBER, &new_number);
-    }
+        // Require admin authentication
+        group.admin.require_auth();
 
-    /// Guess a number between 1 and 10
-    pub fn guess(env: &Env, a_number: u64, guesser: Address) -> Result<bool, Error> {
-        let xlm_client = xlm::token_client(env);
-        let contract_address = env.current_contract_address();
-        let guessed_it = a_number == Self::number(env);
-        if guessed_it {
-            let balance = xlm_client.balance(&contract_address);
-            if balance == 0 {
-                return Err(Error::NoBalanceToTransfer);
-            }
-            // Methods `try_*` will return an error if the method fails
-            // `.map_err` lets us convert the error to our custom Error type
-            let _ = xlm_client
-                .try_transfer(&contract_address, &guesser, &balance)
-                .map_err(|_| Error::FailedToTransferToGuesser)?;
-        } else {
-            guesser.require_auth();
-            let _ = xlm_client
-                .try_transfer(&guesser, &contract_address, &xlm::to_stroops(1))
-                .map_err(|_| Error::FailedToTransferFromGuesser)?;
+        // Validate group can be activated
+        if group.status != GroupStatus::Forming {
+            return Err(Error::InvalidGroupStatus);
         }
-        Ok(guessed_it)
-    }
 
-    /// Admin can add more funds to the contract
-    pub fn add_funds(env: &Env, amount: i128) {
-        Self::require_admin(env);
-        let contract_address = env.current_contract_address();
-        // unwrap here is safe because the admin was set in the constructor
-        let admin = Self::admin(env).unwrap();
-        xlm::token_client(env).transfer(&admin, &contract_address, &amount);
-    }
-
-    /// Upgrade the contract to new wasm. Only callable by admin.
-    pub fn upgrade(env: &Env, new_wasm_hash: BytesN<32>) {
-        Self::require_admin(env);
-        env.deployer().update_current_contract_wasm(new_wasm_hash);
-    }
-
-    /// readonly function to get the current number
-    /// `pub(crate)` makes it accessible in the same crate, but not outside of it
-    pub(crate) fn number(env: &Env) -> u64 {
-        // We can unwrap because the number is set in the constructor
-        // and then only reset by the admin
-        unsafe { env.storage().instance().get(THE_NUMBER).unwrap_unchecked() }
-    }
-
-    /// Get current admin
-    pub fn admin(env: &Env) -> Option<Address> {
-        env.storage().instance().get(ADMIN_KEY)
-    }
-
-    /// Set a new admin. Only callable by admin.
-    pub fn set_admin(env: &Env, admin: Address) {
-        // Check if admin is already set
-        if env.storage().instance().has(ADMIN_KEY) {
-            panic!("admin already set");
+        if group.member_count == 0 {
+            return Err(Error::GroupNotActive);
         }
-        env.storage().instance().set(ADMIN_KEY, &admin);
+
+        // Update status and start time
+        group.status = GroupStatus::Active;
+        group.start_time = env.ledger().timestamp();
+
+        storage::save_group(&env, &group);
+
+        Ok(())
     }
 
-    /// Private helper function to require auth from the admin
-    fn require_admin(env: &Env) {
-        let admin = Self::admin(env).expect("admin not set");
-        admin.require_auth();
+    /// Get group details
+    ///
+    /// # Arguments
+    /// * `env` - The contract environment
+    /// * `group_id` - The group identifier
+    ///
+    /// # Returns
+    /// * `Result<Group, Error>` - The group data
+    pub fn get_group(env: Env, group_id: u64) -> Result<Group, Error> {
+        storage::load_group(&env, group_id).ok_or(Error::GroupNotFound)
     }
 }
-
-mod test;

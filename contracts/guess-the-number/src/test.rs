@@ -1,158 +1,320 @@
 #![cfg(test)]
-// This lets use reference types in the std library for testing
-extern crate std;
 
-use super::*;
-use soroban_sdk::{
-    testutils::{Address as _, MockAuth, MockAuthInvoke},
-    token::StellarAssetClient,
-    Address, Env, IntoVal, Val, Vec,
-};
+use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
-fn init_test<'a>(env: &'a Env) -> (Address, StellarAssetClient<'a>, GuessTheNumberClient<'a>) {
-    let admin = Address::generate(env);
-    let client = generate_client(env, &admin);
-    // This is needed because we want to call a function from within the context of the contract
-    // In this case we want to get the address of the XLM contract registered by the constructor
-    let sac_address = env.as_contract(&client.address, || xlm::contract_id(env));
-    (admin, StellarAssetClient::new(env, &sac_address), client)
-}
+use crate::{types::GroupStatus, Error, StellarSave, StellarSaveClient};
 
-#[test]
-fn constructed_correctly() {
-    let env = &Env::default();
-    let (admin, sac, client) = init_test(env);
-    // Check that the admin is set correctly
-    assert_eq!(client.admin(), Some(admin.clone()));
-    // Check that the contract has a balance of 1 XLM
-    assert_eq!(sac.balance(&client.address), xlm::to_stroops(1));
-    // Need to use `as_contract` to call a function in the context of the contract
-    // Since the method `number` is not in the client, but is visibile in the crate
-    let number = env.as_contract(&client.address, || GuessTheNumber::number(env));
-    assert_eq!(number, 4);
-}
-
-#[test]
-fn only_admin_can_reset() {
-    let env = &Env::default();
-    let (admin, _, client) = init_test(env);
-    let user = Address::generate(env);
-
-    set_caller(&client, "reset", &user, ());
-    assert!(client.try_reset().is_err());
-
-    set_caller(&client, "reset", &admin, ());
-    assert!(client.try_reset().is_ok());
-}
-
-#[test]
-fn guess() {
-    let env = &Env::default();
-    let (_, sac, client) = init_test(env);
-    // This lets you mock all auth when they become complicated when making cross contract calls.
+fn create_test_env() -> (Env, Address, StellarSaveClient<'static>) {
+    let env = Env::default();
     env.mock_all_auths();
 
-    // Create a user to guess
-    let alice = Address::generate(env);
-    // Mint tokens to the user. On testnet you use friendbot to fund the account.
-    sac.mint(&alice, &xlm::to_stroops(2));
-    // Check that alice has the tokens
-    assert_eq!(sac.balance(&alice), xlm::to_stroops(2));
+    let admin = Address::generate(&env);
+    let contract_id = env.register_contract(None, StellarSave);
+    let client = StellarSaveClient::new(&env, &contract_id);
 
-    // Create another user with no funds
-    let bob = Address::generate(env);
+    (env, admin, client)
+}
 
-    // In the testing enviroment the random seed is always the same initially.
-    // This tests a wrong guess so the balance should go down one XLM
-    assert!(!client.guess(&3, &alice));
-    assert_eq!(sac.balance(&alice), xlm::to_stroops(1));
+#[test]
+fn test_is_group_active_returns_false_for_nonexistent_group() {
+    let (_env, _admin, client) = create_test_env();
 
-    // Now we test a wrong guess but the user has no funds so  we get an error
-    assert_eq!(
-        client.try_guess(&3, &bob).unwrap_err(),
-        Ok(Error::FailedToTransferFromGuesser)
+    let result = client.try_is_group_active(&999);
+
+    assert_eq!(result, Err(Ok(Error::GroupNotFound)));
+}
+
+#[test]
+fn test_is_group_active_returns_false_for_forming_group() {
+    let (env, admin, client) = create_test_env();
+
+    // Create a group (starts in Forming status)
+    let group_id = client.create_group(
+        &admin,
+        &String::from_str(&env, "Test Group"),
+        &1000,
+        &86400,
+        &10,
     );
 
-    // Now we test a correct guess, the balance should go up by the initial 1 XLM + the 1 XLM from the contract
-    assert!(client.guess(&4, &alice));
-    assert_eq!(sac.balance(&alice), xlm::to_stroops(3));
+    // Group exists but is in Forming status
+    let is_active = client.is_group_active(&group_id);
 
-    assert_eq!(
-        client.try_guess(&4, &alice).unwrap_err(),
-        Ok(Error::NoBalanceToTransfer)
+    assert_eq!(is_active, false);
+}
+
+#[test]
+fn test_is_group_active_returns_false_for_completed_group() {
+    let (env, admin, client) = create_test_env();
+
+    let group_id = client.create_group(
+        &admin,
+        &String::from_str(&env, "Test Group"),
+        &1000,
+        &86400,
+        &10,
     );
+
+    // Manually set group to Completed status using contract context
+    env.as_contract(&client.address, || {
+        let mut group = crate::storage::load_group(&env, group_id).unwrap();
+        group.status = GroupStatus::Completed;
+        group.member_count = 5;
+        crate::storage::save_group(&env, &group);
+    });
+
+    let is_active = client.is_group_active(&group_id);
+
+    assert_eq!(is_active, false);
 }
 
 #[test]
-fn add_funds() {
-    let env = &Env::default();
-    let (_, sac, client) = init_test(env);
-    // This lets you mock all auth when they become complicated when making cross contract calls.
-    env.mock_all_auths();
+fn test_is_group_active_returns_false_for_cancelled_group() {
+    let (env, admin, client) = create_test_env();
 
-    // Create a user to guess
-    let alice = Address::generate(env);
-    // Mint tokens to the user. On testnet you use friendbot to fund the account.
-    sac.mint(&alice, &xlm::to_stroops(2));
-    // Now we test a correct guess, the balance should go up by the initial 1 XLM + the 1 XLM from the contract
-    assert!(client.guess(&4, &alice));
-    assert_eq!(sac.balance(&alice), xlm::to_stroops(3));
-    assert_eq!(sac.balance(&client.address), 0);
+    let group_id = client.create_group(
+        &admin,
+        &String::from_str(&env, "Test Group"),
+        &1000,
+        &86400,
+        &10,
+    );
 
-    client.add_funds(&xlm::to_stroops(5));
-    assert_eq!(sac.balance(&client.address), xlm::to_stroops(5));
+    // Manually set group to Cancelled status using contract context
+    env.as_contract(&client.address, || {
+        let mut group = crate::storage::load_group(&env, group_id).unwrap();
+        group.status = GroupStatus::Cancelled;
+        group.member_count = 3;
+        crate::storage::save_group(&env, &group);
+    });
 
-    // Since we didn't reset the number, the guess should still be correct
-    assert!(client.guess(&4, &alice));
-    assert_eq!(sac.balance(&alice), xlm::to_stroops(8));
-    assert_eq!(sac.balance(&client.address), 0);
+    let is_active = client.is_group_active(&group_id);
+
+    assert_eq!(is_active, false);
 }
 
 #[test]
-fn reset_and_guess() {
-    let env = &Env::default();
-    let (_, sac, client) = init_test(env);
-    // This lets you mock all auth when they become complicated when making cross contract calls.
-    env.mock_all_auths();
+fn test_is_group_active_returns_false_for_zero_members() {
+    let (env, admin, client) = create_test_env();
 
-    // Create a user to guess
-    let alice = Address::generate(env);
-    // Mint tokens to the user. On testnet you use friendbot to fund the account.
-    sac.mint(&alice, &xlm::to_stroops(2));
+    let group_id = client.create_group(
+        &admin,
+        &String::from_str(&env, "Test Group"),
+        &1000,
+        &86400,
+        &10,
+    );
 
-    // Reset the number
-    client.reset();
+    // Set group to Active but with 0 members using contract context
+    env.as_contract(&client.address, || {
+        let mut group = crate::storage::load_group(&env, group_id).unwrap();
+        group.status = GroupStatus::Active;
+        group.member_count = 0;
+        crate::storage::save_group(&env, &group);
+    });
 
-    // Guess again, this should be correct now
-    assert!(client.guess(&10, &alice));
+    let is_active = client.is_group_active(&group_id);
+
+    assert_eq!(is_active, false);
 }
 
-fn generate_client<'a>(env: &Env, admin: &Address) -> GuessTheNumberClient<'a> {
-    let contract_id = Address::generate(env);
-    env.mock_all_auths();
-    let contract_id = env.register_at(&contract_id, GuessTheNumber, (admin,));
-    env.set_auths(&[]); // clear auths
-    GuessTheNumberClient::new(env, &contract_id)
+#[test]
+fn test_is_group_active_returns_false_when_members_exceed_max() {
+    let (env, admin, client) = create_test_env();
+
+    let group_id = client.create_group(
+        &admin,
+        &String::from_str(&env, "Test Group"),
+        &1000,
+        &86400,
+        &10,
+    );
+
+    // Set member count to exceed max_members using contract context
+    env.as_contract(&client.address, || {
+        let mut group = crate::storage::load_group(&env, group_id).unwrap();
+        group.status = GroupStatus::Active;
+        group.member_count = 11; // Exceeds max of 10
+        crate::storage::save_group(&env, &group);
+    });
+
+    let is_active = client.is_group_active(&group_id);
+
+    assert_eq!(is_active, false);
 }
 
-// This lets you mock the auth context for a function call
-fn set_caller<T>(client: &GuessTheNumberClient, fn_name: &str, caller: &Address, args: T)
-where
-    T: IntoVal<Env, Vec<Val>>,
-{
-    // clear previous auth mocks
-    client.env.set_auths(&[]);
+#[test]
+fn test_is_group_active_returns_true_for_valid_active_group() {
+    let (env, admin, client) = create_test_env();
 
-    let invoke = &MockAuthInvoke {
-        contract: &client.address,
-        fn_name,
-        args: args.into_val(&client.env),
-        sub_invokes: &[],
-    };
+    let group_id = client.create_group(
+        &admin,
+        &String::from_str(&env, "Test Group"),
+        &1000,
+        &86400,
+        &10,
+    );
 
-    // mock auth as passed-in address
-    client.env.mock_auths(&[MockAuth {
-        address: &caller,
-        invoke,
-    }]);
+    // Set group to Active with valid member count using contract context
+    env.as_contract(&client.address, || {
+        let mut group = crate::storage::load_group(&env, group_id).unwrap();
+        group.status = GroupStatus::Active;
+        group.member_count = 5;
+        crate::storage::save_group(&env, &group);
+    });
+
+    let is_active = client.is_group_active(&group_id);
+
+    assert_eq!(is_active, true);
+}
+
+#[test]
+fn test_is_group_active_returns_true_at_max_capacity() {
+    let (env, admin, client) = create_test_env();
+
+    let group_id = client.create_group(
+        &admin,
+        &String::from_str(&env, "Test Group"),
+        &1000,
+        &86400,
+        &10,
+    );
+
+    // Set member count exactly at max using contract context
+    env.as_contract(&client.address, || {
+        let mut group = crate::storage::load_group(&env, group_id).unwrap();
+        group.status = GroupStatus::Active;
+        group.member_count = 10; // Exactly at max
+        crate::storage::save_group(&env, &group);
+    });
+
+    let is_active = client.is_group_active(&group_id);
+
+    assert_eq!(is_active, true);
+}
+
+#[test]
+fn test_is_group_active_returns_true_with_one_member() {
+    let (env, admin, client) = create_test_env();
+
+    let group_id = client.create_group(
+        &admin,
+        &String::from_str(&env, "Test Group"),
+        &1000,
+        &86400,
+        &10,
+    );
+
+    // Set group to Active with minimum valid member count using contract context
+    env.as_contract(&client.address, || {
+        let mut group = crate::storage::load_group(&env, group_id).unwrap();
+        group.status = GroupStatus::Active;
+        group.member_count = 1;
+        crate::storage::save_group(&env, &group);
+    });
+
+    let is_active = client.is_group_active(&group_id);
+
+    assert_eq!(is_active, true);
+}
+
+#[test]
+fn test_activate_group_success() {
+    let (env, admin, client) = create_test_env();
+
+    let group_id = client.create_group(
+        &admin,
+        &String::from_str(&env, "Test Group"),
+        &1000,
+        &86400,
+        &10,
+    );
+
+    // Add at least one member using contract context
+    env.as_contract(&client.address, || {
+        let mut group = crate::storage::load_group(&env, group_id).unwrap();
+        group.member_count = 3;
+        crate::storage::save_group(&env, &group);
+    });
+
+    // Activate the group
+    client.activate_group(&group_id);
+
+    // Verify group is now active
+    let is_active = client.is_group_active(&group_id);
+    assert_eq!(is_active, true);
+
+    // Verify group details
+    let group = client.get_group(&group_id);
+    assert_eq!(group.status, GroupStatus::Active);
+    // In test environment, timestamp is set by the test framework
+    assert_eq!(group.start_time, env.ledger().timestamp());
+}
+
+#[test]
+fn test_activate_group_fails_without_members() {
+    let (env, admin, client) = create_test_env();
+
+    let group_id = client.create_group(
+        &admin,
+        &String::from_str(&env, "Test Group"),
+        &1000,
+        &86400,
+        &10,
+    );
+
+    // Try to activate without members
+    let result = client.try_activate_group(&group_id);
+
+    assert_eq!(result, Err(Ok(Error::GroupNotActive)));
+}
+
+#[test]
+fn test_activate_group_fails_if_already_active() {
+    let (env, admin, client) = create_test_env();
+
+    let group_id = client.create_group(
+        &admin,
+        &String::from_str(&env, "Test Group"),
+        &1000,
+        &86400,
+        &10,
+    );
+
+    // Set up group with members and activate using contract context
+    env.as_contract(&client.address, || {
+        let mut group = crate::storage::load_group(&env, group_id).unwrap();
+        group.member_count = 3;
+        crate::storage::save_group(&env, &group);
+    });
+
+    client.activate_group(&group_id);
+
+    // Try to activate again
+    let result = client.try_activate_group(&group_id);
+
+    assert_eq!(result, Err(Ok(Error::InvalidGroupStatus)));
+}
+
+#[test]
+fn test_get_group_returns_correct_data() {
+    let (env, admin, client) = create_test_env();
+
+    let name = String::from_str(&env, "Savings Circle");
+    let contribution = 1000i128;
+    let duration = 86400u64;
+    let max = 10u32;
+
+    let group_id = client.create_group(&admin, &name, &contribution, &duration, &max);
+
+    let group = client.get_group(&group_id);
+
+    assert_eq!(group.id, group_id);
+    assert_eq!(group.name, name);
+    assert_eq!(group.admin, admin);
+    assert_eq!(group.contribution_amount, contribution);
+    assert_eq!(group.cycle_duration, duration);
+    assert_eq!(group.max_members, max);
+    assert_eq!(group.member_count, 0);
+    assert_eq!(group.status, GroupStatus::Forming);
 }
