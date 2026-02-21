@@ -1,6 +1,22 @@
 [workspace]
 resolver = "2"
 members = [
+    "contracts/guess-the-number",
+    "contracts/fungible-allowlist",
+    "contracts/nft-enumerable",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/Xoulomon/Stellar-Save"
+
+[workspace.dependencies]
+soroban-sdk = "23.0.3"
+stellar-access = "0.6.0"
+stellar-macros = "0.6.0"
+stellar-tokens = "0.6.0"
     "contracts/stellar-save",
 ]
 
@@ -16,3 +32,7 @@ debug-assertions = false
 panic = "abort"
 codegen-units = 1
 lto = true
+
+[profile.release-with-logs]
+inherits = "release"
+debug-assertions = true
