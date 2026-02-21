@@ -1,0 +1,10 @@
+I worked on the Figma layout for the group creation and details screens to ensure a streamlined, intuitive entry point for users setting up their decentralized savings circles. To maintain consistent engagement, I worked on the progress bar and status indicators that provide a clear visual sense of momentum throughout the four-step setup process.
+
+I worked on the interactive financial settings in Figma, carefully balancing the currency input fields and contribution summary cards to ensure maximum readability for users. Additionally, I worked on the tactile frequency selection system, creating a distinct visual language for weekly, bi-weekly, and monthly cycles that simplifies complex financial scheduling.
+
+I worked on the group rules interface, integrating helpful subtext for member capacity and a prominent start date picker to prevent scheduling confusion within the dApp. I also worked on the comprehensive review screen to aggregate general information, financial details, and membership timelines into scannable, high-fidelity cards before final confirmation.
+
+Finally, I worked on the transition from low-fidelity wireframes to the final "African Imagery" aesthetic, focusing on the dark-mode dashboard for the "Summer Trip 2024" group. I worked on the activity timeline and payout schedule UX to ensure that group contributions, distributions, and member statuses are transparent and easy to track at a glance.
+
+https://www.figma.com/design/fEqfuBtMgHZWDXHq9wqdHY/Stella-Save-UI?node-id=0-1&p=f&t=cD4A5k93cUikEqT7-0
+
