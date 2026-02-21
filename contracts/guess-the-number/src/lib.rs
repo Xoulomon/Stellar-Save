@@ -76,8 +76,9 @@ impl StellarSave {
         // Require authentication from admin
         admin.require_auth();
 
-        // Generate new group ID (simplified - in production use counter)
-        let group_id = env.ledger().sequence() as u64;
+        // Increment group counter and use as group ID
+        storage::increment_group_count(&env);
+        let group_id = storage::get_group_count(&env);
 
         let group = Group {
             id: group_id,
@@ -140,5 +141,30 @@ impl StellarSave {
     /// * `Result<Group, Error>` - The group data
     pub fn get_group(env: Env, group_id: u64) -> Result<Group, Error> {
         storage::load_group(&env, group_id).ok_or(Error::GroupNotFound)
+    }
+
+    /// Get the total number of groups created
+    ///
+    /// Returns the total count of groups that have been created in the contract.
+    /// This is a monotonically increasing counter that tracks all groups ever created,
+    /// regardless of their current status (Forming, Active, Completed, or Cancelled).
+    ///
+    /// # Arguments
+    /// * `env` - The contract environment
+    ///
+    /// # Returns
+    /// * `u64` - The total number of groups created (0 if no groups exist)
+    ///
+    /// # Security Considerations
+    /// - Read-only function, no state modifications
+    /// - No authentication required (public query)
+    /// - Returns 0 for uninitialized state (safe default)
+    ///
+    /// # Example
+    /// ```ignore
+    /// let total_groups = contract.get_total_groups_created(&env);
+    /// ```
+    pub fn get_total_groups_created(env: Env) -> u64 {
+        storage::get_group_count(&env)
     }
 }

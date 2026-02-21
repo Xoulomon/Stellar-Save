@@ -40,3 +40,28 @@ pub fn add_member(env: &Env, group_id: u64, member: &Address) {
     env.storage().persistent().set(&key, &true);
     env.storage().persistent().extend_ttl(&key, 518400, 518400);
 }
+
+/// Get the total number of groups created
+///
+/// Returns the counter value from storage, or 0 if not initialized
+pub fn get_group_count(env: &Env) -> u64 {
+    env.storage()
+        .persistent()
+        .get(&StorageKey::GROUP_COUNT)
+        .unwrap_or(0)
+}
+
+/// Increment the group counter
+///
+/// Called internally when a new group is created
+pub fn increment_group_count(env: &Env) {
+    let current = get_group_count(env);
+    let new_count = current.checked_add(1).expect("Group count overflow");
+    env.storage()
+        .persistent()
+        .set(&StorageKey::GROUP_COUNT, &new_count);
+    // Extend TTL for 30 days (in ledgers, ~5 seconds per ledger)
+    env.storage()
+        .persistent()
+        .extend_ttl(&StorageKey::GROUP_COUNT, 518400, 518400);
+}

@@ -89,12 +89,43 @@
           "contract_data": {
             "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
             "key": {
+              "symbol": "GRP_CNT"
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+                "key": {
+                  "symbol": "GRP_CNT"
+                },
+                "durability": "persistent",
+                "val": {
+                  "u64": 1
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          518400
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+            "key": {
               "vec": [
                 {
                   "symbol": "GROUP"
                 },
                 {
-                  "u64": 0
+                  "u64": 1
                 }
               ]
             },
@@ -114,7 +145,7 @@
                       "symbol": "GROUP"
                     },
                     {
-                      "u64": 0
+                      "u64": 1
                     }
                   ]
                 },
@@ -161,7 +192,7 @@
                         "symbol": "id"
                       },
                       "val": {
-                        "u64": 0
+                        "u64": 1
                       }
                     },
                     {
@@ -342,7 +373,7 @@
               }
             ],
             "data": {
-              "u64": 0
+              "u64": 1
             }
           }
         }
@@ -368,7 +399,7 @@
               }
             ],
             "data": {
-              "u64": 0
+              "u64": 1
             }
           }
         }
