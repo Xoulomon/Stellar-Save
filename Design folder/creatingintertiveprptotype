@@ -1,0 +1,24 @@
+Main Navigation Hub
+This section provides a core architecture and screen hierarchy overview for the rental platform.
+
+Initial Landing: The Main Dashboard serves as the primary entry point.
+
+Inventory List: Accessible via the sidebar navigation, leading to Property Listings.
+
+Support Hub: Contains detailed information such as Agent Profiles.
+
+2. Interactive Callouts
+Specific behaviors triggered by user actions within the interface.
+
+01. View Details Interaction: Clicking "View Details" on any Property Card triggers a horizontal slide-in transition from the right, overlaying 60% of the screen.
+
+Trigger: On Tap.
+
+02. Search Expansion: Focusing the search bar expands the filtering dropdown with a "Smart Animate" spring effect (300ms).
+
+Trigger: On Focus.
+
+3. Transition Definitions
+Standardized timing and curves for all platform animations.
+
+figma link: https://www.figma.com/design/etd3BGQdLekZhZgCy59NYF/Create-Interactive-Prototype?m=auto&t=QiJAuHsbcwE39Adj-6
