@@ -12,10 +12,19 @@
 //! ## Modules
 //! - `group`: Core Group data structure and state management
 //! - `payout`: Payout record tracking for fund distributions
+//! - `storage`: Storage key structure for efficient data access
+//! - `status`: Group lifecycle status enum with state transitions
+//! - `events`: Event definitions for contract actions
 
+pub mod events;
 pub mod group;
 pub mod payout;
+pub mod status;
+pub mod storage;
 
 // Re-export for convenience
 pub use group::Group;
 pub use payout::PayoutRecord;
+pub use status::{GroupStatus, StatusError};
+pub use storage::{StorageKey, StorageKeyBuilder};
+pub use events::EventEmitter;
