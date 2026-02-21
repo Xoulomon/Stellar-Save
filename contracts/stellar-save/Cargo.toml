@@ -1,0 +1,20 @@
+[package]
+name = "stellar-save"
+description = "Rotational savings and credit association (ROSCA) on Stellar"
+edition = "2021"
+license = "MIT"
+version = "0.1.0"
+publish = false
+
+[package.metadata.stellar]
+cargo_inherit = true 
+
+[lib]
+crate-type = ["cdylib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = "23.0.3"
+
+[dev-dependencies]
+soroban-sdk = { version = "23.0.3", features = ["testutils"] }
