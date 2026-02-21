@@ -1,6 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
+    "contracts/stellar-save",
+]
+exclude = [
     "contracts/guess-the-number",
     "contracts/fungible-allowlist",
     "contracts/nft-enumerable",
@@ -17,11 +20,6 @@ soroban-sdk = "23.0.3"
 stellar-access = "0.6.0"
 stellar-macros = "0.6.0"
 stellar-tokens = "0.6.0"
-    "contracts/stellar-save",
-]
-
-[workspace.dependencies]
-soroban-sdk = "21.0.0"
 
 [profile.release]
 opt-level = "z"

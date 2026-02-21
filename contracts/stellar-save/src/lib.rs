@@ -26,6 +26,7 @@ pub mod group;
 pub mod payout;
 pub mod status;
 pub mod storage;
+pub mod pool;
 
 // Re-export for convenience
 pub use events::*;
@@ -33,8 +34,9 @@ pub use error::{StellarSaveError, ErrorCategory, ContractResult};
 pub use group::{Group, GroupStatus};
 pub use contribution::ContributionRecord;
 pub use payout::PayoutRecord;
-pub use status::{GroupStatus, StatusError};
+pub use status::StatusError;
 pub use storage::{StorageKey, StorageKeyBuilder};
+pub use pool::{PoolInfo, PoolCalculator};
 pub use events::EventEmitter;
 use soroban_sdk::{contract, contractimpl, Env};
 
