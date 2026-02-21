@@ -1,0 +1,18 @@
+Project Overview: Multi-Platform Notification Systems
+I designed and implemented comprehensive Notification Centers focused on user engagement and real-time information architecture. My work involved creating scalable components for various alert types, including high-priority actions, transactional confirmations, and system status updates.
+
+Key Features I Developed:
+Actionable Alerts: Implemented high-priority "Action Required" cards with embedded CTA buttons (e.g., identity verification) to reduce friction in the user journey.
+
+Transactional Transparency: Designed clear success states for financial contributions and profile updates, providing users with immediate peace of mind.
+
+Social & System Integration: Built components for social triggers (e.g., "New Member Joined") and critical system maintenance logs.
+
+Filtering & Organization: Developed a tabbed navigation system (All, Unread, Archive) to help users manage information density effectively.
+
+Visual Hierarchy: Utilized distinct iconography and color-coding to differentiate between security alerts, financial milestones, and general updates.
+
+Impact & Design Logic
+"The goal was to move beyond a simple list and create a dynamic communication hub. By categorizing notifications by time (Today, Yesterday) and priority level, I improved the scannability of the interface, ensuring users never miss a critical security alert or a 'Goal Achieved' celebration."
+
+figma UI https://www.figma.com/design/fEqfuBtMgHZWDXHq9wqdHY/Stella-Save-UI?node-id=0-1&p=f&t=cD4A5k93cUikEqT7-0
