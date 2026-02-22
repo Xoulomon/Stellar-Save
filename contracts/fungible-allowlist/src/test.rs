@@ -12,7 +12,10 @@ fn create_client<'a>(
 ) -> ExampleContractClient<'a> {
     let name = String::from_str(e, "AllowList Token");
     let symbol = String::from_str(e, "ALT");
-    let address = e.register(ExampleContract, (name, symbol, admin, manager, initial_supply));
+    let address = e.register(
+        ExampleContract,
+        (name, symbol, admin, manager, initial_supply),
+    );
     ExampleContractClient::new(e, &address)
 }
 

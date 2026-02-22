@@ -1,0 +1,7 @@
+I worked on the Figma layout to ensure the Group Name and Description fields served as a streamlined entry point, prioritizing a quick and intuitive start for the user. To maintain engagement, I worked on the progress bar at the top of the interface, providing a clear visual sense of momentum from the very first interaction.
+
+I worked on the interactive currency input field in Figma, carefully balancing the USD dropdown and numerical amount to ensure maximum readability. Additionally, I worked on a three-option card system for Weekly, Bi-Weekly, and Monthly frequencies, creating a tactile selection process that makes choosing a savings cycle feel distinct and effortless.
+
+I worked on the Maximum Members input field, integrating helpful subtext to guide users toward an optimal group size. I also worked on the Start Date picker UX to ensure the first collection date was prominently displayed, effectively preventing any potential scheduling confusion. Finally, I worked on the comprehensive summary screen in Figma to aggregate General Information, Financial Details, and Membership data into scannable, high-fidelity cards.
+
+this is the figma link https://www.figma.com/design/fEqfuBtMgHZWDXHq9wqdHY/Stella-Save-UI?node-id=8-664&t=cD4A5k93cUikEqT7-0

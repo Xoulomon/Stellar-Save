@@ -1,0 +1,57 @@
+Activity Log (List View)
+Header: Activity Log
+
+Sub-header: Review and manage your blockchain transactions.
+
+Empty State/Search: Search by group or hash...
+
+Table Headers: Date | Type | Group Name | Amount | Status
+
+Status Badges: Completed | Pending | Failed
+
+Action Buttons: Export | New Transaction
+
+Transaction Details (Modal)
+Header Section:
+
+Success Indicator: +500.00 XLM
+
+Status: Success (October 24, 2023 • 14:22:10 UTC)
+
+Wallet Routing:
+
+Source: GBH3...4K2L
+
+Destination: GD72...X9Y1
+
+Technical Data:
+
+Transaction Hash: f1e92c...88a2b
+
+Block Height: 48,291,042
+
+Network Fee: 0.00001 XLM (100 stroops)
+
+Memo: "Invoice #8291-STLLR"
+
+Summary:
+
+New Balance: 2,450.00 XLM
+
+Footer Actions:
+
+View on Stellar Expert
+
+Download PDF
+
+Sidebar Navigation
+Dashboard
+
+Transactions
+
+Groups
+
+Wallet
+
+Settings
+https://www.figma.com/design/VVu1Qe32XfSFXqttpUiTHt/-33-Wireframe---Transaction-History?m=auto&t=zyZyoMjEvTVifKUu-6

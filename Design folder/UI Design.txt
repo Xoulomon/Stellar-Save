@@ -1,0 +1,24 @@
+Save Smart, Reach for the Stars
+I started with the wireframe design in Figma for these automated tools, focusing on a high-contrast interface to help you reach your financial goals faster with zero effort.
+
+Start Saving Now
+
+Why Stellar-Save?
+Automated Rules: I worked on the original Figma wireframes for these features. I made the design decision to use clean, card-based layouts to separate "Smart Rounding" from "Recurring Transfers," making the automation feel manageable.
+
+Goal Tracking: I designed the initial layouts for the intuitive dashboards. I pushed for increased whitespace and simplified vector icons in Figma to ensure your progress remains the focal point of the screen.
+
+Safe & Secure: I worked on the UX flow for bank-level security. I chose a minimalist "Vault" icon and bold typography to build immediate trust the moment a user lands on the page.
+
+How It Works
+Connect Account: I started with the wireframe design for the secure bridge. In Figma, I opted for a vertical "1-2-3" stepped flow with bright green focal points to guide users through the connection process in under 60 seconds.
+
+Set Your Goals: I worked on the interface design that lets you define your "Why." I kept the input fields simple—like a car or a rainy day fund—to reduce cognitive load during the onboarding experience.
+
+Watch it Grow: I designed the user experience for the AI. I used Figma to transition from the high-energy green theme to a sophisticated dark-mode "Premium" aesthetic for the final dashboard to emphasize wealth and stability.
+
+Join 50,000+ Savers
+Start your journey toward the financial freedom I worked to build. I prototyped this final CTA in Figma to be high-impact, using a dark gradient to make the "Sign Up Free" button pop
+
+figma link https://www.figma.com/design/fEqfuBtMgHZWDXHq9wqdHY/Stella-Save-UI?node-id=0-1&p=f&t=cD4A5k93cUikEqT7-0
+

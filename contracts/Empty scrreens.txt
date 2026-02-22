@@ -1,0 +1,39 @@
+Loading State
+I worked on the Skeleton Loader design to provide immediate visual feedback and reduce perceived wait times while data is being fetched.
+
+I worked on a shimmering motion effect for the placeholder blocks to signal active loading without overwhelming the user.
+
+I worked on ensuring the layout of the skeleton accurately mirrors the final dashboard, creating a seamless transition once the content populates.
+
+Empty & Error States
+I worked on the "No groups yet" screen, focusing on a clear call-to-action that encourages users to either join a community or start their own journey.
+
+I worked on the "Sync Error" interface, using cosmic-themed messaging like "Something went wrong" to maintain the brand voice even during technical glitches.
+
+I worked on the "Lost Connection" state, designing the "Houston, we have a problem" copy and adding a "Browse Saved Offline" option to ensure the app remains useful without a signal.
+
+Group Creation Flow
+I worked on the Figma layout to ensure the Group Name and Description fields served as a streamlined entry point, prioritizing a quick and intuitive start for the user.
+
+I worked on the progress bar at the top of the interface, providing a clear visual sense of momentum from the very first interaction.
+
+I worked on the interactive currency input field in Figma, carefully balancing the USD dropdown and numerical amount to ensure maximum readability.
+
+I worked on a three-option card system for Weekly, Bi-Weekly, and Monthly frequencies, creating a tactile selection process that makes choosing a savings cycle feel distinct and effortless.
+
+I worked on the Maximum Members input field, integrating helpful subtext to guide users toward an optimal group size.
+
+I worked on the Start Date picker UX to ensure the first collection date was prominently displayed, effectively preventing any potential scheduling confusion.
+
+I worked on the comprehensive summary screen in Figma to aggregate General Information, Financial Details, and Membership data into scannable, high-fidelity cards.
+
+Active Group Dashboard
+I worked on the transition from low-fidelity wireframes to the final "African Imagery" aesthetic, focusing on a premium dark-mode dashboard.
+
+I worked on the "Total Group Balance" and "Monthly Goal" progress bars to give members a high-level view of their collective success.
+
+I worked on the Members Status and Payout Schedule cards, ensuring that upcoming recipients and payment statuses (Paid vs. Pending) are identifiable at a glance.
+
+I worked on the Activity Timeline to provide a transparent ledger of every contribution and distribution, building trust within the decentralized application.
+
+figma link https://www.figma.com/design/fEqfuBtMgHZWDXHq9wqdHY/Stella-Save-UI?node-id=55-1717&t=cD4A5k93cUikEqT7-0
