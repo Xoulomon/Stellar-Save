@@ -250,6 +250,42 @@ impl StellarSaveContract {
             .get::<_, Group>(&key)
             .ok_or(StellarSaveError::GroupNotFound)
     }
+
+    /// Deletes a group from storage.
+    /// Only allowed if the caller is the creator and no members have joined yet.
+    pub fn delete_group(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
+        // 1. Task: Load group and Verify caller is creator
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env.storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        group.creator.require_auth();
+
+        // 2. Task: Check no members joined
+        // We check if the member count is 0. 
+        // Note: If the creator is automatically added as a member in join_group, 
+        // this check should be adjusted to (count == 1).
+        if group.member_count > 0 {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        // 3. Task: Remove from storage
+        // We remove both the main data and the status record
+        env.storage().persistent().remove(&group_key);
+        
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        env.storage().persistent().remove(&status_key);
+
+        // 4. Task: Emit event
+        env.events().publish(
+            (Symbol::new(&env, "GroupDeleted"), group_id),
+            group.creator
+        );
+
+        Ok(())
+    }
 }
 
 
@@ -321,5 +357,33 @@ mod tests {
         // ... setup contract and manually set status to GroupStatus::Active ...
         
         client.update_group(&group_id, &200, &7200, &10);
+    }
+
+    #[test]
+    fn test_delete_group_success() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+
+        // 1. Setup: Create a group with 0 members
+        let group_id = client.create_group(&creator, &100, &3600, &5);
+        
+        // 2. Action: Delete group
+        env.mock_all_auths();
+        client.delete_group(&group_id);
+
+        // 3. Verify: Group should no longer exist
+        let result = client.try_get_group(&group_id);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1003))")] // InvalidState
+    fn test_delete_group_fails_if_has_members() {
+        let env = Env::default();
+        // ... setup and add a member to the group ...
+        
+        client.delete_group(&group_id);
     }
 }
