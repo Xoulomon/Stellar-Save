@@ -289,6 +289,13 @@ impl StellarSaveContract {
         Ok(())
     }
 
+    /// Returns the total number of groups created.
+    /// This reads the existing counter from storage without modifying it.
+    pub fn get_total_groups(env: Env) -> u64 {
+        let key = StorageKeyBuilder::next_group_id();
+        env.storage().persistent().get(&key).unwrap_or(0)
+    }
+
     /// Lists groups with cursor-based pagination and optional status filtering.
     /// Tasks: Pagination, Status Filtering, Gas Optimization.
     pub fn list_groups(
@@ -418,6 +425,24 @@ fn test_group_id_uniqueness() {
     assert_eq!(id1, 1);
     assert_eq!(id2, 2);
     assert_ne!(id1, id2);
+}
+
+#[test]
+fn test_get_total_groups() {
+    let env = Env::default();
+    let contract_id = env.register_contract(None, StellarSaveContract);
+    let client = StellarSaveContractClient::new(&env, &contract_id);
+    let creator = Address::generate(&env);
+
+    // Initially, no groups should exist
+    assert_eq!(client.get_total_groups(), 0);
+
+    // Create a group
+    env.mock_all_auths();
+    client.create_group(&creator, &100, &3600, &5);
+
+    // Total groups should now be 1
+    assert_eq!(client.get_total_groups(), 1);
 }
 
 #[cfg(test)]
