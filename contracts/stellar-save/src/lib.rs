@@ -178,6 +178,61 @@ impl StellarSaveContract {
         Ok(group_id)
     }
 
+    /// Updates group parameters. Only allowed for creators while the group is Pending.
+    pub fn update_group(
+        env: Env,
+        group_id: u64,
+        new_contribution: i128,
+        new_duration: u64,
+        new_max_members: u32,
+    ) -> Result<(), StellarSaveError> {
+        // 1. Load existing group data
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let mut group = env.storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // 2. Task: Verify caller is creator
+        group.creator.require_auth();
+
+        // 3. Task: Check group is not yet active
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        let status = env.storage()
+            .persistent()
+            .get::<_, GroupStatus>(&status_key)
+            .unwrap_or(GroupStatus::Pending);
+
+        if status != GroupStatus::Pending {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        // 4. Task: Validate new parameters against global config
+        let config_key = StorageKeyBuilder::contract_config();
+        if let Some(config) = env.storage().persistent().get::<_, ContractConfig>(&config_key) {
+            if new_contribution < config.min_contribution || new_contribution > config.max_contribution ||
+               new_max_members < config.min_members || new_max_members > config.max_members ||
+               new_duration < config.min_cycle_duration || new_duration > config.max_cycle_duration {
+                return Err(StellarSaveError::InvalidState);
+            }
+        }
+
+        // 5. Task: Update storage
+        group.contribution_amount = new_contribution;
+        group.cycle_duration = new_duration;
+        group.max_members = new_max_members;
+        
+        env.storage().persistent().set(&group_key, &group);
+
+        // 6. Task: Emit event
+        env.events().publish(
+            (Symbol::new(&env, "GroupUpdated"), group_id),
+            group.creator
+        );
+
+        Ok(())
+    }
+
     /// Retrieves the details of a specific savings group.
     /// 
     /// # Arguments
@@ -245,5 +300,26 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         client.get_group(&999); // ID that doesn't exist
+    }
+
+    #[test]
+    fn test_update_group_success() {
+        let env = Env::default();
+        // ... setup contract and create a group in Pending state ...
+        
+        // Attempt update
+        client.update_group(&group_id, &200, &7200, &10);
+        
+        let updated = client.get_group(&group_id);
+        assert_eq!(updated.contribution_amount, 200);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1003))")] // InvalidState
+    fn test_update_group_fails_if_active() {
+        let env = Env::default();
+        // ... setup contract and manually set status to GroupStatus::Active ...
+        
+        client.update_group(&group_id, &200, &7200, &10);
     }
 }
