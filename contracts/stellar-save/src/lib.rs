@@ -53,6 +53,14 @@ pub struct ContractConfig {
     pub max_cycle_duration: u64,
 }
 
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemberProfile {
+    pub address: Address,
+    pub group_id: u64,
+    pub joined_at: u64,
+}
+
 impl ContractConfig {
     pub fn validate(&self) -> bool {
         self.min_contribution > 0 && 
@@ -403,6 +411,51 @@ impl StellarSaveContract {
         Ok(result)
     }
 
+    /// Retrieves detailed information about a specific member in a savings group.
+    ///
+    /// This function queries the member profile data for a given address within a specific group.
+    /// It performs validation to ensure both the group and member exist before returning the profile.
+    ///
+    /// # Parameters
+    /// - `env`: The Soroban environment for storage access
+    /// - `group_id`: The unique identifier of the group
+    /// - `address`: The Stellar address of the member to query
+    ///
+    /// # Returns
+    /// - `Ok(MemberProfile)`: The member's profile data including address, group_id, and joined_at timestamp
+    /// - `Err(StellarSaveError::GroupNotFound)`: If the specified group does not exist
+    /// - `Err(StellarSaveError::NotMember)`: If the address is not a member of the specified group
+    ///
+    /// # Example
+    /// ```ignore
+    /// let member_profile = contract.get_member_details(env, 1, member_address)?;
+    /// assert_eq!(member_profile.group_id, 1);
+    /// assert_eq!(member_profile.address, member_address);
+    /// ```
+    pub fn get_member_details(
+        env: Env,
+        group_id: u64,
+        address: Address,
+    ) -> Result<MemberProfile, StellarSaveError> {
+        // 1. Verify group exists
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        if !env.storage().persistent().has(&group_key) {
+            return Err(StellarSaveError::GroupNotFound);
+        }
+        
+        // 2. Build member profile storage key
+        let member_key = StorageKeyBuilder::member_profile(group_id, address.clone());
+        
+        // 3. Retrieve member profile from storage
+        let member_profile: MemberProfile = env.storage()
+            .persistent()
+            .get(&member_key)
+            .ok_or(StellarSaveError::NotMember)?;
+        
+        // 4. Return member profile
+        Ok(member_profile)
+    }
+
     /// Activates a group once minimum members have joined.
     /// 
     /// # Arguments
@@ -746,5 +799,144 @@ mod tests {
         
         // Test: Attempt to list members for a non-existent group
         client.list_group_members(&999, &0, &10);
+    }
+
+    // Task 4.1: Test successful member retrieval
+    #[test]
+    fn test_get_member_details_success() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        // Setup: Create a group and add a member
+        let group_id = 1;
+        let member_address = Address::generate(&env);
+        let joined_at = 1704067200u64;
+        
+        // Store group data
+        let group = Group::new(group_id, Address::generate(&env), 100, 3600, 5, joined_at);
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        env.storage().persistent().set(&group_key, &group);
+        
+        // Store member profile
+        let member_profile = MemberProfile {
+            address: member_address.clone(),
+            group_id,
+            joined_at,
+        };
+        let member_key = StorageKeyBuilder::member_profile(group_id, member_address.clone());
+        env.storage().persistent().set(&member_key, &member_profile);
+        
+        // Test: Call get_member_details
+        let result = client.get_member_details(&group_id, &member_address);
+        
+        // Assert: Verify the result is correct
+        assert_eq!(result.address, member_address);
+        assert_eq!(result.group_id, group_id);
+        assert_eq!(result.joined_at, joined_at);
+    }
+
+    // Task 4.2: Test group not found error
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1001))")] // 1001 is GroupNotFound
+    fn test_get_member_details_group_not_found() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        // Test: Call get_member_details with non-existent group_id
+        let member_address = Address::generate(&env);
+        client.get_member_details(&999, &member_address);
+    }
+
+    // Task 4.3: Test member not found error
+    #[test]
+    #[should_panic(expected = "Status(ContractError(2002))")] // 2002 is NotMember
+    fn test_get_member_details_member_not_found() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        // Setup: Create a group without adding the member
+        let group_id = 1;
+        let member_address = Address::generate(&env);
+        let joined_at = 1704067200u64;
+        
+        // Store group data
+        let group = Group::new(group_id, Address::generate(&env), 100, 3600, 5, joined_at);
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        env.storage().persistent().set(&group_key, &group);
+        
+        // Test: Call get_member_details with valid group but non-member address
+        client.get_member_details(&group_id, &member_address);
+    }
+
+    // Task 4.4: Test idempotence property
+    #[test]
+    fn test_get_member_details_idempotence() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        // Setup: Create a group and add a member
+        let group_id = 1;
+        let member_address = Address::generate(&env);
+        let joined_at = 1704067200u64;
+        
+        // Store group data
+        let group = Group::new(group_id, Address::generate(&env), 100, 3600, 5, joined_at);
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        env.storage().persistent().set(&group_key, &group);
+        
+        // Store member profile
+        let member_profile = MemberProfile {
+            address: member_address.clone(),
+            group_id,
+            joined_at,
+        };
+        let member_key = StorageKeyBuilder::member_profile(group_id, member_address.clone());
+        env.storage().persistent().set(&member_key, &member_profile);
+        
+        // Test: Call get_member_details twice with same parameters
+        let result1 = client.get_member_details(&group_id, &member_address);
+        let result2 = client.get_member_details(&group_id, &member_address);
+        
+        // Assert: Both results are identical
+        assert_eq!(result1.address, result2.address);
+        assert_eq!(result1.group_id, result2.group_id);
+        assert_eq!(result1.joined_at, result2.joined_at);
+    }
+
+    // Task 4.5: Test address invariant property
+    #[test]
+    fn test_get_member_details_address_invariant() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        // Setup: Create a group and add a member
+        let group_id = 1;
+        let member_address = Address::generate(&env);
+        let joined_at = 1704067200u64;
+        
+        // Store group data
+        let group = Group::new(group_id, Address::generate(&env), 100, 3600, 5, joined_at);
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        env.storage().persistent().set(&group_key, &group);
+        
+        // Store member profile
+        let member_profile = MemberProfile {
+            address: member_address.clone(),
+            group_id,
+            joined_at,
+        };
+        let member_key = StorageKeyBuilder::member_profile(group_id, member_address.clone());
+        env.storage().persistent().set(&member_key, &member_profile);
+        
+        // Test: Call get_member_details
+        let result = client.get_member_details(&group_id, &member_address);
+        
+        // Assert: Returned address equals query address parameter
+        assert_eq!(result.address, member_address);
     }
 }
