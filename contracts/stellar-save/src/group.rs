@@ -132,6 +132,15 @@ pub struct Group {
     /// Determines total number of cycles (one payout per member).
     pub max_members: u32,
 
+    /// Minimum number of members required to activate the group.
+    /// The group cannot start until this many members have joined.
+    /// Must be at least 2 and not greater than max_members.
+    pub min_members: u32,
+
+    /// Current number of members in the group.
+    /// Tracks how many members have joined.
+    pub member_count: u32,
+
     /// Current cycle number (0-indexed).
     /// Increments after each successful payout.
     /// When current_cycle reaches max_members, the group is complete.
@@ -151,6 +160,11 @@ pub struct Group {
     /// Timestamp when the group was created (Unix timestamp in seconds).
     /// Used for tracking group age and calculating cycle deadlines.
     pub created_at: u64,
+
+    /// Timestamp when the group was activated (Unix timestamp in seconds).
+    /// Used for tracking when the first cycle started.
+    /// Only set when started is true.
+    pub started_at: u64,
 }
 
 impl Group {
@@ -162,6 +176,7 @@ impl Group {
     /// * `contribution_amount` - Amount each member contributes per cycle (in stroops)
     /// * `cycle_duration` - Duration of each cycle in seconds
     /// * `max_members` - Maximum number of members allowed
+    /// * `min_members` - Minimum number of members required to activate the group
     /// * `created_at` - Creation timestamp
     /// 
     /// # Panics
@@ -169,12 +184,15 @@ impl Group {
     /// - contribution_amount must be > 0
     /// - cycle_duration must be > 0
     /// - max_members must be >= 2
+    /// - min_members must be >= 2
+    /// - min_members must be <= max_members
     pub fn new(
         id: u64,
         creator: Address,
         contribution_amount: i128,
         cycle_duration: u64,
         max_members: u32,
+        min_members: u32,
         created_at: u64,
     ) -> Self {
         // Validate contribution amount
@@ -195,16 +213,31 @@ impl Group {
             "max_members must be at least 2"
         );
 
+        // Validate min members (minimum 2 for a meaningful ROSCA)
+        assert!(
+            min_members >= 2,
+            "min_members must be at least 2"
+        );
+
+        // Validate min_members <= max_members
+        assert!(
+            min_members <= max_members,
+            "min_members must be less than or equal to max_members"
+        );
+
         Self {
             id,
             creator,
             contribution_amount,
             cycle_duration,
             max_members,
+            min_members,
+            member_count: 0,
             current_cycle: 0,
             is_active: true,
             status: Status::Active,
             created_at,
+            started_at: 0,
         }
     }
 
@@ -283,6 +316,36 @@ impl Group {
         self.status = Status::Active;
     }
 
+    /// Activates the group (starts the first cycle) once minimum members have joined.
+    /// 
+    /// # Arguments
+    /// * `timestamp` - Current timestamp when activation occurs
+    /// 
+    /// # Panics
+    /// Panics if:
+    /// - Group has already been started
+    /// - Minimum member count has not been reached
+    pub fn activate(&mut self, timestamp: u64) {
+        // Check if already started
+        assert!(!self.started, "group has already been started");
+        
+        // Check if minimum members have joined
+        assert!(
+            self.member_count >= self.min_members,
+            "minimum members ({}) required to activate, currently have {}",
+            self.min_members,
+            self.member_count
+        );
+        
+        self.started = true;
+        self.started_at = timestamp;
+    }
+
+    /// Checks if the group has met the minimum member requirement for activation.
+    pub fn can_activate(&self) -> bool {
+        !self.started && self.member_count >= self.min_members
+    }
+
     /// Calculates the total pool amount for a cycle.
     /// This is the amount distributed to the recipient each cycle.
     pub fn total_pool_amount(&self) -> i128 {
@@ -295,6 +358,8 @@ impl Group {
         self.contribution_amount > 0
             && self.cycle_duration > 0
             && self.max_members >= 2
+            && self.min_members >= 2
+            && self.min_members <= self.max_members
             && self.current_cycle <= self.max_members
     }
 
@@ -344,6 +409,7 @@ mod tests {
             10_000_000, // 1 XLM
             604800,     // 1 week
             5,          // 5 members
+            2,          // 2 min members
             1234567890,
         );
 
@@ -352,10 +418,30 @@ mod tests {
         assert_eq!(group.contribution_amount, 10_000_000);
         assert_eq!(group.cycle_duration, 604800);
         assert_eq!(group.max_members, 5);
+        assert_eq!(group.min_members, 2);
+        assert_eq!(group.member_count, 0);
         assert_eq!(group.current_cycle, 0);
         assert_eq!(group.is_active, true);
         assert_eq!(group.status, Status::Active);
         assert_eq!(group.created_at, 1234567890);
+    }
+
+    #[test]
+    #[should_panic(expected = "min_members must be at least 2")]
+    fn test_invalid_min_members() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        
+        Group::new(1, creator, 10_000_000, 604800, 5, 1, 1234567890);
+    }
+
+    #[test]
+    #[should_panic(expected = "min_members must be less than or equal to max_members")]
+    fn test_min_members_greater_than_max() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        
+        Group::new(1, creator, 10_000_000, 604800, 3, 5, 1234567890);
     }
 
     #[test]
@@ -364,7 +450,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
         
-        Group::new(1, creator, 0, 604800, 5, 1234567890);
+        Group::new(1, creator, 0, 604800, 5, 2, 1234567890);
     }
 
     #[test]
@@ -373,7 +459,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
         
-        Group::new(1, creator, 10_000_000, 0, 5, 1234567890);
+        Group::new(1, creator, 10_000_000, 0, 5, 2, 1234567890);
     }
 
     #[test]
@@ -382,7 +468,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
         
-        Group::new(1, creator, 10_000_000, 604800, 1, 1234567890);
+        Group::new(1, creator, 10_000_000, 604800, 1, 2, 1234567890);
     }
 
     #[test]
@@ -390,7 +476,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
         
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 1234567890);
+        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 2, 1234567890);
         
         assert!(!group.is_complete());
         
@@ -406,7 +492,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
         
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 1234567890);
+        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 2, 1234567890);
         
         assert_eq!(group.current_cycle, 0);
         assert!(group.is_active);
@@ -434,7 +520,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
         
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 2, 1234567890);
+        let mut group = Group::new(1, creator, 10_000_000, 604800, 2, 2, 1234567890);
         group.current_cycle = 2;
         
         group.advance_cycle(&env); // Should panic
@@ -445,7 +531,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
         
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 1234567890);
+        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 2, 1234567890);
         
         assert!(group.is_active);
         assert_eq!(group.status, Status::Active);
@@ -533,7 +619,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
         
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 2, 1234567890);
+        let mut group = Group::new(1, creator, 10_000_000, 604800, 2, 2, 1234567890);
         group.current_cycle = 2;
         
         group.reactivate(); // Should panic
@@ -544,7 +630,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
         
-        let group = Group::new(1, creator, 10_000_000, 604800, 5, 1234567890);
+        let group = Group::new(1, creator, 10_000_000, 604800, 5, 2, 1234567890);
         
         assert_eq!(group.total_pool_amount(), 50_000_000); // 5 XLM total
     }
@@ -554,7 +640,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
         
-        let group = Group::new(1, creator, 10_000_000, 604800, 5, 1234567890);
+        let group = Group::new(1, creator, 10_000_000, 604800, 5, 2, 1234567890);
         assert!(group.validate());
     }
 
