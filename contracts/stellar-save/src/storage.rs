@@ -138,6 +138,9 @@ pub enum CounterKey {
     /// Contract version: COUNTER_VERSION
     /// Tracks contract version for upgrade compatibility.
     ContractVersion,
+
+    /// Global contract configuration.
+    ContractConfig,
 }
 
 /// Utility functions for creating storage keys with consistent formatting.
@@ -240,6 +243,11 @@ impl StorageKeyBuilder {
     /// Creates a key for contract version.
     pub fn contract_version() -> StorageKey {
         StorageKey::Counter(CounterKey::ContractVersion)
+    }
+
+    /// Creates a key for the global contract configuration.
+    pub fn contract_config() -> StorageKey {
+        StorageKey::Counter(CounterKey::ContractConfig)
     }
 }
 

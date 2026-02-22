@@ -69,6 +69,10 @@ pub enum StellarSaveError {
     /// The contract data is corrupted or invalid.
     /// Error Code: 9002
     DataCorruption = 9002,
+
+    /// Added for ID Generation: The counter has reached its maximum limit.
+    /// Error Code: 9003
+    Overflow = 9003,
 }
 
 impl StellarSaveError {
@@ -149,6 +153,14 @@ impl StellarSaveError {
             4000..=4999 => ErrorCategory::Payout,
             9000..=9999 => ErrorCategory::System,
             _ => ErrorCategory::Unknown,
+        }
+    }
+    
+    pub fn message(&self) -> &'static str {
+    match self {
+        // ... existing matches ...
+        StellarSaveError::Overflow => {
+            "The ID counter has reached its maximum limit. No more IDs can be generated."
         }
     }
 }
