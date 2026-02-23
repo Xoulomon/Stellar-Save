@@ -773,6 +773,7 @@ impl StellarSaveContract {
         Ok(contributions)
     }
 
+    /// Checks if a member has contributed for a specific cycle.
     /// Checks if all members have contributed for the current cycle.
     /// 
     /// # Arguments
