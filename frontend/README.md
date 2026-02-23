@@ -18,6 +18,7 @@ This project is configured with **MUI** and a centralized theme/wrapper layer.
 - Theme creation: `src/ui/theme/theme.ts`
 - Theme provider: `src/ui/providers/AppThemeProvider.tsx`
 - Wrappers: `src/ui/components/index.ts`
+- Layout: `src/ui/layout/AppLayout.tsx`
 
 ## Wallet Integration
 

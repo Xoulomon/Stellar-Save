@@ -2,6 +2,7 @@ import {
   Alert,
   Box,
   Chip,
+  Divider,
   Stack,
   Typography,
 } from "@mui/material";
@@ -9,9 +10,11 @@ import { useWallet } from "./hooks/useWallet";
 import {
   AppButton,
   AppCard,
+  AppLayout,
   AppSelectField,
+  type LayoutNavItem,
   type SelectOption,
-} from "./ui/components";
+} from "./ui";
 
 function App() {
   const {
@@ -39,19 +42,36 @@ function App() {
     connectedAccounts.length === 0
       ? [{ value: "", label: "No accounts connected" }]
       : connectedAccounts.map((address) => ({ value: address, label: address }));
+  const navItems: LayoutNavItem[] = [
+    { key: "dashboard", label: "Dashboard" },
+    { key: "wallets", label: "Wallets" },
+    { key: "activity", label: "Activity" },
+  ];
+  const sidebar = (
+    <AppCard>
+      <Stack spacing={1.5}>
+        <Typography variant="subtitle2" color="text.secondary">
+          Wallet Summary
+        </Typography>
+        <Divider />
+        <Typography variant="body2">
+          Selected wallet: {selectedWallet?.name ?? "None"}
+        </Typography>
+        <Typography variant="body2">Connected accounts: {connectedAccounts.length}</Typography>
+        <Typography variant="body2">Network: {network ?? "Not connected"}</Typography>
+      </Stack>
+    </AppCard>
+  );
 
   return (
-    <Box
-      component="main"
-      sx={{
-        minHeight: "100vh",
-        width: "100%",
-        display: "grid",
-        placeItems: "center",
-        p: { xs: 2, md: 4 },
-      }}
+    <AppLayout
+      title="Stellar Save"
+      subtitle="Secure savings powered by Stellar wallets"
+      navItems={navItems}
+      sidebar={sidebar}
+      footerText="Stellar Save - Built for transparent, on-chain savings"
     >
-      <AppCard sx={{ width: "min(760px, 100%)" }}>
+      <AppCard>
         <Stack spacing={2}>
           <Box>
             <Typography
@@ -123,8 +143,9 @@ function App() {
           {error ? <Alert severity="error">{error}</Alert> : null}
         </Stack>
       </AppCard>
-    </Box>
+    </AppLayout>
   );
 }
 
 export default App;
+

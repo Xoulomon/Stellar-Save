@@ -34,20 +34,24 @@ Wrappers provide a stable app-level API around MUI:
 - `AppButton` in `src/ui/components/AppButton.tsx`
 - `AppCard` in `src/ui/components/AppCard.tsx`
 - `AppSelectField` in `src/ui/components/AppSelectField.tsx`
+- `AppLayout` in `src/ui/layout/AppLayout.tsx` (header, footer, optional sidebar, mobile menu)
 - Exports in `src/ui/components/index.ts`
+- Re-exported from `src/ui/index.ts`
 
 Use wrappers for app screens unless there is a specific reason to consume raw MUI components directly.
 
 ## Usage example
 
 ```tsx
-import { AppButton, AppCard } from "./ui/components";
+import { AppButton, AppCard, AppLayout } from "./ui";
 
 export function ExamplePanel() {
   return (
-    <AppCard>
-      <AppButton>Save</AppButton>
-    </AppCard>
+    <AppLayout title="Dashboard">
+      <AppCard>
+        <AppButton>Save</AppButton>
+      </AppCard>
+    </AppLayout>
   );
 }
 ```
