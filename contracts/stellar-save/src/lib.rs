@@ -662,6 +662,36 @@ impl StellarSaveContract {
         Ok(contributions)
     }
 
+    /// Checks if all members have contributed for the current cycle.
+    /// 
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    /// * `cycle_number` - The cycle number to check
+    /// 
+    /// # Returns
+    /// * `Ok(bool)` - true if all members contributed, false otherwise
+    /// * `Err(StellarSaveError)` if group not found
+    pub fn is_cycle_complete(
+        env: Env,
+        group_id: u64,
+        cycle_number: u32,
+    ) -> Result<bool, StellarSaveError> {
+        let members_key = StorageKeyBuilder::group_members(group_id);
+        let members: Vec<Address> = env.storage()
+            .persistent()
+            .get(&members_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+        
+        let count_key = StorageKeyBuilder::contribution_cycle_count(group_id, cycle_number);
+        let contributed_count: u32 = env.storage()
+            .persistent()
+            .get(&count_key)
+            .unwrap_or(0);
+        
+        Ok(contributed_count >= members.len())
+    }
+
     /// Allows a user to join an existing savings group.
     /// 
     /// Users can join groups that are in Pending status (not yet activated).
@@ -2099,4 +2129,164 @@ mod tests {
         let final_group: Group = env.storage().persistent().get(&group_key).unwrap();
         assert_eq!(final_group.member_count, 4);
     }
+
+    #[test]
+    fn test_is_cycle_complete_all_contributed() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let member3 = Address::generate(&env);
+        let group_id = 1;
+        let cycle = 0;
+        
+        // Setup: Create members list
+        let mut members = Vec::new(&env);
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        members.push_back(member3.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Setup: All members contributed
+        let count_key = StorageKeyBuilder::contribution_cycle_count(group_id, cycle);
+        env.storage().persistent().set(&count_key, &3u32);
+        
+        // Action: Check if cycle complete
+        let is_complete = client.is_cycle_complete(&group_id, &cycle);
+        
+        // Verify: Cycle is complete
+        assert_eq!(is_complete, true);
+    }
+
+    #[test]
+    fn test_is_cycle_complete_partial_contributions() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let member3 = Address::generate(&env);
+        let group_id = 1;
+        let cycle = 0;
+        
+        // Setup: Create members list
+        let mut members = Vec::new(&env);
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        members.push_back(member3.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Setup: Only 2 out of 3 members contributed
+        let count_key = StorageKeyBuilder::contribution_cycle_count(group_id, cycle);
+        env.storage().persistent().set(&count_key, &2u32);
+        
+        // Action: Check if cycle complete
+        let is_complete = client.is_cycle_complete(&group_id, &cycle);
+        
+        // Verify: Cycle is not complete
+        assert_eq!(is_complete, false);
+    }
+
+    #[test]
+    fn test_is_cycle_complete_no_contributions() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let group_id = 1;
+        let cycle = 0;
+        
+        // Setup: Create members list
+        let mut members = Vec::new(&env);
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Setup: No contributions (count defaults to 0)
+        
+        // Action: Check if cycle complete
+        let is_complete = client.is_cycle_complete(&group_id, &cycle);
+        
+        // Verify: Cycle is not complete
+        assert_eq!(is_complete, false);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1001))")] // GroupNotFound
+    fn test_is_cycle_complete_group_not_found() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        // Action: Try to check non-existent group
+        client.is_cycle_complete(&999, &0);
+    }
+
+    #[test]
+    fn test_is_cycle_complete_different_cycles() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let group_id = 1;
+        
+        // Setup: Create members list
+        let mut members = Vec::new(&env);
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Setup: Cycle 0 is complete, cycle 1 is not
+        let count_key0 = StorageKeyBuilder::contribution_cycle_count(group_id, 0);
+        env.storage().persistent().set(&count_key0, &2u32);
+        
+        let count_key1 = StorageKeyBuilder::contribution_cycle_count(group_id, 1);
+        env.storage().persistent().set(&count_key1, &1u32);
+        
+        // Action: Check both cycles
+        let is_complete_0 = client.is_cycle_complete(&group_id, &0);
+        let is_complete_1 = client.is_cycle_complete(&group_id, &1);
+        
+        // Verify: Cycle 0 complete, cycle 1 not complete
+        assert_eq!(is_complete_0, true);
+        assert_eq!(is_complete_1, false);
+    }
+
+    #[test]
+    fn test_is_cycle_complete_exact_count() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let member3 = Address::generate(&env);
+        let group_id = 1;
+        let cycle = 0;
+        
+        // Setup: Create members list with 3 members
+        let mut members = Vec::new(&env);
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        members.push_back(member3.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Setup: Exactly 3 contributions (equal to member count)
+        let count_key = StorageKeyBuilder::contribution_cycle_count(group_id, cycle);
+        env.storage().persistent().set(&count_key, &3u32);
+        
+        // Action: Check if cycle complete
+        let is_complete = client.is_cycle_complete(&group_id, &cycle);
+        
+        // Verify: Cycle is complete (equal counts)
+        assert_eq!(is_complete, true);
+    }
 }
+
