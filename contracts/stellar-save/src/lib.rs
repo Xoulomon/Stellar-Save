@@ -456,6 +456,109 @@ impl StellarSaveContract {
         Ok(member_profile)
     }
 
+    /// Allows a user to join an existing savings group.
+    /// 
+    /// Users can join groups that are in Pending status (not yet activated).
+    /// This function verifies the group is joinable, checks capacity, assigns
+    /// a payout position, and stores the member's profile data.
+    /// 
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group to join
+    /// * `member` - Address of the user joining (must be caller)
+    /// 
+    /// # Returns
+    /// * `Ok(())` - Member successfully joined the group
+    /// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
+    /// * `Err(StellarSaveError::AlreadyMember)` - User is already a member
+    /// * `Err(StellarSaveError::GroupFull)` - Group has reached max capacity
+    /// * `Err(StellarSaveError::InvalidState)` - Group is not in joinable state
+    /// 
+    /// # Example
+    /// ```ignore
+    /// contract.join_group(env, 1, member_address)?;
+    /// ```
+    pub fn join_group(
+        env: Env,
+        group_id: u64,
+        member: Address,
+    ) -> Result<(), StellarSaveError> {
+        // Verify caller authorization
+        member.require_auth();
+        
+        // Task 1: Verify group exists and is joinable
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let mut group: Group = env.storage()
+            .persistent()
+            .get(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+        
+        // Check group status is Pending (joinable)
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        let status: GroupStatus = env.storage()
+            .persistent()
+            .get(&status_key)
+            .unwrap_or(GroupStatus::Pending);
+        
+        if status != GroupStatus::Pending {
+            return Err(StellarSaveError::InvalidState);
+        }
+        
+        // Task 2: Check not already member
+        let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
+        if env.storage().persistent().has(&member_key) {
+            return Err(StellarSaveError::AlreadyMember);
+        }
+        
+        // Task 3: Check group not full
+        if group.member_count >= group.max_members {
+            return Err(StellarSaveError::GroupFull);
+        }
+        
+        // Task 4: Assign payout position
+        // Payout position is based on join order (member_count)
+        let payout_position = group.member_count;
+        
+        // Task 5: Store member data
+        let timestamp = env.ledger().timestamp();
+        
+        // Store member profile
+        let member_profile = MemberProfile {
+            address: member.clone(),
+            group_id,
+            joined_at: timestamp,
+        };
+        env.storage().persistent().set(&member_key, &member_profile);
+        
+        // Add to member list
+        let members_key = StorageKeyBuilder::group_members(group_id);
+        let mut members: Vec<Address> = env.storage()
+            .persistent()
+            .get(&members_key)
+            .unwrap_or(Vec::new(&env));
+        members.push_back(member.clone());
+        env.storage().persistent().set(&members_key, &members);
+        
+        // Store payout eligibility (position in payout order)
+        let payout_key = StorageKeyBuilder::member_payout_eligibility(group_id, member.clone());
+        env.storage().persistent().set(&payout_key, &payout_position);
+        
+        // Update group member count
+        group.member_count += 1;
+        env.storage().persistent().set(&group_key, &group);
+        
+        // Emit event
+        EventEmitter::emit_member_joined(
+            &env,
+            group_id,
+            member,
+            group.member_count,
+            timestamp,
+        );
+        
+        Ok(())
+    }
+
     /// Activates a group once minimum members have joined.
     /// 
     /// # Arguments
@@ -938,5 +1041,218 @@ mod tests {
         
         // Assert: Returned address equals query address parameter
         assert_eq!(result.address, member_address);
+    }
+
+    // Task 6: Tests for join_group function
+    
+    // Task 6.1: Test successful member joining
+    #[test]
+    fn test_join_group_success() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        // Setup: Create a group
+        let group_id = 1;
+        let creator = Address::generate(&env);
+        let new_member = Address::generate(&env);
+        let joined_at = 1704067200u64;
+        
+        // Store group data
+        let mut group = Group::new(group_id, creator.clone(), 100, 3600, 5, 2, joined_at);
+        group.member_count = 1; // Creator already joined
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        env.storage().persistent().set(&group_key, &group);
+        
+        // Store group status as Pending
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        env.storage().persistent().set(&status_key, &GroupStatus::Pending);
+        
+        // Store initial member list with creator
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        let members_key = StorageKeyBuilder::group_members(group_id);
+        env.storage().persistent().set(&members_key, &members);
+        
+        // Test: New member joins
+        client.join_group(&group_id, &new_member);
+        
+        // Assert: Member profile created
+        let member_key = StorageKeyBuilder::member_profile(group_id, new_member.clone());
+        assert!(env.storage().persistent().has(&member_key));
+        
+        let profile: MemberProfile = env.storage().persistent().get(&member_key).unwrap();
+        assert_eq!(profile.address, new_member);
+        assert_eq!(profile.group_id, group_id);
+        
+        // Assert: Member added to list
+        let updated_members: Vec<Address> = env.storage().persistent().get(&members_key).unwrap();
+        assert_eq!(updated_members.len(), 2);
+        assert_eq!(updated_members.get(1).unwrap(), new_member);
+        
+        // Assert: Member count increased
+        let updated_group: Group = env.storage().persistent().get(&group_key).unwrap();
+        assert_eq!(updated_group.member_count, 2);
+        
+        // Assert: Payout position assigned
+        let payout_key = StorageKeyBuilder::member_payout_eligibility(group_id, new_member.clone());
+        let payout_position: u32 = env.storage().persistent().get(&payout_key).unwrap();
+        assert_eq!(payout_position, 1); // Second member gets position 1
+    }
+    
+    // Task 6.2: Test joining non-existent group
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1001))")] // 1001 is GroupNotFound
+    fn test_join_group_not_found() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let member = Address::generate(&env);
+        
+        // Test: Try to join non-existent group
+        client.join_group(&999, &member);
+    }
+    
+    // Task 6.3: Test joining when already a member
+    #[test]
+    #[should_panic(expected = "Status(ContractError(2001))")] // 2001 is AlreadyMember
+    fn test_join_group_already_member() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        // Setup: Create a group with a member
+        let group_id = 1;
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+        let joined_at = 1704067200u64;
+        
+        // Store group data
+        let group = Group::new(group_id, creator.clone(), 100, 3600, 5, 2, joined_at);
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        env.storage().persistent().set(&group_key, &group);
+        
+        // Store group status as Pending
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        env.storage().persistent().set(&status_key, &GroupStatus::Pending);
+        
+        // Store member profile (already a member)
+        let member_profile = MemberProfile {
+            address: member.clone(),
+            group_id,
+            joined_at,
+        };
+        let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
+        env.storage().persistent().set(&member_key, &member_profile);
+        
+        // Test: Member tries to join again
+        client.join_group(&group_id, &member);
+    }
+    
+    // Task 6.4: Test joining when group is full
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1002))")] // 1002 is GroupFull
+    fn test_join_group_full() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        // Setup: Create a full group
+        let group_id = 1;
+        let creator = Address::generate(&env);
+        let new_member = Address::generate(&env);
+        let joined_at = 1704067200u64;
+        
+        // Store group data with max_members = 3 and member_count = 3 (full)
+        let mut group = Group::new(group_id, creator.clone(), 100, 3600, 3, 2, joined_at);
+        group.member_count = 3;
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        env.storage().persistent().set(&group_key, &group);
+        
+        // Store group status as Pending
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        env.storage().persistent().set(&status_key, &GroupStatus::Pending);
+        
+        // Test: Try to join full group
+        client.join_group(&group_id, &new_member);
+    }
+    
+    // Task 6.5: Test joining when group is already active
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1003))")] // 1003 is InvalidState
+    fn test_join_group_already_active() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        // Setup: Create an active group
+        let group_id = 1;
+        let creator = Address::generate(&env);
+        let new_member = Address::generate(&env);
+        let joined_at = 1704067200u64;
+        
+        // Store group data
+        let group = Group::new(group_id, creator.clone(), 100, 3600, 5, 2, joined_at);
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        env.storage().persistent().set(&group_key, &group);
+        
+        // Store group status as Active
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        env.storage().persistent().set(&status_key, &GroupStatus::Active);
+        
+        // Test: Try to join active group
+        client.join_group(&group_id, &new_member);
+    }
+    
+    // Task 6.6: Test payout position assignment
+    #[test]
+    fn test_join_group_payout_position_assignment() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        // Setup: Create a group with some members
+        let group_id = 1;
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let member3 = Address::generate(&env);
+        let joined_at = 1704067200u64;
+        
+        // Store group data
+        let mut group = Group::new(group_id, creator.clone(), 100, 3600, 5, 2, joined_at);
+        group.member_count = 2; // Creator and one member already joined
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        env.storage().persistent().set(&group_key, &group);
+        
+        // Store group status as Pending
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        env.storage().persistent().set(&status_key, &GroupStatus::Pending);
+        
+        // Store initial member list
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        members.push_back(member1.clone());
+        let members_key = StorageKeyBuilder::group_members(group_id);
+        env.storage().persistent().set(&members_key, &members);
+        
+        // Test: Member2 joins (should get position 2)
+        client.join_group(&group_id, &member2);
+        
+        let payout_key2 = StorageKeyBuilder::member_payout_eligibility(group_id, member2.clone());
+        let position2: u32 = env.storage().persistent().get(&payout_key2).unwrap();
+        assert_eq!(position2, 2);
+        
+        // Test: Member3 joins (should get position 3)
+        client.join_group(&group_id, &member3);
+        
+        let payout_key3 = StorageKeyBuilder::member_payout_eligibility(group_id, member3.clone());
+        let position3: u32 = env.storage().persistent().get(&payout_key3).unwrap();
+        assert_eq!(position3, 3);
+        
+        // Assert: Final member count is correct
+        let final_group: Group = env.storage().persistent().get(&group_key).unwrap();
+        assert_eq!(final_group.member_count, 4);
     }
 }
