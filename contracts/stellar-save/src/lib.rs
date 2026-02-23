@@ -843,6 +843,65 @@ impl StellarSaveContract {
         Ok(contributed_count >= members.len())
     }
 
+    /// Identifies members who haven't contributed in the specified cycle.
+    /// 
+    /// This function returns a vector of addresses for members who are part of the group
+    /// but have not made their contribution for the given cycle. This is useful for:
+    /// - Tracking delinquent members
+    /// - Sending reminders
+    /// - Determining if a cycle can be completed
+    /// - Enforcing contribution deadlines
+    /// 
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group to check
+    /// * `cycle_number` - The cycle number to check for missed contributions
+    /// 
+    /// # Returns
+    /// * `Ok(Vec<Address>)` - Vector of addresses who haven't contributed
+    /// * `Err(StellarSaveError::GroupNotFound)` - If the group doesn't exist
+    /// 
+    /// # Example
+    /// ```ignore
+    /// // Get members who missed contributions in cycle 0
+    /// let missed = contract.get_missed_contributions(env, 1, 0)?;
+    /// for member in missed.iter() {
+    ///     // Send reminder to member
+    /// }
+    /// ```
+    pub fn get_missed_contributions(
+        env: Env,
+        group_id: u64,
+        cycle_number: u32,
+    ) -> Result<Vec<Address>, StellarSaveError> {
+        // 1. Get all members in the group
+        let members_key = StorageKeyBuilder::group_members(group_id);
+        let members: Vec<Address> = env.storage()
+            .persistent()
+            .get(&members_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+        
+        // 2. Initialize result vector for non-contributors
+        let mut missed_members = Vec::new(&env);
+        
+        // 3. Check each member's contribution status for this cycle
+        for member in members.iter() {
+            let contrib_key = StorageKeyBuilder::contribution_individual(
+                group_id,
+                cycle_number,
+                member.clone()
+            );
+            
+            // If no contribution record exists for this member in this cycle, they missed it
+            if !env.storage().persistent().has(&contrib_key) {
+                missed_members.push_back(member);
+            }
+        }
+        
+        // 4. Return vector of addresses who haven't contributed
+        Ok(missed_members)
+    }
+
     /// Allows a user to join an existing savings group.
     /// 
     /// Users can join groups that are in Pending status (not yet activated).
@@ -2814,6 +2873,277 @@ mod tests {
         });
         assert!(result2.is_err());
         assert_eq!(result2.unwrap_err(), StellarSaveError::InvalidAmount);
+    }
+
+    // Tests for get_missed_contributions function
+    
+    #[test]
+    fn test_get_missed_contributions_all_contributed() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let member3 = Address::generate(&env);
+        let group_id = 1;
+        let cycle = 0;
+        
+        // Setup: Create members list
+        let mut members = Vec::new(&env);
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        members.push_back(member3.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Setup: All members contributed
+        for member in members.iter() {
+            let contrib = ContributionRecord::new(
+                member.clone(),
+                group_id,
+                cycle,
+                10_000_000,
+                12345,
+            );
+            let contrib_key = StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
+            env.storage().persistent().set(&contrib_key, &contrib);
+        }
+        
+        // Action: Get missed contributions
+        let missed = client.get_missed_contributions(&group_id, &cycle);
+        
+        // Verify: No one missed
+        assert_eq!(missed.len(), 0);
+    }
+    
+    #[test]
+    fn test_get_missed_contributions_some_missed() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let member3 = Address::generate(&env);
+        let group_id = 1;
+        let cycle = 0;
+        
+        // Setup: Create members list
+        let mut members = Vec::new(&env);
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        members.push_back(member3.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Setup: Only member1 contributed (member2 and member3 missed)
+        let contrib = ContributionRecord::new(
+            member1.clone(),
+            group_id,
+            cycle,
+            10_000_000,
+            12345,
+        );
+        let contrib_key = StorageKeyBuilder::contribution_individual(group_id, cycle, member1.clone());
+        env.storage().persistent().set(&contrib_key, &contrib);
+        
+        // Action: Get missed contributions
+        let missed = client.get_missed_contributions(&group_id, &cycle);
+        
+        // Verify: member2 and member3 missed
+        assert_eq!(missed.len(), 2);
+        
+        // Check that the missed members are member2 and member3
+        let mut found_member2 = false;
+        let mut found_member3 = false;
+        for member in missed.iter() {
+            if member == member2 {
+                found_member2 = true;
+            }
+            if member == member3 {
+                found_member3 = true;
+            }
+        }
+        assert!(found_member2);
+        assert!(found_member3);
+    }
+    
+    #[test]
+    fn test_get_missed_contributions_all_missed() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let group_id = 1;
+        let cycle = 0;
+        
+        // Setup: Create members list
+        let mut members = Vec::new(&env);
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Setup: No contributions made
+        
+        // Action: Get missed contributions
+        let missed = client.get_missed_contributions(&group_id, &cycle);
+        
+        // Verify: All members missed
+        assert_eq!(missed.len(), 2);
+        assert_eq!(missed.get(0).unwrap(), member1);
+        assert_eq!(missed.get(1).unwrap(), member2);
+    }
+    
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1001))")] // GroupNotFound
+    fn test_get_missed_contributions_group_not_found() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        // Action: Try to get missed contributions for non-existent group
+        client.get_missed_contributions(&999, &0);
+    }
+    
+    #[test]
+    fn test_get_missed_contributions_different_cycles() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let group_id = 1;
+        
+        // Setup: Create members list
+        let mut members = Vec::new(&env);
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Setup: member1 contributed in cycle 0, member2 contributed in cycle 1
+        let contrib0 = ContributionRecord::new(
+            member1.clone(),
+            group_id,
+            0,
+            10_000_000,
+            12345,
+        );
+        let contrib_key0 = StorageKeyBuilder::contribution_individual(group_id, 0, member1.clone());
+        env.storage().persistent().set(&contrib_key0, &contrib0);
+        
+        let contrib1 = ContributionRecord::new(
+            member2.clone(),
+            group_id,
+            1,
+            10_000_000,
+            12345 + 3600,
+        );
+        let contrib_key1 = StorageKeyBuilder::contribution_individual(group_id, 1, member2.clone());
+        env.storage().persistent().set(&contrib_key1, &contrib1);
+        
+        // Action: Check cycle 0
+        let missed_cycle0 = client.get_missed_contributions(&group_id, &0);
+        assert_eq!(missed_cycle0.len(), 1);
+        assert_eq!(missed_cycle0.get(0).unwrap(), member2);
+        
+        // Action: Check cycle 1
+        let missed_cycle1 = client.get_missed_contributions(&group_id, &1);
+        assert_eq!(missed_cycle1.len(), 1);
+        assert_eq!(missed_cycle1.get(0).unwrap(), member1);
+    }
+    
+    #[test]
+    fn test_get_missed_contributions_empty_group() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let group_id = 1;
+        let cycle = 0;
+        
+        // Setup: Create empty members list
+        let members = Vec::new(&env);
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Action: Get missed contributions
+        let missed = client.get_missed_contributions(&group_id, &cycle);
+        
+        // Verify: No members, so no one missed
+        assert_eq!(missed.len(), 0);
+    }
+    
+    #[test]
+    fn test_get_missed_contributions_single_member() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let member = Address::generate(&env);
+        let group_id = 1;
+        let cycle = 0;
+        
+        // Setup: Create single member group
+        let mut members = Vec::new(&env);
+        members.push_back(member.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Setup: Member didn't contribute
+        
+        // Action: Get missed contributions
+        let missed = client.get_missed_contributions(&group_id, &cycle);
+        
+        // Verify: Single member missed
+        assert_eq!(missed.len(), 1);
+        assert_eq!(missed.get(0).unwrap(), member);
+    }
+    
+    #[test]
+    fn test_get_missed_contributions_large_group() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let group_id = 1;
+        let cycle = 0;
+        
+        // Setup: Create group with 10 members
+        let mut members = Vec::new(&env);
+        let mut member_addresses = Vec::new(&env);
+        for _ in 0..10 {
+            let member = Address::generate(&env);
+            members.push_back(member.clone());
+            member_addresses.push_back(member);
+        }
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Setup: Only first 5 members contributed
+        for i in 0..5 {
+            let member = member_addresses.get(i).unwrap();
+            let contrib = ContributionRecord::new(
+                member.clone(),
+                group_id,
+                cycle,
+                10_000_000,
+                12345,
+            );
+            let contrib_key = StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
+            env.storage().persistent().set(&contrib_key, &contrib);
+        }
+        
+        // Action: Get missed contributions
+        let missed = client.get_missed_contributions(&group_id, &cycle);
+        
+        // Verify: Last 5 members missed
+        assert_eq!(missed.len(), 5);
+        
+        // Verify the missed members are the last 5
+        for i in 0..5 {
+            let expected_member = member_addresses.get(i + 5).unwrap();
+            let missed_member = missed.get(i).unwrap();
+            assert_eq!(missed_member, expected_member);
+        }
     }
 }
 
