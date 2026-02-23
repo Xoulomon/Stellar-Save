@@ -55,6 +55,14 @@ pub struct ContractConfig {
     pub max_cycle_duration: u64,
 }
 
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemberProfile {
+    pub address: Address,
+    pub group_id: u64,
+    pub joined_at: u64,
+}
+
 impl ContractConfig {
     pub fn validate(&self) -> bool {
         self.min_contribution > 0 && 
