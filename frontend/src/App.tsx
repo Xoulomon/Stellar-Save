@@ -17,6 +17,7 @@ import {
   type SelectOption,
 } from "./ui";
 import { SearchBar } from "./components";
+import { Dropdown } from "./components";
 import { Tabs, type Tab } from "./components";
 
 function App() {
@@ -259,7 +260,6 @@ function App() {
       </AppCard>
     </AppLayout>
   );
-}
 }
 
 export default App;
