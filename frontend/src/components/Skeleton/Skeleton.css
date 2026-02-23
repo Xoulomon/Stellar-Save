@@ -1,0 +1,89 @@
+:root {
+  --skeleton-bg: #e9ecef;
+  --skeleton-highlight: rgba(255, 255, 255, 0.6);
+}
+
+.skeleton {
+  display: inline-block;
+  background-color: var(--skeleton-bg);
+  width: var(--skeleton-width, 100%);
+  height: var(--skeleton-height, 1rem);
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -150%;
+  height: 100%;
+  width: 150%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--skeleton-highlight) 50%,
+    transparent 100%
+  );
+  transform: translateX(0);
+}
+
+.skeleton--animated::after {
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton--text {
+  height: 1rem;
+  border-radius: 4px;
+}
+
+.skeleton--rect {
+  border-radius: 6px;
+}
+
+.skeleton--card {
+  width: var(--skeleton-width, 100%);
+  height: var(--skeleton-height, 120px);
+  border-radius: 8px;
+}
+
+.skeleton--circle {
+  border-radius: 50%;
+  width: var(--skeleton-width, 40px);
+  height: var(--skeleton-height, 40px);
+}
+
+.skeleton--avatar {
+  border-radius: 50%;
+  width: var(--skeleton-width, 48px);
+  height: var(--skeleton-height, 48px);
+}
+
+.skeleton--rounded {
+  border-radius: 999px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .skeleton--avatar {
+    width: var(--skeleton-width, 40px);
+    height: var(--skeleton-height, 40px);
+  }
+  .skeleton--card {
+    height: var(--skeleton-height, 96px);
+  }
+}
+
+/* Utility helpers */
+.skeleton--block {
+  display: block;
+}

@@ -1,0 +1,94 @@
+.btn {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.25s, opacity 0.25s, background-color 0.25s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+}
+
+/* Variants */
+.btn-primary {
+  background-color: #646cff;
+  color: #fff;
+  border-color: #646cff;
+}
+.btn-primary:hover:not(:disabled) {
+  background-color: #535bf2;
+  border-color: #535bf2;
+}
+
+.btn-secondary {
+  background-color: #1a1a1a;
+  color: rgba(255, 255, 255, 0.87);
+  border-color: #646cff;
+}
+.btn-secondary:hover:not(:disabled) {
+  background-color: #2a2a2a;
+}
+
+.btn-danger {
+  background-color: #e53e3e;
+  color: #fff;
+  border-color: #e53e3e;
+}
+.btn-danger:hover:not(:disabled) {
+  background-color: #c53030;
+  border-color: #c53030;
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: #646cff;
+  border-color: transparent;
+}
+.btn-ghost:hover:not(:disabled) {
+  background-color: rgba(100, 108, 255, 0.1);
+}
+
+/* Sizes */
+.btn-sm {
+  font-size: 0.8em;
+  padding: 0.4em 0.8em;
+}
+
+.btn-md {
+  font-size: 1em;
+  padding: 0.6em 1.2em;
+}
+
+.btn-lg {
+  font-size: 1.2em;
+  padding: 0.8em 1.6em;
+}
+
+/* States */
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-loading {
+  cursor: wait;
+  opacity: 0.8;
+}
+
+/* Spinner */
+.btn-spinner {
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
