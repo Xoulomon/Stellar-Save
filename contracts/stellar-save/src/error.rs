@@ -48,6 +48,10 @@ pub enum StellarSaveError {
     /// Error Code: 3003
     CycleNotComplete = 3003,
     
+    /// The contribution record was not found.
+    /// Error Code: 3004
+    ContributionNotFound = 3004,
+    
     // Payout-related errors (4000-4999)
     /// The payout operation failed due to insufficient funds or transfer error.
     /// Error Code: 4001
@@ -113,6 +117,9 @@ impl StellarSaveError {
             }
             StellarSaveError::CycleNotComplete => {
                 "The current cycle is not complete. All members must contribute before payout."
+            }
+            StellarSaveError::ContributionNotFound => {
+                "The contribution record was not found for the specified member and cycle."
             }
             
             // Payout-related errors

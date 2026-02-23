@@ -93,6 +93,18 @@ pub struct MemberProfile {
     pub joined_at: u64,
 }
 
+/// Assignment mode for payout positions
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum AssignmentMode {
+    /// Sequential assignment based on join order (default)
+    Sequential,
+    /// Random assignment using ledger timestamp as seed
+    Random,
+    /// Manual assignment with explicit positions
+    Manual(Vec<u32>),
+}
+
 #[contractimpl]
 impl StellarSaveContract {
     fn generate_next_group_id(env: &Env) -> Result<u64, StellarSaveError> {
@@ -379,6 +391,105 @@ impl StellarSaveContract {
         Ok(group.member_count)
     }
 
+    /// Assigns or reassigns payout positions to members.
+    /// 
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    /// * `caller` - Address of the caller (must be group creator)
+    /// * `mode` - Assignment mode (Sequential, Random, or Manual)
+    /// 
+    /// # Returns
+    /// * `Ok(())` if assignment successful
+    /// * `Err(StellarSaveError)` if validation fails
+    pub fn assign_payout_positions(
+        env: Env,
+        group_id: u64,
+        caller: Address,
+        mode: AssignmentMode,
+    ) -> Result<(), StellarSaveError> {
+        caller.require_auth();
+        
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group: Group = env.storage()
+            .persistent()
+            .get(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+        
+        if group.creator != caller {
+            return Err(StellarSaveError::Unauthorized);
+        }
+        
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        let status: GroupStatus = env.storage()
+            .persistent()
+            .get(&status_key)
+            .unwrap_or(GroupStatus::Pending);
+        
+        if status != GroupStatus::Pending {
+            return Err(StellarSaveError::InvalidState);
+        }
+        
+        let members_key = StorageKeyBuilder::group_members(group_id);
+        let members: Vec<Address> = env.storage()
+            .persistent()
+            .get(&members_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+        
+        let positions = match mode {
+            AssignmentMode::Sequential => {
+                let mut pos = Vec::new(&env);
+                for i in 0..members.len() {
+                    pos.push_back(i);
+                }
+                pos
+            }
+            AssignmentMode::Random => {
+                let mut pos = Vec::new(&env);
+                for i in 0..members.len() {
+                    pos.push_back(i);
+                }
+                let seed = env.ledger().timestamp();
+                Self::shuffle(&env, &mut pos, seed);
+                pos
+            }
+            AssignmentMode::Manual(positions) => {
+                if positions.len() != members.len() {
+                    return Err(StellarSaveError::InvalidState);
+                }
+                positions
+            }
+        };
+        
+        for (idx, member) in members.iter().enumerate() {
+            let position = positions.get(idx as u32).unwrap();
+            let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
+            let mut profile: MemberProfile = env.storage()
+                .persistent()
+                .get(&member_key)
+                .ok_or(StellarSaveError::NotMember)?;
+            
+            profile.payout_position = position;
+            env.storage().persistent().set(&member_key, &profile);
+            
+            let payout_key = StorageKeyBuilder::member_payout_eligibility(group_id, member.clone());
+            env.storage().persistent().set(&payout_key, &position);
+        }
+        
+        Ok(())
+    }
+    
+    fn shuffle(env: &Env, vec: &mut Vec<u32>, seed: u64) {
+        let len = vec.len();
+        for i in (1..len).rev() {
+            let j = (seed.wrapping_mul(i as u64 + 1) % (i as u64 + 1)) as u32;
+            let temp = vec.get(i).unwrap();
+            let swap = vec.get(j).unwrap();
+            vec.set(i, swap);
+            vec.set(j, temp);
+        }
+    }
+
     /// Deletes a group from storage.
     /// Only allowed if the caller is the creator and no members have joined yet.
     pub fn delete_group(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
@@ -663,23 +774,34 @@ impl StellarSaveContract {
     }
 
     /// Checks if a member has contributed for a specific cycle.
+    /// Checks if all members have contributed for the current cycle.
     /// 
     /// # Arguments
     /// * `env` - Soroban environment
     /// * `group_id` - ID of the group
     /// * `cycle_number` - The cycle number to check
-    /// * `member` - Address of the member
     /// 
     /// # Returns
-    /// * `bool` - true if member has contributed, false otherwise
-    pub fn has_contributed(
+    /// * `Ok(bool)` - true if all members contributed, false otherwise
+    /// * `Err(StellarSaveError)` if group not found
+    pub fn is_cycle_complete(
         env: Env,
         group_id: u64,
         cycle_number: u32,
-        member: Address,
-    ) -> bool {
-        let key = StorageKeyBuilder::contribution_individual(group_id, cycle_number, member);
-        env.storage().persistent().has(&key)
+    ) -> Result<bool, StellarSaveError> {
+        let members_key = StorageKeyBuilder::group_members(group_id);
+        let members: Vec<Address> = env.storage()
+            .persistent()
+            .get(&members_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+        
+        let count_key = StorageKeyBuilder::contribution_cycle_count(group_id, cycle_number);
+        let contributed_count: u32 = env.storage()
+            .persistent()
+            .get(&count_key)
+            .unwrap_or(0);
+        
+        Ok(contributed_count >= members.len())
     }
 
     /// Allows a user to join an existing savings group.
@@ -752,6 +874,7 @@ impl StellarSaveContract {
         let member_profile = MemberProfile {
             address: member.clone(),
             group_id,
+            payout_position,
             joined_at: timestamp,
         };
         env.storage().persistent().set(&member_key, &member_profile);
@@ -2121,48 +2244,260 @@ mod tests {
     }
 
     #[test]
-    fn test_has_contributed_true() {
+    fn test_assign_payout_positions_sequential() {
         let env = Env::default();
         let contract_id = env.register_contract(None, StellarSaveContract);
         let client = StellarSaveContractClient::new(&env, &contract_id);
         
-        let member = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let member3 = Address::generate(&env);
         let group_id = 1;
         let cycle = 0;
         
-        // Setup: Create a contribution record
-        let contribution = ContributionRecord::new(member.clone(), group_id, cycle, 100, 1000);
-        let key = StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
-        env.storage().persistent().set(&key, &contribution);
+        // Setup: Create members list
+        let mut members = Vec::new(&env);
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        members.push_back(member3.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
         
-        // Action: Check if member has contributed
-        let has_contributed = client.has_contributed(&group_id, &cycle, &member);
+        // Setup: All members contributed
+        let count_key = StorageKeyBuilder::contribution_cycle_count(group_id, cycle);
+        env.storage().persistent().set(&count_key, &3u32);
         
-        // Verify: Returns true
-        assert_eq!(has_contributed, true);
+        // Action: Check if cycle complete
+        let is_complete = client.is_cycle_complete(&group_id, &cycle);
+        
+        // Verify: Cycle is complete
+        assert_eq!(is_complete, true);
     }
 
     #[test]
-    fn test_has_contributed_false() {
+    fn test_is_cycle_complete_partial_contributions() {
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let group_id = 1;
+        
+        // Setup: Create group and members
+        let group = Group::new(group_id, creator.clone(), 100, 3600, 3, 2, 1000);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        env.storage().persistent().set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
+        
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Create member profiles
+        for (idx, member) in members.iter().enumerate() {
+            let profile = MemberProfile {
+                address: member.clone(),
+                group_id,
+                payout_position: 0,
+                joined_at: 1000,
+            };
+            env.storage().persistent().set(&StorageKeyBuilder::member_profile(group_id, member), &profile);
+        }
+        
+        // Action: Assign sequential positions
+        env.mock_all_auths();
+        client.assign_payout_positions(&group_id, &creator, &AssignmentMode::Sequential);
+        
+        // Verify: Positions are 0, 1, 2
+        let pos0: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, creator.clone())).unwrap();
+        let pos1: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, member1.clone())).unwrap();
+        let pos2: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, member2.clone())).unwrap();
+        
+        assert_eq!(pos0, 0);
+        assert_eq!(pos1, 1);
+        assert_eq!(pos2, 2);
+    }
+
+    #[test]
+    fn test_assign_payout_positions_manual() {
         let env = Env::default();
         let contract_id = env.register_contract(None, StellarSaveContract);
         let client = StellarSaveContractClient::new(&env, &contract_id);
         
-        let member = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let member3 = Address::generate(&env);
         let group_id = 1;
         let cycle = 0;
         
-        // Setup: No contribution record exists
+        // Setup: Create members list
+        let mut members = Vec::new(&env);
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        members.push_back(member3.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
         
-        // Action: Check if member has contributed
-        let has_contributed = client.has_contributed(&group_id, &cycle, &member);
+        // Setup: Only 2 out of 3 members contributed
+        let count_key = StorageKeyBuilder::contribution_cycle_count(group_id, cycle);
+        env.storage().persistent().set(&count_key, &2u32);
         
-        // Verify: Returns false
-        assert_eq!(has_contributed, false);
+        // Action: Check if cycle complete
+        let is_complete = client.is_cycle_complete(&group_id, &cycle);
+        
+        // Verify: Cycle is not complete
+        assert_eq!(is_complete, false);
     }
 
     #[test]
-    fn test_has_contributed_different_members() {
+    fn test_is_cycle_complete_no_contributions() {
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let group_id = 1;
+        
+        // Setup: Create group and members
+        let group = Group::new(group_id, creator.clone(), 100, 3600, 3, 2, 1000);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        env.storage().persistent().set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
+        
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Create member profiles
+        for member in members.iter() {
+            let profile = MemberProfile {
+                address: member.clone(),
+                group_id,
+                payout_position: 0,
+                joined_at: 1000,
+            };
+            env.storage().persistent().set(&StorageKeyBuilder::member_profile(group_id, member), &profile);
+        }
+        
+        // Action: Assign manual positions [2, 0, 1]
+        let mut positions = Vec::new(&env);
+        positions.push_back(2);
+        positions.push_back(0);
+        positions.push_back(1);
+        
+        env.mock_all_auths();
+        client.assign_payout_positions(&group_id, &creator, &AssignmentMode::Manual(positions));
+        
+        // Verify: Positions match manual assignment
+        let pos0: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, creator.clone())).unwrap();
+        let pos1: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, member1.clone())).unwrap();
+        let pos2: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, member2.clone())).unwrap();
+        
+        assert_eq!(pos0, 2);
+        assert_eq!(pos1, 0);
+        assert_eq!(pos2, 1);
+    }
+
+    #[test]
+    fn test_assign_payout_positions_random() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let group_id = 1;
+        let cycle = 0;
+      
+        // Setup: Create group and members
+        let group = Group::new(group_id, creator.clone(), 100, 3600, 3, 2, 1000);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        env.storage().persistent().set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
+        
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Setup: No contributions (count defaults to 0)
+        
+        // Action: Check if cycle complete
+        let is_complete = client.is_cycle_complete(&group_id, &cycle);
+        
+        // Verify: Cycle is not complete
+        assert_eq!(is_complete, false);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1001))")] // GroupNotFound
+    fn test_is_cycle_complete_group_not_found() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        // Action: Try to check non-existent group
+        client.is_cycle_complete(&999, &0);
+    }
+
+    #[test]
+    fn test_is_cycle_complete_different_cycles() {
+        // Create member profiles
+        for member in members.iter() {
+            let profile = MemberProfile {
+                address: member.clone(),
+                group_id,
+                payout_position: 0,
+                joined_at: 1000,
+            };
+            env.storage().persistent().set(&StorageKeyBuilder::member_profile(group_id, member), &profile);
+        }
+        
+        // Action: Assign random positions
+        env.mock_all_auths();
+        client.assign_payout_positions(&group_id, &creator, &AssignmentMode::Random);
+        
+        // Verify: All positions are assigned and unique
+        let pos0: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, creator.clone())).unwrap();
+        let pos1: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, member1.clone())).unwrap();
+        let pos2: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, member2.clone())).unwrap();
+        
+        // All positions should be in range [0, 2]
+        assert!(pos0 < 3);
+        assert!(pos1 < 3);
+        assert!(pos2 < 3);
+        
+        // All positions should be unique
+        assert_ne!(pos0, pos1);
+        assert_ne!(pos0, pos2);
+        assert_ne!(pos1, pos2);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(2003))")] // Unauthorized
+    fn test_assign_payout_positions_not_creator() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let non_creator = Address::generate(&env);
+        let group_id = 1;
+        
+        // Setup: Create group
+        let group = Group::new(group_id, creator.clone(), 100, 3600, 3, 2, 1000);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        env.storage().persistent().set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
+        
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Action: Try to assign as non-creator
+        env.mock_all_auths();
+        client.assign_payout_positions(&group_id, &non_creator, &AssignmentMode::Sequential);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1003))")] // InvalidState
+    fn test_assign_payout_positions_group_active() {
         let env = Env::default();
         let contract_id = env.register_contract(None, StellarSaveContract);
         let client = StellarSaveContractClient::new(&env, &contract_id);
@@ -2170,95 +2505,99 @@ mod tests {
         let member1 = Address::generate(&env);
         let member2 = Address::generate(&env);
         let group_id = 1;
-        let cycle = 0;
         
-        // Setup: Only member1 has contributed
-        let contribution = ContributionRecord::new(member1.clone(), group_id, cycle, 100, 1000);
-        let key = StorageKeyBuilder::contribution_individual(group_id, cycle, member1.clone());
-        env.storage().persistent().set(&key, &contribution);
+        // Setup: Create members list
+        let mut members = Vec::new(&env);
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
         
-        // Action: Check both members
-        let has_contributed_1 = client.has_contributed(&group_id, &cycle, &member1);
-        let has_contributed_2 = client.has_contributed(&group_id, &cycle, &member2);
+        // Setup: Cycle 0 is complete, cycle 1 is not
+        let count_key0 = StorageKeyBuilder::contribution_cycle_count(group_id, 0);
+        env.storage().persistent().set(&count_key0, &2u32);
         
-        // Verify: member1 true, member2 false
-        assert_eq!(has_contributed_1, true);
-        assert_eq!(has_contributed_2, false);
-    }
-
-    #[test]
-    fn test_has_contributed_different_cycles() {
-        let env = Env::default();
-        let contract_id = env.register_contract(None, StellarSaveContract);
-        let client = StellarSaveContractClient::new(&env, &contract_id);
-        
-        let member = Address::generate(&env);
-        let group_id = 1;
-        
-        // Setup: Member contributed in cycle 0 but not cycle 1
-        let contribution = ContributionRecord::new(member.clone(), group_id, 0, 100, 1000);
-        let key = StorageKeyBuilder::contribution_individual(group_id, 0, member.clone());
-        env.storage().persistent().set(&key, &contribution);
+        let count_key1 = StorageKeyBuilder::contribution_cycle_count(group_id, 1);
+        env.storage().persistent().set(&count_key1, &1u32);
         
         // Action: Check both cycles
-        let has_contributed_0 = client.has_contributed(&group_id, &0, &member);
-        let has_contributed_1 = client.has_contributed(&group_id, &1, &member);
+        let is_complete_0 = client.is_cycle_complete(&group_id, &0);
+        let is_complete_1 = client.is_cycle_complete(&group_id, &1);
         
-        // Verify: cycle 0 true, cycle 1 false
-        assert_eq!(has_contributed_0, true);
-        assert_eq!(has_contributed_1, false);
+        // Verify: Cycle 0 complete, cycle 1 not complete
+        assert_eq!(is_complete_0, true);
+        assert_eq!(is_complete_1, false);
     }
 
     #[test]
-    fn test_has_contributed_different_groups() {
-        let env = Env::default();
-        let contract_id = env.register_contract(None, StellarSaveContract);
-        let client = StellarSaveContractClient::new(&env, &contract_id);
-        
-        let member = Address::generate(&env);
-        let cycle = 0;
-        
-        // Setup: Member contributed in group 1 but not group 2
-        let contribution = ContributionRecord::new(member.clone(), 1, cycle, 100, 1000);
-        let key = StorageKeyBuilder::contribution_individual(1, cycle, member.clone());
-        env.storage().persistent().set(&key, &contribution);
-        
-        // Action: Check both groups
-        let has_contributed_1 = client.has_contributed(&1, &cycle, &member);
-        let has_contributed_2 = client.has_contributed(&2, &cycle, &member);
-        
-        // Verify: group 1 true, group 2 false
-        assert_eq!(has_contributed_1, true);
-        assert_eq!(has_contributed_2, false);
-    }
-
-    #[test]
-    fn test_has_contributed_multiple_cycles() {
-        let env = Env::default();
-        let contract_id = env.register_contract(None, StellarSaveContract);
-        let client = StellarSaveContractClient::new(&env, &contract_id);
-        
-        let member = Address::generate(&env);
+    fn test_is_cycle_complete_exact_count() {
+        let creator = Address::generate(&env);
         let group_id = 1;
         
-        // Setup: Member contributed in cycles 0, 1, and 3 (but not 2)
-        for cycle in [0u32, 1u32, 3u32] {
-            let contribution = ContributionRecord::new(member.clone(), group_id, cycle, 100, 1000);
-            let key = StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
-            env.storage().persistent().set(&key, &contribution);
-        }
+        // Setup: Create active group
+        let group = Group::new(group_id, creator.clone(), 100, 3600, 3, 2, 1000);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        env.storage().persistent().set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Active);
         
-        // Action: Check all cycles
-        let has_0 = client.has_contributed(&group_id, &0, &member);
-        let has_1 = client.has_contributed(&group_id, &1, &member);
-        let has_2 = client.has_contributed(&group_id, &2, &member);
-        let has_3 = client.has_contributed(&group_id, &3, &member);
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
         
-        // Verify: cycles 0, 1, 3 true; cycle 2 false
-        assert_eq!(has_0, true);
-        assert_eq!(has_1, true);
-        assert_eq!(has_2, false);
-        assert_eq!(has_3, true);
+        // Action: Try to assign when group is active
+        env.mock_all_auths();
+        client.assign_payout_positions(&group_id, &creator, &AssignmentMode::Sequential);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1003))")] // InvalidState
+    fn test_assign_payout_positions_manual_wrong_count() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let member3 = Address::generate(&env);
+        let group_id = 1;
+        let cycle = 0;
+        
+        // Setup: Create members list with 3 members
+        let mut members = Vec::new(&env);
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        members.push_back(member3.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Setup: Exactly 3 contributions (equal to member count)
+        let count_key = StorageKeyBuilder::contribution_cycle_count(group_id, cycle);
+        env.storage().persistent().set(&count_key, &3u32);
+        
+        // Action: Check if cycle complete
+        let is_complete = client.is_cycle_complete(&group_id, &cycle);
+        
+        // Verify: Cycle is complete (equal counts)
+        assert_eq!(is_complete, true);
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let group_id = 1;
+        
+        // Setup: Create group with 2 members
+        let group = Group::new(group_id, creator.clone(), 100, 3600, 3, 2, 1000);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        env.storage().persistent().set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
+        
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        members.push_back(member1.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Action: Try to assign with wrong number of positions (3 instead of 2)
+        let mut positions = Vec::new(&env);
+        positions.push_back(0);
+        positions.push_back(1);
+        positions.push_back(2);
+        
+        env.mock_all_auths();
+        client.assign_payout_positions(&group_id, &creator, &AssignmentMode::Manual(positions));
     }
 }
 
