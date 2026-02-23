@@ -107,6 +107,46 @@ pub enum AssignmentMode {
 
 #[contractimpl]
 impl StellarSaveContract {
+    /// Validates that a contribution amount matches the group's required contribution amount.
+    /// 
+    /// This helper function ensures that members contribute the exact amount specified
+    /// by the group configuration, maintaining fairness in the ROSCA system.
+    /// 
+    /// # Arguments
+    /// * `env` - Soroban environment for storage access
+    /// * `group_id` - ID of the group to validate against
+    /// * `amount` - The contribution amount to validate
+    /// 
+    /// # Returns
+    /// * `Ok(())` - The amount matches the group's required contribution
+    /// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
+    /// * `Err(StellarSaveError::InvalidAmount)` - Amount doesn't match group requirement
+    /// 
+    /// # Example
+    /// ```ignore
+    /// // Validate a contribution of 10 XLM for group 1
+    /// StellarSaveContract::validate_contribution_amount(&env, 1, 100_000_000)?;
+    /// ```
+    pub fn validate_contribution_amount(
+        env: &Env,
+        group_id: u64,
+        amount: i128,
+    ) -> Result<(), StellarSaveError> {
+        // Load the group from storage
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env.storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+        
+        // Compare the provided amount with the group's required contribution amount
+        if amount != group.contribution_amount {
+            return Err(StellarSaveError::InvalidAmount);
+        }
+        
+        Ok(())
+    }
+
     fn generate_next_group_id(env: &Env) -> Result<u64, StellarSaveError> {
         let key = StorageKeyBuilder::next_group_id();
         
@@ -2597,6 +2637,183 @@ mod tests {
         
         env.mock_all_auths();
         client.assign_payout_positions(&group_id, &creator, &AssignmentMode::Manual(positions));
+    }
+
+    // Tests for validate_contribution_amount helper function
+    
+    #[test]
+    fn test_validate_contribution_amount_success() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        
+        // Create a group with contribution amount of 10 XLM
+        let group_id = 1;
+        let contribution_amount = 100_000_000; // 10 XLM
+        let group = Group::new(group_id, creator.clone(), contribution_amount, 3600, 5, 2, 12345);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        // Validate with correct amount using as_contract
+        let result = env.as_contract(&env.register_contract(None, StellarSaveContract), || {
+            StellarSaveContract::validate_contribution_amount(&env, group_id, contribution_amount)
+        });
+        assert!(result.is_ok());
+    }
+    
+    #[test]
+    fn test_validate_contribution_amount_invalid_amount() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        
+        // Create a group with contribution amount of 10 XLM
+        let group_id = 1;
+        let contribution_amount = 100_000_000; // 10 XLM
+        let group = Group::new(group_id, creator.clone(), contribution_amount, 3600, 5, 2, 12345);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        // Validate with incorrect amount (5 XLM instead of 10 XLM)
+        let wrong_amount = 50_000_000;
+        let result = env.as_contract(&env.register_contract(None, StellarSaveContract), || {
+            StellarSaveContract::validate_contribution_amount(&env, group_id, wrong_amount)
+        });
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::InvalidAmount);
+    }
+    
+    #[test]
+    fn test_validate_contribution_amount_group_not_found() {
+        let env = Env::default();
+        
+        // Try to validate for a non-existent group
+        let result = env.as_contract(&env.register_contract(None, StellarSaveContract), || {
+            StellarSaveContract::validate_contribution_amount(&env, 999, 100_000_000)
+        });
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::GroupNotFound);
+    }
+    
+    #[test]
+    fn test_validate_contribution_amount_zero() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        
+        // Create a group with contribution amount of 1 XLM
+        let group_id = 1;
+        let contribution_amount = 10_000_000; // 1 XLM
+        let group = Group::new(group_id, creator.clone(), contribution_amount, 3600, 5, 2, 12345);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        // Validate with zero amount
+        let result = env.as_contract(&env.register_contract(None, StellarSaveContract), || {
+            StellarSaveContract::validate_contribution_amount(&env, group_id, 0)
+        });
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::InvalidAmount);
+    }
+    
+    #[test]
+    fn test_validate_contribution_amount_negative() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        
+        // Create a group with contribution amount of 1 XLM
+        let group_id = 1;
+        let contribution_amount = 10_000_000; // 1 XLM
+        let group = Group::new(group_id, creator.clone(), contribution_amount, 3600, 5, 2, 12345);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        // Validate with negative amount
+        let result = env.as_contract(&env.register_contract(None, StellarSaveContract), || {
+            StellarSaveContract::validate_contribution_amount(&env, group_id, -100)
+        });
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::InvalidAmount);
+    }
+    
+    #[test]
+    fn test_validate_contribution_amount_too_high() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        
+        // Create a group with contribution amount of 1 XLM
+        let group_id = 1;
+        let contribution_amount = 10_000_000; // 1 XLM
+        let group = Group::new(group_id, creator.clone(), contribution_amount, 3600, 5, 2, 12345);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        // Validate with amount that's too high (2 XLM instead of 1 XLM)
+        let result = env.as_contract(&env.register_contract(None, StellarSaveContract), || {
+            StellarSaveContract::validate_contribution_amount(&env, group_id, 20_000_000)
+        });
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::InvalidAmount);
+    }
+    
+    #[test]
+    fn test_validate_contribution_amount_multiple_groups() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        
+        // Create multiple groups with different contribution amounts
+        let group1_id = 1;
+        let group1_amount = 10_000_000; // 1 XLM
+        let group1 = Group::new(group1_id, creator.clone(), group1_amount, 3600, 5, 2, 12345);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group1_id), &group1);
+        
+        let group2_id = 2;
+        let group2_amount = 50_000_000; // 5 XLM
+        let group2 = Group::new(group2_id, creator.clone(), group2_amount, 3600, 5, 2, 12345);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group2_id), &group2);
+        
+        // Validate correct amounts for each group
+        let result1 = env.as_contract(&contract_id, || {
+            StellarSaveContract::validate_contribution_amount(&env, group1_id, group1_amount)
+        });
+        assert!(result1.is_ok());
+        
+        let result2 = env.as_contract(&contract_id, || {
+            StellarSaveContract::validate_contribution_amount(&env, group2_id, group2_amount)
+        });
+        assert!(result2.is_ok());
+        
+        // Validate incorrect amounts (swapped)
+        let result3 = env.as_contract(&contract_id, || {
+            StellarSaveContract::validate_contribution_amount(&env, group1_id, group2_amount)
+        });
+        assert!(result3.is_err());
+        assert_eq!(result3.unwrap_err(), StellarSaveError::InvalidAmount);
+        
+        let result4 = env.as_contract(&contract_id, || {
+            StellarSaveContract::validate_contribution_amount(&env, group2_id, group1_amount)
+        });
+        assert!(result4.is_err());
+        assert_eq!(result4.unwrap_err(), StellarSaveError::InvalidAmount);
+    }
+    
+    #[test]
+    fn test_validate_contribution_amount_edge_case_one_stroop() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        
+        // Create a group with minimum contribution amount (1 stroop)
+        let group_id = 1;
+        let contribution_amount = 1; // 1 stroop
+        let group = Group::new(group_id, creator.clone(), contribution_amount, 3600, 5, 2, 12345);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        // Validate with correct amount
+        let result1 = env.as_contract(&contract_id, || {
+            StellarSaveContract::validate_contribution_amount(&env, group_id, 1)
+        });
+        assert!(result1.is_ok());
+        
+        // Validate with incorrect amount (2 stroops)
+        let result2 = env.as_contract(&contract_id, || {
+            StellarSaveContract::validate_contribution_amount(&env, group_id, 2)
+        });
+        assert!(result2.is_err());
+        assert_eq!(result2.unwrap_err(), StellarSaveError::InvalidAmount);
     }
 }
 
