@@ -93,6 +93,18 @@ pub struct MemberProfile {
     pub joined_at: u64,
 }
 
+/// Assignment mode for payout positions
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum AssignmentMode {
+    /// Sequential assignment based on join order (default)
+    Sequential,
+    /// Random assignment using ledger timestamp as seed
+    Random,
+    /// Manual assignment with explicit positions
+    Manual(Vec<u32>),
+}
+
 #[contractimpl]
 impl StellarSaveContract {
     fn generate_next_group_id(env: &Env) -> Result<u64, StellarSaveError> {
@@ -377,6 +389,105 @@ impl StellarSaveContract {
             .ok_or(StellarSaveError::GroupNotFound)?;
         
         Ok(group.member_count)
+    }
+
+    /// Assigns or reassigns payout positions to members.
+    /// 
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    /// * `caller` - Address of the caller (must be group creator)
+    /// * `mode` - Assignment mode (Sequential, Random, or Manual)
+    /// 
+    /// # Returns
+    /// * `Ok(())` if assignment successful
+    /// * `Err(StellarSaveError)` if validation fails
+    pub fn assign_payout_positions(
+        env: Env,
+        group_id: u64,
+        caller: Address,
+        mode: AssignmentMode,
+    ) -> Result<(), StellarSaveError> {
+        caller.require_auth();
+        
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group: Group = env.storage()
+            .persistent()
+            .get(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+        
+        if group.creator != caller {
+            return Err(StellarSaveError::Unauthorized);
+        }
+        
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        let status: GroupStatus = env.storage()
+            .persistent()
+            .get(&status_key)
+            .unwrap_or(GroupStatus::Pending);
+        
+        if status != GroupStatus::Pending {
+            return Err(StellarSaveError::InvalidState);
+        }
+        
+        let members_key = StorageKeyBuilder::group_members(group_id);
+        let members: Vec<Address> = env.storage()
+            .persistent()
+            .get(&members_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+        
+        let positions = match mode {
+            AssignmentMode::Sequential => {
+                let mut pos = Vec::new(&env);
+                for i in 0..members.len() {
+                    pos.push_back(i);
+                }
+                pos
+            }
+            AssignmentMode::Random => {
+                let mut pos = Vec::new(&env);
+                for i in 0..members.len() {
+                    pos.push_back(i);
+                }
+                let seed = env.ledger().timestamp();
+                Self::shuffle(&env, &mut pos, seed);
+                pos
+            }
+            AssignmentMode::Manual(positions) => {
+                if positions.len() != members.len() {
+                    return Err(StellarSaveError::InvalidState);
+                }
+                positions
+            }
+        };
+        
+        for (idx, member) in members.iter().enumerate() {
+            let position = positions.get(idx as u32).unwrap();
+            let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
+            let mut profile: MemberProfile = env.storage()
+                .persistent()
+                .get(&member_key)
+                .ok_or(StellarSaveError::NotMember)?;
+            
+            profile.payout_position = position;
+            env.storage().persistent().set(&member_key, &profile);
+            
+            let payout_key = StorageKeyBuilder::member_payout_eligibility(group_id, member.clone());
+            env.storage().persistent().set(&payout_key, &position);
+        }
+        
+        Ok(())
+    }
+    
+    fn shuffle(env: &Env, vec: &mut Vec<u32>, seed: u64) {
+        let len = vec.len();
+        for i in (1..len).rev() {
+            let j = (seed.wrapping_mul(i as u64 + 1) % (i as u64 + 1)) as u32;
+            let temp = vec.get(i).unwrap();
+            let swap = vec.get(j).unwrap();
+            vec.set(i, swap);
+            vec.set(j, temp);
+        }
     }
 
     /// Deletes a group from storage.
@@ -732,6 +843,7 @@ impl StellarSaveContract {
         let member_profile = MemberProfile {
             address: member.clone(),
             group_id,
+            payout_position,
             joined_at: timestamp,
         };
         env.storage().persistent().set(&member_key, &member_profile);
@@ -2099,4 +2211,237 @@ mod tests {
         let final_group: Group = env.storage().persistent().get(&group_key).unwrap();
         assert_eq!(final_group.member_count, 4);
     }
+
+    #[test]
+    fn test_assign_payout_positions_sequential() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let group_id = 1;
+        
+        // Setup: Create group and members
+        let group = Group::new(group_id, creator.clone(), 100, 3600, 3, 2, 1000);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        env.storage().persistent().set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
+        
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Create member profiles
+        for (idx, member) in members.iter().enumerate() {
+            let profile = MemberProfile {
+                address: member.clone(),
+                group_id,
+                payout_position: 0,
+                joined_at: 1000,
+            };
+            env.storage().persistent().set(&StorageKeyBuilder::member_profile(group_id, member), &profile);
+        }
+        
+        // Action: Assign sequential positions
+        env.mock_all_auths();
+        client.assign_payout_positions(&group_id, &creator, &AssignmentMode::Sequential);
+        
+        // Verify: Positions are 0, 1, 2
+        let pos0: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, creator.clone())).unwrap();
+        let pos1: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, member1.clone())).unwrap();
+        let pos2: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, member2.clone())).unwrap();
+        
+        assert_eq!(pos0, 0);
+        assert_eq!(pos1, 1);
+        assert_eq!(pos2, 2);
+    }
+
+    #[test]
+    fn test_assign_payout_positions_manual() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let group_id = 1;
+        
+        // Setup: Create group and members
+        let group = Group::new(group_id, creator.clone(), 100, 3600, 3, 2, 1000);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        env.storage().persistent().set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
+        
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Create member profiles
+        for member in members.iter() {
+            let profile = MemberProfile {
+                address: member.clone(),
+                group_id,
+                payout_position: 0,
+                joined_at: 1000,
+            };
+            env.storage().persistent().set(&StorageKeyBuilder::member_profile(group_id, member), &profile);
+        }
+        
+        // Action: Assign manual positions [2, 0, 1]
+        let mut positions = Vec::new(&env);
+        positions.push_back(2);
+        positions.push_back(0);
+        positions.push_back(1);
+        
+        env.mock_all_auths();
+        client.assign_payout_positions(&group_id, &creator, &AssignmentMode::Manual(positions));
+        
+        // Verify: Positions match manual assignment
+        let pos0: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, creator.clone())).unwrap();
+        let pos1: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, member1.clone())).unwrap();
+        let pos2: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, member2.clone())).unwrap();
+        
+        assert_eq!(pos0, 2);
+        assert_eq!(pos1, 0);
+        assert_eq!(pos2, 1);
+    }
+
+    #[test]
+    fn test_assign_payout_positions_random() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let group_id = 1;
+        
+        // Setup: Create group and members
+        let group = Group::new(group_id, creator.clone(), 100, 3600, 3, 2, 1000);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        env.storage().persistent().set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
+        
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        members.push_back(member1.clone());
+        members.push_back(member2.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Create member profiles
+        for member in members.iter() {
+            let profile = MemberProfile {
+                address: member.clone(),
+                group_id,
+                payout_position: 0,
+                joined_at: 1000,
+            };
+            env.storage().persistent().set(&StorageKeyBuilder::member_profile(group_id, member), &profile);
+        }
+        
+        // Action: Assign random positions
+        env.mock_all_auths();
+        client.assign_payout_positions(&group_id, &creator, &AssignmentMode::Random);
+        
+        // Verify: All positions are assigned and unique
+        let pos0: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, creator.clone())).unwrap();
+        let pos1: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, member1.clone())).unwrap();
+        let pos2: u32 = env.storage().persistent().get(&StorageKeyBuilder::member_payout_eligibility(group_id, member2.clone())).unwrap();
+        
+        // All positions should be in range [0, 2]
+        assert!(pos0 < 3);
+        assert!(pos1 < 3);
+        assert!(pos2 < 3);
+        
+        // All positions should be unique
+        assert_ne!(pos0, pos1);
+        assert_ne!(pos0, pos2);
+        assert_ne!(pos1, pos2);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(2003))")] // Unauthorized
+    fn test_assign_payout_positions_not_creator() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let non_creator = Address::generate(&env);
+        let group_id = 1;
+        
+        // Setup: Create group
+        let group = Group::new(group_id, creator.clone(), 100, 3600, 3, 2, 1000);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        env.storage().persistent().set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
+        
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Action: Try to assign as non-creator
+        env.mock_all_auths();
+        client.assign_payout_positions(&group_id, &non_creator, &AssignmentMode::Sequential);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1003))")] // InvalidState
+    fn test_assign_payout_positions_group_active() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = 1;
+        
+        // Setup: Create active group
+        let group = Group::new(group_id, creator.clone(), 100, 3600, 3, 2, 1000);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        env.storage().persistent().set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Active);
+        
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Action: Try to assign when group is active
+        env.mock_all_auths();
+        client.assign_payout_positions(&group_id, &creator, &AssignmentMode::Sequential);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1003))")] // InvalidState
+    fn test_assign_payout_positions_manual_wrong_count() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let group_id = 1;
+        
+        // Setup: Create group with 2 members
+        let group = Group::new(group_id, creator.clone(), 100, 3600, 3, 2, 1000);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        env.storage().persistent().set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
+        
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        members.push_back(member1.clone());
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+        
+        // Action: Try to assign with wrong number of positions (3 instead of 2)
+        let mut positions = Vec::new(&env);
+        positions.push_back(0);
+        positions.push_back(1);
+        positions.push_back(2);
+        
+        env.mock_all_auths();
+        client.assign_payout_positions(&group_id, &creator, &AssignmentMode::Manual(positions));
+    }
 }
+
