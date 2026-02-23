@@ -74,6 +74,25 @@ impl ContractConfig {
     }
 }
 
+/// Member profile structure for tracking member data in a group.
+/// Stores the member's payout position (turn order) in the rotation.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemberProfile {
+    /// Address of the member
+    pub address: Address,
+    
+    /// Group ID this member belongs to
+    pub group_id: u64,
+    
+    /// Payout position (0-indexed) - determines when member receives payout
+    /// Position 0 receives payout in cycle 0, position 1 in cycle 1, etc.
+    pub payout_position: u32,
+    
+    /// Timestamp when member joined the group
+    pub joined_at: u64,
+}
+
 #[contractimpl]
 impl StellarSaveContract {
     fn generate_next_group_id(env: &Env) -> Result<u64, StellarSaveError> {
@@ -279,6 +298,30 @@ impl StellarSaveContract {
             .ok_or(StellarSaveError::GroupNotFound)
     }
 
+    /// Returns the payout position for a member in a specific group.
+    /// 
+    /// # Arguments
+    /// * `group_id` - The unique identifier of the group.
+    /// * `member_address` - The address of the member.
+    /// 
+    /// # Returns
+    /// Returns the payout position as u32, or an error if the group or member doesn't exist.
+    /// The payout position is 0-indexed (position 0 receives payout in cycle 0, etc.)
+    pub fn get_payout_position(
+        env: Env,
+        group_id: u64,
+        member_address: Address,
+    ) -> Result<u32, StellarSaveError> {
+        let key = StorageKeyBuilder::member_payout_eligibility(group_id, member_address);
+        let member_profile = env.storage()
+            .persistent()
+            .get::<_, MemberProfile>(&key)
+            .ok_or(StellarSaveError::NotMember)?;
+        
+        Ok(member_profile.payout_position)
+      
+    }
+  
     /// Returns the number of members in a specific group.
     /// 
     /// # Arguments
@@ -810,6 +853,69 @@ mod tests {
         client.get_group(&999); // ID that doesn't exist
     }
 
+    #[test]
+    fn test_get_payout_position_success() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let member_address = Address::generate(&env);
+
+        // Create a member profile with payout position 2
+        let group_id = 1;
+        let member_profile = MemberProfile {
+            address: member_address.clone(),
+            group_id,
+            payout_position: 2,
+            joined_at: 12345,
+        };
+        
+        // Store the member profile
+        let key = StorageKeyBuilder::member_payout_eligibility(group_id, member_address.clone());
+        env.storage().persistent().set(&key, &member_profile);
+
+        // Get payout position
+        let position = client.get_payout_position(&group_id, &member_address);
+        assert_eq!(position, 2);
+    }
+
+    #[test]
+    fn test_get_payout_position_first_member() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let member_address = Address::generate(&env);
+
+        // Create a member profile with payout position 0 (first member)
+        let group_id = 1;
+        let member_profile = MemberProfile {
+            address: member_address.clone(),
+            group_id,
+            payout_position: 0,
+            joined_at: 12345,
+        };
+        
+        // Store the member profile
+        let key = StorageKeyBuilder::member_payout_eligibility(group_id, member_address.clone());
+        env.storage().persistent().set(&key, &member_profile);
+
+        // Get payout position
+        let position = client.get_payout_position(&group_id, &member_address);
+        assert_eq!(position, 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(2002))")] // 2002 is NotMember
+    fn test_get_payout_position_not_member() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let member_address = Address::generate(&env);
+
+        // Try to get payout position for a member that doesn't exist
+        client.get_payout_position(&1, &member_address);
+      
+    }
+  
     #[test]
     fn test_get_member_count_success() {
         let env = Env::default();
