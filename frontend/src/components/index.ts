@@ -1,6 +1,7 @@
 export { Avatar } from "./Avatar";
 export { Badge } from "./Badge";
 export { Tooltip } from "./Tooltip";
+export { Dropdown } from "./Dropdown";
 export { EmptyState } from "./EmptyState/EmptyState";
 export { ErrorBoundary } from "./ErrorBoundary/ErrorBoundary";
 export { Skeleton } from "./Skeleton/Skeleton";
