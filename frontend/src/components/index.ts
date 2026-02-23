@@ -9,3 +9,6 @@ export { GroupSkeleton } from "./Skeleton/GroupSkeleton";
 export { ContributionSkeleton } from "./Skeleton/ContributionSkeleton";
 export { WalletButton } from "./WalletButton";
 export { NetworkIndicator } from "./NetworkIndicator";
+export { Pagination } from "./Pagination";
+export { Tabs } from "./Tabs";
+export type { Tab } from "./Tabs";

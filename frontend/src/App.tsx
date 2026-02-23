@@ -16,6 +16,7 @@ import {
   type SelectOption,
 } from "./ui";
 import { Dropdown } from "./components";
+import { Tabs, type Tab } from "./components";
 
 function App() {
   const {
@@ -48,6 +49,55 @@ function App() {
     { key: "wallets", label: "Wallets" },
     { key: "activity", label: "Activity" },
   ];
+  
+  const demoTabs: Tab[] = [
+    {
+      id: "overview",
+      label: "Overview",
+      icon: "📊",
+      content: (
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Wallet Overview
+          </Typography>
+          <Typography color="text.secondary">
+            View your wallet connection status and manage your accounts.
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: "transactions",
+      label: "Transactions",
+      icon: "💸",
+      content: (
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Transaction History
+          </Typography>
+          <Typography color="text.secondary">
+            Your recent transactions will appear here once connected.
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      icon: "⚙️",
+      content: (
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Wallet Settings
+          </Typography>
+          <Typography color="text.secondary">
+            Configure your wallet preferences and security options.
+          </Typography>
+        </Box>
+      ),
+    },
+  ];
+  
   const sidebar = (
     <AppCard>
       <Stack spacing={1.5}>
@@ -147,44 +197,37 @@ function App() {
 
       <AppCard>
         <Stack spacing={2}>
-          <Typography variant="h2">Dropdown Component Demo</Typography>
-          
-          <Stack direction="row" spacing={2} flexWrap="wrap">
-            <Dropdown
-              trigger={<AppButton>Actions Menu</AppButton>}
-              items={[
-                { id: '1', label: 'Edit Profile', onClick: () => alert('Edit Profile') },
-                { id: '2', label: 'Settings', onClick: () => alert('Settings') },
-                { id: '3', label: 'divider', divider: true },
-                { id: '4', label: 'Logout', onClick: () => alert('Logout') },
-              ]}
-            />
+          <Box>
+            <Typography variant="h2">Tabs Component Demo</Typography>
+            <Typography color="text.secondary" sx={{ mt: 0.75 }}>
+              Accessible tabs with keyboard navigation and multiple variants.
+            </Typography>
+          </Box>
 
-            <Dropdown
-              trigger={<AppButton color="secondary">With Icons</AppButton>}
-              items={[
-                { id: '1', label: 'Copy', icon: '📋', onClick: () => alert('Copied!') },
-                { id: '2', label: 'Share', icon: '🔗', onClick: () => alert('Shared!') },
-                { id: '3', label: 'Download', icon: '⬇️', onClick: () => alert('Downloaded!') },
-                { id: '4', label: 'divider', divider: true },
-                { id: '5', label: 'Delete', icon: '🗑️', onClick: () => alert('Deleted!') },
-              ]}
-              position="bottom-end"
-            />
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              Default Variant
+            </Typography>
+            <Tabs tabs={demoTabs} />
+          </Box>
 
-            <Dropdown
-              trigger={<AppButton>With Disabled Items</AppButton>}
-              items={[
-                { id: '1', label: 'Available Action', onClick: () => alert('Action!') },
-                { id: '2', label: 'Disabled Action', disabled: true },
-                { id: '3', label: 'Another Available', onClick: () => alert('Another!') },
-              ]}
-            />
-          </Stack>
+          <Divider />
 
-          <Typography variant="body2" color="text.secondary">
-            Try keyboard navigation: Arrow keys, Home, End, Enter, Escape
-          </Typography>
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              Pills Variant
+            </Typography>
+            <Tabs tabs={demoTabs} variant="pills" />
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              Underline Variant
+            </Typography>
+            <Tabs tabs={demoTabs} variant="underline" />
+          </Box>
         </Stack>
       </AppCard>
     </AppLayout>
