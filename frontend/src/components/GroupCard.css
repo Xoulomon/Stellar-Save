@@ -1,0 +1,130 @@
+.group-card {
+  border-radius: 12px;
+  border: 1px solid #333;
+  background-color: #1a1a1a;
+  overflow: hidden;
+  transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.group-card:hover {
+  border-color: #646cff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(100, 108, 255, 0.15);
+}
+
+/* Header */
+.group-card-header {
+  padding: 1.2em 1.5em;
+  border-bottom: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1em;
+}
+
+.group-card-title {
+  margin: 0;
+  font-size: 1.2em;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.87);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Body */
+.group-card-body {
+  padding: 1.5em;
+}
+
+.group-card-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1.5em;
+}
+
+.group-card-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+}
+
+.group-card-stat-label {
+  font-size: 0.85em;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.group-card-stat-value {
+  font-size: 1.4em;
+  font-weight: 700;
+  color: #646cff;
+}
+
+/* Footer */
+.group-card-footer {
+  padding: 1em 1.5em;
+  border-top: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.8em;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .group-card-header,
+  .group-card-body,
+  .group-card-footer {
+    padding: 1em;
+  }
+
+  .group-card-title {
+    font-size: 1.1em;
+  }
+
+  .group-card-stats {
+    grid-template-columns: 1fr;
+    gap: 1em;
+  }
+
+  .group-card-stat-value {
+    font-size: 1.2em;
+  }
+
+  .group-card-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .group-card-footer button {
+    width: 100%;
+  }
+}
+
+/* Light mode */
+@media (prefers-color-scheme: light) {
+  .group-card {
+    background-color: #f9f9f9;
+    border-color: #e0e0e0;
+  }
+
+  .group-card-header,
+  .group-card-footer {
+    border-color: #e0e0e0;
+  }
+
+  .group-card-title {
+    color: rgba(0, 0, 0, 0.87);
+  }
+
+  .group-card-stat-label {
+    color: rgba(0, 0, 0, 0.6);
+  }
+}
