@@ -15,6 +15,7 @@ import {
   type LayoutNavItem,
   type SelectOption,
 } from "./ui";
+import { Tabs, type Tab } from "./components";
 
 function App() {
   const {
@@ -47,6 +48,55 @@ function App() {
     { key: "wallets", label: "Wallets" },
     { key: "activity", label: "Activity" },
   ];
+  
+  const demoTabs: Tab[] = [
+    {
+      id: "overview",
+      label: "Overview",
+      icon: "📊",
+      content: (
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Wallet Overview
+          </Typography>
+          <Typography color="text.secondary">
+            View your wallet connection status and manage your accounts.
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: "transactions",
+      label: "Transactions",
+      icon: "💸",
+      content: (
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Transaction History
+          </Typography>
+          <Typography color="text.secondary">
+            Your recent transactions will appear here once connected.
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      icon: "⚙️",
+      content: (
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Wallet Settings
+          </Typography>
+          <Typography color="text.secondary">
+            Configure your wallet preferences and security options.
+          </Typography>
+        </Box>
+      ),
+    },
+  ];
+  
   const sidebar = (
     <AppCard>
       <Stack spacing={1.5}>
@@ -141,6 +191,42 @@ function App() {
           </Box>
 
           {error ? <Alert severity="error">{error}</Alert> : null}
+        </Stack>
+      </AppCard>
+
+      <AppCard>
+        <Stack spacing={2}>
+          <Box>
+            <Typography variant="h2">Tabs Component Demo</Typography>
+            <Typography color="text.secondary" sx={{ mt: 0.75 }}>
+              Accessible tabs with keyboard navigation and multiple variants.
+            </Typography>
+          </Box>
+
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              Default Variant
+            </Typography>
+            <Tabs tabs={demoTabs} />
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              Pills Variant
+            </Typography>
+            <Tabs tabs={demoTabs} variant="pills" />
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              Underline Variant
+            </Typography>
+            <Tabs tabs={demoTabs} variant="underline" />
+          </Box>
         </Stack>
       </AppCard>
     </AppLayout>
