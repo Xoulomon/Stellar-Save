@@ -638,6 +638,87 @@ impl StellarSaveContract {
         Ok(total)
     }
 
+    /// Gets all payout records for a group with pagination and sorting.
+    /// 
+    /// This function retrieves the complete payout history for a specific group,
+    /// allowing for pagination to handle large datasets and sorting by cycle number.
+    /// 
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group to query
+    /// * `offset` - Number of records to skip (for pagination)
+    /// * `limit` - Maximum number of records to return (for pagination)
+    /// 
+    /// # Returns
+    /// * `Ok(Vec<PayoutRecord>)` - Vector of payout records sorted by cycle number
+    /// * `Err(StellarSaveError::GroupNotFound)` - If the group doesn't exist
+    /// * `Err(StellarSaveError::Overflow)` - If pagination parameters cause overflow
+    /// 
+    /// # Example
+    /// ```ignore
+    /// // Get first 10 payout records
+    /// let first_page = contract.get_payout_history(env, group_id, 0, 10)?;
+    /// 
+    /// // Get next 10 payout records
+    /// let second_page = contract.get_payout_history(env, group_id, 10, 10)?;
+    /// ```
+    pub fn get_payout_history(
+        env: Env,
+        group_id: u64,
+        offset: u32,
+        limit: u32,
+    ) -> Result<Vec<PayoutRecord>, StellarSaveError> {
+        // 1. Verify group exists
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env.storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // 2. Validate pagination parameters
+        if offset.checked_add(limit).is_none() {
+            return Err(StellarSaveError::Overflow);
+        }
+
+        // 3. Collect all payout records from cycles 0 to current_cycle-1
+        let mut all_payouts = Vec::new(&env);
+        
+        for cycle in 0..group.current_cycle {
+            let payout_key = StorageKeyBuilder::payout_record(group_id, cycle);
+            
+            if let Some(payout_record) = env.storage()
+                .persistent()
+                .get::<_, PayoutRecord>(&payout_key)
+            {
+                all_payouts.push_back(payout_record);
+            }
+        }
+
+        // 4. Sort by cycle number (already in order due to iteration, but ensuring consistency)
+        all_payouts.sort_by(|a, b| a.cycle_number.cmp(&b.cycle_number));
+
+        // 5. Apply pagination
+        let total_records = all_payouts.len();
+        let start_index = offset as usize;
+        
+        // If offset is beyond total records, return empty vector
+        if start_index >= total_records {
+            return Ok(Vec::new(&env));
+        }
+
+        let end_index = std::cmp::min(
+            start_index.checked_add(limit as usize).ok_or(StellarSaveError::Overflow)?,
+            total_records
+        );
+
+        let mut paginated_payouts = Vec::new(&env);
+        for i in start_index..end_index {
+            paginated_payouts.push_back(all_payouts.get(i).unwrap().clone());
+        }
+
+        Ok(paginated_payouts)
+    }
+
     /// Gets the payout received by a specific member.
     /// 
     /// # Arguments
