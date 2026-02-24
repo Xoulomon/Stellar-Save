@@ -638,6 +638,87 @@ impl StellarSaveContract {
         Ok(total)
     }
 
+    /// Gets all payout records for a group with pagination and sorting.
+    /// 
+    /// This function retrieves the complete payout history for a specific group,
+    /// allowing for pagination to handle large datasets and sorting by cycle number.
+    /// 
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group to query
+    /// * `offset` - Number of records to skip (for pagination)
+    /// * `limit` - Maximum number of records to return (for pagination)
+    /// 
+    /// # Returns
+    /// * `Ok(Vec<PayoutRecord>)` - Vector of payout records sorted by cycle number
+    /// * `Err(StellarSaveError::GroupNotFound)` - If the group doesn't exist
+    /// * `Err(StellarSaveError::Overflow)` - If pagination parameters cause overflow
+    /// 
+    /// # Example
+    /// ```ignore
+    /// // Get first 10 payout records
+    /// let first_page = contract.get_payout_history(env, group_id, 0, 10)?;
+    /// 
+    /// // Get next 10 payout records
+    /// let second_page = contract.get_payout_history(env, group_id, 10, 10)?;
+    /// ```
+    pub fn get_payout_history(
+        env: Env,
+        group_id: u64,
+        offset: u32,
+        limit: u32,
+    ) -> Result<Vec<PayoutRecord>, StellarSaveError> {
+        // 1. Verify group exists
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env.storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // 2. Validate pagination parameters
+        if offset.checked_add(limit).is_none() {
+            return Err(StellarSaveError::Overflow);
+        }
+
+        // 3. Collect all payout records from cycles 0 to current_cycle-1
+        let mut all_payouts = Vec::new(&env);
+        
+        for cycle in 0..group.current_cycle {
+            let payout_key = StorageKeyBuilder::payout_record(group_id, cycle);
+            
+            if let Some(payout_record) = env.storage()
+                .persistent()
+                .get::<_, PayoutRecord>(&payout_key)
+            {
+                all_payouts.push_back(payout_record);
+            }
+        }
+
+        // 4. Sort by cycle number (already in order due to iteration, but ensuring consistency)
+        all_payouts.sort_by(|a, b| a.cycle_number.cmp(&b.cycle_number));
+
+        // 5. Apply pagination
+        let total_records = all_payouts.len();
+        let start_index = offset as usize;
+        
+        // If offset is beyond total records, return empty vector
+        if start_index >= total_records {
+            return Ok(Vec::new(&env));
+        }
+
+        let end_index = std::cmp::min(
+            start_index.checked_add(limit as usize).ok_or(StellarSaveError::Overflow)?,
+            total_records
+        );
+
+        let mut paginated_payouts = Vec::new(&env);
+        for i in start_index..end_index {
+            paginated_payouts.push_back(all_payouts.get(i).unwrap().clone());
+        }
+
+        Ok(paginated_payouts)
+    }
+
     /// Gets the payout received by a specific member.
     /// 
     /// # Arguments
@@ -5043,12 +5124,299 @@ mod tests {
         let env = Env::default();
         env.mock_all_auths();
         let contract_id = env.register_contract(None, StellarSaveContract);
-        let client = StellarSaveContractClient::new(&env, &contract_id);
-        
         let result = client.try_get_total_paid_out(&999);
         assert_eq!(result, Err(Ok(StellarSaveError::GroupNotFound)));
     }
+
+    // Tests for get_payout_history function
     
+    #[test]
+    fn test_get_payout_history_no_payouts() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        // Get payout history (should be empty)
+        let history = client.get_payout_history(&group_id, &0, &10);
+        assert_eq!(history.len(), 0);
+    }
+    
+    #[test]
+    fn test_get_payout_history_single_payout() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        // Setup: Create a group with one payout
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 1;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        let payout = PayoutRecord::new(creator.clone(), group_id, 0, 300, env.ledger().timestamp());
+        let payout_key = StorageKeyBuilder::payout_record(group_id, 0);
+        env.storage().persistent().set(&payout_key, &payout);
+        
+        // Get payout history
+        let history = client.get_payout_history(&group_id, &0, &10);
+        assert_eq!(history.len(), 1);
+        assert_eq!(history.get(0).unwrap().cycle_number, 0);
+        assert_eq!(history.get(0).unwrap().recipient, creator);
+        assert_eq!(history.get(0).unwrap().amount, 300);
+    }
+    
+    #[test]
+    fn test_get_payout_history_multiple_payouts() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        // Setup: Create a group with multiple payouts
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 3;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        let payout1 = PayoutRecord::new(creator.clone(), group_id, 0, 300, 1000);
+        let payout2 = PayoutRecord::new(member1.clone(), group_id, 1, 300, 2000);
+        let payout3 = PayoutRecord::new(member2.clone(), group_id, 2, 300, 3000);
+        
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 0), &payout1);
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 1), &payout2);
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 2), &payout3);
+        
+        // Get payout history
+        let history = client.get_payout_history(&group_id, &0, &10);
+        assert_eq!(history.len(), 3);
+        
+        // Verify sorting by cycle number
+        assert_eq!(history.get(0).unwrap().cycle_number, 0);
+        assert_eq!(history.get(1).unwrap().cycle_number, 1);
+        assert_eq!(history.get(2).unwrap().cycle_number, 2);
+        
+        // Verify recipients
+        assert_eq!(history.get(0).unwrap().recipient, creator);
+        assert_eq!(history.get(1).unwrap().recipient, member1);
+        assert_eq!(history.get(2).unwrap().recipient, member2);
+    }
+    
+    #[test]
+    fn test_get_payout_history_pagination_first_page() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &10);
+        
+        // Setup: Create a group with 5 payouts
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 5;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        for i in 0..5 {
+            let payout = PayoutRecord::new(creator.clone(), group_id, i, 300, 1000 + (i as u64 * 1000));
+            env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, i), &payout);
+        }
+        
+        // Get first page (limit 2)
+        let first_page = client.get_payout_history(&group_id, &0, &2);
+        assert_eq!(first_page.len(), 2);
+        assert_eq!(first_page.get(0).unwrap().cycle_number, 0);
+        assert_eq!(first_page.get(1).unwrap().cycle_number, 1);
+    }
+    
+    #[test]
+    fn test_get_payout_history_pagination_second_page() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &10);
+        
+        // Setup: Create a group with 5 payouts
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 5;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        for i in 0..5 {
+            let payout = PayoutRecord::new(creator.clone(), group_id, i, 300, 1000 + (i as u64 * 1000));
+            env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, i), &payout);
+        }
+        
+        // Get second page (offset 2, limit 2)
+        let second_page = client.get_payout_history(&group_id, &2, &2);
+        assert_eq!(second_page.len(), 2);
+        assert_eq!(second_page.get(0).unwrap().cycle_number, 2);
+        assert_eq!(second_page.get(1).unwrap().cycle_number, 3);
+    }
+    
+    #[test]
+    fn test_get_payout_history_pagination_last_page_partial() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &10);
+        
+        // Setup: Create a group with 5 payouts
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 5;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        for i in 0..5 {
+            let payout = PayoutRecord::new(creator.clone(), group_id, i, 300, 1000 + (i as u64 * 1000));
+            env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, i), &payout);
+        }
+        
+        // Get last page (offset 4, limit 2) - should only return 1 record
+        let last_page = client.get_payout_history(&group_id, &4, &2);
+        assert_eq!(last_page.len(), 1);
+        assert_eq!(last_page.get(0).unwrap().cycle_number, 4);
+    }
+    
+    #[test]
+    fn test_get_payout_history_pagination_offset_beyond_end() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        // Setup: Create a group with 2 payouts
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 2;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        for i in 0..2 {
+            let payout = PayoutRecord::new(creator.clone(), group_id, i, 300, 1000 + (i as u64 * 1000));
+            env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, i), &payout);
+        }
+        
+        // Get with offset beyond total records
+        let empty_result = client.get_payout_history(&group_id, &10, &5);
+        assert_eq!(empty_result.len(), 0);
+    }
+    
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1001))")] // GroupNotFound
+    fn test_get_payout_history_group_not_found() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        // Try to get payout history for non-existent group
+        client.get_payout_history(&999, &0, &10);
+    }
+    
+    #[test]
+    fn test_get_payout_history_large_dataset() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &50);
+        
+        // Setup: Create a group with 20 payouts
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 20;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        for i in 0..20 {
+            let payout = PayoutRecord::new(creator.clone(), group_id, i, 300, 1000 + (i as u64 * 1000));
+            env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, i), &payout);
+        }
+        
+        // Test multiple pages
+        let page1 = client.get_payout_history(&group_id, &0, &5);
+        let page2 = client.get_payout_history(&group_id, &5, &5);
+        let page3 = client.get_payout_history(&group_id, &10, &5);
+        let page4 = client.get_payout_history(&group_id, &15, &5);
+        
+        assert_eq!(page1.len(), 5);
+        assert_eq!(page2.len(), 5);
+        assert_eq!(page3.len(), 5);
+        assert_eq!(page4.len(), 5);
+        
+        // Verify continuity
+        assert_eq!(page1.get(4).unwrap().cycle_number, 4);
+        assert_eq!(page2.get(0).unwrap().cycle_number, 5);
+        assert_eq!(page3.get(0).unwrap().cycle_number, 10);
+        assert_eq!(page4.get(0).unwrap().cycle_number, 15);
+    }
+    
+    #[test]
+    fn test_get_payout_history_sorting_consistency() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &5);
+        
+        // Setup: Create payouts out of order in storage
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 3;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        // Store payouts in non-sequential order
+        let payout2 = PayoutRecord::new(creator.clone(), group_id, 2, 300, 3000);
+        let payout0 = PayoutRecord::new(creator.clone(), group_id, 0, 300, 1000);
+        let payout1 = PayoutRecord::new(creator.clone(), group_id, 1, 300, 2000);
+        
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 2), &payout2);
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 0), &payout0);
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 1), &payout1);
+        
+        // Get payout history and verify sorting
+        let history = client.get_payout_history(&group_id, &0, &10);
+        assert_eq!(history.len(), 3);
+        
+        // Should be sorted by cycle number regardless of storage order
+        assert_eq!(history.get(0).unwrap().cycle_number, 0);
+        assert_eq!(history.get(1).unwrap().cycle_number, 1);
+        assert_eq!(history.get(2).unwrap().cycle_number, 2);
+    }
+
     #[test]
     fn test_get_member_payout_no_payout_received() {
         let env = Env::default();
