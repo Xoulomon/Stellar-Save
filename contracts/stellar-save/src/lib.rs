@@ -660,6 +660,28 @@ impl StellarSaveContract {
         
         Ok(schedule)
     }
+
+    /// Checks if a group has completed all cycles.
+    /// 
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    /// 
+    /// # Returns
+    /// * `Ok(bool)` - true if group completed all cycles, false otherwise
+    /// * `Err(StellarSaveError::GroupNotFound)` - If group doesn't exist
+    pub fn is_complete(
+        env: Env,
+        group_id: u64,
+    ) -> Result<bool, StellarSaveError> {
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env.storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+        
+        Ok(group.is_complete())
+    }
   
     /// Returns the number of members in a specific group.
     /// 
@@ -4562,6 +4584,91 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
         
         let result = client.try_get_payout_schedule(&999);
+        assert_eq!(result, Err(Ok(StellarSaveError::GroupNotFound)));
+    }
+    
+    #[test]
+    fn test_is_complete_not_started() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        let is_complete = client.is_complete(&group_id);
+        assert_eq!(is_complete, false);
+    }
+    
+    #[test]
+    fn test_is_complete_in_progress() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 1;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        let is_complete = client.is_complete(&group_id);
+        assert_eq!(is_complete, false);
+    }
+    
+    #[test]
+    fn test_is_complete_all_cycles_done() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 3;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        let is_complete = client.is_complete(&group_id);
+        assert_eq!(is_complete, true);
+    }
+    
+    #[test]
+    fn test_is_complete_status_completed() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.status = GroupStatus::Completed;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        let is_complete = client.is_complete(&group_id);
+        assert_eq!(is_complete, true);
+    }
+    
+    #[test]
+    fn test_is_complete_group_not_found() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let result = client.try_is_complete(&999);
         assert_eq!(result, Err(Ok(StellarSaveError::GroupNotFound)));
     }
 }
