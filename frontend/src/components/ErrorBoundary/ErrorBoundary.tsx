@@ -38,6 +38,10 @@ export class ErrorBoundary extends React.Component<
     this.setState({ hasError: false, error: null });
   };
 
+  handleGoHome = () => {
+    window.location.href = '/';
+  };
+
   renderFallback() {
     const { fallback, className } = this.props;
 
@@ -48,7 +52,7 @@ export class ErrorBoundary extends React.Component<
         <div className="error-boundary__card">
           <h3 className="error-boundary__title">Something went wrong</h3>
           <p className="error-boundary__message">
-            An unexpected error occurred.
+            An unexpected error occurred while loading this page.
           </p>
           <div className="error-boundary__actions">
             <button
@@ -57,6 +61,14 @@ export class ErrorBoundary extends React.Component<
               onClick={this.handleRetry}
             >
               Retry
+            </button>
+            <button
+              className="error-boundary__retry"
+              type="button"
+              onClick={this.handleGoHome}
+              style={{ marginLeft: '8px' }}
+            >
+              Go Home
             </button>
           </div>
         </div>

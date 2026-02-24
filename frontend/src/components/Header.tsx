@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { isConnected, getPublicKey, requestAccess } from '@stellar/freighter-api';
+import { ROUTES } from '../routing/constants';
 import './Header.css';
 
 export default function Header() {
@@ -24,10 +26,10 @@ export default function Header() {
   return (
     <header className="header">
       <div className="header-container">
-        <div className="header-logo">
+        <Link to={ROUTES.HOME} className="header-logo" style={{ textDecoration: 'none', color: 'inherit' }}>
           <span className="logo-icon">⭐</span>
           <span className="logo-text">Stellar-Save</span>
-        </div>
+        </Link>
 
         <button 
           className="menu-toggle"
@@ -38,9 +40,9 @@ export default function Header() {
         </button>
 
         <nav className={`header-nav ${isMenuOpen ? 'open' : ''}`}>
-          <a href="#groups">Groups</a>
-          <a href="#create">Create</a>
-          <a href="#about">About</a>
+          <Link to={ROUTES.GROUPS}>Groups</Link>
+          <Link to={ROUTES.DASHBOARD}>Dashboard</Link>
+          <Link to={ROUTES.PROFILE}>Profile</Link>
         </nav>
 
         <button 

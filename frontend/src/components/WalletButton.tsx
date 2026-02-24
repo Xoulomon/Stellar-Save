@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useWallet } from '../hooks/useWallet';
+import { useAuthRedirect } from '../routing/useAuthRedirect';
 import { Button } from './Button';
 import './WalletButton.css';
 
@@ -7,6 +8,9 @@ export function WalletButton() {
   const { status, activeAddress, connect, disconnect } = useWallet();
   const [showMenu, setShowMenu] = useState(false);
   const [balance] = useState('0.00'); // TODO: Fetch actual balance
+  
+  // Handle post-authentication redirect
+  useAuthRedirect();
 
   if (status === 'connected' && activeAddress) {
     return (
