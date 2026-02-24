@@ -1,8 +1,11 @@
+import { Link } from 'react-router-dom';
+import { buildRoute } from '../routing/constants';
 import './GroupCard.css';
 import { Button } from './Button';
 import { Badge } from './Badge';
 
 interface GroupCardProps {
+  groupId?: string;
   groupName: string;
   memberCount: number;
   contributionAmount: number;
@@ -15,6 +18,7 @@ interface GroupCardProps {
 }
 
 export function GroupCard({
+  groupId,
   groupName,
   memberCount,
   contributionAmount,
@@ -48,8 +52,8 @@ export function GroupCard({
     }
   };
 
-  return (
-    <div className={classes} onClick={handleCardClick}>
+  const cardContent = (
+    <>
       <div className="group-card-header">
         <h3 className="group-card-title">{groupName}</h3>
         <Badge variant={getStatusVariant()} size="sm">
@@ -98,6 +102,27 @@ export function GroupCard({
           </Button>
         )}
       </div>
+    </>
+  );
+
+  // If groupId is provided, wrap in Link
+  if (groupId) {
+    return (
+      <Link 
+        to={buildRoute.groupDetail(groupId)} 
+        className={classes}
+        style={{ textDecoration: 'none', color: 'inherit' }}
+        onClick={handleCardClick}
+      >
+        {cardContent}
+      </Link>
+    );
+  }
+
+  // Otherwise, render as div
+  return (
+    <div className={classes} onClick={handleCardClick}>
+      {cardContent}
     </div>
   );
 }

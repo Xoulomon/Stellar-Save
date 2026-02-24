@@ -1,0 +1,1 @@
+.kiro/specs/stellar-sdk-integration/.config.kiro .kiro/specs/stellar-sdk-integration/design.md .kiro/specs/stellar-sdk-integration/requirements.md .kiro/specs/stellar-sdk-integration/tasks.md
