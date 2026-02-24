@@ -19,6 +19,7 @@ import {
 import { SearchBar } from "./components";
 import { Dropdown } from "./components";
 import { Tabs, type Tab } from "./components";
+import { GroupCard, GroupCardSkeleton } from "./components";
 
 function App() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -255,6 +256,72 @@ function App() {
               Underline Variant
             </Typography>
             <Tabs tabs={demoTabs} variant="underline" />
+          </Box>
+        </Stack>
+      </AppCard>
+
+      <AppCard>
+        <Stack spacing={2}>
+          <Box>
+            <Typography variant="h2">GroupCard Component Demo</Typography>
+            <Typography color="text.secondary" sx={{ mt: 0.75 }}>
+              Display group summaries with member count, contributions, and actions.
+            </Typography>
+          </Box>
+
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+              gap: 2,
+            }}
+          >
+            <GroupCard
+              groupName="Savings Circle Alpha"
+              memberCount={12}
+              contributionAmount={5000}
+              currency="XLM"
+              status="active"
+              onClick={() => console.log("Card clicked")}
+              onViewDetails={() => console.log("View details")}
+              onJoin={() => console.log("Join group")}
+            />
+            <GroupCard
+              groupName="Emergency Fund Group"
+              memberCount={8}
+              contributionAmount={3200}
+              currency="XLM"
+              status="pending"
+              onClick={() => console.log("Card clicked")}
+              onViewDetails={() => console.log("View details")}
+            />
+            <GroupCard
+              groupName="Monthly Savings Pool"
+              memberCount={25}
+              contributionAmount={12500}
+              currency="XLM"
+              status="completed"
+              onClick={() => console.log("Card clicked")}
+              onViewDetails={() => console.log("View details")}
+            />
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              Loading State
+            </Typography>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                gap: 2,
+              }}
+            >
+              <GroupCardSkeleton />
+              <GroupCardSkeleton />
+            </Box>
           </Box>
         </Stack>
       </AppCard>

@@ -1,0 +1,146 @@
+.member-list {
+  width: 100%;
+}
+
+.member-list-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.member-list-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #111827);
+}
+
+.member-list-table {
+  width: 100%;
+}
+
+.member-list-table-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--color-bg-secondary, #f9fafb);
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.sort-button {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #6b7280);
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sort-button:hover {
+  color: var(--color-text-primary, #111827);
+}
+
+.member-list-body {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.member-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  transition: background-color 0.2s;
+}
+
+.member-row:hover {
+  background-color: var(--color-bg-secondary, #f9fafb);
+}
+
+.member-row:last-child {
+  border-bottom: none;
+}
+
+.member-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.member-address {
+  font-size: 0.875rem;
+  font-family: monospace;
+  color: var(--color-text-primary, #111827);
+}
+
+.member-status {
+  display: flex;
+  align-items: center;
+}
+
+.member-list-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 0.875rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .member-list-table-header,
+  .member-row {
+    grid-template-columns: 1.5fr 1fr 1fr;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .member-address {
+    font-size: 0.75rem;
+  }
+
+  .sort-button {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .member-list-table-header,
+  .member-row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .member-list-table-header {
+    display: none;
+  }
+
+  .member-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .member-info {
+    width: 100%;
+  }
+
+  .member-status {
+    justify-content: flex-start;
+    gap: 0.5rem;
+  }
+
+  .member-status::before {
+    content: attr(data-label);
+    font-size: 0.75rem;
+    color: var(--color-text-secondary, #6b7280);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
