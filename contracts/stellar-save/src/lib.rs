@@ -3962,5 +3962,116 @@ mod tests {
         assert_eq!(deadline1, deadline2);
         assert_eq!(deadline2, deadline3);
     }
+
+    #[test]
+    fn test_is_payout_due_group_not_found() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let result = client.try_is_payout_due(&999);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_is_payout_due_pending_group() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        let group_id = 1;
+
+        let mut group = Group::new(group_id, creator.clone(), 100, 3600, 5, 2, 12345);
+        group.status = GroupStatus::Pending;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+
+        let is_due = client.is_payout_due(&group_id);
+        assert!(!is_due);
+    }
+
+    #[test]
+    fn test_is_payout_due_cycle_incomplete() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        let group_id = 1;
+
+        let mut group = Group::new(group_id, creator.clone(), 100, 3600, 2, 2, 12345);
+        group.status = GroupStatus::Active;
+        group.member_count = 2;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+
+        // Setup members list
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        members.push_back(Address::generate(&env));
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+
+        // Only 1 contribution
+        env.storage().persistent().set(&StorageKeyBuilder::contribution_cycle_count(group_id, 0), &1u32);
+        env.storage().persistent().set(&StorageKeyBuilder::contribution_cycle_total(group_id, 0), &100i128);
+
+        let is_due = client.is_payout_due(&group_id);
+        assert!(!is_due);
+    }
+
+    #[test]
+    fn test_is_payout_due_ready() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        let group_id = 1;
+
+        let mut group = Group::new(group_id, creator.clone(), 100, 3600, 2, 2, 12345);
+        group.status = GroupStatus::Active;
+        group.member_count = 2;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+
+        // Setup members list
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        members.push_back(Address::generate(&env));
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+
+        // 2 contributions (complete)
+        env.storage().persistent().set(&StorageKeyBuilder::contribution_cycle_count(group_id, 0), &2u32);
+        env.storage().persistent().set(&StorageKeyBuilder::contribution_cycle_total(group_id, 0), &200i128);
+
+        let is_due = client.is_payout_due(&group_id);
+        assert!(is_due);
+    }
+
+    #[test]
+    fn test_is_payout_due_already_paid() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        let group_id = 1;
+
+        let mut group = Group::new(group_id, creator.clone(), 100, 3600, 2, 2, 12345);
+        group.status = GroupStatus::Active;
+        group.member_count = 2;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+
+        // Setup members list
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        members.push_back(Address::generate(&env));
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+
+        // 2 contributions (complete)
+        env.storage().persistent().set(&StorageKeyBuilder::contribution_cycle_count(group_id, 0), &2u32);
+        env.storage().persistent().set(&StorageKeyBuilder::contribution_cycle_total(group_id, 0), &200i128);
+
+        // Mark as already paid
+        env.storage().persistent().set(&StorageKeyBuilder::payout_recipient(group_id, 0), &creator);
+
+        let is_due = client.is_payout_due(&group_id);
+        assert!(!is_due);
+    }
 }
+
 
