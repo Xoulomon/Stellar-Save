@@ -14,6 +14,8 @@ export { SearchBar } from "./SearchBar";
 export { Pagination } from "./Pagination";
 export { Tabs } from "./Tabs";
 export type { Tab } from "./Tabs";
+export { GroupDetails } from "./GroupDetails";
+export type { GroupInfo, GroupMember, Contribution, CycleInfo } from "./GroupDetails";
 export { GroupCard } from "./GroupCard";
 export { CreateGroupForm } from "./CreateGroupForm";
 export { GroupStats } from "./GroupStats";
