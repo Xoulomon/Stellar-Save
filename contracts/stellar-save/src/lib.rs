@@ -559,6 +559,42 @@ impl StellarSaveContract {
         
         Ok(true)
     }
+
+    /// Calculates the total amount paid out by a group across all cycles.
+    /// 
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    /// 
+    /// # Returns
+    /// * `Ok(i128)` - Total amount paid out
+    /// * `Err(StellarSaveError::GroupNotFound)` - If group doesn't exist
+    pub fn get_total_paid_out(
+        env: Env,
+        group_id: u64,
+    ) -> Result<i128, StellarSaveError> {
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env.storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+        
+        let mut total: i128 = 0;
+        
+        for cycle in 0..group.current_cycle {
+            let payout_key = StorageKeyBuilder::payout_record(group_id, cycle);
+            
+            if let Some(payout_record) = env.storage()
+                .persistent()
+                .get::<_, PayoutRecord>(&payout_key)
+            {
+                total = total.checked_add(payout_record.amount)
+                    .ok_or(StellarSaveError::Overflow)?;
+            }
+        }
+        
+        Ok(total)
+    }
   
     /// Returns the number of members in a specific group.
     /// 
@@ -4302,6 +4338,85 @@ mod tests {
         let member = Address::generate(&env);
         
         let result = client.try_validate_payout_recipient(&999, &member);
+        assert_eq!(result, Err(Ok(StellarSaveError::GroupNotFound)));
+    }
+    
+    #[test]
+    fn test_get_total_paid_out_no_payouts() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        let total = client.get_total_paid_out(&group_id);
+        assert_eq!(total, 0);
+    }
+    
+    #[test]
+    fn test_get_total_paid_out_single_payout() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 1;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        let payout = PayoutRecord::new(creator.clone(), group_id, 0, 300, env.ledger().timestamp());
+        let payout_key = StorageKeyBuilder::payout_record(group_id, 0);
+        env.storage().persistent().set(&payout_key, &payout);
+        
+        let total = client.get_total_paid_out(&group_id);
+        assert_eq!(total, 300);
+    }
+    
+    #[test]
+    fn test_get_total_paid_out_multiple_payouts() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 3;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        let payout1 = PayoutRecord::new(creator.clone(), group_id, 0, 300, env.ledger().timestamp());
+        let payout2 = PayoutRecord::new(member1.clone(), group_id, 1, 300, env.ledger().timestamp());
+        let payout3 = PayoutRecord::new(member2.clone(), group_id, 2, 300, env.ledger().timestamp());
+        
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 0), &payout1);
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 1), &payout2);
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 2), &payout3);
+        
+        let total = client.get_total_paid_out(&group_id);
+        assert_eq!(total, 900);
+    }
+    
+    #[test]
+    fn test_get_total_paid_out_group_not_found() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let result = client.try_get_total_paid_out(&999);
         assert_eq!(result, Err(Ok(StellarSaveError::GroupNotFound)));
     }
 }
