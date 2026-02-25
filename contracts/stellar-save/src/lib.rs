@@ -1751,6 +1751,59 @@ impl StellarSaveContract {
             member_count,
         );
     }
+
+    /// Records a payout execution in storage and updates related tracking data.
+    ///
+    /// This internal helper handles all the storage operations required when a payout
+    /// is distributed to a member. It ensures data consistency by:
+    /// - Creating and storing the detailed payout record
+    /// - Recording the recipient for the specific cycle (used for fast lookups)
+    /// - Updating the payout status for the cycle
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment for storage access
+    /// * `group_id` - ID of the group making the payout
+    /// * `cycle_number` - The cycle number for this payout
+    /// * `recipient` - Address of the member receiving the payout
+    /// * `amount` - Payout amount in stroops
+    /// * `timestamp` - Timestamp when the payout was executed
+    fn record_payout(
+        env: &Env,
+        group_id: u64,
+        cycle_number: u32,
+        recipient: Address,
+        amount: i128,
+        timestamp: u64,
+    ) -> Result<(), StellarSaveError> {
+        let record_key = StorageKeyBuilder::payout_record(group_id, cycle_number);
+        
+        // 1. Check if payout was already recorded to prevent overwriting/double payouts
+        if env.storage().persistent().has(&record_key) {
+            return Err(StellarSaveError::InvalidState); 
+        }
+
+        // 2. Create the PayoutRecord
+        let payout = PayoutRecord::new(
+            recipient.clone(),
+            group_id,
+            cycle_number,
+            amount,
+            timestamp,
+        );
+
+        // 3. Store the full record with proper key
+        env.storage().persistent().set(&record_key, &payout);
+
+        // 4. Store the recipient explicitly for quick `has_received_payout` lookups
+        let recipient_key = StorageKeyBuilder::payout_recipient(group_id, cycle_number);
+        env.storage().persistent().set(&recipient_key, &recipient);
+
+        // 5. Update the payout status to true/completed for this cycle
+        let status_key = StorageKeyBuilder::payout_status(group_id, cycle_number);
+        env.storage().persistent().set(&status_key, &true);
+
+        Ok(())
+    }
 }
 
 fn emit_group_activated(env: &Env, group_id: u64, timestamp: u64, member_count: u32) {
@@ -6499,5 +6552,83 @@ mod tests {
 
         let result = client.try_get_payout_queue(&999);
         assert_eq!(result, Err(Ok(StellarSaveError::GroupNotFound)));
+    }
+
+    // Tests for record_payout helper function
+
+    #[test]
+    fn test_record_payout_success() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        
+        let recipient = Address::generate(&env);
+        let group_id = 1;
+        let cycle = 0;
+        let amount = 50_000_000;
+        let timestamp = 1234567890u64;
+
+        // Action: Record payout using as_contract
+        let result = env.as_contract(&contract_id, || {
+            StellarSaveContract::record_payout(
+                &env,
+                group_id,
+                cycle,
+                recipient.clone(),
+                amount,
+                timestamp,
+            )
+        });
+
+        // Verify: Success
+        assert!(result.is_ok());
+
+        // Verify: Payout record was stored
+        let record_key = StorageKeyBuilder::payout_record(group_id, cycle);
+        let stored_payout: PayoutRecord = env.storage().persistent().get(&record_key).unwrap();
+        assert_eq!(stored_payout.recipient, recipient);
+        assert_eq!(stored_payout.group_id, group_id);
+        assert_eq!(stored_payout.cycle_number, cycle);
+        assert_eq!(stored_payout.amount, amount);
+        assert_eq!(stored_payout.timestamp, timestamp);
+
+        // Verify: Recipient was stored
+        let recipient_key = StorageKeyBuilder::payout_recipient(group_id, cycle);
+        let stored_recipient: Address = env.storage().persistent().get(&recipient_key).unwrap();
+        assert_eq!(stored_recipient, recipient);
+
+        // Verify: Status was stored
+        let status_key = StorageKeyBuilder::payout_status(group_id, cycle);
+        let stored_status: bool = env.storage().persistent().get(&status_key).unwrap();
+        assert_eq!(stored_status, true);
+    }
+
+    #[test]
+    fn test_record_payout_already_executed() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        
+        let recipient = Address::generate(&env);
+        let group_id = 1;
+        let cycle = 0;
+        let amount = 50_000_000;
+        let timestamp = 1234567890u64;
+
+        // Setup: Record payout for the first time
+        env.as_contract(&contract_id, || {
+            StellarSaveContract::record_payout(
+                &env, group_id, cycle, recipient.clone(), amount, timestamp,
+            )
+        }).unwrap();
+
+        // Action: Try to record the same payout again
+        let result = env.as_contract(&contract_id, || {
+            StellarSaveContract::record_payout(
+                &env, group_id, cycle, recipient.clone(), amount, timestamp,
+            )
+        });
+
+        // Verify: Fails with InvalidState
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::InvalidState);
     }
 }
