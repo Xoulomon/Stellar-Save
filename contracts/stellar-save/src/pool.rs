@@ -277,7 +277,34 @@ impl PoolCalculator {
             return Err(StellarSaveError::InvalidAmount);
         }
         
+        
         Ok(())
+    }
+
+    /// Calculates the net payout amount for a cycle.
+    /// 
+    /// This function takes the total pool amount and subtracts any applicable fees.
+    /// In v1, fees are 0, so the net payout equals the total pool.
+    /// 
+    /// # Arguments
+    /// * `total_pool` - The total amount accumulated in the cycle pool
+    /// 
+    /// # Returns
+    /// * `Ok(net_payout)` - The amount to be paid out to the recipient
+    /// * `Err(StellarSaveError)` - If calculation fails
+    pub fn calculate_payout_amount(total_pool: i128) -> Result<i128, StellarSaveError> {
+        if total_pool < 0 {
+            return Err(StellarSaveError::InvalidAmount);
+        }
+
+        // v1: 0 fees
+        let fees = 0i128;
+        
+        let net_payout = total_pool
+            .checked_sub(fees)
+            .ok_or(StellarSaveError::InternalError)?;
+
+        Ok(net_payout)
     }
 }
 
@@ -645,5 +672,32 @@ mod tests {
             assert!(result.is_ok());
             assert_eq!(result.unwrap(), *expected);
         }
+    }
+
+    #[test]
+    fn test_calculate_payout_amount_v1() {
+        let total_pool = 10_000_000i128;
+        let result = PoolCalculator::calculate_payout_amount(total_pool);
+        
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 10_000_000i128); // 0 fees in v1
+    }
+
+    #[test]
+    fn test_calculate_payout_amount_zero() {
+        let total_pool = 0i128;
+        let result = PoolCalculator::calculate_payout_amount(total_pool);
+        
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 0i128);
+    }
+
+    #[test]
+    fn test_calculate_payout_amount_invalid() {
+        let total_pool = -1_000_000i128;
+        let result = PoolCalculator::calculate_payout_amount(total_pool);
+        
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::InvalidAmount);
     }
 }

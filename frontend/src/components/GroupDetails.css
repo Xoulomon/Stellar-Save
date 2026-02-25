@@ -1,0 +1,467 @@
+.group-details {
+  width: 100%;
+}
+
+/* Header */
+.group-details-header {
+  margin-bottom: 1.5rem;
+}
+
+.group-details-title-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.group-details-title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+/* Overview Section */
+.group-details-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.group-details-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.group-details-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.group-details-info-label {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.group-details-info-value {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.87);
+  text-transform: capitalize;
+}
+
+.group-details-description {
+  padding: 1rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.group-details-description h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.group-details-description p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
+}
+
+/* Progress Section */
+.group-details-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.group-details-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.group-details-progress-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.group-details-progress-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #646cff;
+}
+
+.group-details-progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.group-details-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #646cff 0%, #535bf2 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.group-details-progress-percentage {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: right;
+}
+
+/* Cycles Section */
+.group-details-cycles {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.group-details-current-cycle {
+  padding: 1.5rem;
+}
+
+.group-details-cycle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.group-details-cycle-header h4 {
+  margin: 0;
+  font-size: 1.125rem;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.group-details-cycle-dates {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 1rem;
+}
+
+.group-details-cycle-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.group-details-cycle-amount {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #646cff;
+  text-align: right;
+}
+
+.group-details-cycle-history h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.group-details-cycle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.group-details-cycle-item {
+  padding: 1rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: border-color 0.25s;
+}
+
+.group-details-cycle-item:hover {
+  border-color: rgba(100, 108, 255, 0.5);
+}
+
+.group-details-cycle-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.group-details-cycle-number {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.group-details-cycle-item-dates {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.5rem;
+}
+
+.group-details-cycle-item-amount {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #646cff;
+}
+
+/* Members Section */
+.group-details-members {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.group-details-members-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.group-details-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.group-details-member-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: border-color 0.25s, transform 0.25s;
+}
+
+.group-details-member-clickable {
+  cursor: pointer;
+}
+
+.group-details-member-clickable:hover {
+  border-color: #646cff;
+  transform: translateY(-2px);
+}
+
+.group-details-member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.group-details-member-name {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.87);
+  margin-bottom: 0.25rem;
+}
+
+.group-details-member-address {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: monospace;
+}
+
+.group-details-member-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.group-details-member-contributions {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #646cff;
+}
+
+/* Contributions Section */
+.group-details-contributions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.group-details-contributions-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.group-details-contributions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.group-details-contribution-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: border-color 0.25s, transform 0.25s;
+}
+
+.group-details-contribution-clickable {
+  cursor: pointer;
+}
+
+.group-details-contribution-clickable:hover {
+  border-color: #646cff;
+  transform: translateY(-2px);
+}
+
+.group-details-contribution-main {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.group-details-contribution-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.group-details-contribution-member {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.group-details-contribution-date {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.group-details-contribution-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.group-details-contribution-amount {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #646cff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .group-details-title {
+    font-size: 1.5rem;
+  }
+
+  .group-details-info-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .group-details-member-item {
+    flex-wrap: wrap;
+  }
+
+  .group-details-member-stats {
+    flex-direction: row;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .group-details-contribution-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .group-details-contribution-details {
+    flex-direction: row;
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 480px) {
+  .group-details-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .group-details-title-section {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Light mode */
+@media (prefers-color-scheme: light) {
+  .group-details-title {
+    color: rgba(0, 0, 0, 0.87);
+  }
+
+  .group-details-info-label {
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  .group-details-info-value {
+    color: rgba(0, 0, 0, 0.87);
+  }
+
+  .group-details-description {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  .group-details-description h4 {
+    color: rgba(0, 0, 0, 0.87);
+  }
+
+  .group-details-description p {
+    color: rgba(0, 0, 0, 0.7);
+  }
+
+  .group-details-progress-bar {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+
+  .group-details-progress-percentage {
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  .group-details-cycle-header h4,
+  .group-details-cycle-history h4,
+  .group-details-members-header h4,
+  .group-details-contributions-header h4 {
+    color: rgba(0, 0, 0, 0.87);
+  }
+
+  .group-details-cycle-dates,
+  .group-details-cycle-item-dates {
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  .group-details-cycle-number {
+    color: rgba(0, 0, 0, 0.87);
+  }
+
+  .group-details-cycle-item,
+  .group-details-member-item,
+  .group-details-contribution-item {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
+  }
+
+  .group-details-member-name,
+  .group-details-contribution-member {
+    color: rgba(0, 0, 0, 0.87);
+  }
+
+  .group-details-member-address,
+  .group-details-contribution-date {
+    color: rgba(0, 0, 0, 0.6);
+  }
+}

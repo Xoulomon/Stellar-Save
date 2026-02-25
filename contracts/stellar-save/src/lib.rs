@@ -55,14 +55,6 @@ pub struct ContractConfig {
     pub max_cycle_duration: u64,
 }
 
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MemberProfile {
-    pub address: Address,
-    pub group_id: u64,
-    pub joined_at: u64,
-}
-
 impl ContractConfig {
     pub fn validate(&self) -> bool {
         self.min_contribution > 0 && 
@@ -492,9 +484,50 @@ impl StellarSaveContract {
         }
         
         Ok(false)
-      
-      
     }
+
+    /// Checks if a payout is due for the current cycle of a group.
+    /// 
+    /// A payout is due if:
+    /// 1. The group is in Active status.
+    /// 2. All members have contributed for the current cycle (cycle complete).
+    /// 3. A payout has not already been executed for the current cycle.
+    /// 
+    /// # Arguments
+    /// * `env` - Soroban environment.
+    /// * `group_id` - Unique identifier of the group.
+    /// 
+    /// # Returns
+    /// Returns true if a payout is due, false otherwise.
+    /// Returns StellarSaveError::GroupNotFound if the group doesn't exist.
+    pub fn is_payout_due(env: Env, group_id: u64) -> Result<bool, StellarSaveError> {
+        // 1. Load group data
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env.storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // 2. Check if group is active
+        if group.status != GroupStatus::Active {
+            return Ok(false);
+        }
+
+        // 3. Get pool information for current cycle
+        let pool_info = PoolCalculator::get_pool_info(&env, group_id, group.current_cycle)?;
+
+        // 4. Check if cycle is complete (all members contributed)
+        if !pool_info.is_cycle_complete {
+            return Ok(false);
+        }
+
+        // 5. Check if payout already executed for current cycle
+        let recipient_key = StorageKeyBuilder::payout_recipient(group_id, group.current_cycle);
+        let already_executed = env.storage().persistent().has(&recipient_key);
+
+        Ok(!already_executed)
+    }
+
     /// Returns the payout position for a member in a specific group.
     /// 
     /// # Arguments
@@ -603,6 +636,134 @@ impl StellarSaveContract {
         }
         
         Ok(total)
+    }
+
+    /// Gets all payout records for a group with pagination and sorting.
+    /// 
+    /// This function retrieves the complete payout history for a specific group,
+    /// allowing for pagination to handle large datasets and sorting by cycle number.
+    /// 
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group to query
+    /// * `offset` - Number of records to skip (for pagination)
+    /// * `limit` - Maximum number of records to return (for pagination)
+    /// 
+    /// # Returns
+    /// * `Ok(Vec<PayoutRecord>)` - Vector of payout records sorted by cycle number
+    /// * `Err(StellarSaveError::GroupNotFound)` - If the group doesn't exist
+    /// * `Err(StellarSaveError::Overflow)` - If pagination parameters cause overflow
+    /// 
+    /// # Example
+    /// ```ignore
+    /// // Get first 10 payout records
+    /// let first_page = contract.get_payout_history(env, group_id, 0, 10)?;
+    /// 
+    /// // Get next 10 payout records
+    /// let second_page = contract.get_payout_history(env, group_id, 10, 10)?;
+    /// ```
+    pub fn get_payout_history(
+        env: Env,
+        group_id: u64,
+        offset: u32,
+        limit: u32,
+    ) -> Result<Vec<PayoutRecord>, StellarSaveError> {
+        // 1. Verify group exists
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env.storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // 2. Validate pagination parameters
+        if offset.checked_add(limit).is_none() {
+            return Err(StellarSaveError::Overflow);
+        }
+
+        // 3. Collect all payout records from cycles 0 to current_cycle-1
+        let mut all_payouts = Vec::new(&env);
+        
+        for cycle in 0..group.current_cycle {
+            let payout_key = StorageKeyBuilder::payout_record(group_id, cycle);
+            
+            if let Some(payout_record) = env.storage()
+                .persistent()
+                .get::<_, PayoutRecord>(&payout_key)
+            {
+                all_payouts.push_back(payout_record);
+            }
+        }
+
+        // 4. Sort by cycle number (already in order due to iteration, but ensuring consistency)
+        all_payouts.sort_by(|a, b| a.cycle_number.cmp(&b.cycle_number));
+
+        // 5. Apply pagination
+        let total_records = all_payouts.len();
+        let start_index = offset as usize;
+        
+        // If offset is beyond total records, return empty vector
+        if start_index >= total_records {
+            return Ok(Vec::new(&env));
+        }
+
+        let end_index = std::cmp::min(
+            start_index.checked_add(limit as usize).ok_or(StellarSaveError::Overflow)?,
+            total_records
+        );
+
+        let mut paginated_payouts = Vec::new(&env);
+        for i in start_index..end_index {
+            paginated_payouts.push_back(all_payouts.get(i).unwrap().clone());
+        }
+
+        Ok(paginated_payouts)
+    }
+
+    /// Gets the payout received by a specific member.
+    /// 
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    /// * `member_address` - Address of the member to query
+    /// 
+    /// # Returns
+    /// * `Ok(Option<PayoutRecord>)` - Payout record if member received one, None if not
+    /// * `Err(StellarSaveError)` - If group doesn't exist or member is not part of the group
+    pub fn get_member_payout(
+        env: Env,
+        group_id: u64,
+        member_address: Address,
+    ) -> Result<Option<PayoutRecord>, StellarSaveError> {
+        // Verify the group exists
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env.storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // Verify the member is part of the group
+        let member_key = StorageKeyBuilder::member_profile(group_id, member_address.clone());
+        if !env.storage().persistent().has(&member_key) {
+            return Err(StellarSaveError::NotMember);
+        }
+
+        // Query payout history for all cycles up to current_cycle
+        for cycle in 0..=group.current_cycle {
+            let payout_key = StorageKeyBuilder::payout_record(group_id, cycle);
+            
+            if let Some(payout_record) = env.storage()
+                .persistent()
+                .get::<_, PayoutRecord>(&payout_key)
+            {
+                // Filter by recipient
+                if payout_record.recipient == member_address {
+                    return Ok(Some(payout_record));
+                }
+            }
+        }
+        
+        // Member hasn't received any payout yet
+        Ok(None)
     }
 
     /// Gets the complete payout schedule with dates for all members.
@@ -752,23 +913,6 @@ impl StellarSaveContract {
         Ok(sorted_queue)
     }
   
-    /// Returns the number of members in a specific group.
-    /// 
-    /// # Arguments
-    /// * `group_id` - The unique identifier of the group.
-    /// 
-    /// # Returns
-    /// Returns the member count as u32, or StellarSaveError::GroupNotFound if the group doesn't exist.
-    pub fn get_member_count(env: Env, group_id: u64) -> Result<u32, StellarSaveError> {
-        let key = StorageKeyBuilder::group_data(group_id);
-        let group = env.storage()
-            .persistent()
-            .get::<_, Group>(&key)
-            .ok_or(StellarSaveError::GroupNotFound)?;
-        
-        Ok(group.member_count)
-    }
-
     /// Assigns or reassigns payout positions to members.
     /// 
     /// # Arguments
@@ -1304,6 +1448,76 @@ impl StellarSaveContract {
             .ok_or(StellarSaveError::Overflow)?;
         
         Ok(deadline)
+    }
+
+    /// Calculates when the next payout will occur.
+    /// 
+    /// This function determines the timestamp of the next payout cycle deadline.
+    /// The next payout cycle is typically current_cycle + 1, unless the group is complete.
+    /// 
+    /// The calculation is: started_at + ((next_cycle_number + 1) * cycle_duration)
+    /// where next_cycle_number = current_cycle + 1
+    /// 
+    /// This function is useful for:
+    /// - Displaying countdown timers to users
+    /// - Scheduling automated reminders
+    /// - Planning contribution timing
+    /// - UI/UX countdown displays
+    /// 
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    /// 
+    /// # Returns
+    /// * `Ok(u64)` - Unix timestamp (seconds) when the next payout cycle ends
+    /// * `Err(StellarSaveError::GroupNotFound)` - If the group doesn't exist
+    /// * `Err(StellarSaveError::InvalidState)` - If the group hasn't been started yet
+    /// * `Err(StellarSaveError::InvalidState)` - If the group is complete (no more payouts)
+    /// * `Err(StellarSaveError::Overflow)` - If timestamp calculation overflows
+    /// 
+    /// # Example
+    /// ```ignore
+    /// // Get next payout time
+    /// let next_payout_time = contract.get_next_payout_cycle(env, group_id)?;
+    /// let current_time = env.ledger().timestamp();
+    /// let time_until_payout = next_payout_time - current_time;
+    /// ```
+    pub fn get_next_payout_cycle(
+        env: Env,
+        group_id: u64,
+    ) -> Result<u64, StellarSaveError> {
+        // 1. Load the group from storage
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env.storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // 2. Validate group state
+        if !group.started {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        // 3. Check if group is complete (no more payouts expected)
+        if group.is_complete() {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        // 4. Calculate next cycle number
+        let next_cycle = group.current_cycle.checked_add(1)
+            .ok_or(StellarSaveError::Overflow)?;
+
+        // 5. Calculate next cycle end time: started_at + ((next_cycle + 1) * cycle_duration)
+        let cycle_multiplier = next_cycle.checked_add(1)
+            .ok_or(StellarSaveError::Overflow)?;
+        
+        let next_cycle_end_time = cycle_multiplier
+            .checked_mul(group.cycle_duration as u32)
+            .map(|duration| duration as u64)
+            .and_then(|duration| group.started_at.checked_add(duration))
+            .ok_or(StellarSaveError::Overflow)?;
+        
+        Ok(next_cycle_end_time)
     }
 
     /// Allows a user to join an existing savings group.
@@ -4244,7 +4458,347 @@ mod tests {
         assert_eq!(deadline1, deadline2);
         assert_eq!(deadline2, deadline3);
     }
+
+    // Tests for get_next_payout_cycle function
     
+    #[test]
+    fn test_get_next_payout_cycle_current_cycle_0() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = 1;
+        let cycle_duration = 604800u64; // 1 week in seconds
+        let started_at = 1000000u64;
+        
+        // Setup: Create a started group with current_cycle = 0
+        let mut group = Group::new(group_id, creator.clone(), 100, cycle_duration, 5, 2, started_at);
+        group.started = true;
+        group.started_at = started_at;
+        group.current_cycle = 0;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        // Action: Get next payout cycle time
+        let next_payout_time = client.get_next_payout_cycle(&group_id);
+        
+        // Verify: Next payout is at started_at + (2 * cycle_duration)
+        // current_cycle = 0, next_cycle = 1, so next_payout = started_at + ((1+1) * cycle_duration)
+        let expected = started_at + (2 * cycle_duration);
+        assert_eq!(next_payout_time, expected);
+    }
+    
+    #[test]
+    fn test_get_next_payout_cycle_current_cycle_2() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = 1;
+        let cycle_duration = 86400u64; // 1 day
+        let started_at = 1000000u64;
+        
+        // Setup: Create a started group with current_cycle = 2
+        let mut group = Group::new(group_id, creator.clone(), 100, cycle_duration, 5, 2, started_at);
+        group.started = true;
+        group.started_at = started_at;
+        group.current_cycle = 2;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        // Action: Get next payout cycle time
+        let next_payout_time = client.get_next_payout_cycle(&group_id);
+        
+        // Verify: Next payout is at started_at + (4 * cycle_duration)
+        // current_cycle = 2, next_cycle = 3, so next_payout = started_at + ((3+1) * cycle_duration)
+        let expected = started_at + (4 * cycle_duration);
+        assert_eq!(next_payout_time, expected);
+    }
+    
+    #[test]
+    fn test_get_next_payout_cycle_different_durations() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let started_at = 1000000u64;
+        
+        // Test with 1 hour duration
+        let group1_id = 1;
+        let duration1 = 3600u64; // 1 hour
+        let mut group1 = Group::new(group1_id, creator.clone(), 100, duration1, 5, 2, started_at);
+        group1.started = true;
+        group1.started_at = started_at;
+        group1.current_cycle = 0;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group1_id), &group1);
+        
+        // Test with 1 week duration
+        let group2_id = 2;
+        let duration2 = 604800u64; // 1 week
+        let mut group2 = Group::new(group2_id, creator.clone(), 100, duration2, 5, 2, started_at);
+        group2.started = true;
+        group2.started_at = started_at;
+        group2.current_cycle = 0;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group2_id), &group2);
+        
+        // Action: Get next payout times
+        let next_payout1 = client.get_next_payout_cycle(&group1_id);
+        let next_payout2 = client.get_next_payout_cycle(&group2_id);
+        
+        // Verify: Different next payout times based on duration
+        assert_eq!(next_payout1, started_at + (2 * duration1));
+        assert_eq!(next_payout2, started_at + (2 * duration2));
+        assert_ne!(next_payout1, next_payout2);
+    }
+    
+    #[test]
+    fn test_get_next_payout_cycle_high_cycle_number() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = 1;
+        let cycle_duration = 86400u64; // 1 day
+        let started_at = 1000000u64;
+        
+        // Setup: Create a started group with high current_cycle
+        let mut group = Group::new(group_id, creator.clone(), 100, cycle_duration, 100, 2, started_at);
+        group.started = true;
+        group.started_at = started_at;
+        group.current_cycle = 50;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        // Action: Get next payout cycle time
+        let next_payout_time = client.get_next_payout_cycle(&group_id);
+        
+        // Verify: Correct calculation for high cycle number
+        // current_cycle = 50, next_cycle = 51, so next_payout = started_at + ((51+1) * cycle_duration)
+        let expected = started_at + (52 * cycle_duration);
+        assert_eq!(next_payout_time, expected);
+    }
+    
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1001))")] // GroupNotFound
+    fn test_get_next_payout_cycle_group_not_found() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        // Action: Try to get next payout for non-existent group
+        client.get_next_payout_cycle(&999);
+    }
+    
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1003))")] // InvalidState
+    fn test_get_next_payout_cycle_group_not_started() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = 1;
+        let cycle_duration = 604800u64;
+        let created_at = 1000000u64;
+        
+        // Setup: Create a group that hasn't been started
+        let group = Group::new(group_id, creator.clone(), 100, cycle_duration, 5, 2, created_at);
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        // Action: Try to get next payout for unstarted group
+        client.get_next_payout_cycle(&group_id);
+    }
+    
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1003))")] // InvalidState
+    fn test_get_next_payout_cycle_group_complete() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = 1;
+        let cycle_duration = 604800u64;
+        let started_at = 1000000u64;
+        
+        // Setup: Create a completed group (current_cycle >= max_members)
+        let mut group = Group::new(group_id, creator.clone(), 100, cycle_duration, 5, 2, started_at);
+        group.started = true;
+        group.started_at = started_at;
+        group.current_cycle = 5; // Equal to max_members, so group is complete
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        // Action: Try to get next payout for completed group
+        client.get_next_payout_cycle(&group_id);
+    }
+    
+    #[test]
+    fn test_get_next_payout_cycle_time_remaining() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = 1;
+        let cycle_duration = 604800u64; // 1 week
+        let started_at = 1000000u64;
+        
+        // Setup: Create a started group
+        let mut group = Group::new(group_id, creator.clone(), 100, cycle_duration, 5, 2, started_at);
+        group.started = true;
+        group.started_at = started_at;
+        group.current_cycle = 0;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        // Action: Get next payout time and calculate time remaining
+        let next_payout_time = client.get_next_payout_cycle(&group_id);
+        let current_time = started_at + cycle_duration + 100000; // Some time into cycle 1
+        
+        // Verify: Can calculate time until next payout
+        assert!(next_payout_time > current_time);
+        let time_until_payout = next_payout_time - current_time;
+        assert!(time_until_payout > 0);
+    }
+    
+    #[test]
+    fn test_get_next_payout_cycle_consistency() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = 1;
+        let cycle_duration = 604800u64;
+        let started_at = 1000000u64;
+        
+        // Setup: Create a started group
+        let mut group = Group::new(group_id, creator.clone(), 100, cycle_duration, 5, 2, started_at);
+        group.started = true;
+        group.started_at = started_at;
+        group.current_cycle = 1;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        // Action: Call multiple times
+        let next_payout1 = client.get_next_payout_cycle(&group_id);
+        let next_payout2 = client.get_next_payout_cycle(&group_id);
+        let next_payout3 = client.get_next_payout_cycle(&group_id);
+        
+        // Verify: Always returns same value
+        assert_eq!(next_payout1, next_payout2);
+        assert_eq!(next_payout2, next_payout3);
+    }
+
+    #[test]
+    fn test_is_payout_due_group_not_found() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let result = client.try_is_payout_due(&999);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_is_payout_due_pending_group() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        let group_id = 1;
+
+        let mut group = Group::new(group_id, creator.clone(), 100, 3600, 5, 2, 12345);
+        group.status = GroupStatus::Pending;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+
+        let is_due = client.is_payout_due(&group_id);
+        assert!(!is_due);
+    }
+
+    #[test]
+    fn test_is_payout_due_cycle_incomplete() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        let group_id = 1;
+
+        let mut group = Group::new(group_id, creator.clone(), 100, 3600, 2, 2, 12345);
+        group.status = GroupStatus::Active;
+        group.member_count = 2;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+
+        // Setup members list
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        members.push_back(Address::generate(&env));
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+
+        // Only 1 contribution
+        env.storage().persistent().set(&StorageKeyBuilder::contribution_cycle_count(group_id, 0), &1u32);
+        env.storage().persistent().set(&StorageKeyBuilder::contribution_cycle_total(group_id, 0), &100i128);
+
+        let is_due = client.is_payout_due(&group_id);
+        assert!(!is_due);
+    }
+
+    #[test]
+    fn test_is_payout_due_ready() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        let group_id = 1;
+
+        let mut group = Group::new(group_id, creator.clone(), 100, 3600, 2, 2, 12345);
+        group.status = GroupStatus::Active;
+        group.member_count = 2;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+
+        // Setup members list
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        members.push_back(Address::generate(&env));
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+
+        // 2 contributions (complete)
+        env.storage().persistent().set(&StorageKeyBuilder::contribution_cycle_count(group_id, 0), &2u32);
+        env.storage().persistent().set(&StorageKeyBuilder::contribution_cycle_total(group_id, 0), &200i128);
+
+        let is_due = client.is_payout_due(&group_id);
+        assert!(is_due);
+    }
+
+    #[test]
+    fn test_is_payout_due_already_paid() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        let group_id = 1;
+
+        let mut group = Group::new(group_id, creator.clone(), 100, 3600, 2, 2, 12345);
+        group.status = GroupStatus::Active;
+        group.member_count = 2;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+
+        // Setup members list
+        let mut members = Vec::new(&env);
+        members.push_back(creator.clone());
+        members.push_back(Address::generate(&env));
+        env.storage().persistent().set(&StorageKeyBuilder::group_members(group_id), &members);
+
+        // 2 contributions (complete)
+        env.storage().persistent().set(&StorageKeyBuilder::contribution_cycle_count(group_id, 0), &2u32);
+        env.storage().persistent().set(&StorageKeyBuilder::contribution_cycle_total(group_id, 0), &200i128);
+
+        // Mark as already paid
+        env.storage().persistent().set(&StorageKeyBuilder::payout_recipient(group_id, 0), &creator);
+
+        let is_due = client.is_payout_due(&group_id);
+        assert!(!is_due);
+    }
+  
     #[test]
     fn test_emergency_withdraw_not_member() {
         let env = Env::default();
@@ -4570,10 +5124,427 @@ mod tests {
         let env = Env::default();
         env.mock_all_auths();
         let contract_id = env.register_contract(None, StellarSaveContract);
-        let client = StellarSaveContractClient::new(&env, &contract_id);
-        
         let result = client.try_get_total_paid_out(&999);
         assert_eq!(result, Err(Ok(StellarSaveError::GroupNotFound)));
+    }
+
+    // Tests for get_payout_history function
+    
+    #[test]
+    fn test_get_payout_history_no_payouts() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        // Get payout history (should be empty)
+        let history = client.get_payout_history(&group_id, &0, &10);
+        assert_eq!(history.len(), 0);
+    }
+    
+    #[test]
+    fn test_get_payout_history_single_payout() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        // Setup: Create a group with one payout
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 1;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        let payout = PayoutRecord::new(creator.clone(), group_id, 0, 300, env.ledger().timestamp());
+        let payout_key = StorageKeyBuilder::payout_record(group_id, 0);
+        env.storage().persistent().set(&payout_key, &payout);
+        
+        // Get payout history
+        let history = client.get_payout_history(&group_id, &0, &10);
+        assert_eq!(history.len(), 1);
+        assert_eq!(history.get(0).unwrap().cycle_number, 0);
+        assert_eq!(history.get(0).unwrap().recipient, creator);
+        assert_eq!(history.get(0).unwrap().amount, 300);
+    }
+    
+    #[test]
+    fn test_get_payout_history_multiple_payouts() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        // Setup: Create a group with multiple payouts
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 3;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        let payout1 = PayoutRecord::new(creator.clone(), group_id, 0, 300, 1000);
+        let payout2 = PayoutRecord::new(member1.clone(), group_id, 1, 300, 2000);
+        let payout3 = PayoutRecord::new(member2.clone(), group_id, 2, 300, 3000);
+        
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 0), &payout1);
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 1), &payout2);
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 2), &payout3);
+        
+        // Get payout history
+        let history = client.get_payout_history(&group_id, &0, &10);
+        assert_eq!(history.len(), 3);
+        
+        // Verify sorting by cycle number
+        assert_eq!(history.get(0).unwrap().cycle_number, 0);
+        assert_eq!(history.get(1).unwrap().cycle_number, 1);
+        assert_eq!(history.get(2).unwrap().cycle_number, 2);
+        
+        // Verify recipients
+        assert_eq!(history.get(0).unwrap().recipient, creator);
+        assert_eq!(history.get(1).unwrap().recipient, member1);
+        assert_eq!(history.get(2).unwrap().recipient, member2);
+    }
+    
+    #[test]
+    fn test_get_payout_history_pagination_first_page() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &10);
+        
+        // Setup: Create a group with 5 payouts
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 5;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        for i in 0..5 {
+            let payout = PayoutRecord::new(creator.clone(), group_id, i, 300, 1000 + (i as u64 * 1000));
+            env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, i), &payout);
+        }
+        
+        // Get first page (limit 2)
+        let first_page = client.get_payout_history(&group_id, &0, &2);
+        assert_eq!(first_page.len(), 2);
+        assert_eq!(first_page.get(0).unwrap().cycle_number, 0);
+        assert_eq!(first_page.get(1).unwrap().cycle_number, 1);
+    }
+    
+    #[test]
+    fn test_get_payout_history_pagination_second_page() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &10);
+        
+        // Setup: Create a group with 5 payouts
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 5;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        for i in 0..5 {
+            let payout = PayoutRecord::new(creator.clone(), group_id, i, 300, 1000 + (i as u64 * 1000));
+            env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, i), &payout);
+        }
+        
+        // Get second page (offset 2, limit 2)
+        let second_page = client.get_payout_history(&group_id, &2, &2);
+        assert_eq!(second_page.len(), 2);
+        assert_eq!(second_page.get(0).unwrap().cycle_number, 2);
+        assert_eq!(second_page.get(1).unwrap().cycle_number, 3);
+    }
+    
+    #[test]
+    fn test_get_payout_history_pagination_last_page_partial() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &10);
+        
+        // Setup: Create a group with 5 payouts
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 5;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        for i in 0..5 {
+            let payout = PayoutRecord::new(creator.clone(), group_id, i, 300, 1000 + (i as u64 * 1000));
+            env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, i), &payout);
+        }
+        
+        // Get last page (offset 4, limit 2) - should only return 1 record
+        let last_page = client.get_payout_history(&group_id, &4, &2);
+        assert_eq!(last_page.len(), 1);
+        assert_eq!(last_page.get(0).unwrap().cycle_number, 4);
+    }
+    
+    #[test]
+    fn test_get_payout_history_pagination_offset_beyond_end() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        // Setup: Create a group with 2 payouts
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 2;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        for i in 0..2 {
+            let payout = PayoutRecord::new(creator.clone(), group_id, i, 300, 1000 + (i as u64 * 1000));
+            env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, i), &payout);
+        }
+        
+        // Get with offset beyond total records
+        let empty_result = client.get_payout_history(&group_id, &10, &5);
+        assert_eq!(empty_result.len(), 0);
+    }
+    
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1001))")] // GroupNotFound
+    fn test_get_payout_history_group_not_found() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        // Try to get payout history for non-existent group
+        client.get_payout_history(&999, &0, &10);
+    }
+    
+    #[test]
+    fn test_get_payout_history_large_dataset() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &50);
+        
+        // Setup: Create a group with 20 payouts
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 20;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        for i in 0..20 {
+            let payout = PayoutRecord::new(creator.clone(), group_id, i, 300, 1000 + (i as u64 * 1000));
+            env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, i), &payout);
+        }
+        
+        // Test multiple pages
+        let page1 = client.get_payout_history(&group_id, &0, &5);
+        let page2 = client.get_payout_history(&group_id, &5, &5);
+        let page3 = client.get_payout_history(&group_id, &10, &5);
+        let page4 = client.get_payout_history(&group_id, &15, &5);
+        
+        assert_eq!(page1.len(), 5);
+        assert_eq!(page2.len(), 5);
+        assert_eq!(page3.len(), 5);
+        assert_eq!(page4.len(), 5);
+        
+        // Verify continuity
+        assert_eq!(page1.get(4).unwrap().cycle_number, 4);
+        assert_eq!(page2.get(0).unwrap().cycle_number, 5);
+        assert_eq!(page3.get(0).unwrap().cycle_number, 10);
+        assert_eq!(page4.get(0).unwrap().cycle_number, 15);
+    }
+    
+    #[test]
+    fn test_get_payout_history_sorting_consistency() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &5);
+        
+        // Setup: Create payouts out of order in storage
+        let mut group: Group = env.storage().persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        group.current_cycle = 3;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+        
+        // Store payouts in non-sequential order
+        let payout2 = PayoutRecord::new(creator.clone(), group_id, 2, 300, 3000);
+        let payout0 = PayoutRecord::new(creator.clone(), group_id, 0, 300, 1000);
+        let payout1 = PayoutRecord::new(creator.clone(), group_id, 1, 300, 2000);
+        
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 2), &payout2);
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 0), &payout0);
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 1), &payout1);
+        
+        // Get payout history and verify sorting
+        let history = client.get_payout_history(&group_id, &0, &10);
+        assert_eq!(history.len(), 3);
+        
+        // Should be sorted by cycle number regardless of storage order
+        assert_eq!(history.get(0).unwrap().cycle_number, 0);
+        assert_eq!(history.get(1).unwrap().cycle_number, 1);
+        assert_eq!(history.get(2).unwrap().cycle_number, 2);
+    }
+
+    #[test]
+    fn test_get_member_payout_no_payout_received() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        // Add member to group
+        client.join_group(&group_id, &member);
+        
+        // Member hasn't received any payout yet
+        let result = client.get_member_payout(&group_id, &member);
+        assert_eq!(result, None);
+    }
+    
+    #[test]
+    fn test_get_member_payout_received_payout() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        // Add member to group
+        client.join_group(&group_id, &member);
+        
+        // Simulate a payout to the member in cycle 0
+        let payout = PayoutRecord::new(member.clone(), group_id, 0, 300, env.ledger().timestamp());
+        let payout_key = StorageKeyBuilder::payout_record(group_id, 0);
+        env.storage().persistent().set(&payout_key, &payout);
+        
+        // Update group current_cycle to reflect the payout
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let mut group: Group = env.storage().persistent().get(&group_key).unwrap();
+        group.current_cycle = 1;
+        env.storage().persistent().set(&group_key, &group);
+        
+        // Member should have received a payout
+        let result = client.get_member_payout(&group_id, &member);
+        assert!(result.is_some());
+        
+        let payout_record = result.unwrap();
+        assert_eq!(payout_record.recipient, member);
+        assert_eq!(payout_record.group_id, group_id);
+        assert_eq!(payout_record.cycle_number, 0);
+        assert_eq!(payout_record.amount, 300);
+    }
+    
+    #[test]
+    fn test_get_member_payout_multiple_cycles() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        // Add members to group
+        client.join_group(&group_id, &member1);
+        client.join_group(&group_id, &member2);
+        
+        // Simulate payouts across multiple cycles
+        let payout1 = PayoutRecord::new(member1.clone(), group_id, 0, 300, env.ledger().timestamp());
+        let payout2 = PayoutRecord::new(member2.clone(), group_id, 1, 300, env.ledger().timestamp());
+        let payout3 = PayoutRecord::new(creator.clone(), group_id, 2, 300, env.ledger().timestamp());
+        
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 0), &payout1);
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 1), &payout2);
+        env.storage().persistent().set(&StorageKeyBuilder::payout_record(group_id, 2), &payout3);
+        
+        // Update group current_cycle
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let mut group: Group = env.storage().persistent().get(&group_key).unwrap();
+        group.current_cycle = 3;
+        env.storage().persistent().set(&group_key, &group);
+        
+        // Check member1's payout (should be cycle 0)
+        let result1 = client.get_member_payout(&group_id, &member1);
+        assert!(result1.is_some());
+        assert_eq!(result1.unwrap().cycle_number, 0);
+        
+        // Check member2's payout (should be cycle 1)
+        let result2 = client.get_member_payout(&group_id, &member2);
+        assert!(result2.is_some());
+        assert_eq!(result2.unwrap().cycle_number, 1);
+        
+        // Check creator's payout (should be cycle 2)
+        let result3 = client.get_member_payout(&group_id, &creator);
+        assert!(result3.is_some());
+        assert_eq!(result3.unwrap().cycle_number, 2);
+    }
+    
+    #[test]
+    fn test_get_member_payout_group_not_found() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let member = Address::generate(&env);
+        
+        let result = client.try_get_member_payout(&999, &member);
+        assert_eq!(result, Err(Ok(StellarSaveError::GroupNotFound)));
+    }
+    
+    #[test]
+    fn test_get_member_payout_not_member() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, StellarSaveContract);
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        
+        let creator = Address::generate(&env);
+        let non_member = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        
+        let result = client.try_get_member_payout(&group_id, &non_member);
+        assert_eq!(result, Err(Ok(StellarSaveError::NotMember)));
     }
     
     #[test]
@@ -4824,4 +5795,5 @@ mod tests {
         assert_eq!(result, Err(Ok(StellarSaveError::GroupNotFound)));
     }
 }
+
 
