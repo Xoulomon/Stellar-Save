@@ -100,7 +100,7 @@ impl EventEmitter {
         };
         env.events().publish(("group_created",), event);
     }
-    
+
     pub fn emit_member_joined(
         env: &Env,
         group_id: u64,
@@ -116,7 +116,7 @@ impl EventEmitter {
         };
         env.events().publish(("member_joined",), event);
     }
-    
+
     pub fn emit_member_left(
         env: &Env,
         group_id: u64,
@@ -132,7 +132,7 @@ impl EventEmitter {
         };
         env.events().publish(("member_left",), event);
     }
-    
+
     pub fn emit_contribution_made(
         env: &Env,
         group_id: u64,
@@ -152,7 +152,7 @@ impl EventEmitter {
         };
         env.events().publish(("contribution_made",), event);
     }
-    
+
     pub fn emit_payout_executed(
         env: &Env,
         group_id: u64,
@@ -170,7 +170,7 @@ impl EventEmitter {
         };
         env.events().publish(("payout_executed",), event);
     }
-    
+
     pub fn emit_group_completed(
         env: &Env,
         group_id: u64,
@@ -188,7 +188,7 @@ impl EventEmitter {
         };
         env.events().publish(("group_completed",), event);
     }
-    
+
     pub fn emit_group_status_changed(
         env: &Env,
         group_id: u64,
@@ -217,7 +217,7 @@ mod tests {
     fn test_group_created_event() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        
+
         let event = GroupCreated {
             group_id: 1,
             creator: creator.clone(),
@@ -226,7 +226,7 @@ mod tests {
             max_members: 5,
             created_at: 1234567890,
         };
-        
+
         assert_eq!(event.group_id, 1);
         assert_eq!(event.creator, creator);
     }
@@ -235,14 +235,14 @@ mod tests {
     fn test_member_joined_event() {
         let env = Env::default();
         let member = Address::generate(&env);
-        
+
         let event = MemberJoined {
             group_id: 1,
             member: member.clone(),
             member_count: 3,
             joined_at: 1234567890,
         };
-        
+
         assert_eq!(event.group_id, 1);
         assert_eq!(event.member, member);
     }
@@ -251,15 +251,7 @@ mod tests {
     fn test_event_emitter_group_created() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        
-        EventEmitter::emit_group_created(
-            &env,
-            1,
-            creator,
-            10_000_000,
-            604800,
-            5,
-            1234567890,
-        );
+
+        EventEmitter::emit_group_created(&env, 1, creator, 10_000_000, 604800, 5, 1234567890);
     }
 }

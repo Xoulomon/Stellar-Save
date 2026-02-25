@@ -1,4 +1,4 @@
-﻿use soroban_sdk::{contracterror, contracttype};
+use soroban_sdk::{contracterror, contracttype};
 
 /// Error types for invalid state transitions.
 #[contracterror]
@@ -13,12 +13,11 @@ pub enum StatusError {
     AlreadyCancelled = 3,
 }
 
-
 /// GroupStatus enum representing the lifecycle states of a savings group.
-/// 
+///
 /// A group progresses through various states from creation to completion.
 /// State transitions are validated to ensure proper group lifecycle management.
-/// 
+///
 /// # State Flow
 /// ```text
 /// Pending -> Active -> Completed
@@ -37,22 +36,22 @@ pub enum GroupStatus {
     /// Waiting for minimum members to join before activation.
     /// Can transition to: Active, Cancelled
     Pending = 0,
-    
+
     /// Group is actively running with members contributing and receiving payouts.
     /// Normal operational state where contributions and payouts occur.
     /// Can transition to: Paused, Completed, Cancelled
     Active = 1,
-    
+
     /// Group is temporarily paused.
     /// No contributions or payouts can occur while paused.
     /// Can transition to: Active, Cancelled
     Paused = 2,
-    
+
     /// Group has completed all cycles successfully.
     /// All members have received their payouts.
     /// Terminal state - no further transitions allowed.
     Completed = 3,
-    
+
     /// Group has been cancelled and will not continue.
     /// May occur due to insufficient members, admin action, or other issues.
     /// Terminal state - no further transitions allowed.
@@ -61,14 +60,14 @@ pub enum GroupStatus {
 
 impl GroupStatus {
     /// Checks if a transition from the current status to a new status is valid.
-    /// 
+    ///
     /// # Arguments
     /// * `new_status` - The desired new status
-    /// 
+    ///
     /// # Returns
     /// * `Ok(())` if the transition is valid
     /// * `Err(StatusError)` if the transition is invalid
-    /// 
+    ///
     /// # Valid Transitions
     /// - Pending -> Active, Cancelled
     /// - Active -> Paused, Completed, Cancelled
@@ -80,30 +79,30 @@ impl GroupStatus {
             // From Pending
             (GroupStatus::Pending, GroupStatus::Active) => Ok(()),
             (GroupStatus::Pending, GroupStatus::Cancelled) => Ok(()),
-            
+
             // From Active
             (GroupStatus::Active, GroupStatus::Paused) => Ok(()),
             (GroupStatus::Active, GroupStatus::Completed) => Ok(()),
             (GroupStatus::Active, GroupStatus::Cancelled) => Ok(()),
-            
+
             // From Paused
             (GroupStatus::Paused, GroupStatus::Active) => Ok(()),
             (GroupStatus::Paused, GroupStatus::Cancelled) => Ok(()),
-            
+
             // Terminal states cannot transition
             (GroupStatus::Completed, _) => Err(StatusError::AlreadyCompleted),
             (GroupStatus::Cancelled, _) => Err(StatusError::AlreadyCancelled),
-            
+
             // All other transitions are invalid
             _ => Err(StatusError::InvalidTransition),
         }
     }
-    
+
     /// Validates and performs a state transition.
-    /// 
+    ///
     /// # Arguments
     /// * `new_status` - The desired new status
-    /// 
+    ///
     /// # Returns
     /// * `Ok(new_status)` if the transition is valid
     /// * `Err(StatusError)` if the transition is invalid
@@ -111,27 +110,27 @@ impl GroupStatus {
         self.can_transition_to(new_status)?;
         Ok(new_status)
     }
-    
+
     /// Checks if the group is in a terminal state (Completed or Cancelled).
     pub fn is_terminal(&self) -> bool {
         matches!(self, GroupStatus::Completed | GroupStatus::Cancelled)
     }
-    
+
     /// Checks if the group can accept contributions in its current state.
     pub fn can_accept_contributions(&self) -> bool {
         matches!(self, GroupStatus::Active)
     }
-    
+
     /// Checks if the group can process payouts in its current state.
     pub fn can_process_payouts(&self) -> bool {
         matches!(self, GroupStatus::Active)
     }
-    
+
     /// Checks if new members can join the group in its current state.
     pub fn can_accept_members(&self) -> bool {
         matches!(self, GroupStatus::Pending | GroupStatus::Active)
     }
-    
+
     /// Returns a string representation of the status.
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -142,12 +141,12 @@ impl GroupStatus {
             GroupStatus::Cancelled => "Cancelled",
         }
     }
-    
+
     /// Converts a u32 value to GroupStatus.
-    /// 
+    ///
     /// # Arguments
     /// * `value` - The u32 representation of the status
-    /// 
+    ///
     /// # Returns
     /// * `Some(GroupStatus)` if the value is valid
     /// * `None` if the value doesn't correspond to any status
@@ -161,7 +160,7 @@ impl GroupStatus {
             _ => None,
         }
     }
-    
+
     /// Converts the GroupStatus to its u32 representation.
     pub fn to_u32(&self) -> u32 {
         *self as u32
@@ -175,13 +174,14 @@ impl GroupStatus {
         match self {
             GroupStatus::Pending => "Group is pending activation, waiting for members to join",
             GroupStatus::Active => "Group is active and accepting contributions",
-            GroupStatus::Paused => "Group is temporarily paused, no contributions or payouts allowed",
+            GroupStatus::Paused => {
+                "Group is temporarily paused, no contributions or payouts allowed"
+            }
             GroupStatus::Completed => "Group has completed all cycles successfully",
             GroupStatus::Cancelled => "Group has been cancelled and will not continue",
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -190,10 +190,10 @@ mod tests {
     #[test]
     fn test_valid_transitions_from_pending() {
         let status = GroupStatus::Pending;
-        
+
         assert!(status.can_transition_to(GroupStatus::Active).is_ok());
         assert!(status.can_transition_to(GroupStatus::Cancelled).is_ok());
-        
+
         assert!(status.can_transition_to(GroupStatus::Paused).is_err());
         assert!(status.can_transition_to(GroupStatus::Completed).is_err());
     }
@@ -201,21 +201,21 @@ mod tests {
     #[test]
     fn test_valid_transitions_from_active() {
         let status = GroupStatus::Active;
-        
+
         assert!(status.can_transition_to(GroupStatus::Paused).is_ok());
         assert!(status.can_transition_to(GroupStatus::Completed).is_ok());
         assert!(status.can_transition_to(GroupStatus::Cancelled).is_ok());
-        
+
         assert!(status.can_transition_to(GroupStatus::Pending).is_err());
     }
 
     #[test]
     fn test_valid_transitions_from_paused() {
         let status = GroupStatus::Paused;
-        
+
         assert!(status.can_transition_to(GroupStatus::Active).is_ok());
         assert!(status.can_transition_to(GroupStatus::Cancelled).is_ok());
-        
+
         assert!(status.can_transition_to(GroupStatus::Pending).is_err());
         assert!(status.can_transition_to(GroupStatus::Completed).is_err());
     }
@@ -223,7 +223,7 @@ mod tests {
     #[test]
     fn test_terminal_state_completed() {
         let status = GroupStatus::Completed;
-        
+
         assert_eq!(
             status.can_transition_to(GroupStatus::Active),
             Err(StatusError::AlreadyCompleted)
@@ -236,14 +236,14 @@ mod tests {
             status.can_transition_to(GroupStatus::Cancelled),
             Err(StatusError::AlreadyCompleted)
         );
-        
+
         assert!(status.is_terminal());
     }
 
     #[test]
     fn test_terminal_state_cancelled() {
         let status = GroupStatus::Cancelled;
-        
+
         assert_eq!(
             status.can_transition_to(GroupStatus::Active),
             Err(StatusError::AlreadyCancelled)
@@ -256,7 +256,7 @@ mod tests {
             status.can_transition_to(GroupStatus::Completed),
             Err(StatusError::AlreadyCancelled)
         );
-        
+
         assert!(status.is_terminal());
     }
 
@@ -264,7 +264,7 @@ mod tests {
     fn test_transition_to_success() {
         let status = GroupStatus::Pending;
         let result = status.transition_to(GroupStatus::Active);
-        
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), GroupStatus::Active);
     }
@@ -273,7 +273,7 @@ mod tests {
     fn test_transition_to_failure() {
         let status = GroupStatus::Pending;
         let result = status.transition_to(GroupStatus::Paused);
-        
+
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), StatusError::InvalidTransition);
     }
@@ -378,11 +378,11 @@ mod tests {
     fn test_full_lifecycle_happy_path() {
         // Pending -> Active -> Completed
         let mut status = GroupStatus::Pending;
-        
+
         status = status.transition_to(GroupStatus::Active).unwrap();
         assert_eq!(status, GroupStatus::Active);
         assert!(status.can_accept_contributions());
-        
+
         status = status.transition_to(GroupStatus::Completed).unwrap();
         assert_eq!(status, GroupStatus::Completed);
         assert!(status.is_terminal());
@@ -392,14 +392,14 @@ mod tests {
     fn test_full_lifecycle_with_pause() {
         // Pending -> Active -> Paused -> Active -> Completed
         let mut status = GroupStatus::Pending;
-        
+
         status = status.transition_to(GroupStatus::Active).unwrap();
         status = status.transition_to(GroupStatus::Paused).unwrap();
         assert!(!status.can_accept_contributions());
-        
+
         status = status.transition_to(GroupStatus::Active).unwrap();
         assert!(status.can_accept_contributions());
-        
+
         status = status.transition_to(GroupStatus::Completed).unwrap();
         assert!(status.is_terminal());
     }
@@ -407,12 +407,18 @@ mod tests {
     #[test]
     fn test_cancellation_from_various_states() {
         // Can cancel from Pending
-        assert!(GroupStatus::Pending.transition_to(GroupStatus::Cancelled).is_ok());
-        
+        assert!(GroupStatus::Pending
+            .transition_to(GroupStatus::Cancelled)
+            .is_ok());
+
         // Can cancel from Active
-        assert!(GroupStatus::Active.transition_to(GroupStatus::Cancelled).is_ok());
-        
+        assert!(GroupStatus::Active
+            .transition_to(GroupStatus::Cancelled)
+            .is_ok());
+
         // Can cancel from Paused
-        assert!(GroupStatus::Paused.transition_to(GroupStatus::Cancelled).is_ok());
+        assert!(GroupStatus::Paused
+            .transition_to(GroupStatus::Cancelled)
+            .is_ok());
     }
 }

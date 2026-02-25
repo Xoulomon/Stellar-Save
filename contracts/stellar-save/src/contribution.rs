@@ -1,7 +1,7 @@
 use soroban_sdk::{contracttype, Address};
 
 /// Contribution Record structure for tracking individual member contributions.
-/// 
+///
 /// Each contribution represents a single payment made by a member during a specific
 /// cycle of a rotational savings group. This provides an immutable audit trail of
 /// all contributions made within the system.
@@ -32,14 +32,14 @@ pub struct ContributionRecord {
 
 impl ContributionRecord {
     /// Creates a new ContributionRecord with validation.
-    /// 
+    ///
     /// # Arguments
     /// * `member_address` - Address of the contributing member
     /// * `group_id` - ID of the group receiving the contribution
     /// * `cycle_number` - Current cycle number
     /// * `amount` - Contribution amount in stroops
     /// * `timestamp` - Contribution timestamp
-    /// 
+    ///
     /// # Panics
     /// Panics if validation constraints are violated:
     /// - amount must be > 0
@@ -69,7 +69,7 @@ impl ContributionRecord {
     }
 
     /// Checks if this contribution matches the expected group and cycle.
-    /// 
+    ///
     /// # Arguments
     /// * `expected_group_id` - The group ID to verify against
     /// * `expected_cycle` - The cycle number to verify against
@@ -78,7 +78,7 @@ impl ContributionRecord {
     }
 
     /// Checks if this contribution was made by a specific member.
-    /// 
+    ///
     /// # Arguments
     /// * `address` - The member address to check
     pub fn is_from_member(&self, address: &Address) -> bool {
@@ -95,7 +95,7 @@ mod tests {
     fn test_contribution_record_creation() {
         let env = Env::default();
         let member = Address::generate(&env);
-        
+
         let contribution = ContributionRecord::new(
             member.clone(),
             1,          // group_id
@@ -116,7 +116,7 @@ mod tests {
     fn test_invalid_amount() {
         let env = Env::default();
         let member = Address::generate(&env);
-        
+
         ContributionRecord::new(member, 1, 0, 0, 1234567890);
     }
 
@@ -124,14 +124,8 @@ mod tests {
     fn test_validate() {
         let env = Env::default();
         let member = Address::generate(&env);
-        
-        let contribution = ContributionRecord::new(
-            member,
-            1,
-            0,
-            10_000_000,
-            1234567890,
-        );
+
+        let contribution = ContributionRecord::new(member, 1, 0, 10_000_000, 1234567890);
 
         assert!(contribution.validate());
     }
@@ -140,14 +134,8 @@ mod tests {
     fn test_matches_group_and_cycle() {
         let env = Env::default();
         let member = Address::generate(&env);
-        
-        let contribution = ContributionRecord::new(
-            member,
-            1,
-            2,
-            10_000_000,
-            1234567890,
-        );
+
+        let contribution = ContributionRecord::new(member, 1, 2, 10_000_000, 1234567890);
 
         assert!(contribution.matches_group_and_cycle(1, 2));
         assert!(!contribution.matches_group_and_cycle(1, 3));
@@ -160,14 +148,8 @@ mod tests {
         let env = Env::default();
         let member1 = Address::generate(&env);
         let member2 = Address::generate(&env);
-        
-        let contribution = ContributionRecord::new(
-            member1.clone(),
-            1,
-            0,
-            10_000_000,
-            1234567890,
-        );
+
+        let contribution = ContributionRecord::new(member1.clone(), 1, 0, 10_000_000, 1234567890);
 
         assert!(contribution.is_from_member(&member1));
         assert!(!contribution.is_from_member(&member2));
@@ -178,22 +160,10 @@ mod tests {
         let env = Env::default();
         let member1 = Address::generate(&env);
         let member2 = Address::generate(&env);
-        
-        let contribution1 = ContributionRecord::new(
-            member1.clone(),
-            1,
-            0,
-            10_000_000,
-            1234567890,
-        );
 
-        let contribution2 = ContributionRecord::new(
-            member2.clone(),
-            1,
-            0,
-            10_000_000,
-            1234567891,
-        );
+        let contribution1 = ContributionRecord::new(member1.clone(), 1, 0, 10_000_000, 1234567890);
+
+        let contribution2 = ContributionRecord::new(member2.clone(), 1, 0, 10_000_000, 1234567891);
 
         assert_eq!(contribution1.group_id, contribution2.group_id);
         assert_eq!(contribution1.cycle_number, contribution2.cycle_number);
@@ -205,14 +175,9 @@ mod tests {
     fn test_contribution_across_cycles() {
         let env = Env::default();
         let member = Address::generate(&env);
-        
-        let contribution_cycle_0 = ContributionRecord::new(
-            member.clone(),
-            1,
-            0,
-            10_000_000,
-            1234567890,
-        );
+
+        let contribution_cycle_0 =
+            ContributionRecord::new(member.clone(), 1, 0, 10_000_000, 1234567890);
 
         let contribution_cycle_1 = ContributionRecord::new(
             member.clone(),
@@ -222,8 +187,14 @@ mod tests {
             1234567890 + 604800, // 1 week later
         );
 
-        assert_eq!(contribution_cycle_0.member_address, contribution_cycle_1.member_address);
+        assert_eq!(
+            contribution_cycle_0.member_address,
+            contribution_cycle_1.member_address
+        );
         assert_eq!(contribution_cycle_0.group_id, contribution_cycle_1.group_id);
-        assert_ne!(contribution_cycle_0.cycle_number, contribution_cycle_1.cycle_number);
+        assert_ne!(
+            contribution_cycle_0.cycle_number,
+            contribution_cycle_1.cycle_number
+        );
     }
 }

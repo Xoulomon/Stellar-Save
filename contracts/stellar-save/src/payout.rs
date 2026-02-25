@@ -1,7 +1,7 @@
-﻿use soroban_sdk::{contracttype, Address};
+use soroban_sdk::{contracttype, Address};
 
 /// Payout Record structure for tracking payout events in rotational savings groups.
-/// 
+///
 /// Each payout represents a distribution of pooled funds to a member during their
 /// designated cycle. This provides an immutable audit trail of all payouts made
 /// within the system.
@@ -32,14 +32,14 @@ pub struct PayoutRecord {
 
 impl PayoutRecord {
     /// Creates a new PayoutRecord with validation.
-    /// 
+    ///
     /// # Arguments
     /// * `recipient` - Address of the member receiving the payout
     /// * `group_id` - ID of the group making the payout
     /// * `cycle_number` - Current cycle number
     /// * `amount` - Payout amount in stroops
     /// * `timestamp` - Payout timestamp
-    /// 
+    ///
     /// # Panics
     /// Panics if validation constraints are violated:
     /// - amount must be > 0
@@ -69,7 +69,7 @@ impl PayoutRecord {
     }
 
     /// Checks if this payout matches the expected group and cycle.
-    /// 
+    ///
     /// # Arguments
     /// * `expected_group_id` - The group ID to verify against
     /// * `expected_cycle` - The cycle number to verify against
@@ -78,7 +78,7 @@ impl PayoutRecord {
     }
 
     /// Checks if this payout was made to a specific recipient.
-    /// 
+    ///
     /// # Arguments
     /// * `address` - The recipient address to check
     pub fn is_for_recipient(&self, address: &Address) -> bool {
@@ -86,7 +86,7 @@ impl PayoutRecord {
     }
 
     /// Checks if this payout belongs to a specific group.
-    /// 
+    ///
     /// # Arguments
     /// * `group_id` - The group ID to check
     pub fn belongs_to_group(&self, group_id: u64) -> bool {
@@ -100,7 +100,6 @@ impl PayoutRecord {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -110,7 +109,7 @@ mod tests {
     fn test_payout_record_creation() {
         let env = Env::default();
         let recipient = Address::generate(&env);
-        
+
         let payout = PayoutRecord::new(
             recipient.clone(),
             1,          // group_id
@@ -131,7 +130,7 @@ mod tests {
     fn test_invalid_amount() {
         let env = Env::default();
         let recipient = Address::generate(&env);
-        
+
         PayoutRecord::new(recipient, 1, 0, 0, 1234567890);
     }
 
@@ -139,14 +138,8 @@ mod tests {
     fn test_validate() {
         let env = Env::default();
         let recipient = Address::generate(&env);
-        
-        let payout = PayoutRecord::new(
-            recipient,
-            1,
-            0,
-            50_000_000,
-            1234567890,
-        );
+
+        let payout = PayoutRecord::new(recipient, 1, 0, 50_000_000, 1234567890);
 
         assert!(payout.validate());
     }
@@ -155,14 +148,8 @@ mod tests {
     fn test_matches_group_and_cycle() {
         let env = Env::default();
         let recipient = Address::generate(&env);
-        
-        let payout = PayoutRecord::new(
-            recipient,
-            1,
-            2,
-            50_000_000,
-            1234567890,
-        );
+
+        let payout = PayoutRecord::new(recipient, 1, 2, 50_000_000, 1234567890);
 
         assert!(payout.matches_group_and_cycle(1, 2));
         assert!(!payout.matches_group_and_cycle(1, 3));
@@ -175,14 +162,8 @@ mod tests {
         let env = Env::default();
         let recipient1 = Address::generate(&env);
         let recipient2 = Address::generate(&env);
-        
-        let payout = PayoutRecord::new(
-            recipient1.clone(),
-            1,
-            0,
-            50_000_000,
-            1234567890,
-        );
+
+        let payout = PayoutRecord::new(recipient1.clone(), 1, 0, 50_000_000, 1234567890);
 
         assert!(payout.is_for_recipient(&recipient1));
         assert!(!payout.is_for_recipient(&recipient2));
@@ -192,14 +173,8 @@ mod tests {
     fn test_belongs_to_group() {
         let env = Env::default();
         let recipient = Address::generate(&env);
-        
-        let payout = PayoutRecord::new(
-            recipient,
-            1,
-            0,
-            50_000_000,
-            1234567890,
-        );
+
+        let payout = PayoutRecord::new(recipient, 1, 0, 50_000_000, 1234567890);
 
         assert!(payout.belongs_to_group(1));
         assert!(!payout.belongs_to_group(2));
@@ -209,12 +184,9 @@ mod tests {
     fn test_amount_in_xlm() {
         let env = Env::default();
         let recipient = Address::generate(&env);
-        
+
         let payout = PayoutRecord::new(
-            recipient,
-            1,
-            0,
-            50_000_000, // 5 XLM in stroops
+            recipient, 1, 0, 50_000_000, // 5 XLM in stroops
             1234567890,
         );
 
@@ -226,14 +198,8 @@ mod tests {
         let env = Env::default();
         let recipient1 = Address::generate(&env);
         let recipient2 = Address::generate(&env);
-        
-        let payout1 = PayoutRecord::new(
-            recipient1.clone(),
-            1,
-            0,
-            50_000_000,
-            1234567890,
-        );
+
+        let payout1 = PayoutRecord::new(recipient1.clone(), 1, 0, 50_000_000, 1234567890);
 
         let payout2 = PayoutRecord::new(
             recipient2.clone(),
@@ -253,22 +219,11 @@ mod tests {
     fn test_payout_sequence() {
         let env = Env::default();
         let recipient = Address::generate(&env);
-        
-        let payout_cycle_0 = PayoutRecord::new(
-            recipient.clone(),
-            1,
-            0,
-            50_000_000,
-            1234567890,
-        );
 
-        let payout_cycle_1 = PayoutRecord::new(
-            recipient.clone(),
-            1,
-            1,
-            50_000_000,
-            1234567890 + 604800,
-        );
+        let payout_cycle_0 = PayoutRecord::new(recipient.clone(), 1, 0, 50_000_000, 1234567890);
+
+        let payout_cycle_1 =
+            PayoutRecord::new(recipient.clone(), 1, 1, 50_000_000, 1234567890 + 604800);
 
         assert_eq!(payout_cycle_0.group_id, payout_cycle_1.group_id);
         assert_eq!(payout_cycle_0.recipient, payout_cycle_1.recipient);
