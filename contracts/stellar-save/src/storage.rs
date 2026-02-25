@@ -141,6 +141,9 @@ pub enum CounterKey {
 
     /// Global contract configuration.
     ContractConfig,
+
+    /// Reentrancy protection flag for transfer operations.
+    ReentrancyGuard,
 }
 
 /// Utility functions for creating storage keys with consistent formatting.
@@ -248,6 +251,11 @@ impl StorageKeyBuilder {
     /// Creates a key for the global contract configuration.
     pub fn contract_config() -> StorageKey {
         StorageKey::Counter(CounterKey::ContractConfig)
+    }
+
+    /// Creates a key for the reentrancy protection guard.
+    pub fn reentrancy_guard() -> StorageKey {
+        StorageKey::Counter(CounterKey::ReentrancyGuard)
     }
 }
 
