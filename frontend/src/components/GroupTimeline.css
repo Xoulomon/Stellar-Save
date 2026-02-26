@@ -1,0 +1,351 @@
+/* Group Timeline Component Styles */
+
+.group-timeline {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Header */
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.timeline-title-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.timeline-header-icon {
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.timeline-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.timeline-event-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 0.5rem;
+  border-radius: 12px;
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Container - Scrollable */
+.timeline-container {
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 0.5rem 0;
+}
+
+/* Scrollbar styling */
+.timeline-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.timeline-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.timeline-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.timeline-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Timeline List */
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.5rem 0;
+}
+
+/* Empty State */
+.timeline-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem 1rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.timeline-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 1.5rem;
+}
+
+.timeline-empty-text {
+  margin: 0;
+  font-size: 0.9375rem;
+  text-align: center;
+}
+
+/* Timeline Item */
+.timeline-item {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+.timeline-item:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.timeline-item[role='button'] {
+  cursor: pointer;
+}
+
+.timeline-item[role='button']:focus-visible {
+  outline: 2px solid rgba(76, 175, 80, 0.6);
+  outline-offset: 0;
+  border-radius: 4px;
+}
+
+/* Timeline Dot */
+.timeline-item-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.1);
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.timeline-event-icon {
+  font-size: 1.25rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Event type colors */
+.timeline-event-contribution .timeline-item-dot {
+  background-color: rgba(76, 175, 80, 0.2);
+}
+
+.timeline-event-contribution .timeline-icon-contribution {
+  color: #4caf50;
+}
+
+.timeline-event-payout .timeline-item-dot {
+  background-color: rgba(255, 193, 7, 0.2);
+}
+
+.timeline-event-payout .timeline-icon-payout {
+  color: #ffc107;
+}
+
+.timeline-event-member-join .timeline-item-dot {
+  background-color: rgba(33, 150, 243, 0.2);
+}
+
+.timeline-event-member-join .timeline-icon-member-join {
+  color: #2196f3;
+}
+
+/* Timeline Line */
+.timeline-item-line {
+  position: absolute;
+  left: 19px;
+  top: 40px;
+  width: 2px;
+  height: calc(100% + 0.75rem);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.timeline-event-contribution .timeline-item-line {
+  background-color: rgba(76, 175, 80, 0.3);
+}
+
+.timeline-event-payout .timeline-item-line {
+  background-color: rgba(255, 193, 7, 0.3);
+}
+
+.timeline-event-member-join .timeline-item-line {
+  background-color: rgba(33, 150, 243, 0.3);
+}
+
+/* Timeline Content */
+.timeline-item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.25rem 0;
+  overflow: hidden;
+}
+
+.timeline-item-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.timeline-item-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.87);
+  word-break: break-word;
+}
+
+/* Status Badges */
+.timeline-item-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.status-pending {
+  background-color: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.status-failed {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+/* Timeline Meta */
+.timeline-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.timeline-item-time {
+  font-weight: 500;
+}
+
+.timeline-item-hash {
+  padding: 0.125rem 0.375rem;
+  border-radius: 3px;
+  background-color: rgba(255, 255, 255, 0.08);
+  font-family: 'Courier New', monospace;
+  cursor: help;
+  transition: background-color 0.2s ease;
+}
+
+.timeline-item-hash:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Timeline Description */
+.timeline-item-description {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .timeline-item {
+    grid-template-columns: 36px 1fr;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+  }
+
+  .timeline-item-dot {
+    width: 36px;
+    height: 36px;
+  }
+
+  .timeline-event-icon {
+    font-size: 1rem;
+  }
+
+  .timeline-item-line {
+    left: 17px;
+  }
+
+  .timeline-title {
+    font-size: 1rem;
+  }
+
+  .timeline-header {
+    padding-bottom: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .timeline-item {
+    grid-template-columns: 32px 1fr;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .timeline-item-dot {
+    width: 32px;
+    height: 32px;
+  }
+
+  .timeline-event-icon {
+    font-size: 0.875rem;
+  }
+
+  .timeline-item-line {
+    left: 15px;
+  }
+
+  .timeline-item-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .timeline-empty-state {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .timeline-title {
+    font-size: 0.9375rem;
+  }
+}
