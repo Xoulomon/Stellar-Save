@@ -1,5 +1,7 @@
 export { Avatar } from "./Avatar";
 export { Badge } from "./Badge";
+export { GroupBadge } from "./GroupBadge";
+export type { GroupBadgeStatus } from "./GroupBadge";
 export { Tooltip } from "./Tooltip";
 export { Dropdown } from "./Dropdown";
 export { EmptyState } from "./EmptyState/EmptyState";
