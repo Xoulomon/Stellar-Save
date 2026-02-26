@@ -3,19 +3,20 @@
  * Use these constants instead of hardcoded strings throughout the application.
  */
 export const ROUTES = {
-  HOME: '/',
-  DASHBOARD: '/dashboard',
-  GROUPS: '/groups',
-  GROUP_DETAIL: '/groups/:groupId',
-  PROFILE: '/profile',
-  SETTINGS: '/settings',
-  NOT_FOUND: '/404',
+  HOME: "/",
+  DASHBOARD: "/dashboard",
+  GROUPS: "/groups",
+  GROUP_DETAIL: "/groups/:groupId",
+  PROFILE: "/profile",
+  SETTINGS: "/settings",
+  NOT_FOUND: "/404",
+  ERROR: "/500",
 } as const;
 
 /**
  * Type-safe route path type
  */
-export type RoutePath = typeof ROUTES[keyof typeof ROUTES];
+export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];
 
 /**
  * Helper to build parameterized routes
