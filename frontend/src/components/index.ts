@@ -23,3 +23,5 @@ export { GroupStats } from "./GroupStats";
 export { MemberList } from "./MemberList";
 export type { Member } from "./MemberList";
 export { JoinGroupButton } from "./JoinGroupButton";
+export { GroupFilters } from "./GroupFilters";
+export type { FilterState, GroupStatus, SortOption } from "./GroupFilters";
