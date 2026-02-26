@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { buildRoute } from '../routing/constants';
 import './GroupCard.css';
 import { Button } from './Button';
-import { Badge } from './Badge';
+import { GroupBadge } from './GroupBadge';
 
 interface GroupCardProps {
   groupId?: string;
@@ -10,7 +10,7 @@ interface GroupCardProps {
   memberCount: number;
   contributionAmount: number;
   currency?: string;
-  status?: 'active' | 'completed' | 'pending';
+  status?: 'active' | 'completed' | 'pending' | 'complete';
   onClick?: () => void;
   onViewDetails?: () => void;
   onJoin?: () => void;
@@ -39,26 +39,11 @@ export function GroupCard({
     onClick?.();
   };
 
-  const getStatusVariant = () => {
-    switch (status) {
-      case 'active':
-        return 'success';
-      case 'completed':
-        return 'info';
-      case 'pending':
-        return 'warning';
-      default:
-        return 'primary';
-    }
-  };
-
   const cardContent = (
     <>
       <div className="group-card-header">
         <h3 className="group-card-title">{groupName}</h3>
-        <Badge variant={getStatusVariant()} size="sm">
-          {status}
-        </Badge>
+        <GroupBadge status={status} />
       </div>
 
       <div className="group-card-body">
