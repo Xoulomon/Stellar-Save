@@ -182,6 +182,36 @@ impl StellarSaveContract {
         Ok(())
     }
 
+    /// Validates that a contribution amount is within the allowed range.
+    ///
+    /// Checks the provided contribution amount against the contract's configured
+    /// minimum and maximum contribution limits.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment for storage access
+    /// * `amount` - The contribution amount to validate (in stroops)
+    ///
+    /// # Returns
+    /// * `Ok(())` - The amount is valid
+    /// * `Err(StellarSaveError::InvalidAmount)` - Amount is outside allowed range
+    ///
+    /// # Example
+    /// ```ignore
+    /// // Validate a 10 XLM contribution
+    /// StellarSaveContract::validate_contribution_amount_range(&env, 100_000_000)?;
+    /// ```
+    pub fn validate_contribution_amount_range(env: &Env, amount: i128) -> Result<(), StellarSaveError> {
+        let config_key = StorageKeyBuilder::contract_config();
+        
+        if let Some(config) = env.storage().persistent().get::<_, ContractConfig>(&config_key) {
+            if amount < config.min_contribution || amount > config.max_contribution {
+                return Err(StellarSaveError::InvalidAmount);
+            }
+        }
+        
+        Ok(())
+    }
+
     /// Records a contribution in storage and updates member statistics.
     ///
     /// This is an internal helper function that handles all the storage operations
@@ -4285,6 +4315,100 @@ mod tests {
         // Test without config (should pass)
         let result = env.as_contract(&contract_id, || {
             StellarSaveContract::validate_cycle_duration(&env, 604800)
+        });
+        assert!(result.is_ok());
+    }
+
+    // Tests for validate_contribution_amount_range function
+
+    #[test]
+    fn test_validate_contribution_amount_range_valid() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let contract_id = env.register(StellarSaveContract, ());
+
+        let config = ContractConfig {
+            admin,
+            min_contribution: 1_000_000,      // 0.1 XLM
+            max_contribution: 1_000_000_000,  // 100 XLM
+            min_members: 2,
+            max_members: 100,
+            min_cycle_duration: 3600,
+            max_cycle_duration: 2592000,
+        };
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::contract_config(), &config);
+
+        // Test valid amount (10 XLM)
+        let result = env.as_contract(&contract_id, || {
+            StellarSaveContract::validate_contribution_amount_range(&env, 100_000_000)
+        });
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_contribution_amount_range_too_low() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let contract_id = env.register(StellarSaveContract, ());
+
+        let config = ContractConfig {
+            admin,
+            min_contribution: 1_000_000,
+            max_contribution: 1_000_000_000,
+            min_members: 2,
+            max_members: 100,
+            min_cycle_duration: 3600,
+            max_cycle_duration: 2592000,
+        };
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::contract_config(), &config);
+
+        // Test amount below minimum
+        let result = env.as_contract(&contract_id, || {
+            StellarSaveContract::validate_contribution_amount_range(&env, 500_000)
+        });
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::InvalidAmount);
+    }
+
+    #[test]
+    fn test_validate_contribution_amount_range_too_high() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let contract_id = env.register(StellarSaveContract, ());
+
+        let config = ContractConfig {
+            admin,
+            min_contribution: 1_000_000,
+            max_contribution: 1_000_000_000,
+            min_members: 2,
+            max_members: 100,
+            min_cycle_duration: 3600,
+            max_cycle_duration: 2592000,
+        };
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::contract_config(), &config);
+
+        // Test amount above maximum
+        let result = env.as_contract(&contract_id, || {
+            StellarSaveContract::validate_contribution_amount_range(&env, 2_000_000_000)
+        });
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::InvalidAmount);
+    }
+
+    #[test]
+    fn test_validate_contribution_amount_range_no_config() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+
+        // Test without config (should pass)
+        let result = env.as_contract(&contract_id, || {
+            StellarSaveContract::validate_contribution_amount_range(&env, 100_000_000)
         });
         assert!(result.is_ok());
     }
