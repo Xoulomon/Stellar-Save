@@ -70,6 +70,10 @@ pub enum MemberKey {
     /// Member payout eligibility: MEMBER_PAYOUT_{group_id}_{address}
     /// Tracks payout turn order and eligibility status.
     PayoutEligibility(u64, Address),
+
+    /// Member total contributions: MEMBER_TOTAL_CONTRIB_{group_id}_{address}
+    /// Tracks total amount contributed by member across all cycles.
+    TotalContributions(u64, Address),
 }
 
 /// Storage keys for contribution tracking.
@@ -144,6 +148,14 @@ pub enum CounterKey {
 
     /// Reentrancy protection flag for transfer operations.
     ReentrancyGuard,
+
+    /// Group balance: COUNTER_GROUP_BALANCE_{group_id}
+    /// Tracks current balance for a group incrementally.
+    GroupBalance(u64),
+
+    /// Group total paid out: COUNTER_GROUP_PAID_OUT_{group_id}
+    /// Tracks total amount paid out incrementally.
+    GroupTotalPaidOut(u64),
 }
 
 /// Utility functions for creating storage keys with consistent formatting.
@@ -185,6 +197,11 @@ impl StorageKeyBuilder {
     /// Creates a key for member payout eligibility.
     pub fn member_payout_eligibility(group_id: u64, address: Address) -> StorageKey {
         StorageKey::Member(MemberKey::PayoutEligibility(group_id, address))
+    }
+
+    /// Creates a key for member total contributions.
+    pub fn member_total_contributions(group_id: u64, address: Address) -> StorageKey {
+        StorageKey::Member(MemberKey::TotalContributions(group_id, address))
     }
 
     // Contribution key builders
@@ -256,6 +273,16 @@ impl StorageKeyBuilder {
     /// Creates a key for the reentrancy protection guard.
     pub fn reentrancy_guard() -> StorageKey {
         StorageKey::Counter(CounterKey::ReentrancyGuard)
+    }
+
+    /// Creates a key for group balance.
+    pub fn group_balance(group_id: u64) -> StorageKey {
+        StorageKey::Counter(CounterKey::GroupBalance(group_id))
+    }
+
+    /// Creates a key for group total paid out.
+    pub fn group_total_paid_out(group_id: u64) -> StorageKey {
+        StorageKey::Counter(CounterKey::GroupTotalPaidOut(group_id))
     }
 }
 

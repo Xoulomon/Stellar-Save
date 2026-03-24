@@ -302,6 +302,18 @@ impl StellarSaveContract {
 
         env.storage().persistent().set(&count_key, &new_count);
 
+        // 6. Update incremental group balance
+        let balance_key = StorageKeyBuilder::group_balance(group_id);
+        let current_balance: i128 = env.storage().persistent().get(&balance_key).unwrap_or(0);
+        let new_balance = current_balance.checked_add(amount).ok_or(StellarSaveError::Overflow)?;
+        env.storage().persistent().set(&balance_key, &new_balance);
+
+        // 7. Update member total contributions tracking
+        let member_total_key = StorageKeyBuilder::member_total_contributions(group_id, member_address.clone());
+        let member_current: i128 = env.storage().persistent().get(&member_total_key).unwrap_or(0);
+        let member_new = member_current.checked_add(amount).ok_or(StellarSaveError::Overflow)?;
+        env.storage().persistent().set(&member_total_key, &member_new);
+
         Ok(())
     }
 
@@ -545,25 +557,20 @@ impl StellarSaveContract {
         group_id: u64,
         member_address: Address,
     ) -> Result<bool, StellarSaveError> {
-        // Verify the group exists and get its current cycle
-        let group_key = StorageKeyBuilder::group_data(group_id);
-        let group = env
+        let member_key = StorageKeyBuilder::member_profile(group_id, member_address.clone());
+        let profile = env
             .storage()
             .persistent()
-            .get::<_, Group>(&group_key)
-            .ok_or(StellarSaveError::GroupNotFound)?;
+            .get::<_, MemberProfile>(&member_key);
 
-        // Check each cycle from 0 to current_cycle to see if member received payout
-        for cycle in 0..=group.current_cycle {
-            let recipient_key = StorageKeyBuilder::payout_recipient(group_id, cycle);
-
+        if let Some(member_profile) = profile {
+            let recipient_key = StorageKeyBuilder::payout_recipient(group_id, member_profile.payout_position);
             if let Some(recipient) = env.storage().persistent().get::<_, Address>(&recipient_key) {
                 if recipient == member_address {
                     return Ok(true);
                 }
             }
         }
-
         Ok(false)
     }
 
@@ -688,27 +695,14 @@ impl StellarSaveContract {
     /// * `Err(StellarSaveError::GroupNotFound)` - If group doesn't exist
     pub fn get_total_paid_out(env: Env, group_id: u64) -> Result<i128, StellarSaveError> {
         let group_key = StorageKeyBuilder::group_data(group_id);
-        let group = env
+        let _group = env
             .storage()
             .persistent()
             .get::<_, Group>(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        let mut total: i128 = 0;
-
-        for cycle in 0..group.current_cycle {
-            let payout_key = StorageKeyBuilder::payout_record(group_id, cycle);
-
-            if let Some(payout_record) = env
-                .storage()
-                .persistent()
-                .get::<_, PayoutRecord>(&payout_key)
-            {
-                total = total
-                    .checked_add(payout_record.amount)
-                    .ok_or(StellarSaveError::Overflow)?;
-            }
-        }
+        let total_key = StorageKeyBuilder::group_total_paid_out(group_id);
+        let total: i128 = env.storage().persistent().get(&total_key).unwrap_or(0);
 
         Ok(total)
     }
@@ -728,43 +722,14 @@ impl StellarSaveContract {
     /// * `Err(StellarSaveError::Overflow)` - If calculation overflows
     pub fn get_group_balance(env: Env, group_id: u64) -> Result<i128, StellarSaveError> {
         let group_key = StorageKeyBuilder::group_data(group_id);
-        let group = env
+        let _group = env
             .storage()
             .persistent()
             .get::<_, Group>(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        let mut total_contributions: i128 = 0;
-        let mut total_payouts: i128 = 0;
-
-        // Sum all contributions across all cycles
-        for cycle in 0..=group.current_cycle {
-            let total_key = StorageKeyBuilder::contribution_cycle_total(group_id, cycle);
-            if let Some(cycle_total) = env.storage().persistent().get::<_, i128>(&total_key) {
-                total_contributions = total_contributions
-                    .checked_add(cycle_total)
-                    .ok_or(StellarSaveError::Overflow)?;
-            }
-        }
-
-        // Sum all payouts
-        for cycle in 0..group.current_cycle {
-            let payout_key = StorageKeyBuilder::payout_record(group_id, cycle);
-            if let Some(payout_record) = env
-                .storage()
-                .persistent()
-                .get::<_, PayoutRecord>(&payout_key)
-            {
-                total_payouts = total_payouts
-                    .checked_add(payout_record.amount)
-                    .ok_or(StellarSaveError::Overflow)?;
-            }
-        }
-
-        // Calculate balance
-        let balance = total_contributions
-            .checked_sub(total_payouts)
-            .ok_or(StellarSaveError::Overflow)?;
+        let balance_key = StorageKeyBuilder::group_balance(group_id);
+        let balance: i128 = env.storage().persistent().get(&balance_key).unwrap_or(0);
 
         Ok(balance)
     }
@@ -1288,6 +1253,17 @@ impl StellarSaveContract {
         // 10. Clear reentrancy protection flag
         env.storage().persistent().set(&reentrancy_key, &0);
 
+        // 10.5 Update incremental group balance and total paid out
+        let balance_key = StorageKeyBuilder::group_balance(group_id);
+        let current_balance: i128 = env.storage().persistent().get(&balance_key).unwrap_or(0);
+        let new_balance = current_balance.checked_sub(amount).ok_or(StellarSaveError::Overflow)?;
+        env.storage().persistent().set(&balance_key, &new_balance);
+
+        let paid_out_key = StorageKeyBuilder::group_total_paid_out(group_id);
+        let current_paid_out: i128 = env.storage().persistent().get(&paid_out_key).unwrap_or(0);
+        let new_paid_out = current_paid_out.checked_add(amount).ok_or(StellarSaveError::Overflow)?;
+        env.storage().persistent().set(&paid_out_key, &new_paid_out);
+
         // 11. Emit payout event
         EventEmitter::emit_payout_executed(&env, group_id, recipient, amount, cycle_number, timestamp);
 
@@ -1445,31 +1421,15 @@ impl StellarSaveContract {
     ) -> Result<i128, StellarSaveError> {
         // 1. Verify group exists
         let group_key = StorageKeyBuilder::group_data(group_id);
-        let group = env
+        let _group = env
             .storage()
             .persistent()
             .get::<_, Group>(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        // 2. Iterate through all cycles and sum contributions
-        let mut total: i128 = 0;
-
-        // Iterate from cycle 0 to current_cycle (inclusive)
-        for cycle in 0..=group.current_cycle {
-            let contrib_key =
-                StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
-
-            // Get contribution record if it exists
-            if let Some(contrib_record) = env
-                .storage()
-                .persistent()
-                .get::<_, ContributionRecord>(&contrib_key)
-            {
-                total = total
-                    .checked_add(contrib_record.amount)
-                    .ok_or(StellarSaveError::Overflow)?;
-            }
-        }
+        // 2. Lookup total from incrementally tracked storage
+        let total_key = StorageKeyBuilder::member_total_contributions(group_id, member);
+        let total: i128 = env.storage().persistent().get(&total_key).unwrap_or(0);
 
         Ok(total)
     }

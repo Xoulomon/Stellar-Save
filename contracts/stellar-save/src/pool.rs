@@ -120,15 +120,15 @@ impl PoolCalculator {
     /// * `Ok(member_count)` - The number of members in the group
     /// * `Err(StellarSaveError)` - If group not found or storage error
     pub fn get_member_count(env: &Env, group_id: u64) -> Result<u32, StellarSaveError> {
-        let members_key = StorageKeyBuilder::group_members(group_id);
+        let group_key = StorageKeyBuilder::group_data(group_id);
 
-        let members: soroban_sdk::Vec<soroban_sdk::Address> = env
+        let group: crate::group::Group = env
             .storage()
             .persistent()
-            .get(&members_key)
+            .get(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        Ok(members.len())
+        Ok(group.member_count)
     }
 
     /// Retrieves the contribution amount for a group from storage.
@@ -212,11 +212,16 @@ impl PoolCalculator {
         group_id: u64,
         cycle: u32,
     ) -> Result<PoolInfo, StellarSaveError> {
-        // Get member count
-        let member_count = Self::get_member_count(env, group_id)?;
+        // Get membership info from single group load
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group: crate::group::Group = env
+            .storage()
+            .persistent()
+            .get(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
 
-        // Get contribution amount
-        let contribution_amount = Self::get_contribution_amount(env, group_id)?;
+        let member_count = group.member_count;
+        let contribution_amount = group.contribution_amount;
 
         // Calculate total pool
         let total_pool_amount = Self::calculate_total_pool(contribution_amount, member_count)?;
