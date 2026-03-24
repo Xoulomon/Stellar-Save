@@ -2241,6 +2241,39 @@ impl StellarSaveContract {
 
         Ok(())
     }
+
+    /// Verifies if a transaction was signed by the specified address.
+    ///
+    /// This function can be used to verify signatures for future use cases
+    /// where additional signature verification is needed beyond Soroban's
+    /// built-in `require_auth()`. It returns a boolean indicating whether
+    /// the signature is valid.
+    ///
+    /// Note: Currently, Soroban's `require_auth()` handles authentication.
+    /// This function is provided for future extensibility and can be used
+    /// when custom signature schemes are required.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `address` - The address to verify
+    ///
+    /// # Returns
+    /// * `bool` - Always returns true since Soroban handles auth internally.
+    ///            In future with custom signatures, this would return actual verification result.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let is_valid = StellarSaveContract::verify_signature(&env, user_address);
+    /// ```
+    pub fn verify_signature(env: Env, address: Address) -> bool {
+        // Soroban's require_auth() handles signature verification internally.
+        // This function is a placeholder for future custom signature verification.
+        // For now, we just require auth which validates the signature.
+        address.require_auth();
+
+        // If we reach here, the signature is valid
+        true
+    }
 }
 
 fn emit_group_activated(env: &Env, group_id: u64, timestamp: u64, member_count: u32) {
@@ -8189,4 +8222,34 @@ mod tests {
             }
         }
     }
+
+    // ============================================================
+    // Signature Verification Tests
+    // ============================================================
+
+    #[test]
+    fn test_verify_signature_with_valid_address() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let address = Address::generate(&env);
+
+        // Verify signature should succeed with valid address
+        let result = client.verify_signature(&address);
+        assert_eq!(result, true);
+    }
+
+    #[test]
+    #[should_panic(expected = "requires auth")]
+    fn test_verify_signature_without_auth() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let address = Address::generate(&env);
+
+        // Without calling mock_all_auths(), this should panic due to require_auth
+        let _ = client.verify_signature(&address);
+    }
+}
 }
