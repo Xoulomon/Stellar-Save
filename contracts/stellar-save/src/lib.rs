@@ -2287,6 +2287,8 @@ fn test_get_total_groups() {
 mod tests {
     use super::*;
     use soroban_sdk::testutils::Address as _;
+    use proptest::prelude::*;
+
 
     #[test]
     fn test_get_group_success() {
@@ -8086,5 +8088,103 @@ mod tests {
         // Immediate second join to another group should fail
         let result = client.try_join_group(&group_id2, &member);
         assert_eq!(result, Err(Ok(StellarSaveError::RateLimitExceeded)));
+    }
+
+    // --- Fuzz Tests ---
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(50))]
+        
+        #[test]
+        fn test_fuzz_create_group(
+            amount in 0..2000i128,
+            duration in 0..100000u64,
+            members in 0..20u32
+        ) {
+            let env = Env::default();
+            let admin = Address::generate(&env);
+            let contract_id = env.register(StellarSaveContract, ());
+            let client = StellarSaveContractClient::new(&env, &contract_id);
+
+            let config = ContractConfig {
+                admin: admin.clone(),
+                min_contribution: 10,
+                max_contribution: 1000,
+                min_members: 2,
+                max_members: 10,
+                min_cycle_duration: 3600,
+                max_cycle_duration: 86400,
+            };
+
+            env.mock_all_auths();
+            client.update_config(&config);
+
+            let creator = Address::generate(&env);
+            let result = client.try_create_group(&creator, &amount, &duration, &members);
+
+            // Invariant: If inputs are within config bounds, it should succeed (or rate limit if same creator)
+            let within_bounds = amount >= config.min_contribution && 
+                               amount <= config.max_contribution &&
+                               duration >= config.min_cycle_duration &&
+                               duration <= config.max_cycle_duration &&
+                               members >= config.min_members &&
+                               members <= config.max_members;
+
+            match result {
+                Ok(_) => assert!(within_bounds, "Should not succeed if outside bounds"),
+                Err(Ok(StellarSaveError::InvalidState)) => assert!(!within_bounds, "Should not return InvalidState if within bounds"),
+                Err(Ok(err)) => {
+                    // Other errors like RateLimitExceeded are acceptable in this flow
+                     match err {
+                        StellarSaveError::RateLimitExceeded => (),
+                        _ => panic!("Unexpected error: {:?}", err),
+                     }
+                },
+                Err(e) => panic!("Fuzz test failed with unexpected error types: {:?}", e),
+            }
+        }
+
+        #[test]
+        fn test_fuzz_join_group(
+            group_id_input in 0..100u64
+        ) {
+            let env = Env::default();
+            let admin = Address::generate(&env);
+            let contract_id = env.register(StellarSaveContract, ());
+            let client = StellarSaveContractClient::new(&env, &contract_id);
+
+            let config = ContractConfig {
+                admin: admin.clone(),
+                min_contribution: 10,
+                max_contribution: 1000,
+                min_members: 2,
+                max_members: 10,
+                min_cycle_duration: 3600,
+                max_cycle_duration: 86400,
+            };
+
+            env.mock_all_auths();
+            client.update_config(&config);
+
+            let creator = Address::generate(&env);
+            let created_id = client.create_group(&creator, &100, &3600, &5);
+
+            let member = Address::generate(&env);
+            let result = client.try_join_group(&group_id_input, &member);
+
+            match result {
+                Ok(_) => assert_eq!(group_id_input, created_id),
+                Err(Ok(StellarSaveError::GroupNotFound)) => assert_ne!(group_id_input, created_id),
+                Err(Ok(StellarSaveError::RateLimitExceeded)) => (), // Possible if same member joins repeatedly
+                Err(Ok(err)) => {
+                     // Ensure no panics/crashes for random IDs
+                     match err {
+                        StellarSaveError::InvalidState | StellarSaveError::AlreadyMember | StellarSaveError::GroupFull => (),
+                        _ => panic!("Unexpected join error: {:?}", err),
+                     }
+                },
+                _ => ()
+            }
+        }
     }
 }
