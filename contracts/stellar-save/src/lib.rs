@@ -26,6 +26,7 @@ pub mod group;
 pub mod payout;
 pub mod payout_executor;
 pub mod pool;
+pub mod security;
 pub mod status;
 pub mod storage;
 
