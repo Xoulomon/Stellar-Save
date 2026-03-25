@@ -430,6 +430,9 @@ impl StellarSaveContract {
         if !new_config.validate() {
             return Err(StellarSaveError::InvalidState);
         }
+        if new_config.admin == env.current_contract_address() {
+            return Err(StellarSaveError::Unauthorized);
+        }
 
         let key = StorageKeyBuilder::contract_config();
 
@@ -502,6 +505,20 @@ impl StellarSaveContract {
         max_members: u32,
     ) -> Result<u64, StellarSaveError> {
         Self::assert_not_paused(&env)?;
+
+        // Early numeric guards — must come before any storage writes
+        if contribution_amount <= 0 {
+            return Err(StellarSaveError::InvalidAmount);
+        }
+        if cycle_duration == 0 {
+            return Err(StellarSaveError::InvalidState);
+        }
+        if max_members < 2 {
+            return Err(StellarSaveError::InvalidState);
+        }
+        if creator == env.current_contract_address() {
+            return Err(StellarSaveError::Unauthorized);
+        }
 
         // [RATE LIMITING] Check rate limit for group creation
         let creation_key = StorageKeyBuilder::user_last_creation(creator.clone());
@@ -577,6 +594,17 @@ impl StellarSaveContract {
         new_max_members: u32,
     ) -> Result<(), StellarSaveError> {
         Self::assert_not_paused(&env)?;
+
+        // Early numeric guards — must come before any storage writes
+        if new_contribution <= 0 {
+            return Err(StellarSaveError::InvalidAmount);
+        }
+        if new_duration == 0 {
+            return Err(StellarSaveError::InvalidState);
+        }
+        if new_max_members < 2 {
+            return Err(StellarSaveError::InvalidState);
+        }
 
         // 1. Load existing group data
         let group_key = StorageKeyBuilder::group_data(group_id);
@@ -1946,6 +1974,10 @@ impl StellarSaveContract {
     pub fn join_group(env: Env, group_id: u64, member: Address) -> Result<(), StellarSaveError> {
         Self::assert_not_paused(&env)?;
 
+        if member == env.current_contract_address() {
+            return Err(StellarSaveError::Unauthorized);
+        }
+
         // Verify caller authorization
         member.require_auth();
 
@@ -2022,7 +2054,10 @@ impl StellarSaveContract {
             .set(&payout_key, &payout_position);
 
         // Update group member count
-        group.member_count += 1;
+        group.member_count = group
+            .member_count
+            .checked_add(1)
+            .ok_or(StellarSaveError::Overflow)?;
         env.storage().persistent().set(&group_key, &group);
 
         // Update rate limit tracker
@@ -2204,49 +2239,399 @@ impl StellarSaveContract {
     /// * `env` - Soroban environment
     /// * `group_id` - ID of the group to activate
     /// * `creator` - The creator's address (must match the group's creator)
-    /// * `member_count` - Current number of members in the group
     ///
-    /// # Panics
-    /// Panics if:
-    /// - The caller is not the group creator
-    /// - The group has already been started
-    /// - Minimum member count has not been reached
-    pub fn activate_group(env: Env, group_id: u64, creator: Address, member_count: u32) {
-        // Get the group - in a real implementation, this would come from storage
-        // For now, we'll create a mock group to demonstrate the logic
-        // In production, you'd load from: let mut group = GroupStorage::get(&env, group_id);
+    /// # Returns
+    /// * `Ok(())` - Group successfully activated
+    /// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
+    /// * `Err(StellarSaveError::Unauthorized)` - Caller is not the group creator
+    /// * `Err(StellarSaveError::InvalidState)` - Group is not in Pending state
+    pub fn activate_group(
+        env: Env,
+        group_id: u64,
+        creator: Address,
+    ) -> Result<(), StellarSaveError> {
+        Self::assert_not_paused(&env)?;
 
-        // Verify caller is creator
-        assert!(creator == creator, "caller must be the group creator");
+        creator.require_auth();
 
-        // Get current timestamp
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let mut group: Group = env
+            .storage()
+            .persistent()
+            .get(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        if group.creator != creator {
+            return Err(StellarSaveError::Unauthorized);
+        }
+
+        // State-transition guard: must be Pending
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        let status: GroupStatus = env
+            .storage()
+            .persistent()
+            .get(&status_key)
+            .unwrap_or(GroupStatus::Pending);
+
+        if status != GroupStatus::Pending {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        // Minimum members check
+        if group.member_count < group.min_members {
+            return Err(StellarSaveError::InvalidState);
+        }
+
         let timestamp = env.ledger().timestamp();
+        group.started = true;
+        group.started_at = timestamp;
+        group.status = GroupStatus::Active;
+        group.is_active = true;
 
-        // Create a temporary group for validation (in production, load from storage)
-        let mut group = Group::new(
-            group_id, creator, 10_000_000, // Default contribution amount
-            604800,     // Default cycle duration
-            5,          // Default max members
-            2,          // Default min members
+        env.storage().persistent().set(&group_key, &group);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Active);
+
+        env.events().publish(
+            (Symbol::new(&env, "group_activated"), group_id),
+            (timestamp, group.member_count),
+        );
+
+        Ok(())
+    }
+
+    /// Pauses an active group, halting contributions and payouts.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group to pause
+    /// * `caller` - Address of the caller (must be group creator)
+    ///
+    /// # Returns
+    /// * `Ok(())` - Group successfully paused
+    /// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
+    /// * `Err(StellarSaveError::Unauthorized)` - Caller is not the group creator
+    /// * `Err(StellarSaveError::InvalidState)` - Group is not Active
+    pub fn pause_group(
+        env: Env,
+        group_id: u64,
+        caller: Address,
+    ) -> Result<(), StellarSaveError> {
+        Self::assert_not_paused(&env)?;
+
+        caller.require_auth();
+
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let mut group: Group = env
+            .storage()
+            .persistent()
+            .get(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        if group.creator != caller {
+            return Err(StellarSaveError::Unauthorized);
+        }
+
+        // State-transition guard: must be Active
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        let status: GroupStatus = env
+            .storage()
+            .persistent()
+            .get(&status_key)
+            .unwrap_or(GroupStatus::Pending);
+
+        if status != GroupStatus::Active {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        group.status = GroupStatus::Paused;
+        group.is_active = false;
+
+        env.storage().persistent().set(&group_key, &group);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Paused);
+
+        env.events().publish(
+            (Symbol::new(&env, "group_paused"), group_id),
+            env.ledger().timestamp(),
+        );
+
+        Ok(())
+    }
+
+    /// Resumes a paused group.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group to resume
+    /// * `caller` - Address of the caller (must be group creator)
+    ///
+    /// # Returns
+    /// * `Ok(())` - Group successfully resumed
+    /// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
+    /// * `Err(StellarSaveError::Unauthorized)` - Caller is not the group creator
+    /// * `Err(StellarSaveError::InvalidState)` - Group is not Paused
+    pub fn resume_group(
+        env: Env,
+        group_id: u64,
+        caller: Address,
+    ) -> Result<(), StellarSaveError> {
+        Self::assert_not_paused(&env)?;
+
+        caller.require_auth();
+
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let mut group: Group = env
+            .storage()
+            .persistent()
+            .get(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        if group.creator != caller {
+            return Err(StellarSaveError::Unauthorized);
+        }
+
+        // State-transition guard: must be Paused
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        let status: GroupStatus = env
+            .storage()
+            .persistent()
+            .get(&status_key)
+            .unwrap_or(GroupStatus::Pending);
+
+        if status != GroupStatus::Paused {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        group.status = GroupStatus::Active;
+        group.is_active = true;
+
+        env.storage().persistent().set(&group_key, &group);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Active);
+
+        env.events().publish(
+            (Symbol::new(&env, "group_resumed"), group_id),
+            env.ledger().timestamp(),
+        );
+
+        Ok(())
+    }
+
+    /// Records a member's contribution for the current cycle.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    /// * `member` - Address of the contributing member
+    /// * `amount` - Contribution amount in stroops
+    ///
+    /// # Returns
+    /// * `Ok(())` - Contribution successfully recorded
+    /// * `Err(StellarSaveError::InvalidState)` - Group is not Active
+    /// * `Err(StellarSaveError::NotMember)` - Caller is not a registered member
+    /// * `Err(StellarSaveError::InvalidAmount)` - Amount is zero/negative or doesn't match group requirement
+    /// * `Err(StellarSaveError::AlreadyContributed)` - Member already contributed this cycle
+    pub fn contribute(
+        env: Env,
+        group_id: u64,
+        member: Address,
+        amount: i128,
+    ) -> Result<(), StellarSaveError> {
+        Self::assert_not_paused(&env)?;
+
+        // Amount must be positive before any storage access
+        if amount <= 0 {
+            return Err(StellarSaveError::InvalidAmount);
+        }
+
+        member.require_auth();
+
+        // State guard: group must be Active
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        let status: GroupStatus = env
+            .storage()
+            .persistent()
+            .get(&status_key)
+            .unwrap_or(GroupStatus::Pending);
+
+        if status != GroupStatus::Active {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        // Load group
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group: Group = env
+            .storage()
+            .persistent()
+            .get(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // Membership check
+        let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
+        if !env.storage().persistent().has(&member_key) {
+            return Err(StellarSaveError::NotMember);
+        }
+
+        // Amount exactness check
+        if amount != group.contribution_amount {
+            return Err(StellarSaveError::InvalidAmount);
+        }
+
+        // Delegate to record_contribution which handles duplicate prevention and storage
+        let timestamp = env.ledger().timestamp();
+        Self::record_contribution(
+            &env,
+            group_id,
+            group.current_cycle,
+            member.clone(),
+            amount,
+            timestamp,
+        )?;
+
+        EventEmitter::emit_contribution_made(
+            &env,
+            group_id,
+            member,
+            amount,
+            group.current_cycle,
             timestamp,
         );
 
-        // Simulate adding members (in production, this would be tracked in storage)
-        for _ in 0..member_count {
-            group.add_member();
-        }
-
-        // Check minimum members met (using the activate method)
-        group.activate(timestamp);
-
-        // Emit the activation event
-        env.events().publish(
-            (Symbol::new(&env, "group_activated"), group_id),
-            member_count,
-        );
+        Ok(())
     }
 
-    /// Records a payout execution in storage and updates related tracking data.
+    /// Executes a payout to the eligible recipient for the current cycle.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    /// * `recipient` - Address of the payout recipient
+    ///
+    /// # Returns
+    /// * `Ok(())` - Payout successfully executed
+    /// * `Err(StellarSaveError::InvalidState)` - Group is not Active
+    /// * `Err(StellarSaveError::InvalidRecipient)` - Recipient is not a member or wrong cycle position
+    /// * `Err(StellarSaveError::PayoutAlreadyProcessed)` - Payout already done for this cycle
+    /// * `Err(StellarSaveError::CycleNotComplete)` - Not all members have contributed yet
+    pub fn execute_payout(
+        env: Env,
+        group_id: u64,
+        recipient: Address,
+    ) -> Result<(), StellarSaveError> {
+        Self::assert_not_paused(&env)?;
+
+        // State guard: group must be Active
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        let status: GroupStatus = env
+            .storage()
+            .persistent()
+            .get(&status_key)
+            .unwrap_or(GroupStatus::Pending);
+
+        if status != GroupStatus::Active {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        // Load group
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let mut group: Group = env
+            .storage()
+            .persistent()
+            .get(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // Recipient must be a registered member
+        let member_key = StorageKeyBuilder::member_profile(group_id, recipient.clone());
+        let profile: MemberProfile = env
+            .storage()
+            .persistent()
+            .get(&member_key)
+            .ok_or(StellarSaveError::InvalidRecipient)?;
+
+        // Payout position must match current cycle
+        if profile.payout_position != group.current_cycle {
+            return Err(StellarSaveError::InvalidRecipient);
+        }
+
+        // Recipient must not have already received a payout
+        let recipient_key =
+            StorageKeyBuilder::payout_recipient(group_id, group.current_cycle);
+        if env.storage().persistent().has(&recipient_key) {
+            return Err(StellarSaveError::PayoutAlreadyProcessed);
+        }
+
+        // Cycle must be complete (all members contributed)
+        let count_key =
+            StorageKeyBuilder::contribution_cycle_count(group_id, group.current_cycle);
+        let contributor_count: u32 =
+            env.storage().persistent().get(&count_key).unwrap_or(0);
+
+        if contributor_count < group.member_count {
+            return Err(StellarSaveError::CycleNotComplete);
+        }
+
+        // Calculate payout amount
+        let payout_amount = group
+            .contribution_amount
+            .checked_mul(group.member_count as i128)
+            .ok_or(StellarSaveError::Overflow)?;
+
+        let timestamp = env.ledger().timestamp();
+
+        // Record the payout
+        Self::record_payout(
+            &env,
+            group_id,
+            group.current_cycle,
+            recipient.clone(),
+            payout_amount,
+            timestamp,
+        )?;
+
+        // Update group balance
+        let balance_key = StorageKeyBuilder::group_balance(group_id);
+        let current_balance: i128 =
+            env.storage().persistent().get(&balance_key).unwrap_or(0);
+        let new_balance = current_balance
+            .checked_sub(payout_amount)
+            .ok_or(StellarSaveError::Overflow)?;
+        env.storage().persistent().set(&balance_key, &new_balance);
+
+        // Update total paid out
+        let paid_out_key = StorageKeyBuilder::group_total_paid_out(group_id);
+        let current_paid_out: i128 =
+            env.storage().persistent().get(&paid_out_key).unwrap_or(0);
+        let new_paid_out = current_paid_out
+            .checked_add(payout_amount)
+            .ok_or(StellarSaveError::Overflow)?;
+        env.storage().persistent().set(&paid_out_key, &new_paid_out);
+
+        // Advance cycle
+        group.advance_cycle(&env);
+        env.storage().persistent().set(&group_key, &group);
+
+        // If group completed, update status key too
+        if group.is_complete() {
+            env.storage()
+                .persistent()
+                .set(&status_key, &GroupStatus::Completed);
+        }
+
+        EventEmitter::emit_payout_executed(
+            &env,
+            group_id,
+            recipient,
+            payout_amount,
+            group.current_cycle.saturating_sub(1),
+            timestamp,
+        );
+
+        Ok(())
+    }
     ///
     /// This internal helper handles all the storage operations required when a payout
     /// is distributed to a member. It ensures data consistency by:
