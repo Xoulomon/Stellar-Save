@@ -1,9 +1,9 @@
 
-import App from '../App';
+import LandingPage from './LandingPage';
 
 /**
- * Home page component - uses existing App component
+ * Home page - Landing page for unauthenticated users
  */
 export default function HomePage() {
-  return <App />;
+  return <LandingPage />;
 }
