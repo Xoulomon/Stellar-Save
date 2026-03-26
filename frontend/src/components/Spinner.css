@@ -1,0 +1,147 @@
+/* ===== Spinner Base Styles ===== */
+.spinner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.spinner-track {
+  position: absolute;
+  border: 2px solid;
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ===== Size Variants ===== */
+.spinner-sm .spinner-track {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.spinner-md .spinner-track {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.spinner-lg .spinner-track {
+  width: 3.5rem;
+  height: 3.5rem;
+}
+
+/* Smaller font for labels on small spinners */
+.spinner-label-sm {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.spinner-label-md {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.spinner-label-lg {
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+/* ===== Color Variants ===== */
+/* Primary - Blue */
+.spinner-primary .spinner-track {
+  border-color: #646cff;
+}
+
+/* Secondary - Dark */
+.spinner-secondary .spinner-track {
+  border-color: #1a1a1a;
+}
+
+/* Danger - Red */
+.spinner-danger .spinner-track {
+  border-color: #e53e3e;
+}
+
+/* Success - Green */
+.spinner-success .spinner-track {
+  border-color: #38a169;
+}
+
+/* White - For dark backgrounds */
+.spinner-white .spinner-track {
+  border-color: #ffffff;
+}
+
+/* ===== Animation ===== */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== Full-Page Loader ===== */
+.full-page-loader-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 9999;
+  animation: fadeInOverlay 0.3s ease-in-out;
+}
+
+.full-page-loader-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .full-page-loader-content {
+    background-color: rgba(26, 26, 26, 0.95);
+    color: rgba(255, 255, 255, 0.87);
+  }
+}
+
+/* Overlay fade-in animation */
+@keyframes fadeInOverlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ===== Accessibility ===== */
+@media (prefers-reduced-motion: reduce) {
+  .spinner-track {
+    animation: none;
+    border-right-color: transparent;
+    border-bottom-color: transparent;
+    opacity: 0.6;
+  }
+
+  .full-page-loader-overlay {
+    animation: none;
+  }
+}

@@ -1,0 +1,9 @@
+To create the design for Stellar Save, I focused on translating the complex mechanics of a decentralized ROSCA into a user-friendly mobile interface. Here’s a quick breakdown of the design process:
+
+Information Hierarchy: I prioritized high-level financial health (Total Saved, Payout Dates) at the top of the dashboard to give users immediate peace of mind and clarity.
+Visual Progress Tracking: For the Group Details and Dashboard, I used progress bars and "Round X of Y" indicators to make the rotational nature of the savings circles easy to understand at a glance.
+Trust & Security: By using a clean, professional "Stellar Blue" color palette and a modern sans-serif font (Manrope), the design evokes the reliability expected of a financial application built on blockchain technology.
+Onboarding Logic: I designed a dedicated empty state to provide a clear path for new users, ensuring the app feels welcoming and intuitive from the very first login.
+Social Context: Since ROSCAs are inherently social, I included member status and recent activity feeds to keep users connected to their group's collective progress.
+
+https://www.figma.com/design/qIyC3eXnWhMzJvg2HTxPTi/Untitled?node-id=0-1&p=f&t=8qTuxq9OYynj4ABX-0

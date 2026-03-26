@@ -1,0 +1,33 @@
+User Profile UI Design
+This interface serves as the central command center for the Stella Micro Donation App, bridging the gap between decentralized finance and intuitive personal banking. I designed this architecture to focus on visualizing financial growth through a "zero-effort" lens, ensuring that complex Web3 interactions feel accessible and rewarding.
+
+1. Reputation & Trust Architecture
+At the core of the profile, I designed the Stellar Trust Level, a proprietary reputation metric created to quantify user reliability within the ecosystem.
+
+The Logic: By aggregating on-chain contribution consistency and savings milestones, I developed a system that assigns a score (e.g., 4.9/5.0).
+
+Copy Strategy: I utilized high-affinity phrases like "Excellent Financial Reliability" and "Top 5% of global savers" to transform a data point into a status symbol, driving long-term user retention.
+
+2. Automated Savings Dashboards
+I developed the middle-tier "Savings Statistics" to provide a high-level view of the user’s financial velocity without the need for manual calculations.
+
+Momentum Tracking: I included the +12% monthly growth indicator to provide immediate feedback on the efficacy of the user’s automated savings rules.
+
+Category Breakdown: I structured the Active Groups and Groups Completed modules to reflect the diversity of user goals—ranging from home upgrades to charitable contributions.
+
+3. The Milestone & Award Timeline
+To reinforce the Stellar-Save philosophy, I implemented a vertical History & Milestones feed.
+
+Event Logging: I designed this section to celebrate "Zero-Effort" wins, such as the successful completion of the Home Renovation Group.
+
+Behavioral Awards: I integrated the "Consistency Award" (e.g., 6 months of on-time contributions) as an automated feedback loop, rewarding the user for maintaining their link to the Stellar network.
+
+4. Secure Bridge & Wallet Management
+I crafted the bottom navigation to focus on the technical "bridge" between traditional banking and Web3 protocols.
+
+Interoperability: I designed the Connected Wallets section to give users a clear, high-trust view of their linked assets, including MetaMask, Stellar, and traditional bank accounts.
+
+Security UX: I prioritized "Two-factor authentication and data control" in the copy to provide peace of mind in a decentralized environment.
+
+figma link https://www.figma.com/design/fEqfuBtMgHZWDXHq9wqdHY/Stella-Save-UI?node-id=77-463&t=F3PuUn5TeLj6XgWO-0
+

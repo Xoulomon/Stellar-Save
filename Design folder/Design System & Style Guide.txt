@@ -1,0 +1,27 @@
+Think of the Style Guide as the visual dictionary. it is static and focuses on the aesthetic standards. It tells you what to use so the brand stays recognizable.
+
+Color Palettes: Primary, secondary, and accent colors (HEX/RGB codes).
+
+Typography: Which fonts to use for headers vs. body text.
+
+Iconography: The specific style of icons (line art vs. solid).
+
+Brand Voice: The tone of the copy (is it witty or formal?).
+
+Logo Usage: Where it goes and—more importantly—where it shouldn’t go.
+
+🏗️ The Design System (The "Source of Truth")
+The Design System is the entire infrastructure. It includes the Style Guide but adds the "how-to" and the actual code. It’s a library of reusable components that allows a team to build products at scale.
+
+Component Library: Ready-to-use UI elements like buttons, form fields, and nav bars.
+
+Design Tokens: Variables (like $brand-blue) that sync design files with code.
+
+Pattern Library: Best practices for layouts (e.g., how a login flow should behave).
+
+Documentation: Clear instructions on why certain elements are used in specific contexts.
+
+this is the figma link: 
+
+
+https://www.figma.com/design/v02zBFCe6Z9gaupONo8pIj/Design-System---Style-Guide?node-id=0-1&t=0wJGO8epJ0O4ywq6-1

@@ -1,0 +1,98 @@
+.header {
+  background: #1a1a2e;
+  border-bottom: 1px solid #2a2a3e;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.logo-icon {
+  font-size: 1.5rem;
+}
+
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.header-nav {
+  display: flex;
+  gap: 1.5rem;
+  margin-left: auto;
+}
+
+.header-nav a {
+  color: #a0a0b0;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.header-nav a:hover {
+  color: #fff;
+}
+
+.wallet-button {
+  background: #4a90e2;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.wallet-button:hover {
+  background: #357abd;
+}
+
+@media (max-width: 768px) {
+  .menu-toggle {
+    display: block;
+  }
+
+  .header-nav {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #1a1a2e;
+    flex-direction: column;
+    padding: 1rem;
+    border-bottom: 1px solid #2a2a3e;
+    display: none;
+  }
+
+  .header-nav.open {
+    display: flex;
+  }
+
+  .wallet-button {
+    position: absolute;
+    right: 4rem;
+    top: 1rem;
+  }
+}

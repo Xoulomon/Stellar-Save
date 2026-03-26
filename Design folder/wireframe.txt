@@ -1,0 +1,36 @@
+System States & Loaders
+Standardized visual feedback for loading, empty, and error conditions. Ensuring users are never left wondering what’s happening with their property search or dashboard data.
+
+01. Skeleton Loaders
+Placeholders that simulate the layout of content before it’s fully loaded, reducing perceived wait time.
+
+Property Card Placeholder: A large block layout simulating image and text areas.
+
+Dashboard Stat Placeholder: Circular and rectangular shapes representing profile and numerical data.
+
+02. Empty States
+No Results Found
+We couldn't find any properties matching your current filters. Try adjusting your search criteria or price range.
+
+Action: [Clear All Filters]
+
+03. Error States
+ERROR 404: Something went wrong
+Our system encountered an unexpected error while fetching the property details. This might be a temporary issue with our servers.
+
+Actions: [Retry Now] [Go Back]
+
+04. Offline State
+Used when the browser detects a loss of internet connectivity.
+
+Banner Notification: "You are currently offline. Some features may be unavailable."
+
+Action: [Check Connection]
+
+Modal/Overlay: Connection Lost
+
+"Please check your internet settings. We'll reconnect automatically."
+
+Status: "Attempting to reconnect..."
+
+This is the Figma link: https://www.figma.com/design/aCVsWs2VjLWunqMcOuGs3Q/Wireframe---Loading---Empty-States?m=auto&t=QiJAuHsbcwE39Adj-6

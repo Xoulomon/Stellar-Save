@@ -1,0 +1,86 @@
+.tooltip-trigger {
+  display: inline-block;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  animation: tooltipFadeIn 0.15s ease-out;
+}
+
+.tooltip-content {
+  background-color: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  max-width: 250px;
+  word-wrap: break-word;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.tooltip-arrow {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: rgba(0, 0, 0, 0.9);
+  transform: rotate(45deg);
+}
+
+/* Arrow positioning */
+.tooltip-top .tooltip-arrow {
+  bottom: -4px;
+  left: 50%;
+  margin-left: -4px;
+}
+
+.tooltip-bottom .tooltip-arrow {
+  top: -4px;
+  left: 50%;
+  margin-left: -4px;
+}
+
+.tooltip-left .tooltip-arrow {
+  right: -4px;
+  top: 50%;
+  margin-top: -4px;
+}
+
+.tooltip-right .tooltip-arrow {
+  left: -4px;
+  top: 50%;
+  margin-top: -4px;
+}
+
+/* Animation */
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Light mode adjustments */
+@media (prefers-color-scheme: light) {
+  .tooltip-content {
+    background-color: rgba(50, 50, 50, 0.95);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .tooltip-arrow {
+    background-color: rgba(50, 50, 50, 0.95);
+  }
+}
+
+/* Accessibility: Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .tooltip {
+    animation: none;
+  }
+}

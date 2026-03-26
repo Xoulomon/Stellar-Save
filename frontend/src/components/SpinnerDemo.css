@@ -1,0 +1,90 @@
+.spinner-demo {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.spinner-demo h1 {
+  margin-bottom: 2rem;
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.demo-section {
+  margin-bottom: 3rem;
+  padding: 2rem;
+  border-radius: 12px;
+  background-color: rgba(100, 108, 255, 0.05);
+  border: 1px solid rgba(100, 108, 255, 0.2);
+}
+
+.demo-section h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  color: #646cff;
+}
+
+.demo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 2rem;
+}
+
+.demo-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  border: 1px solid rgba(100, 108, 255, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .demo-section {
+    background-color: rgba(100, 108, 255, 0.1);
+    border-color: rgba(100, 108, 255, 0.3);
+  }
+
+  .demo-item {
+    background-color: rgba(26, 26, 26, 0.5);
+    border-color: rgba(100, 108, 255, 0.2);
+  }
+}
+
+.demo-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+@media (prefers-color-scheme: dark) {
+  .demo-label {
+    color: rgba(255, 255, 255, 0.6);
+  }
+}
+
+.demo-button {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border: 2px solid #646cff;
+  border-radius: 8px;
+  background-color: #646cff;
+  color: white;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.demo-button:hover {
+  background-color: #535bf2;
+  border-color: #535bf2;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(100, 108, 255, 0.3);
+}
+
+.demo-button:active {
+  transform: translateY(0);
+}
