@@ -33,3 +33,4 @@ export { CycleProgress } from "./CycleProgress";
 export type { CycleProgressProps } from "./CycleProgress";
 export { UserStats } from "./UserStats";
 export { SettingsSection } from "./SettingsSection";
+export { DebounceDemo } from "./DebounceDemo";
