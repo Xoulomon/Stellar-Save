@@ -8,4 +8,6 @@ export { calculateCycleProgress, type CycleProgressResult, calculateCycleProgres
 export { errorHandler, formatErrorMessage, type ParsedError } from './errorHandler';
 export type { GroupData, PublicGroup } from './groupApi';
 export { createGroup, fetchGroups } from './groupApi';
+export { isValidStellarAddress, validateAddress } from './validateAddress';
+
 

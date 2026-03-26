@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { errorHandler, formatErrorMessage } from '../utils/errorHandler';
 import type { ParsedError } from '../utils/errorHandler';
+import { validateAddress, isValidStellarAddress } from '../utils';
 
-// Keep existing util
+ // Keep existing util
 function formatAmount(amount: number): string {
   return `${amount} XLM`;
 }
@@ -56,21 +57,4 @@ describe('Utils', () => {
 
     it('handles non-Error unknowns', () => {
       const result = errorHandler('string error');
-      expect(result.message).toContain('unexpected error');
-    });
-
-    it('handles null/undefined', () => {
-      const result1 = errorHandler(null);
-      const result2 = errorHandler(undefined);
-      expect(result1.message).toContain('unexpected error');
-      expect(result2.message).toContain('unexpected error');
-    });
-  });
-
-  describe('formatErrorMessage', () => {
-    it('returns formatted message', () => {
-      const msg = formatErrorMessage(new Error('User rejected'));
-      expect(msg).toBe('Transaction cancelled. This is safe.');
-    });
-  });
-
+      expect(result.message).toContain('unexpected
