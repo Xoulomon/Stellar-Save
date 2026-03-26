@@ -31,3 +31,5 @@ export { GroupFilters } from "./GroupFilters";
 export type { FilterState, GroupStatus, SortOption } from "./GroupFilters";
 export { CycleProgress } from "./CycleProgress";
 export type { CycleProgressProps } from "./CycleProgress";
+export { UserStats } from "./UserStats";
+export { SettingsSection } from "./SettingsSection";
