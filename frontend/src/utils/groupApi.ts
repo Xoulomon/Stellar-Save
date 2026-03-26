@@ -1,7 +1,12 @@
 /**
  * API utilities for group operations.
- * TODO: replace stub with actual Soroban contract invocation.
+ * TODO: replace stubs with actual Soroban contract invocations.
  */
+
+import type { PublicGroup, GroupFilters } from '../types/group';
+
+// Re-export so existing imports keep working
+export type { PublicGroup };
 
 export interface GroupData {
   name: string;
@@ -14,6 +19,7 @@ export interface GroupData {
 
 export async function createGroup(data: GroupData): Promise<string> {
   // stub — returns a mock group ID
+  void data;
   return Promise.resolve('mock-group-id');
 }
 

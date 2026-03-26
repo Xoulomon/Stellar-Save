@@ -4170,6 +4170,126 @@ mod tests {
         assert_eq!(final_group.member_count, 4);
     }
 
+    // Rate limiting tests
+    #[test]
+    #[should_panic(expected = "Status(ContractError(9005))")]
+    fn test_group_creation_rate_limit() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+
+        // Set ledger timestamp to a fixed point in time
+        env.ledger().with_mut(|l| l.timestamp = 1_000_000);
+
+        // First creation should succeed
+        client.create_group(&creator, &100, &3600, &3);
+
+        // Advance time by less than the 300s cooldown (e.g. 100s)
+        env.ledger().with_mut(|l| l.timestamp = 1_000_100);
+
+        // Second creation within cooldown window must fail with RateLimitExceeded (9005)
+        client.create_group(&creator, &100, &3600, &3);
+    }
+
+    #[test]
+    fn test_group_creation_rate_limit_after_cooldown() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+
+        env.ledger().with_mut(|l| l.timestamp = 1_000_000);
+        let group_id_1 = client.create_group(&creator, &100, &3600, &3);
+
+        // Advance time past the 300s cooldown
+        env.ledger().with_mut(|l| l.timestamp = 1_000_301);
+
+        // Second creation after cooldown must succeed
+        let group_id_2 = client.create_group(&creator, &100, &3600, &3);
+
+        assert_ne!(group_id_1, group_id_2);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(9005))")]
+    fn test_group_join_rate_limit() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+
+        env.ledger().with_mut(|l| l.timestamp = 1_000_000);
+
+        // Create two separate groups to join
+        let group_id_1 = client.create_group(&creator, &100, &3600, &5);
+
+        // Advance past creation cooldown so creator can create a second group
+        env.ledger().with_mut(|l| l.timestamp = 1_000_400);
+        let group_id_2 = client.create_group(&creator, &100, &3600, &5);
+
+        // Member joins first group — sets the join timestamp
+        client.join_group(&group_id_1, &member);
+
+        // Advance time by less than the 120s join cooldown (e.g. 60s)
+        env.ledger().with_mut(|l| l.timestamp = 1_000_460);
+
+        // Member tries to join second group within cooldown — must fail with 9005
+        client.join_group(&group_id_2, &member);
+    }
+
+    #[test]
+    fn test_group_join_rate_limit_after_cooldown() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+
+        env.ledger().with_mut(|l| l.timestamp = 1_000_000);
+        let group_id_1 = client.create_group(&creator, &100, &3600, &5);
+
+        env.ledger().with_mut(|l| l.timestamp = 1_000_400);
+        let group_id_2 = client.create_group(&creator, &100, &3600, &5);
+
+        // Member joins first group
+        client.join_group(&group_id_1, &member);
+
+        // Advance past the 120s join cooldown
+        env.ledger().with_mut(|l| l.timestamp = 1_000_521);
+
+        // Member joins second group after cooldown — must succeed
+        client.join_group(&group_id_2, &member);
+
+        let member_key = StorageKeyBuilder::member_profile(group_id_2, member.clone());
+        let profile: MemberProfile = env.storage().persistent().get(&member_key).unwrap();
+        assert_eq!(profile.address, member);
+    }
+
+    #[test]
+    fn test_rate_limit_is_per_user() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator1 = Address::generate(&env);
+        let creator2 = Address::generate(&env);
+
+        env.ledger().with_mut(|l| l.timestamp = 1_000_000);
+
+        // creator1 creates a group — sets their cooldown
+        client.create_group(&creator1, &100, &3600, &3);
+
+        // creator2 has an independent cooldown — must succeed immediately
+        let group_id = client.create_group(&creator2, &100, &3600, &3);
+        assert!(group_id > 0);
+    }
+
     #[test]
     fn test_assign_payout_positions_sequential() {
         let env = Env::default();

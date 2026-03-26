@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Stack, Typography } from '@mui/material';
 import { AppCard, AppLayout } from '../ui';
@@ -7,115 +6,27 @@ import { GroupFilters } from '../components/GroupFilters';
 import { GroupList } from '../components/GroupList';
 import { SearchBar } from '../components/SearchBar';
 import { Button } from '../components/Button';
-import { fetchGroups } from '../utils/groupApi';
-import type { PublicGroup } from '../utils/groupApi';
-import type { FilterState, SortOption } from '../components/GroupFilters';
+import { useGroups } from '../hooks/useGroups';
 import { ROUTES, buildRoute } from '../routing/constants';
 import './BrowseGroupsPage.css';
 
-const DEFAULT_FILTERS: FilterState = {
-  status: 'all',
-  minAmount: '',
-  maxAmount: '',
-  minMembers: '',
-  maxMembers: '',
-  sort: 'date-desc',
-};
-
-function applySortOption(groups: PublicGroup[], sort: SortOption): PublicGroup[] {
-  const sorted = [...groups];
-  sorted.sort((a, b) => {
-    switch (sort) {
-      case 'name-asc':  return a.name.localeCompare(b.name);
-      case 'name-desc': return b.name.localeCompare(a.name);
-      case 'amount-asc':  return a.contributionAmount - b.contributionAmount;
-      case 'amount-desc': return b.contributionAmount - a.contributionAmount;
-      case 'members-asc':  return a.memberCount - b.memberCount;
-      case 'members-desc': return b.memberCount - a.memberCount;
-      case 'date-asc':  return a.createdAt.getTime() - b.createdAt.getTime();
-      case 'date-desc': return b.createdAt.getTime() - a.createdAt.getTime();
-      default: return 0;
-    }
-  });
-  return sorted;
-}
-
 export default function BrowseGroupsPage() {
   const navigate = useNavigate();
-  const [groups, setGroups] = useState<PublicGroup[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
-  const loadGroups = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchGroups();
-      setGroups(data);
-    } catch (err) {
-      const msg =
-        err instanceof Error && err.message
-          ? err.message
-          : 'Failed to load groups. Please try again.';
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadGroups();
-  }, []);
-
-  // Task 5: filteredGroups via useMemo
-  const filteredGroups = useMemo(() => {
-    let result = groups;
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        g =>
-          g.name.toLowerCase().includes(q) ||
-          g.description?.toLowerCase().includes(q)
-      );
-    }
-
-    if (filters.status !== 'all') {
-      result = result.filter(g => g.status === filters.status);
-    }
-
-    if (filters.minAmount) {
-      result = result.filter(g => g.contributionAmount >= Number(filters.minAmount));
-    }
-    if (filters.maxAmount) {
-      result = result.filter(g => g.contributionAmount <= Number(filters.maxAmount));
-    }
-    if (filters.minMembers) {
-      result = result.filter(g => g.memberCount >= Number(filters.minMembers));
-    }
-    if (filters.maxMembers) {
-      result = result.filter(g => g.memberCount <= Number(filters.maxMembers));
-    }
-
-    return applySortOption(result, filters.sort);
-  }, [groups, searchQuery, filters]);
-
-  // Task 5: hasActiveFilters
-  const hasActiveFilters =
-    searchQuery.trim() !== '' ||
-    filters.status !== 'all' ||
-    filters.minAmount !== '' ||
-    filters.maxAmount !== '' ||
-    filters.minMembers !== '' ||
-    filters.maxMembers !== '';
-
-  // Task 7: handlers
-  const handleClearFilters = () => {
-    setSearchQuery('');
-    setFilters(DEFAULT_FILTERS);
-  };
+  const {
+    groups,
+    filteredCount,
+    pagination,
+    filters,
+    isLoading,
+    error,
+    hasActiveFilters,
+    setFilters,
+    clearFilters,
+    setPage,
+    setPageSize,
+    refresh,
+  } = useGroups({ initialPageSize: 12 });
 
   const handleCreateGroup = () => navigate(ROUTES.GROUP_CREATE);
 
@@ -132,7 +43,7 @@ export default function BrowseGroupsPage() {
             {error && (
               <div className="browse-groups-error" role="alert">
                 <p>{error}</p>
-                <Button onClick={() => void loadGroups()}>Retry</Button>
+                <Button onClick={refresh}>Retry</Button>
               </div>
             )}
           </div>
@@ -143,31 +54,29 @@ export default function BrowseGroupsPage() {
                 Public Groups
               </Typography>
 
-              {/* Task 6: SearchBar + GroupFilters */}
               <div className="browse-groups-controls">
                 <SearchBar
                   placeholder="Search groups by name or keyword..."
-                  onSearch={setSearchQuery}
+                  onSearch={(q) => setFilters({ search: q })}
                   debounceMs={300}
-                  loading={loading}
+                  loading={isLoading}
                   aria-label="Search groups"
                 />
                 <GroupFilters
-                  onFilterChange={setFilters}
-                  initialFilters={DEFAULT_FILTERS}
+                  onFilterChange={(f) => setFilters(f)}
+                  initialFilters={filters}
                 />
               </div>
 
-              {/* Task 7: GroupList with GroupCard renderGroupItem */}
-              <div aria-busy={loading}>
+              <div aria-busy={isLoading}>
                 <GroupList
-                  groups={filteredGroups as any}
-                  loading={loading}
+                  groups={groups as any}
+                  loading={isLoading}
                   showSearch={false}
                   showSort={false}
-                  pageSize={12}
+                  pageSize={pagination.pageSize}
                   pageSizeOptions={[12, 24, 48]}
-                  showPagination={filteredGroups.length > 12}
+                  showPagination={filteredCount > pagination.pageSize}
                   emptyTitle={hasActiveFilters ? 'No groups found' : 'No groups available'}
                   emptyDescription={
                     hasActiveFilters
@@ -175,10 +84,9 @@ export default function BrowseGroupsPage() {
                       : 'There are no public groups yet. Be the first to create one!'
                   }
                   emptyActionLabel={hasActiveFilters ? 'Clear Filters' : 'Create Group'}
-                  onEmptyAction={hasActiveFilters ? handleClearFilters : handleCreateGroup}
+                  onEmptyAction={hasActiveFilters ? clearFilters : handleCreateGroup}
                   renderGroupItem={(group) => (
                     <GroupCard
-                      key={group.id}
                       groupId={group.id}
                       groupName={group.name}
                       memberCount={group.memberCount ?? 0}
@@ -195,6 +103,41 @@ export default function BrowseGroupsPage() {
                   )}
                 />
               </div>
+
+              {/* Pagination controls driven by the hook */}
+              {pagination.totalPages > 1 && (
+                <div className="browse-groups-pagination" role="navigation" aria-label="Group list pagination">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={!pagination.hasPrevPage}
+                    onClick={() => setPage(pagination.page - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <span className="browse-groups-page-info">
+                    Page {pagination.page} of {pagination.totalPages}
+                  </span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={!pagination.hasNextPage}
+                    onClick={() => setPage(pagination.page + 1)}
+                  >
+                    Next
+                  </Button>
+                  <select
+                    aria-label="Items per page"
+                    value={pagination.pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="browse-groups-page-size"
+                  >
+                    {[12, 24, 48].map((n) => (
+                      <option key={n} value={n}>{n} per page</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </section>
           )}
         </Stack>
