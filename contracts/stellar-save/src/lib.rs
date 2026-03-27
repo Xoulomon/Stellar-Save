@@ -2094,6 +2094,40 @@ impl StellarSaveContract {
         Ok(paginated_members)
     }
 
+    /// Returns the total number of members in a group.
+    ///
+    /// Useful for pagination — callers can use this alongside `get_group_members`
+    /// to know the total count without fetching all members.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - The ID of the group
+    ///
+    /// # Returns
+    /// * `Ok(u32)` - Total member count
+    /// * `Err(StellarSaveError::GroupNotFound)` - Group does not exist
+    pub fn get_group_total_members(
+        env: Env,
+        group_id: u64,
+    ) -> Result<u32, StellarSaveError> {
+        // Verify group exists
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        env.storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // Load member list and return count
+        let members_key = StorageKeyBuilder::group_members(group_id);
+        let members: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&members_key)
+            .unwrap_or(Vec::new(&env));
+
+        Ok(members.len())
+    }
+
     /// Activates a group once minimum members have joined.
     ///
     /// # Arguments
@@ -7772,6 +7806,49 @@ mod tests {
         // Request with limit 0
         let members = client.get_group_members(&group_id, &0, &0);
         assert_eq!(members.len(), 0);
+    }
+
+    #[test]
+    fn test_get_group_total_members_empty() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &5);
+
+        let count = client.get_group_total_members(&group_id);
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_get_group_total_members_with_members() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &3600, &5);
+
+        client.join_group(&group_id, &creator);
+        client.join_group(&group_id, &Address::generate(&env));
+        client.join_group(&group_id, &Address::generate(&env));
+
+        let count = client.get_group_total_members(&group_id);
+        assert_eq!(count, 3);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #1001)")]
+    fn test_get_group_total_members_not_found() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        client.get_group_total_members(&999);
     }
 
     #[test]
