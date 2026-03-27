@@ -12,3 +12,4 @@ export type { TransactionStatus, TransactionResult, UseTransactionReturn } from 
 export { useTransactions } from './useTransactions';
 export { useUserProfile } from './useUserProfile';
 export { useWallet } from './useWallet';
+export { usePayouts } from './usePayouts';
