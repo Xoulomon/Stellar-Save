@@ -48,6 +48,10 @@ pub enum StellarSaveError {
     /// Error Code: 3003
     CycleNotComplete = 3003,
 
+    /// The contribution record was not found.
+    /// Error Code: 3004
+    ContributionNotFound = 3004,
+
     // Payout-related errors (4000-4999)
     /// The payout operation failed due to insufficient funds or transfer error.
     /// Error Code: 4001
@@ -69,6 +73,10 @@ pub enum StellarSaveError {
     /// The contract data is corrupted or invalid.
     /// Error Code: 9002
     DataCorruption = 9002,
+
+    /// Added for ID Generation: The counter has reached its maximum limit.
+    /// Error Code: 9003
+    Overflow = 9003,
 }
 
 impl StellarSaveError {
@@ -88,7 +96,7 @@ impl StellarSaveError {
             StellarSaveError::InvalidState => {
                 "The group is not in a valid state for this operation. Check group status."
             }
-            
+
             // Member-related errors
             StellarSaveError::AlreadyMember => {
                 "This address is already a member of the group."
@@ -99,7 +107,7 @@ impl StellarSaveError {
             StellarSaveError::Unauthorized => {
                 "You are not authorized to perform this operation. Check permissions."
             }
-            
+
             // Contribution-related errors
             StellarSaveError::InvalidAmount => {
                 "The contribution amount is invalid. Must be positive and match group requirements."
@@ -110,7 +118,10 @@ impl StellarSaveError {
             StellarSaveError::CycleNotComplete => {
                 "The current cycle is not complete. All members must contribute before payout."
             }
-            
+            StellarSaveError::ContributionNotFound => {
+                "The contribution record was not found for the specified member and cycle."
+            }
+
             // Payout-related errors
             StellarSaveError::PayoutFailed => {
                 "The payout operation failed. This may be due to insufficient contract funds or transfer restrictions."
@@ -121,13 +132,16 @@ impl StellarSaveError {
             StellarSaveError::InvalidRecipient => {
                 "The specified recipient is not eligible for payout in this cycle."
             }
-            
+
             // System-related errors
             StellarSaveError::InternalError => {
                 "An internal contract error occurred. Please try again or contact support."
             }
             StellarSaveError::DataCorruption => {
                 "Contract data appears to be corrupted. This is a critical error."
+            }
+            StellarSaveError::Overflow => {
+                "The ID counter has reached its maximum limit. No more IDs can be generated."
             }
         }
     }

@@ -114,7 +114,6 @@ pub fn calculate_current_cycle(env: &Env, group_id: u64) -> Result<u32, StellarS
 
     Ok(result)
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -290,4 +289,3 @@ mod tests {
         let result = calculate_current_cycle(&env, 1);
         assert_eq!(result, Ok(max_members - 1));
     }
-}

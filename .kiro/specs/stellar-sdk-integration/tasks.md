@@ -1,0 +1,1 @@
+[text](.config.kiro) [text](design.md) [text](requirements.md) [text](tasks.md)
