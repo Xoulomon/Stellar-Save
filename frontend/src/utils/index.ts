@@ -11,5 +11,4 @@ export { createGroup, fetchGroups } from './groupApi';
 export { isValidStellarAddress, validateAddress } from './validateAddress';
 export { formatDate, formatDateRelative, formatDateAbsolute, type FormatDateOptions } from './formatDate';
 export { formatAddress, type FormatAddressOptions } from './formatAddress';
-export { formatAmount, type FormatAmountOptions } from './formatAmount';
 
