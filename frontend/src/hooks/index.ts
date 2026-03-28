@@ -22,4 +22,6 @@ export type { TransactionStatus, TransactionResult, UseTransactionReturn } from 
 export { useTransactions } from './useTransactions';
 export { useUserProfile } from './useUserProfile';
 export { useWallet } from './useWallet';
+export { useClipboard } from './useClipboard';
+export type { UseClipboardOptions, UseClipboardReturn } from './useClipboard';
 export { usePayouts } from './usePayouts';
