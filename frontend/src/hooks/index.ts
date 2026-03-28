@@ -4,6 +4,16 @@ export { useDebounce, useDebounceWithCancel } from './useDebounce';
 export type { UseDebounceOptions } from './useDebounce';
 export { useGroup } from './useGroup';
 export { useGroups } from './useGroups';
+export {
+  breakpoints,
+  mediaQueries,
+  only,
+  up,
+  down,
+  between,
+  useMediaQuery,
+} from './useMediaQuery';
+export type { Breakpoint } from './useMediaQuery';
 export { useBalance } from './useBalance';
 export type { Balance, BalanceState, UseBalanceOptions } from './useBalance';
 
