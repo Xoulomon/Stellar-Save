@@ -7,6 +7,7 @@ import { routeConfig } from '../routing/routes';
 import { ROUTES } from '../routing/constants';
 import { fetchGroups } from '../utils/groupApi';
 import type { PublicGroup } from '../utils/groupApi';
+import { clearGroupsCache } from '../hooks/useGroups';
 
 vi.mock('../ui', () => ({
   AppLayout: ({ children, title, subtitle }: any) => (
@@ -49,6 +50,7 @@ function renderPage() {
 describe('BrowseGroupsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearGroupsCache();
     mockFetchGroups.mockResolvedValue(mockGroups);
   });
 
