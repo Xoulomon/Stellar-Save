@@ -237,3 +237,8 @@ export function useGroups(options: UseGroupsOptions = {}): UseGroupsReturn {
     refresh,
   };
 }
+
+// Utilities (for tests/client cache control)
+export function clearGroupsCache(): void {
+  cache.clear();
+}
