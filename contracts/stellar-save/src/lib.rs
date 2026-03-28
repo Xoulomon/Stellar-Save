@@ -769,8 +769,88 @@ impl StellarSaveContract {
         Ok(balance)
     }
 
-    /// Gets all payout records for a group with pagination and sorting.
-    ///
+/// Returns all members of a group.
+/// 
+/// Loads the complete member list from storage. For large groups, consider using
+/// the paginated `get_group_members` function instead.
+/// 
+/// # Arguments
+/// * `env` - Soroban environment
+/// * `group_id` - ID of the group
+/// 
+/// # Returns
+/// * `Ok(Vec<Address>)` - Complete list of member addresses
+/// * `Err(StellarSaveError::GroupNotFound)` - If group or members list missing
+///
+/// # Example
+/// ```ignore
+/// let members = contract.get_members(env, group_id)?;
+/// ```
+pub fn get_members(env: Env, group_id: u64) -> Result<Vec<Address>, StellarSaveError> {
+    // Verify group exists first
+    let _group = Self::get_group(env.clone(), group_id)?;
+
+    let members_key = StorageKeyBuilder::group_members(group_id);
+    let members: Vec<Address> = env
+        .storage()
+        .persistent()
+        .get(&amp;members_key)
+        .ok_or(StellarSaveError::GroupNotFound)?;
+
+    Ok(members)
+}
+
+/// Gets the complete profile of a specific member in a group.
+/// 
+/// # Arguments
+/// * `env` - Soroban environment
+/// * `group_id` - ID of the group
+/// * `address` - Address of the member
+/// 
+/// # Returns
+/// * `Ok(MemberProfile)` - Member profile data
+/// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
+/// * `Err(StellarSaveError::NotMember)` - Member not found in group
+pub fn get_member(
+    env: Env,
+    group_id: u64,
+    address: Address,
+) -> Result<MemberProfile, StellarSaveError> {
+    // Verify group exists
+    let _group = Self::get_group(env.clone(), group_id)?;
+
+    let member_key = StorageKeyBuilder::member_profile(group_id, address.clone());
+    env.storage()
+        .persistent()
+        .get::<_, MemberProfile>(&amp;member_key)
+        .ok_or(StellarSaveError::NotMember)
+}
+
+/// Checks if an address is a member of a specific group.
+/// 
+/// # Arguments
+/// * `env` - Soroban environment
+/// * `group_id` - ID of the group
+/// * `address` - Address to check
+/// 
+/// # Returns
+/// * `Ok(true)` - Address is a member
+/// * `Ok(false)` - Address is not a member
+/// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
+pub fn is_member(
+    env: Env,
+    group_id: u64,
+    address: Address,
+) -> Result<bool, StellarSaveError> {
+    // Verify group exists
+    let _group = Self::get_group(env.clone(), group_id)?;
+
+    let member_key = StorageKeyBuilder::member_profile(group_id, address);
+    Ok(env.storage().persistent().has(&amp;member_key))
+}
+
+/// Gets all payout records for a group with pagination and sorting.
+///
     /// This function retrieves the complete payout history for a specific group,
     /// allowing for pagination to handle large datasets and sorting by cycle number.
     ///
@@ -2106,10 +2186,7 @@ impl StellarSaveContract {
     /// # Returns
     /// * `Ok(u32)` - Total member count
     /// * `Err(StellarSaveError::GroupNotFound)` - Group does not exist
-    pub fn get_group_total_members(
-        env: Env,
-        group_id: u64,
-    ) -> Result<u32, StellarSaveError> {
+
         // Verify group exists
         let group_key = StorageKeyBuilder::group_data(group_id);
         env.storage()
