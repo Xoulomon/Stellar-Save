@@ -133,3 +133,8 @@ export function useGroup(
 
   return { group, isLoading, error, refresh };
 }
+
+// Utilities (for tests/client cache control)
+export function clearGroupCache(): void {
+  cache.clear();
+}

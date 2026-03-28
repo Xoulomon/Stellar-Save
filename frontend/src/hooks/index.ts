@@ -4,6 +4,8 @@ export { useDebounce, useDebounceWithCancel } from './useDebounce';
 export type { UseDebounceOptions } from './useDebounce';
 export { useGroup } from './useGroup';
 export { useGroups } from './useGroups';
+export { useMembers } from './useMembers';
+export { useContributions } from './useContributions';
 export {
   breakpoints,
   mediaQueries,
