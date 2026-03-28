@@ -74,12 +74,14 @@ export interface GroupCycle {
   status: 'active' | 'completed' | 'upcoming';
 }
 
-export async function fetchGroups(_filters?: Partial<GroupFilters>): Promise<PublicGroup[]> {
+export async function fetchGroups(filters?: Partial<GroupFilters>): Promise<PublicGroup[]> {
   // stub — TODO: replace with actual Soroban contract invocation
+  void filters;
   return Promise.resolve([]);
 }
 
-export async function fetchGroup(_groupId: string): Promise<DetailedGroup | null> {
+export async function fetchGroup(groupId: string): Promise<DetailedGroup | null> {
   // stub — TODO: replace with actual Soroban contract invocation
+  void groupId;
   return Promise.resolve(null);
 }
