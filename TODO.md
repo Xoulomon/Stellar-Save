@@ -1,17 +1,30 @@
-# CacheService Implementation TODO
+# Stellar Horizon API Service Implementation Plan
 
-## Plan Summary
-Create CacheService in utils/cache.ts with TTL, localStorage+memory, invalidation.
+## Completed Steps
+- [x] Analyzed project structure and confirmed new `client/` Rust crate needed
+- [x] Created TODO.md with breakdown
 
-## Steps
-- [x] 1. Create frontend/src/utils/cache.ts (class impl)
 
-- [x] 2. Update frontend/src/utils/index.ts (export CacheService)
+   - Integrate as workspace member
 
-- [x] 3. Create frontend/src/utils/cache.test.ts (vitest tests)
+2. **Update root `Cargo.toml`**
+   - Add `client` to workspace members
 
-- [ ] 4. Update frontend/README.md (usage docs)
-- [ ] 5. Run `npm test` and verify
-- [ ] 6. attempt_completion
+3. **Implement `client/src/lib.rs`**
+   - HorizonService struct
+   - get_account(), get_balances(), get_transactions()
+   - Error handling with HorizonError
+   - JSON deserialization types
 
-Current progress: Tests fixed (export CacheOptions, vitest import). Ready for step 4.
+4. **Add example usage and tests**
+
+5. **Verify build**
+   - `cargo check`
+   - `cargo build --package client`
+
+6. **Documentation**
+   - README in `client/`
+   - Export doc tests
+
+**Current Step: Create client/Cargo.toml**
+

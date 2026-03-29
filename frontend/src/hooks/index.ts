@@ -27,3 +27,6 @@ export { useWallet } from './useWallet';
 export { useClipboard } from './useClipboard';
 export type { UseClipboardOptions, UseClipboardReturn } from './useClipboard';
 export { usePayouts } from './usePayouts';
+
+export { useEventService } from './useEventService';
+export type { UseEventServiceReturn } from './useEventService';
