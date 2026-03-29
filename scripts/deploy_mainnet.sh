@@ -15,7 +15,13 @@ echo "⚠️  WARNING: Deploying to MAINNET"
 echo "Network: $STELLAR_NETWORK"
 echo "RPC URL: $STELLAR_RPC_URL"
 echo ""
-read -p "Are you sure you want to deploy to mainnet? (yes/no): " confirm
+
+if [ "$CI" = "true" ] || [ "$AUTO_CONFIRM_MAINNET" = "true" ]; then
+  echo "Auto-confirming mainnet deployment for CI/automation"
+  confirm="yes"
+else
+  read -p "Are you sure you want to deploy to mainnet? (yes/no): " confirm
+fi
 
 if [ "$confirm" != "yes" ]; then
   echo "Deployment cancelled"
