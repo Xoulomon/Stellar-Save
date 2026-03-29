@@ -18,4 +18,5 @@ export interface ToastContextType {
   addToast: (toast: Omit<Toast, 'id'>) => string;
   removeToast: (id: string) => void;
   toasts: Toast[];
+  queue: Toast[];
 }
