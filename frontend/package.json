@@ -11,7 +11,8 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage --run",
-    "test:coverage:watch": "vitest --coverage"
+    "test:coverage:watch": "vitest --coverage",
+    "test:e2e": "vitest run src/test/integration"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
