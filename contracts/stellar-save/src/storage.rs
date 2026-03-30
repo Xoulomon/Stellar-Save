@@ -364,6 +364,82 @@ pub mod key_prefixes {
     pub const COUNTER: &str = "COUNTER";
 }
 
+/// Storage layout documentation and access patterns.
+///
+/// # Storage Organization
+///
+/// The contract uses a hierarchical key structure to organize data:
+///
+/// ## Group Storage (GroupKey)
+/// - `GROUP_{id}`: Complete group data (configuration, state)
+/// - `GROUP_MEMBERS_{id}`: List of member addresses
+/// - `GROUP_STATUS_{id}`: Current group status
+///
+/// ## Member Storage (MemberKey)
+/// - `MEMBER_{group_id}_{address}`: Member profile (join date, status)
+/// - `MEMBER_CONTRIB_{group_id}_{address}`: Current cycle contribution status
+/// - `MEMBER_PAYOUT_{group_id}_{address}`: Payout eligibility and turn order
+/// - `MEMBER_TOTAL_CONTRIB_{group_id}_{address}`: Total contributions across all cycles
+///
+/// ## Contribution Storage (ContributionKey)
+/// - `CONTRIB_{group_id}_{cycle}_{address}`: Individual contribution amount and timestamp
+/// - `CONTRIB_TOTAL_{group_id}_{cycle}`: Total pool for the cycle
+/// - `CONTRIB_COUNT_{group_id}_{cycle}`: Number of contributors in the cycle
+///
+/// ## Payout Storage (PayoutKey)
+/// - `PAYOUT_{group_id}_{cycle}`: Complete payout record
+/// - `PAYOUT_RECIPIENT_{group_id}_{cycle}`: Recipient address for quick lookup
+/// - `PAYOUT_STATUS_{group_id}_{cycle}`: Payout execution status
+///
+/// ## Counter Storage (CounterKey)
+/// - `COUNTER_GROUP_ID`: Next available group ID
+/// - `COUNTER_TOTAL_GROUPS`: Total groups created
+/// - `COUNTER_ACTIVE_GROUPS`: Currently active groups
+/// - `COUNTER_TOTAL_MEMBERS`: Total members across all groups
+/// - `COUNTER_VERSION`: Contract version for upgrades
+/// - `COUNTER_GROUP_BALANCE_{id}`: Current balance for a group
+/// - `COUNTER_GROUP_PAID_OUT_{id}`: Total paid out for a group
+/// - `COUNTER_EMERGENCY_PAUSE`: Global pause flag
+///
+/// ## User Storage (UserKey)
+/// - `USER_LAST_CREATION_{address}`: Last group creation timestamp
+/// - `USER_LAST_JOIN_{address}`: Last group join timestamp
+///
+/// # Access Patterns
+///
+/// - **Fast lookups**: O(1) for individual records using direct keys
+/// - **Range queries**: Supported for cycles and members within a group
+/// - **Aggregations**: Counters enable O(1) access to totals
+/// - **Iteration**: Member lists and contribution records support enumeration
+pub struct StorageLayout;
+
+impl StorageLayout {
+    /// Returns documentation about the storage layout.
+    pub fn documentation() -> &'static str {
+        "Stellar-Save uses a hierarchical key structure with categories: Group, Member, Contribution, Payout, Counter, and User. Each category has optimized access patterns for its specific use case."
+    }
+
+    /// Returns the total number of storage key categories.
+    pub fn key_categories() -> usize {
+        6 // Group, Member, Contribution, Payout, Counter, User
+    }
+
+    /// Returns the estimated storage overhead per group.
+    pub fn estimated_overhead_per_group() -> &'static str {
+        "Approximately 5-10 storage entries per group (group data, members list, status, balance, paid_out)"
+    }
+
+    /// Returns the estimated storage overhead per member.
+    pub fn estimated_overhead_per_member() -> &'static str {
+        "Approximately 4 storage entries per member per group (profile, contribution status, payout eligibility, total contributions)"
+    }
+
+    /// Returns the estimated storage overhead per cycle.
+    pub fn estimated_overhead_per_cycle() -> &'static str {
+        "Approximately 3 storage entries per cycle (cycle total, contributor count, payout record)"
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -548,5 +624,134 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn test_storage_layout_documentation() {
+        let doc = StorageLayout::documentation();
+        assert!(!doc.is_empty());
+        assert!(doc.contains("hierarchical"));
+        assert!(doc.contains("key structure"));
+    }
+
+    #[test]
+    fn test_storage_layout_categories() {
+        assert_eq!(StorageLayout::key_categories(), 6);
+    }
+
+    #[test]
+    fn test_user_key_builders() {
+        let env = Env::default();
+        let user = Address::generate(&env);
+
+        let creation_key = StorageKeyBuilder::user_last_creation(user.clone());
+        let join_key = StorageKeyBuilder::user_last_join(user.clone());
+
+        // Verify keys are different
+        assert_ne!(creation_key, join_key);
+
+        // Verify they contain the correct data
+        match creation_key {
+            StorageKey::User(UserKey::LastGroupCreation(addr)) => {
+                assert_eq!(addr, user);
+            }
+            _ => panic!("Wrong key type"),
+        }
+    }
+
+    #[test]
+    fn test_group_balance_and_payout_keys() {
+        let group_id = 42;
+
+        let balance_key = StorageKeyBuilder::group_balance(group_id);
+        let paid_out_key = StorageKeyBuilder::group_total_paid_out(group_id);
+
+        // Verify keys are different
+        assert_ne!(balance_key, paid_out_key);
+
+        // Verify they contain the correct group ID
+        match balance_key {
+            StorageKey::Counter(CounterKey::GroupBalance(id)) => assert_eq!(id, group_id),
+            _ => panic!("Wrong key type"),
+        }
+    }
+
+    #[test]
+    fn test_emergency_pause_key() {
+        let pause_key = StorageKeyBuilder::emergency_pause();
+
+        match pause_key {
+            StorageKey::Counter(CounterKey::EmergencyPause) => {}
+            _ => panic!("Wrong key type"),
+        }
+    }
+
+    #[test]
+    fn test_reentrancy_guard_key() {
+        let guard_key = StorageKeyBuilder::reentrancy_guard();
+
+        match guard_key {
+            StorageKey::Counter(CounterKey::ReentrancyGuard) => {}
+            _ => panic!("Wrong key type"),
+        }
+    }
+
+    #[test]
+    fn test_contract_config_key() {
+        let config_key = StorageKeyBuilder::contract_config();
+
+        match config_key {
+            StorageKey::Counter(CounterKey::ContractConfig) => {}
+            _ => panic!("Wrong key type"),
+        }
+    }
+
+    #[test]
+    fn test_member_total_contributions_key() {
+        let env = Env::default();
+        let group_id = 1;
+        let address = Address::generate(&env);
+
+        let total_contrib_key =
+            StorageKeyBuilder::member_total_contributions(group_id, address.clone());
+
+        match total_contrib_key {
+            StorageKey::Member(MemberKey::TotalContributions(id, addr)) => {
+                assert_eq!(id, group_id);
+                assert_eq!(addr, address);
+            }
+            _ => panic!("Wrong key type"),
+        }
+    }
+
+    #[test]
+    fn test_storage_key_uniqueness_across_groups() {
+        let key1 = StorageKeyBuilder::group_data(1);
+        let key2 = StorageKeyBuilder::group_data(2);
+        let key3 = StorageKeyBuilder::group_data(1);
+
+        assert_ne!(key1, key2);
+        assert_eq!(key1, key3);
+    }
+
+    #[test]
+    fn test_storage_key_uniqueness_across_cycles() {
+        let key1 = StorageKeyBuilder::contribution_cycle_total(1, 1);
+        let key2 = StorageKeyBuilder::contribution_cycle_total(1, 2);
+        let key3 = StorageKeyBuilder::contribution_cycle_total(2, 1);
+
+        assert_ne!(key1, key2);
+        assert_ne!(key1, key3);
+        assert_ne!(key2, key3);
+    }
+
+    #[test]
+    fn test_key_prefixes_constants() {
+        assert_eq!(key_prefixes::GROUP, "GROUP");
+        assert_eq!(key_prefixes::GROUP_MEMBERS, "GROUP_MEMBERS");
+        assert_eq!(key_prefixes::MEMBER, "MEMBER");
+        assert_eq!(key_prefixes::CONTRIB, "CONTRIB");
+        assert_eq!(key_prefixes::PAYOUT, "PAYOUT");
+        assert_eq!(key_prefixes::COUNTER, "COUNTER");
     }
 }
