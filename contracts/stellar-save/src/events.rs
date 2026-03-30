@@ -280,4 +280,183 @@ mod tests {
 
         EventEmitter::emit_group_created(&env, 1, creator, 10_000_000, 604800, 5, 1234567890);
     }
+
+    #[test]
+    fn test_contribution_made_event() {
+        let env = Env::default();
+        let contributor = Address::generate(&env);
+
+        let event = ContributionMade {
+            group_id: 1,
+            contributor: contributor.clone(),
+            amount: 10_000_000,
+            cycle: 1,
+            cycle_total: 50_000_000,
+            contributed_at: 1234567890,
+        };
+
+        assert_eq!(event.group_id, 1);
+        assert_eq!(event.amount, 10_000_000);
+        assert_eq!(event.cycle, 1);
+    }
+
+    #[test]
+    fn test_payout_executed_event() {
+        let env = Env::default();
+        let recipient = Address::generate(&env);
+
+        let event = PayoutExecuted {
+            group_id: 1,
+            recipient: recipient.clone(),
+            amount: 50_000_000,
+            cycle: 1,
+            executed_at: 1234567890,
+        };
+
+        assert_eq!(event.group_id, 1);
+        assert_eq!(event.amount, 50_000_000);
+        assert_eq!(event.cycle, 1);
+    }
+
+    #[test]
+    fn test_group_completed_event() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+
+        let event = GroupCompleted {
+            group_id: 1,
+            creator: creator.clone(),
+            total_cycles: 5,
+            total_distributed: 250_000_000,
+            completed_at: 1234567890,
+        };
+
+        assert_eq!(event.group_id, 1);
+        assert_eq!(event.total_cycles, 5);
+        assert_eq!(event.total_distributed, 250_000_000);
+    }
+
+    #[test]
+    fn test_group_status_changed_event() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+
+        let event = GroupStatusChanged {
+            group_id: 1,
+            old_status: 0,
+            new_status: 1,
+            changed_by: admin.clone(),
+            changed_at: 1234567890,
+        };
+
+        assert_eq!(event.group_id, 1);
+        assert_eq!(event.old_status, 0);
+        assert_eq!(event.new_status, 1);
+    }
+
+    #[test]
+    fn test_member_left_event() {
+        let env = Env::default();
+        let member = Address::generate(&env);
+
+        let event = MemberLeft {
+            group_id: 1,
+            member: member.clone(),
+            member_count: 2,
+            left_at: 1234567890,
+        };
+
+        assert_eq!(event.group_id, 1);
+        assert_eq!(event.member_count, 2);
+    }
+
+    #[test]
+    fn test_contract_paused_event() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+
+        let event = ContractPaused {
+            admin: admin.clone(),
+            timestamp: 1234567890,
+        };
+
+        assert_eq!(event.timestamp, 1234567890);
+    }
+
+    #[test]
+    fn test_contract_unpaused_event() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+
+        let event = ContractUnpaused {
+            admin: admin.clone(),
+            timestamp: 1234567890,
+        };
+
+        assert_eq!(event.timestamp, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_member_joined() {
+        let env = Env::default();
+        let member = Address::generate(&env);
+
+        EventEmitter::emit_member_joined(&env, 1, member, 3, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_contribution_made() {
+        let env = Env::default();
+        let contributor = Address::generate(&env);
+
+        EventEmitter::emit_contribution_made(&env, 1, contributor, 10_000_000, 1, 50_000_000, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_payout_executed() {
+        let env = Env::default();
+        let recipient = Address::generate(&env);
+
+        EventEmitter::emit_payout_executed(&env, 1, recipient, 50_000_000, 1, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_group_completed() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+
+        EventEmitter::emit_group_completed(&env, 1, creator, 5, 250_000_000, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_group_status_changed() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+
+        EventEmitter::emit_group_status_changed(&env, 1, 0, 1, admin, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_contract_paused() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+
+        EventEmitter::emit_contract_paused(&env, admin, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_contract_unpaused() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+
+        EventEmitter::emit_contract_unpaused(&env, admin, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_member_left() {
+        let env = Env::default();
+        let member = Address::generate(&env);
+
+        EventEmitter::emit_member_left(&env, 1, member, 2, 1234567890);
+    }
 }
