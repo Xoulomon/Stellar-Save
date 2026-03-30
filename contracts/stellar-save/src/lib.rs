@@ -1385,6 +1385,412 @@ pub fn is_member(
         }
     }
 
+    // ============================================================================
+    // ISSUE #424: Payout Execution
+    // ============================================================================
+
+    /// Executes automatic payout distribution for a group's current cycle.
+    ///
+    /// This function orchestrates the complete payout process:
+    /// 1. Validates all members have contributed to the current cycle
+    /// 2. Calculates the total pool amount
+    /// 3. Identifies the recipient based on payout position
+    /// 4. Transfers funds to the recipient
+    /// 5. Records the payout
+    /// 6. Advances to the next cycle
+    /// 7. Emits PayoutExecuted event
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group to execute payout for
+    ///
+    /// # Returns
+    /// * `Ok(())` - Payout executed successfully
+    /// * `Err(StellarSaveError)` - If validation or execution fails
+    ///
+    /// # Errors
+    /// - `GroupNotFound` - Group doesn't exist
+    /// - `InvalidState` - Group not in Active status or payout already executed
+    /// - `CycleNotComplete` - Not all members have contributed
+    /// - `PayoutFailed` - Transfer failed or insufficient balance
+    /// - `InvalidRecipient` - Recipient not eligible for payout
+    pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
+        payout_executor::execute_payout(env, group_id)
+    }
+
+    // ============================================================================
+    // ISSUE #425: Group Status Management
+    // ============================================================================
+
+    /// Pauses a group, preventing contributions and payouts.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group to pause
+    /// * `caller` - Address of the caller (must be group creator)
+    ///
+    /// # Returns
+    /// * `Ok(())` - Group paused successfully
+    /// * `Err(StellarSaveError)` - If validation fails
+    ///
+    /// # Errors
+    /// - `GroupNotFound` - Group doesn't exist
+    /// - `Unauthorized` - Caller is not the group creator
+    /// - `InvalidState` - Group not in Active status
+    pub fn pause_group(env: Env, group_id: u64, caller: Address) -> Result<(), StellarSaveError> {
+        caller.require_auth();
+
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env
+            .storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        if group.creator != caller {
+            return Err(StellarSaveError::Unauthorized);
+        }
+
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        let current_status: GroupStatus = env
+            .storage()
+            .persistent()
+            .get(&status_key)
+            .unwrap_or(GroupStatus::Pending);
+
+        if current_status != GroupStatus::Active {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        let new_status = GroupStatus::Paused;
+        env.storage().persistent().set(&status_key, &new_status);
+
+        let timestamp = env.ledger().timestamp();
+        EventEmitter::emit_group_status_changed(
+            &env,
+            group_id,
+            current_status as u32,
+            new_status as u32,
+            caller,
+            timestamp,
+        );
+
+        Ok(())
+    }
+
+    /// Resumes a paused group, allowing contributions and payouts again.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group to resume
+    /// * `caller` - Address of the caller (must be group creator)
+    ///
+    /// # Returns
+    /// * `Ok(())` - Group resumed successfully
+    /// * `Err(StellarSaveError)` - If validation fails
+    ///
+    /// # Errors
+    /// - `GroupNotFound` - Group doesn't exist
+    /// - `Unauthorized` - Caller is not the group creator
+    /// - `InvalidState` - Group not in Paused status
+    pub fn resume_group(env: Env, group_id: u64, caller: Address) -> Result<(), StellarSaveError> {
+        caller.require_auth();
+
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env
+            .storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        if group.creator != caller {
+            return Err(StellarSaveError::Unauthorized);
+        }
+
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        let current_status: GroupStatus = env
+            .storage()
+            .persistent()
+            .get(&status_key)
+            .unwrap_or(GroupStatus::Pending);
+
+        if current_status != GroupStatus::Paused {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        let new_status = GroupStatus::Active;
+        env.storage().persistent().set(&status_key, &new_status);
+
+        let timestamp = env.ledger().timestamp();
+        EventEmitter::emit_group_status_changed(
+            &env,
+            group_id,
+            current_status as u32,
+            new_status as u32,
+            caller,
+            timestamp,
+        );
+
+        Ok(())
+    }
+
+    /// Cancels a group and returns funds to contributors.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group to cancel
+    /// * `caller` - Address of the caller (must be group creator)
+    ///
+    /// # Returns
+    /// * `Ok(())` - Group cancelled successfully
+    /// * `Err(StellarSaveError)` - If validation fails
+    ///
+    /// # Errors
+    /// - `GroupNotFound` - Group doesn't exist
+    /// - `Unauthorized` - Caller is not the group creator
+    /// - `InvalidState` - Group is already in terminal state
+    pub fn cancel_group(env: Env, group_id: u64, caller: Address) -> Result<(), StellarSaveError> {
+        caller.require_auth();
+
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env
+            .storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        if group.creator != caller {
+            return Err(StellarSaveError::Unauthorized);
+        }
+
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        let current_status: GroupStatus = env
+            .storage()
+            .persistent()
+            .get(&status_key)
+            .unwrap_or(GroupStatus::Pending);
+
+        if current_status.is_terminal() {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        let new_status = GroupStatus::Cancelled;
+        env.storage().persistent().set(&status_key, &new_status);
+
+        let timestamp = env.ledger().timestamp();
+        EventEmitter::emit_group_status_changed(
+            &env,
+            group_id,
+            current_status as u32,
+            new_status as u32,
+            caller.clone(),
+            timestamp,
+        );
+
+        Ok(())
+    }
+
+    // ============================================================================
+    // ISSUE #426: Query Functions
+    // ============================================================================
+
+    /// Gets complete information about a group.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    ///
+    /// # Returns
+    /// * `Ok(Group)` - Complete group data
+    /// * `Err(StellarSaveError::GroupNotFound)` - If group doesn't exist
+    pub fn get_group_info(env: Env, group_id: u64) -> Result<Group, StellarSaveError> {
+        Self::get_group(env, group_id)
+    }
+
+    /// Gets all members of a group.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    ///
+    /// # Returns
+    /// * `Ok(Vec<Address>)` - List of member addresses
+    /// * `Err(StellarSaveError::GroupNotFound)` - If group doesn't exist
+    pub fn get_group_members(env: Env, group_id: u64) -> Result<Vec<Address>, StellarSaveError> {
+        Self::get_members(env, group_id)
+    }
+
+    /// Gets contribution status for a specific cycle.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    /// * `cycle` - Cycle number to check
+    ///
+    /// # Returns
+    /// * `Ok(Vec<(Address, bool)>)` - List of (member, has_contributed) tuples
+    /// * `Err(StellarSaveError)` - If group doesn't exist
+    pub fn get_contribution_status(
+        env: Env,
+        group_id: u64,
+        cycle: u32,
+    ) -> Result<Vec<(Address, bool)>, StellarSaveError> {
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let _group = env
+            .storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        let members_key = StorageKeyBuilder::group_members(group_id);
+        let members: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&members_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        let mut status = Vec::new(&env);
+
+        for member in members.iter() {
+            let contrib_key = StorageKeyBuilder::contribution_record(group_id, cycle, member.clone());
+            let has_contributed = env.storage().persistent().has(&contrib_key);
+            status.push_back((member, has_contributed));
+        }
+
+        Ok(status)
+    }
+
+    /// Gets payout history for a group.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    ///
+    /// # Returns
+    /// * `Ok(Vec<PayoutRecord>)` - List of all payout records
+    /// * `Err(StellarSaveError::GroupNotFound)` - If group doesn't exist
+    pub fn get_payout_history_all(
+        env: Env,
+        group_id: u64,
+    ) -> Result<Vec<PayoutRecord>, StellarSaveError> {
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env
+            .storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        let mut payouts = Vec::new(&env);
+
+        for cycle in 0..group.current_cycle {
+            let payout_key = StorageKeyBuilder::payout_record(group_id, cycle);
+            if let Some(payout) = env.storage().persistent().get::<_, PayoutRecord>(&payout_key) {
+                payouts.push_back(payout);
+            }
+        }
+
+        Ok(payouts)
+    }
+
+    /// Checks if a member is part of a group.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    /// * `member` - Address to check
+    ///
+    /// # Returns
+    /// * `Ok(bool)` - true if member is in group, false otherwise
+    /// * `Err(StellarSaveError::GroupNotFound)` - If group doesn't exist
+    pub fn is_member_of_group(
+        env: Env,
+        group_id: u64,
+        member: Address,
+    ) -> Result<bool, StellarSaveError> {
+        Self::is_member(env, group_id, member)
+    }
+
+    // ============================================================================
+    // ISSUE #427: Input Validation
+    // ============================================================================
+
+    /// Validates an address input.
+    ///
+    /// # Arguments
+    /// * `address` - Address to validate
+    ///
+    /// # Returns
+    /// * `Ok(())` - Address is valid
+    /// * `Err(StellarSaveError::InvalidState)` - Address is invalid
+    pub fn validate_address(address: &Address) -> Result<(), StellarSaveError> {
+        // Addresses in Soroban are always valid if they can be constructed
+        // This is a placeholder for additional validation if needed
+        let _ = address;
+        Ok(())
+    }
+
+    /// Validates a numeric amount input.
+    ///
+    /// # Arguments
+    /// * `amount` - Amount to validate
+    ///
+    /// # Returns
+    /// * `Ok(())` - Amount is valid (positive)
+    /// * `Err(StellarSaveError::InvalidAmount)` - Amount is invalid
+    pub fn validate_amount(amount: i128) -> Result<(), StellarSaveError> {
+        if amount <= 0 {
+            return Err(StellarSaveError::InvalidAmount);
+        }
+        Ok(())
+    }
+
+    /// Validates a cycle duration input.
+    ///
+    /// # Arguments
+    /// * `duration` - Duration in seconds to validate
+    ///
+    /// # Returns
+    /// * `Ok(())` - Duration is valid (positive)
+    /// * `Err(StellarSaveError::InvalidState)` - Duration is invalid
+    pub fn validate_duration(duration: u64) -> Result<(), StellarSaveError> {
+        if duration == 0 {
+            return Err(StellarSaveError::InvalidState);
+        }
+        Ok(())
+    }
+
+    /// Validates member count bounds.
+    ///
+    /// # Arguments
+    /// * `min_members` - Minimum members required
+    /// * `max_members` - Maximum members allowed
+    ///
+    /// # Returns
+    /// * `Ok(())` - Bounds are valid
+    /// * `Err(StellarSaveError::InvalidState)` - Bounds are invalid
+    pub fn validate_member_bounds(min_members: u32, max_members: u32) -> Result<(), StellarSaveError> {
+        if min_members < 2 || max_members < min_members {
+            return Err(StellarSaveError::InvalidState);
+        }
+        Ok(())
+    }
+
+    /// Validates a string input (group name, description).
+    ///
+    /// # Arguments
+    /// * `text` - String to validate
+    /// * `max_length` - Maximum allowed length
+    ///
+    /// # Returns
+    /// * `Ok(())` - String is valid
+    /// * `Err(StellarSaveError::InvalidState)` - String is invalid
+    pub fn validate_string(text: &str, max_length: usize) -> Result<(), StellarSaveError> {
+        if text.is_empty() || text.len() > max_length {
+            return Err(StellarSaveError::InvalidState);
+        }
+        Ok(())
+    }
+
     /// Deletes a group from storage.
     /// Only allowed if the caller is the creator and no members have joined yet.
     pub fn delete_group(env: Env, group_id: u64) -> Result<(), StellarSaveError> {

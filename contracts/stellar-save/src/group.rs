@@ -85,6 +85,29 @@ impl GroupStatus {
     pub fn is_terminal(&self) -> bool {
         matches!(self, GroupStatus::Completed | GroupStatus::Cancelled)
     }
+
+    /// Converts GroupStatus to u32 representation.
+    pub fn as_u32(&self) -> u32 {
+        match self {
+            GroupStatus::Pending => 0,
+            GroupStatus::Active => 1,
+            GroupStatus::Paused => 2,
+            GroupStatus::Completed => 3,
+            GroupStatus::Cancelled => 4,
+        }
+    }
+
+    /// Converts u32 to GroupStatus.
+    pub fn from_u32(value: u32) -> Option<Self> {
+        match value {
+            0 => Some(GroupStatus::Pending),
+            1 => Some(GroupStatus::Active),
+            2 => Some(GroupStatus::Paused),
+            3 => Some(GroupStatus::Completed),
+            4 => Some(GroupStatus::Cancelled),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for GroupStatus {
