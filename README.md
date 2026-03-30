@@ -18,6 +18,27 @@ Stellar-Save is a rotating savings and credit association (ROSCA) common in Nige
 - ✅ Accessible (anyone with a Stellar wallet can join)
 - ✅ Programmable (automated payouts, no manual coordination)
 
+## 🏗️ Architecture
+
+The Stellar-Save system consists of four main layers that work together to provide a decentralized ROSCA experience:
+
+![Stellar-Save Architecture](docs/architecture-diagram.svg)
+
+### Architecture Components
+
+- **User Layer**: Users interact with the system through Stellar wallets (Freighter, Lobstr, Albedo)
+- **Frontend Layer**: React + TypeScript SPA with Vite, Material-UI components, and React Query for state management
+- **Blockchain Layer**: Stellar network with Soroban smart contracts managing groups, contributions, and payouts
+- **Data Layer**: On-chain storage, Stellar Horizon API for transaction history, and Soroban events for real-time updates
+
+### Key Data Flows
+
+1. **Group Creation**: User → Frontend → Contract → On-chain Storage → Events → UI Update
+2. **Contribution**: User → Frontend → Contract → Escrow → Storage → Events → UI Update
+3. **Payout**: User → Frontend → Contract → Escrow → Recipient → Storage → Events → UI Update
+
+For detailed architecture documentation, see [docs/architecture.md](docs/architecture.md).
+
 ## 🚀 Features
 
 - **Create Groups**: Set contribution amount, cycle duration, and max members
