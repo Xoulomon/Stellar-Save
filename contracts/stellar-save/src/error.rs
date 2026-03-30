@@ -196,6 +196,94 @@ pub enum ErrorCategory {
 /// or a StellarSaveError from contract functions.
 pub type ContractResult<T> = Result<T, StellarSaveError>;
 
+/// Error recovery strategies for different error types.
+///
+/// This module provides guidance on how to recover from different error conditions.
+pub struct ErrorRecoveryStrategy;
+
+impl ErrorRecoveryStrategy {
+    /// Returns recovery guidance for a given error.
+    pub fn recovery_guidance(error: &StellarSaveError) -> &'static str {
+        match error {
+            // Group errors - recovery strategies
+            StellarSaveError::GroupNotFound => {
+                "Verify the group ID is correct. Check if the group has been deleted or if you're using the correct contract instance."
+            }
+            StellarSaveError::GroupFull => {
+                "Wait for a member to leave the group or create a new group with higher max_members capacity."
+            }
+            StellarSaveError::InvalidState => {
+                "Check the group's current status. Some operations are only available in specific states (e.g., Active, Paused)."
+            }
+
+            // Member errors - recovery strategies
+            StellarSaveError::AlreadyMember => {
+                "You are already a member of this group. Leave the group first if you want to rejoin."
+            }
+            StellarSaveError::NotMember => {
+                "Join the group first before attempting member-only operations."
+            }
+            StellarSaveError::Unauthorized => {
+                "Ensure you have the required permissions. Only group creators can pause/resume/cancel groups. Only members can contribute."
+            }
+
+            // Contribution errors - recovery strategies
+            StellarSaveError::InvalidAmount => {
+                "Ensure the contribution amount matches the group's required amount exactly and is positive."
+            }
+            StellarSaveError::AlreadyContributed => {
+                "You have already contributed for this cycle. Wait for the next cycle to contribute again."
+            }
+            StellarSaveError::CycleNotComplete => {
+                "Not all members have contributed yet. Wait for all members to contribute before executing payout."
+            }
+            StellarSaveError::ContributionNotFound => {
+                "The contribution record doesn't exist. Verify the member and cycle number are correct."
+            }
+
+            // Payout errors - recovery strategies
+            StellarSaveError::PayoutFailed => {
+                "Ensure the contract has sufficient funds and the recipient's wallet can receive transfers. Check network conditions."
+            }
+            StellarSaveError::PayoutAlreadyProcessed => {
+                "This payout has already been executed. Move to the next cycle for the next payout."
+            }
+            StellarSaveError::InvalidRecipient => {
+                "The recipient is not eligible for payout in this cycle. Check the payout queue order."
+            }
+
+            // System errors - recovery strategies
+            StellarSaveError::InternalError => {
+                "This is an internal contract error. Try the operation again. If it persists, contact support."
+            }
+            StellarSaveError::DataCorruption => {
+                "Critical data corruption detected. This requires immediate investigation and potential contract upgrade."
+            }
+            StellarSaveError::Overflow => {
+                "The ID counter has reached its maximum. This is extremely rare and requires contract upgrade."
+            }
+        }
+    }
+
+    /// Determines if an error is retryable.
+    pub fn is_retryable(error: &StellarSaveError) -> bool {
+        matches!(
+            error,
+            StellarSaveError::PayoutFailed
+                | StellarSaveError::InternalError
+                | StellarSaveError::CycleNotComplete
+        )
+    }
+
+    /// Determines if an error is a user input error (vs system error).
+    pub fn is_user_error(error: &StellarSaveError) -> bool {
+        matches!(
+            error.category(),
+            ErrorCategory::Member | ErrorCategory::Contribution | ErrorCategory::Payout
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -322,4 +410,78 @@ mod tests {
             _ => panic!("Unexpected result"),
         }
     }
-}
+
+    #[test]
+    fn test_error_recovery_guidance() {
+        // Test that all errors have recovery guidance
+        let errors = [
+            StellarSaveError::GroupNotFound,
+            StellarSaveError::GroupFull,
+            StellarSaveError::InvalidState,
+            StellarSaveError::AlreadyMember,
+            StellarSaveError::NotMember,
+            StellarSaveError::Unauthorized,
+            StellarSaveError::InvalidAmount,
+            StellarSaveError::AlreadyContributed,
+            StellarSaveError::CycleNotComplete,
+            StellarSaveError::PayoutFailed,
+            StellarSaveError::PayoutAlreadyProcessed,
+            StellarSaveError::InvalidRecipient,
+            StellarSaveError::InternalError,
+            StellarSaveError::DataCorruption,
+        ];
+
+        for error in &errors {
+            let guidance = ErrorRecoveryStrategy::recovery_guidance(error);
+            assert!(!guidance.is_empty(), "Error {:?} has no recovery guidance", error);
+            assert!(
+                guidance.len() > 20,
+                "Error {:?} has insufficient recovery guidance",
+                error
+            );
+        }
+    }
+
+    #[test]
+    fn test_retryable_errors() {
+        // Test that retryable errors are correctly identified
+        assert!(ErrorRecoveryStrategy::is_retryable(
+            &StellarSaveError::PayoutFailed
+        ));
+        assert!(ErrorRecoveryStrategy::is_retryable(
+            &StellarSaveError::InternalError
+        ));
+        assert!(ErrorRecoveryStrategy::is_retryable(
+            &StellarSaveError::CycleNotComplete
+        ));
+
+        // Non-retryable errors
+        assert!(!ErrorRecoveryStrategy::is_retryable(
+            &StellarSaveError::GroupNotFound
+        ));
+        assert!(!ErrorRecoveryStrategy::is_retryable(
+            &StellarSaveError::AlreadyMember
+        ));
+    }
+
+    #[test]
+    fn test_user_error_classification() {
+        // Test that user errors are correctly identified
+        assert!(ErrorRecoveryStrategy::is_user_error(
+            &StellarSaveError::AlreadyMember
+        ));
+        assert!(ErrorRecoveryStrategy::is_user_error(
+            &StellarSaveError::InvalidAmount
+        ));
+        assert!(ErrorRecoveryStrategy::is_user_error(
+            &StellarSaveError::PayoutFailed
+        ));
+
+        // System errors
+        assert!(!ErrorRecoveryStrategy::is_user_error(
+            &StellarSaveError::DataCorruption
+        ));
+        assert!(!ErrorRecoveryStrategy::is_user_error(
+            &StellarSaveError::Overflow
+        ));
+    }
