@@ -7,6 +7,69 @@ on:
     branches: [main, develop]
 
 jobs:
+  # ─── Code Quality & Security Checks ─────────────────────────────────────────
+  code-quality:
+    name: Code Quality & Security
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Frontend Quality Checks ──────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Frontend - Lint check
+        run: npm run lint
+        working-directory: frontend
+
+      - name: Frontend - Format check
+        run: npx prettier --check "src/**/*.{ts,tsx,css}"
+        working-directory: frontend
+
+      - name: Frontend - Security audit
+        run: npm audit --audit-level=moderate
+        working-directory: frontend
+        continue-on-error: false
+
+      # ── Rust Quality Checks ──────────────────────────────────────────────
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Rust - Format check
+        run: cargo fmt --manifest-path contracts/stellar-save/Cargo.toml --all -- --check
+
+      - name: Rust - Clippy lint
+        run: |
+          cargo clippy \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            --all-targets \
+            --all-features \
+            -- -D warnings
+
+      - name: Rust - Security audit
+        uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rust - Dependency check
+        run: |
+          cargo tree --manifest-path contracts/stellar-save/Cargo.toml --duplicates
+          cargo tree --manifest-path contracts/stellar-save/Cargo.toml --depth 1
+
   # ─── Frontend Tests & Coverage ──────────────────────────────────────────────
   frontend:
     name: Frontend Tests
@@ -131,7 +194,7 @@ jobs:
   build:
     name: Build Verification
     runs-on: ubuntu-latest
-    needs: [frontend, contracts]
+    needs: [code-quality, frontend, contracts]
 
     steps:
       - uses: actions/checkout@v4
