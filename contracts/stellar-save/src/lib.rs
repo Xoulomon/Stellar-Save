@@ -31,7 +31,7 @@ pub mod storage;
 pub mod templates;
 
 // Re-export for convenience
-pub use contribution::ContributionRecord;
+pub use contribution::{ContributionPage, ContributionRecord};
 use core::cmp;
 pub use error::{ContractResult, ErrorCategory, StellarSaveError};
 pub use events::EventEmitter;
@@ -2030,13 +2030,14 @@ pub fn is_member(
     /// - Use start_cycle=0 and limit=10 to get first 10 contributions
     /// - Use start_cycle=10 and limit=10 to get next 10 contributions
     /// - Limit is capped at 50 for gas optimization
+    /// - `has_more` in the returned page is true when contributions exist beyond this page
     pub fn get_member_contribution_history(
         env: Env,
         group_id: u64,
         member: Address,
         start_cycle: u32,
         limit: u32,
-    ) -> Result<Vec<ContributionRecord>, StellarSaveError> {
+    ) -> Result<ContributionPage, StellarSaveError> {
         // 1. Verify group exists
         let group_key = StorageKeyBuilder::group_data(group_id);
         let group = env
@@ -2045,44 +2046,32 @@ pub fn is_member(
             .get::<_, Group>(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        // 2. Initialize result vector
-        let mut contributions = Vec::new(&env);
+        // 2. Cap limit at 50 for gas optimization
+        let page_limit = if limit > 50 { 50 } else if limit == 0 { 10 } else { limit };
 
-        // 3. Cap limit at 50 for gas optimization
-        let page_limit = if limit > 50 { 50 } else { limit };
+        // 3. Collect up to page_limit+1 records to detect has_more
+        let mut items = Vec::new(&env);
+        let mut cycle = start_cycle;
+        let mut collected: u32 = 0;
 
-        // 4. Calculate end cycle (don't go beyond current_cycle)
-        let end_cycle = {
-            let calculated_end = start_cycle.saturating_add(page_limit);
-            if calculated_end > group.current_cycle {
-                group.current_cycle
-            } else {
-                calculated_end
-            }
-        };
-
-        // 5. Query contributions for the specified range
-        let mut count = 0;
-        for cycle in start_cycle..=end_cycle {
-            if count >= page_limit {
-                break;
-            }
-
+        while cycle <= group.current_cycle && collected <= page_limit {
             let contrib_key =
                 StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
-
-            // Get contribution record if it exists
-            if let Some(contrib_record) = env
+            if let Some(record) = env
                 .storage()
                 .persistent()
                 .get::<_, ContributionRecord>(&contrib_key)
             {
-                contributions.push_back(contrib_record);
-                count += 1;
+                if collected < page_limit {
+                    items.push_back(record);
+                }
+                collected += 1;
             }
+            cycle += 1;
         }
 
-        Ok(contributions)
+        let has_more = collected > page_limit;
+        Ok(ContributionPage { items, has_more })
     }
 
     /// Gets all contributions for a specific cycle in a group.
@@ -3391,7 +3380,8 @@ mod tests {
 
         // Member has not contributed yet
         let history = client.get_member_contribution_history(&group_id, &member, &0, &10);
-        assert_eq!(history.len(), 0);
+        assert_eq!(history.items.len(), 0);
+        assert!(!history.has_more);
     }
 
     #[test]
@@ -3425,9 +3415,10 @@ mod tests {
 
         // Get contribution history
         let history = client.get_member_contribution_history(&group_id, &member, &0, &10);
-        assert_eq!(history.len(), 1);
-        assert_eq!(history.get(0).unwrap().cycle_number, 0);
-        assert_eq!(history.get(0).unwrap().amount, contribution_amount);
+        assert_eq!(history.items.len(), 1);
+        assert_eq!(history.items.get(0).unwrap().cycle_number, 0);
+        assert_eq!(history.items.get(0).unwrap().amount, contribution_amount);
+        assert!(!history.has_more);
     }
 
     #[test]
@@ -3470,12 +3461,13 @@ mod tests {
 
         // Get all contributions
         let history = client.get_member_contribution_history(&group_id, &member, &0, &10);
-        assert_eq!(history.len(), 5);
+        assert_eq!(history.items.len(), 5);
+        assert!(!history.has_more);
 
         // Verify order and content
         for i in 0..5 {
-            assert_eq!(history.get(i as u32).unwrap().cycle_number, i);
-            assert_eq!(history.get(i as u32).unwrap().amount, contribution_amount);
+            assert_eq!(history.items.get(i as u32).unwrap().cycle_number, i);
+            assert_eq!(history.items.get(i as u32).unwrap().amount, contribution_amount);
         }
     }
 
@@ -3519,15 +3511,17 @@ mod tests {
 
         // Get first page (cycles 0-4)
         let page1 = client.get_member_contribution_history(&group_id, &member, &0, &5);
-        assert_eq!(page1.len(), 5);
-        assert_eq!(page1.get(0).unwrap().cycle_number, 0);
-        assert_eq!(page1.get(4).unwrap().cycle_number, 4);
+        assert_eq!(page1.items.len(), 5);
+        assert_eq!(page1.items.get(0).unwrap().cycle_number, 0);
+        assert_eq!(page1.items.get(4).unwrap().cycle_number, 4);
+        assert!(page1.has_more);
 
         // Get second page (cycles 5-9)
         let page2 = client.get_member_contribution_history(&group_id, &member, &5, &5);
-        assert_eq!(page2.len(), 5);
-        assert_eq!(page2.get(0).unwrap().cycle_number, 5);
-        assert_eq!(page2.get(4).unwrap().cycle_number, 9);
+        assert_eq!(page2.items.len(), 5);
+        assert_eq!(page2.items.get(0).unwrap().cycle_number, 5);
+        assert_eq!(page2.items.get(4).unwrap().cycle_number, 9);
+        assert!(!page2.has_more);
     }
 
     #[test]
@@ -3570,10 +3564,11 @@ mod tests {
 
         // Get contribution history
         let history = client.get_member_contribution_history(&group_id, &member, &0, &10);
-        assert_eq!(history.len(), 3); // Only 3 contributions
-        assert_eq!(history.get(0).unwrap().cycle_number, 0);
-        assert_eq!(history.get(1).unwrap().cycle_number, 2);
-        assert_eq!(history.get(2).unwrap().cycle_number, 4);
+        assert_eq!(history.items.len(), 3); // Only 3 contributions
+        assert_eq!(history.items.get(0).unwrap().cycle_number, 0);
+        assert_eq!(history.items.get(1).unwrap().cycle_number, 2);
+        assert_eq!(history.items.get(2).unwrap().cycle_number, 4);
+        assert!(!history.has_more);
     }
 
     #[test]
@@ -3616,7 +3611,8 @@ mod tests {
 
         // Request 100 records but should be capped at 50
         let history = client.get_member_contribution_history(&group_id, &member, &0, &100);
-        assert_eq!(history.len(), 50); // Capped at 50
+        assert_eq!(history.items.len(), 50); // Capped at 50
+        assert!(history.has_more);
     }
 
     #[test]
@@ -3671,9 +3667,64 @@ mod tests {
 
         // Request starting from cycle 2 with limit 10 (would go to cycle 12, but should stop at 3)
         let history = client.get_member_contribution_history(&group_id, &member, &2, &10);
-        assert_eq!(history.len(), 2); // Only cycles 2 and 3
-        assert_eq!(history.get(0).unwrap().cycle_number, 2);
-        assert_eq!(history.get(1).unwrap().cycle_number, 3);
+        assert_eq!(history.items.len(), 2); // Only cycles 2 and 3
+        assert_eq!(history.items.get(0).unwrap().cycle_number, 2);
+        assert_eq!(history.items.get(1).unwrap().cycle_number, 3);
+        assert!(!history.has_more);
+    }
+
+    #[test]
+    fn test_get_member_contribution_history_100_plus_contributions() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let member = Address::generate(&env);
+
+        let group_id = 1;
+        let contribution_amount = 10_000_000i128;
+        let total_cycles: u32 = 110;
+
+        let mut group = Group::new(group_id, member.clone(), contribution_amount, 3600, 200, 2, 0);
+        group.current_cycle = total_cycles - 1;
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_data(group_id), &group);
+
+        for cycle in 0..total_cycles {
+            let contrib = ContributionRecord::new(
+                member.clone(),
+                group_id,
+                cycle,
+                contribution_amount,
+                cycle as u64 * 3600,
+            );
+            env.storage().persistent().set(
+                &StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone()),
+                &contrib,
+            );
+        }
+
+        // Page 1: limit=50, has_more=true (110 total, 50 returned)
+        let page1 = client.get_member_contribution_history(&group_id, &member, &0, &50);
+        assert_eq!(page1.items.len(), 50);
+        assert_eq!(page1.items.get(0).unwrap().cycle_number, 0);
+        assert_eq!(page1.items.get(49).unwrap().cycle_number, 49);
+        assert!(page1.has_more);
+
+        // Page 2: start=50, limit=50, has_more=true (60 remaining, 50 returned)
+        let page2 = client.get_member_contribution_history(&group_id, &member, &50, &50);
+        assert_eq!(page2.items.len(), 50);
+        assert_eq!(page2.items.get(0).unwrap().cycle_number, 50);
+        assert_eq!(page2.items.get(49).unwrap().cycle_number, 99);
+        assert!(page2.has_more);
+
+        // Page 3: start=100, limit=50, has_more=false (10 remaining)
+        let page3 = client.get_member_contribution_history(&group_id, &member, &100, &50);
+        assert_eq!(page3.items.len(), 10);
+        assert_eq!(page3.items.get(0).unwrap().cycle_number, 100);
+        assert_eq!(page3.items.get(9).unwrap().cycle_number, 109);
+        assert!(!page3.has_more);
+    }
     }
 
     #[test]
