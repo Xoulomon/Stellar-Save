@@ -2341,6 +2341,176 @@ pub fn is_member(
     /// ```ignore
     /// contract.join_group(env, 1, member_address)?;
     /// ```
+
+    /// Retrieves members who need a contribution reminder for the current cycle.
+    ///
+    /// Returns members who:
+    /// 1. Are part of the group
+    /// 2. Haven't contributed in the current cycle
+    /// 3. Are within 24 hours of the contribution deadline
+    ///
+    /// This function is designed for off-chain services to query which members
+    /// should receive reminder notifications about upcoming contribution deadlines.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    /// * `cycle` - Cycle number to check
+    ///
+    /// # Returns
+    /// * `Ok(Vec<Address>)` - List of members needing reminders
+    /// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
+    /// * `Err(StellarSaveError::InvalidState)` - Group hasn't been started
+    ///
+    /// # Example
+    /// ```ignore
+    /// let members_needing_reminder = contract.get_members_needing_reminder(env, 1, 0)?;
+    /// for member in members_needing_reminder {
+    ///     // Send reminder notification to member
+    /// }
+    /// ```
+    pub fn get_members_needing_reminder(
+        env: Env,
+        group_id: u64,
+        cycle: u32,
+    ) -> Result<Vec<Address>, StellarSaveError> {
+        // 1. Load the group from storage
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env
+            .storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // 2. Verify group has been started
+        if !group.started {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        // 3. Calculate the deadline for this cycle
+        let cycle_offset = (cycle as u64)
+            .checked_add(1)
+            .ok_or(StellarSaveError::Overflow)?;
+        let duration_offset = group
+            .cycle_duration
+            .checked_mul(cycle_offset)
+            .ok_or(StellarSaveError::InternalError)?;
+        let deadline = group
+            .started_at
+            .checked_add(duration_offset)
+            .ok_or(StellarSaveError::InternalError)?;
+
+        // 4. Get current timestamp
+        let current_time = env.ledger().timestamp();
+
+        // 5. Check if we're within 24 hours (86400 seconds) of deadline
+        let reminder_window_start = deadline.saturating_sub(86400);
+        if current_time < reminder_window_start || current_time >= deadline {
+            // Not in the reminder window
+            return Ok(Vec::new(&env));
+        }
+
+        // 6. Get all members in the group
+        let members_key = StorageKeyBuilder::group_members(group_id);
+        let members: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get::<_, Vec<Address>>(&members_key)
+            .unwrap_or_else(|| Vec::new(&env));
+
+        // 7. Filter members who haven't contributed and need reminders
+        let mut members_needing_reminder = Vec::new(&env);
+        for member in members.iter() {
+            // Check if member has already contributed in this cycle
+            let contrib_key = StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
+            let has_contributed = env
+                .storage()
+                .persistent()
+                .get::<_, ContributionRecord>(&contrib_key)
+                .is_some();
+
+            if !has_contributed {
+                members_needing_reminder.push_back(member.clone());
+            }
+        }
+
+        Ok(members_needing_reminder)
+    }
+
+    /// Emits contribution due reminders for members who haven't contributed.
+    ///
+    /// This function should be called by off-chain services to emit reminder events
+    /// for members who are within 24 hours of the contribution deadline.
+    /// It prevents duplicate reminders by tracking which members have already been reminded.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    /// * `cycle` - Cycle number
+    ///
+    /// # Returns
+    /// * `Ok(u32)` - Number of reminders emitted
+    /// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
+    /// * `Err(StellarSaveError::InvalidState)` - Group hasn't been started
+    ///
+    /// # Example
+    /// ```ignore
+    /// let reminders_sent = contract.emit_contribution_reminders(env, 1, 0)?;
+    /// println!("Sent {} reminders", reminders_sent);
+    /// ```
+    pub fn emit_contribution_reminders(
+        env: Env,
+        group_id: u64,
+        cycle: u32,
+    ) -> Result<u32, StellarSaveError> {
+        // 1. Get members needing reminders
+        let members_needing_reminder = Self::get_members_needing_reminder(env.clone(), group_id, cycle)?;
+
+        // 2. Load the group to get deadline
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env
+            .storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        let deadline = group
+            .started_at
+            .checked_add(group.cycle_duration.checked_mul(cycle as u64 + 1).ok_or(StellarSaveError::InternalError)?)
+            .ok_or(StellarSaveError::InternalError)?;
+
+        let current_time = env.ledger().timestamp();
+        let mut reminders_emitted = 0u32;
+
+        // 3. Emit reminder for each member who hasn't been reminded yet
+        for member in members_needing_reminder.iter() {
+            let reminder_key = StorageKeyBuilder::contribution_reminder_emitted(group_id, cycle, member.clone());
+            let already_reminded = env
+                .storage()
+                .persistent()
+                .get::<_, bool>(&reminder_key)
+                .unwrap_or(false);
+
+            if !already_reminded {
+                // Emit the event
+                EventEmitter::emit_contribution_due(
+                    &env,
+                    group_id,
+                    member.clone(),
+                    cycle,
+                    deadline,
+                    current_time,
+                );
+
+                // Mark as reminded
+                env.storage().persistent().set(&reminder_key, &true);
+                reminders_emitted = reminders_emitted.checked_add(1).ok_or(StellarSaveError::Overflow)?;
+            }
+        }
+
+        Ok(reminders_emitted)
+    }
+
     pub fn join_group(env: Env, group_id: u64, member: Address) -> Result<(), StellarSaveError> {
         // Verify caller authorization
         member.require_auth();
@@ -8864,5 +9034,293 @@ mod tests {
         assert_eq!(GroupStatus::from_u32(3), Some(GroupStatus::Completed));
         assert_eq!(GroupStatus::from_u32(4), Some(GroupStatus::Cancelled));
         assert_eq!(GroupStatus::from_u32(5), None);
+    }
+
+    // Tests for contribution reminder functionality
+
+    #[test]
+    fn test_get_members_needing_reminder_all_contributed() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+
+        // Create and setup group
+        let group_id = client.create_group(&creator, &100, &604800, &3);
+        client.join_group(&group_id, &creator);
+        client.join_group(&group_id, &member1);
+        client.join_group(&group_id, &member2);
+
+        // Start group
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_data(group_id),
+            &{
+                let mut g = client.get_group(&group_id);
+                g.started = true;
+                g.started_at = env.ledger().timestamp();
+                g
+            },
+        );
+
+        // All members contribute
+        let contrib_key_creator = StorageKeyBuilder::contribution_individual(group_id, 0, creator.clone());
+        let contrib_key_m1 = StorageKeyBuilder::contribution_individual(group_id, 0, member1.clone());
+        let contrib_key_m2 = StorageKeyBuilder::contribution_individual(group_id, 0, member2.clone());
+
+        env.storage().persistent().set(
+            &contrib_key_creator,
+            &ContributionRecord::new(creator.clone(), group_id, 0, 100, env.ledger().timestamp()),
+        );
+        env.storage().persistent().set(
+            &contrib_key_m1,
+            &ContributionRecord::new(member1.clone(), group_id, 0, 100, env.ledger().timestamp()),
+        );
+        env.storage().persistent().set(
+            &contrib_key_m2,
+            &ContributionRecord::new(member2.clone(), group_id, 0, 100, env.ledger().timestamp()),
+        );
+
+        // Get members needing reminder - should be empty since all contributed
+        let result = client.get_members_needing_reminder(&group_id, &0);
+        assert_eq!(result.len(), 0);
+    }
+
+    #[test]
+    fn test_get_members_needing_reminder_some_missed() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+
+        // Create and setup group
+        let group_id = client.create_group(&creator, &100, &604800, &3);
+        client.join_group(&group_id, &creator);
+        client.join_group(&group_id, &member1);
+        client.join_group(&group_id, &member2);
+
+        // Start group - set time to 24 hours before deadline
+        let start_time = 1000000u64;
+        env.ledger().with_mut(|l| {
+            l.timestamp = start_time + 604800 - 86400; // 24 hours before deadline
+        });
+
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_data(group_id),
+            &{
+                let mut g = client.get_group(&group_id);
+                g.started = true;
+                g.started_at = start_time;
+                g
+            },
+        );
+
+        // Only creator contributes
+        let contrib_key_creator = StorageKeyBuilder::contribution_individual(group_id, 0, creator.clone());
+        env.storage().persistent().set(
+            &contrib_key_creator,
+            &ContributionRecord::new(creator.clone(), group_id, 0, 100, env.ledger().timestamp()),
+        );
+
+        // Get members needing reminder - should include member1 and member2
+        let result = client.get_members_needing_reminder(&group_id, &0);
+        assert_eq!(result.len(), 2);
+        assert!(result.iter().any(|m| m == &member1));
+        assert!(result.iter().any(|m| m == &member2));
+    }
+
+    #[test]
+    fn test_get_members_needing_reminder_outside_window() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+
+        // Create and setup group
+        let group_id = client.create_group(&creator, &100, &604800, &2);
+        client.join_group(&group_id, &creator);
+        client.join_group(&group_id, &member1);
+
+        // Start group - set time far from deadline
+        let start_time = 1000000u64;
+        env.ledger().with_mut(|l| {
+            l.timestamp = start_time + 100000; // Far from deadline
+        });
+
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_data(group_id),
+            &{
+                let mut g = client.get_group(&group_id);
+                g.started = true;
+                g.started_at = start_time;
+                g
+            },
+        );
+
+        // Get members needing reminder - should be empty (outside 24-hour window)
+        let result = client.get_members_needing_reminder(&group_id, &0);
+        assert_eq!(result.len(), 0);
+    }
+
+    #[test]
+    fn test_get_members_needing_reminder_group_not_found() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let result = client.try_get_members_needing_reminder(&999, &0);
+        assert_eq!(result, Err(Ok(StellarSaveError::GroupNotFound)));
+    }
+
+    #[test]
+    fn test_get_members_needing_reminder_not_started() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &604800, &2);
+        client.join_group(&group_id, &creator);
+
+        // Group not started yet
+        let result = client.try_get_members_needing_reminder(&group_id, &0);
+        assert_eq!(result, Err(Ok(StellarSaveError::InvalidState)));
+    }
+
+    #[test]
+    fn test_emit_contribution_reminders_success() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+
+        // Create and setup group
+        let group_id = client.create_group(&creator, &100, &604800, &3);
+        client.join_group(&group_id, &creator);
+        client.join_group(&group_id, &member1);
+        client.join_group(&group_id, &member2);
+
+        // Start group - set time to 24 hours before deadline
+        let start_time = 1000000u64;
+        env.ledger().with_mut(|l| {
+            l.timestamp = start_time + 604800 - 86400;
+        });
+
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_data(group_id),
+            &{
+                let mut g = client.get_group(&group_id);
+                g.started = true;
+                g.started_at = start_time;
+                g
+            },
+        );
+
+        // Only creator contributes
+        let contrib_key_creator = StorageKeyBuilder::contribution_individual(group_id, 0, creator.clone());
+        env.storage().persistent().set(
+            &contrib_key_creator,
+            &ContributionRecord::new(creator.clone(), group_id, 0, 100, env.ledger().timestamp()),
+        );
+
+        // Emit reminders
+        let reminders_sent = client.emit_contribution_reminders(&group_id, &0);
+        assert_eq!(reminders_sent, 2); // member1 and member2
+
+        // Verify reminders were marked as emitted
+        let reminder_key_m1 = StorageKeyBuilder::contribution_reminder_emitted(group_id, 0, member1.clone());
+        let reminder_key_m2 = StorageKeyBuilder::contribution_reminder_emitted(group_id, 0, member2.clone());
+
+        assert_eq!(
+            env.storage().persistent().get::<_, bool>(&reminder_key_m1),
+            Some(true)
+        );
+        assert_eq!(
+            env.storage().persistent().get::<_, bool>(&reminder_key_m2),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn test_emit_contribution_reminders_no_duplicates() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+
+        // Create and setup group
+        let group_id = client.create_group(&creator, &100, &604800, &2);
+        client.join_group(&group_id, &creator);
+        client.join_group(&group_id, &member1);
+
+        // Start group - set time to 24 hours before deadline
+        let start_time = 1000000u64;
+        env.ledger().with_mut(|l| {
+            l.timestamp = start_time + 604800 - 86400;
+        });
+
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_data(group_id),
+            &{
+                let mut g = client.get_group(&group_id);
+                g.started = true;
+                g.started_at = start_time;
+                g
+            },
+        );
+
+        // Emit reminders first time
+        let reminders_sent_1 = client.emit_contribution_reminders(&group_id, &0);
+        assert_eq!(reminders_sent_1, 1);
+
+        // Emit reminders second time - should be 0 (already reminded)
+        let reminders_sent_2 = client.emit_contribution_reminders(&group_id, &0);
+        assert_eq!(reminders_sent_2, 0);
+    }
+
+    #[test]
+    fn test_emit_contribution_reminders_group_not_found() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let result = client.try_emit_contribution_reminders(&999, &0);
+        assert_eq!(result, Err(Ok(StellarSaveError::GroupNotFound)));
+    }
+
+    #[test]
+    fn test_emit_contribution_reminders_not_started() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100, &604800, &2);
+        client.join_group(&group_id, &creator);
+
+        // Group not started yet
+        let result = client.try_emit_contribution_reminders(&group_id, &0);
+        assert_eq!(result, Err(Ok(StellarSaveError::InvalidState)));
     }
 }

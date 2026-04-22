@@ -108,6 +108,10 @@ pub enum ContributionKey {
     /// Cycle contributor count: CONTRIB_COUNT_{group_id}_{cycle}
     /// Tracks how many members have contributed in the current cycle.
     CycleCount(u64, u32),
+
+    /// Reminder emitted flag: CONTRIB_REMINDER_{group_id}_{cycle}_{address}
+    /// Tracks whether a 24-hour reminder has been emitted for a member in a cycle.
+    ReminderEmitted(u64, u32, Address),
 }
 
 /// Storage keys for payout records.
@@ -237,6 +241,11 @@ impl StorageKeyBuilder {
     /// Creates a key for cycle contributor count.
     pub fn contribution_cycle_count(group_id: u64, cycle: u32) -> StorageKey {
         StorageKey::Contribution(ContributionKey::CycleCount(group_id, cycle))
+    }
+
+    /// Creates a key for tracking whether a reminder has been emitted for a member.
+    pub fn contribution_reminder_emitted(group_id: u64, cycle: u32, address: Address) -> StorageKey {
+        StorageKey::Contribution(ContributionKey::ReminderEmitted(group_id, cycle, address))
     }
 
     // Payout key builders

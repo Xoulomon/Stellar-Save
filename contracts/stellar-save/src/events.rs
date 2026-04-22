@@ -93,6 +93,19 @@ pub struct ContractUnpaused {
     pub timestamp: u64,
 }
 
+/// Event emitted when a contribution is due for a member.
+/// This event is emitted 24 hours before the contribution deadline
+/// to remind members who haven't yet contributed in the current cycle.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContributionDue {
+    pub group_id: u64,
+    pub member: Address,
+    pub cycle: u32,
+    pub deadline: u64,
+    pub emitted_at: u64,
+}
+
 /// Utility functions for emitting events.
 pub struct EventEmitter;
 
@@ -232,7 +245,24 @@ impl EventEmitter {
         let event = ContractUnpaused { admin, timestamp };
         env.events().publish(("contract_unpaused",), event);
     }
-}
+
+    pub fn emit_contribution_due(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        cycle: u32,
+        deadline: u64,
+        emitted_at: u64,
+    ) {
+        let event = ContributionDue {
+            group_id,
+            member,
+            cycle,
+            deadline,
+            emitted_at,
+        };
+        env.events().publish(("contribution_due",), event);
+    }
 
 #[cfg(test)]
 mod tests {
@@ -458,5 +488,31 @@ mod tests {
         let member = Address::generate(&env);
 
         EventEmitter::emit_member_left(&env, 1, member, 2, 1234567890);
+    }
+
+    #[test]
+    fn test_contribution_due_event() {
+        let env = Env::default();
+        let member = Address::generate(&env);
+
+        let event = ContributionDue {
+            group_id: 1,
+            member: member.clone(),
+            cycle: 0,
+            deadline: 1234567890,
+            emitted_at: 1234567890,
+        };
+
+        assert_eq!(event.group_id, 1);
+        assert_eq!(event.cycle, 0);
+        assert_eq!(event.deadline, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_contribution_due() {
+        let env = Env::default();
+        let member = Address::generate(&env);
+
+        EventEmitter::emit_contribution_due(&env, 1, member, 0, 1234567890, 1234567890);
     }
 }
