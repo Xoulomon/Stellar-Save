@@ -94,6 +94,7 @@ pub struct ContractUnpaused {
 }
 
 
+
 /// Event emitted when a contribution proof is verified (#479).
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -126,26 +127,55 @@ pub struct ContributionAmountChanged {
     pub changed_at: u64,
 
 /// Event emitted when a specific group is paused by its creator.
+
+/// Event emitted when a cycle starts.
+
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct GroupPaused {
+pub struct CycleStarted {
     pub group_id: u64,
-    pub paused_by: Address,
-    pub paused_at: u64,
+    pub cycle_id: u32,
+    pub started_at: u64,
 }
 
-/// Event emitted when a specific group is unpaused by its creator.
+/// Event emitted when a cycle ends (transitions to next).
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct GroupUnpaused {
+pub struct CycleEnded {
     pub group_id: u64,
+
     pub unpaused_by: Address,
     pub unpaused_at: u64,
+
+
+    pub cycle_id: u32,
+    pub ended_at: u64,
 
 }
 
 /// Utility functions for emitting events.
 pub struct EventEmitter;
+
+/// Event emitted when a penalty is applied to a member for a missed contribution.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PenaltyApplied {
+    pub group_id: u64,
+    pub member: Address,
+    pub amount: i128,
+    pub cycle_id: u32,
+    pub applied_at: u64,
+}
+
+/// Event emitted when a member successfully recovers from a penalty.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PenaltyRecovered {
+    pub group_id: u64,
+    pub member: Address,
+    pub cycle_id: u32,
+    pub recovered_at: u64,
+}
 
 impl EventEmitter {
     pub fn emit_group_created(
@@ -285,6 +315,7 @@ impl EventEmitter {
     }
 
 
+
     pub fn emit_contribution_verified(
         env: &Env,
         group_id: u64,
@@ -338,20 +369,42 @@ impl EventEmitter {
 
     pub fn emit_group_paused(env: &Env, group_id: u64, paused_by: Address, paused_at: u64) {
         let event = GroupPaused {
+
+    pub fn emit_penalty_applied(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        amount: i128,
+        cycle_id: u32,
+    ) {
+        let event = PenaltyApplied {
+
             group_id,
-            paused_by,
-            paused_at,
+            member,
+            amount,
+            cycle_id,
+            applied_at: env.ledger().timestamp(),
         };
-        env.events().publish(("group_paused",), event);
+        env.events().publish(("penalty_applied",), event);
     }
 
-    pub fn emit_group_unpaused(env: &Env, group_id: u64, unpaused_by: Address, unpaused_at: u64) {
-        let event = GroupUnpaused {
+    pub fn emit_penalty_recovered(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        cycle_id: u32,
+    ) {
+        let event = PenaltyRecovered {
             group_id,
-            unpaused_by,
-            unpaused_at,
+            member,
+            cycle_id,
+            recovered_at: env.ledger().timestamp(),
         };
+
         env.events().publish(("group_unpaused",), event);
+
+
+        env.events().publish(("penalty_recovered",), event);
 
     }
 }

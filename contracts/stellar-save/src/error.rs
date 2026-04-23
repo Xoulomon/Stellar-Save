@@ -77,6 +77,10 @@ pub enum StellarSaveError {
     /// Added for ID Generation: The counter has reached its maximum limit.
     /// Error Code: 9003
     Overflow = 9003,
+
+    /// The cycle deadline has passed; contributions are no longer accepted.
+    /// Error Code: 3005
+    CycleDeadlineExpired = 3005,
 }
 
 impl StellarSaveError {
@@ -142,6 +146,9 @@ impl StellarSaveError {
             }
             StellarSaveError::Overflow => {
                 "The ID counter has reached its maximum limit. No more IDs can be generated."
+            }
+            StellarSaveError::CycleDeadlineExpired => {
+                "The cycle deadline has passed. Contributions are no longer accepted for this cycle."
             }
         }
     }

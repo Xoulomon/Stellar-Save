@@ -209,6 +209,66 @@ A: Verify you have sufficient XLM for both the contribution and transaction fees
 **Q: Wrong contribution amount**
 A: Contributions must match the group's exact amount. Check the group settings.
 
+## Penalty System
+
+To encourage timely contributions and protect active members, Stellar-Save supports an optional penalty mechanism for missed contributions.
+
+### How Penalties Work
+
+When a group creator enables penalties, any member who fails to contribute during a cycle is automatically charged a fixed penalty fee at payout time. The penalty amount is added directly to the cycle pool, so the payout recipient receives the full pool **plus** any penalties collected from non-contributors.
+
+**Key points:**
+- Penalties are **optional** — the group creator decides whether to enable them at group creation.
+- The penalty amount is fixed in stroops (1 XLM = 10,000,000 stroops) and set when the group is created.
+- Penalties are applied automatically by the smart contract when `execute_payout` is called; no manual action is required.
+- A `PenaltyApplied` event is emitted on-chain for each penalty, providing a transparent audit trail.
+
+### Penalty Configuration
+
+When creating a group, the creator can set:
+
+| Field | Description |
+|---|---|
+| `penalty_enabled` | `true` to activate the penalty system, `false` to disable it |
+| `penalty_amount` | Fixed penalty in stroops charged per missed cycle (must be > 0 when enabled) |
+
+Example: a group with `contribution_amount = 10,000,000` (1 XLM) and `penalty_amount = 500,000` (0.05 XLM) means a member who misses a cycle pays an extra 0.05 XLM that goes to the current cycle's recipient.
+
+### Penalty Flow
+
+1. All members contribute (or the cycle deadline passes).
+2. `execute_payout` is called.
+3. The contract identifies members who did not contribute this cycle.
+4. For each non-contributor, `penalty_amount` is:
+   - Added to their cumulative penalty total (queryable via `get_member_penalties`).
+   - Added to the cycle pool total so the payout recipient receives it.
+5. A `PenaltyApplied` event is emitted for each penalised member.
+6. The payout is distributed to the eligible recipient (base pool + penalties).
+
+### Querying Penalties
+
+Use the `get_member_penalties(group_id, member)` contract function to check how much a member has been penalised in total across all cycles of a group.
+
+```
+get_member_penalties(group_id: u64, member: Address) -> i128
+```
+
+Returns the cumulative penalty amount in stroops. Returns `0` if no penalties have been applied.
+
+### FAQ
+
+**Q: Can penalties be changed after the group is created?**
+A: No. Penalty settings are fixed at group creation to ensure all members agree to the same terms.
+
+**Q: What if I miss a contribution — will I be removed from the group?**
+A: No. You remain a member and will still receive your payout when your turn comes. The penalty is a financial charge, not an exclusion.
+
+**Q: Does the penalty affect the payout I receive when it's my turn?**
+A: No. Your payout is based on the pool at the time of your cycle. If other members missed contributions in your cycle, their penalties are added to your payout.
+
+**Q: Can I see who was penalised?**
+A: Yes. `PenaltyApplied` events are emitted on-chain and include the group ID, member address, penalty amount, and cycle number.
+
 ## Getting Help
 
 - **Documentation**: Check this guide and the technical docs
