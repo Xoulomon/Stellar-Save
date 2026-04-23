@@ -32,3 +32,6 @@ export { usePayouts } from './usePayouts';
 
 export { useEventService } from './useEventService';
 export type { UseEventServiceReturn } from './useEventService';
+
+export { usePushNotifications } from './usePushNotifications';
+export type { UsePushNotificationsReturn } from './usePushNotifications';

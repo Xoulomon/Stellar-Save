@@ -7,6 +7,7 @@ import ContributeButton from '../components/ContributeButton';
 import { useNavigation } from '../routing/useNavigation';
 import { fetchGroup } from '../utils/groupApi';
 import { useWallet } from '../hooks/useWallet';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import type { DetailedGroup } from '../utils/groupApi';
 
 /**
@@ -21,6 +22,8 @@ export default function GroupDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const { scheduleReminder } = usePushNotifications();
+
   useEffect(() => {
     if (!groupId) {
       setError('No group ID provided');
@@ -34,6 +37,15 @@ export default function GroupDetailPage() {
         setError(null);
         const groupData = await fetchGroup(groupId);
         setGroup(groupData);
+
+        // Schedule contribution reminders if the group has an active cycle deadline
+        if (groupData?.currentCycle?.endDate) {
+          scheduleReminder({
+            groupId: groupData.id,
+            groupName: groupData.name,
+            deadlineTimestamp: groupData.currentCycle.endDate.getTime(),
+          });
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load group details';
         setError(message);
@@ -43,7 +55,7 @@ export default function GroupDetailPage() {
     };
 
     void loadGroup();
-  }, [groupId]);
+  }, [groupId, scheduleReminder]);
 
   const handleRetry = () => {
     if (groupId) {
