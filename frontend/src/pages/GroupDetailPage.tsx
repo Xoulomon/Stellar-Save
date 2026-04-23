@@ -14,7 +14,7 @@ import {
 import { AppCard, AppLayout } from '../ui';
 import { GroupDetails } from '../components/GroupDetails';
 import { Button } from '../components/Button';
-import ContributeButton from '../components/ContributeButton';
+import { ContributionFlow } from '../components/ContributionFlow';
 import { PayoutQueue } from '../components/PayoutQueue';
 import { useNavigation } from '../routing/useNavigation';
 import { useWallet } from '../hooks/useWallet';
@@ -232,11 +232,11 @@ export default function GroupDetailPage() {
                 </Button>
               )}
               {canContribute && (
-                <ContributeButton
-                  amount={group.contributionAmount}
+                <ContributionFlow
+                  defaultAmount={group.contributionAmount}
                   cycleId={group.currentCycle?.cycleNumber ?? 0}
                   walletAddress={activeAddress ?? undefined}
-                  onSuccess={(txHash) => setSuccessMessage(`Contribution successful! TX: ${txHash}`)}
+                  onSuccess={(txHash, amount) => setSuccessMessage(`Contributed ${amount} XLM! TX: ${txHash}`)}
                   onError={(err) => setError(err.message)}
                 />
               )}
