@@ -36,3 +36,5 @@ export type { CycleProgressProps } from "./CycleProgress";
 export { UserStats } from "./UserStats";
 export { SettingsSection } from "./SettingsSection";
 export { DebounceDemo } from "./DebounceDemo";
+export { ActivityFeed } from "./ActivityFeed/ActivityFeed";
+export type { ActivityFeedProps } from "./ActivityFeed/ActivityFeed";

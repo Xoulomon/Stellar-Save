@@ -1,8 +1,6 @@
 // events.ts
 // TypeScript definitions for StellarSave smart contract events
 
-import type { Address } from '@stellar/stellar-sdk';
-
 export interface GroupCreatedEvent {
   type: 'GroupCreated';
   groupId: bigint;
@@ -11,6 +9,14 @@ export interface GroupCreatedEvent {
   cycleDuration: bigint;
   maxMembers: number;
   createdAt: bigint;
+}
+
+export interface MemberJoinedEvent {
+  type: 'MemberJoined';
+  groupId: bigint;
+  member: string;
+  memberCount: number;
+  joinedAt: bigint;
 }
 
 export interface ContributionMadeEvent {
@@ -32,7 +38,11 @@ export interface PayoutExecutedEvent {
   executedAt: bigint;
 }
 
-export type AppEvent = GroupCreatedEvent | ContributionMadeEvent | PayoutExecutedEvent;
+export type AppEvent =
+  | GroupCreatedEvent
+  | MemberJoinedEvent
+  | ContributionMadeEvent
+  | PayoutExecutedEvent;
 
 export type EventType = AppEvent['type'];
 
