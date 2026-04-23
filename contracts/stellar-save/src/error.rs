@@ -308,6 +308,9 @@ impl ErrorRecoveryStrategy {
             StellarSaveError::Overflow => {
                 "The ID counter has reached its maximum. This is extremely rare and requires contract upgrade."
             }
+            StellarSaveError::CycleDeadlineExpired => {
+                "The contribution deadline for this cycle has passed. Wait for the next cycle."
+            }
         }
     }
 

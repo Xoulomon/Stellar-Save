@@ -242,7 +242,22 @@ impl Group {
     /// - min_members must be >= 2
     /// - min_members must be <= max_members
     /// - grace_period_seconds must be <= 604800 (7 days)
+    /// 7-arg constructor — grace_period_seconds defaults to 0.
+    /// All existing tests use this signature.
     pub fn new(
+        id: u64,
+        creator: Address,
+        contribution_amount: i128,
+        cycle_duration: u64,
+        max_members: u32,
+        min_members: u32,
+        created_at: u64,
+    ) -> Self {
+        Self::new_with_grace(id, creator, contribution_amount, cycle_duration, max_members, min_members, created_at, 0)
+    }
+
+    /// 8-arg constructor — explicit grace_period_seconds.
+    pub fn new_with_grace(
         id: u64,
         creator: Address,
         contribution_amount: i128,
@@ -262,6 +277,7 @@ impl Group {
             created_at,
             false,
             0,
+            grace_period_seconds,
         )
     }
 
@@ -276,6 +292,7 @@ impl Group {
         created_at: u64,
         penalty_enabled: bool,
         penalty_amount: i128,
+        grace_period_seconds: u64,
     ) -> Self {
         // Validate contribution amount
         assert!(
@@ -464,7 +481,7 @@ mod tests {
 
     fn make_group(env: &Env, max_members: u32, grace_period_seconds: u64) -> Group {
         let creator = Address::generate(env);
-        Group::new(1, creator, 10_000_000, 604800, max_members, 2, 1234567890, grace_period_seconds)
+        Group::new_with_grace(1, creator, 10_000_000, 604800, max_members, 2, 1234567890, grace_period_seconds)
     }
 
     #[test]
@@ -472,7 +489,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
 
-        let group = Group::new(
+        let group = Group::new_with_grace(
             1,
             creator.clone(),
             10_000_000, // 1 XLM
@@ -509,7 +526,7 @@ mod tests {
     fn test_invalid_grace_period() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        Group::new(1, creator, 10_000_000, 604800, 5, 2, 1234567890, 604801);
+        Group::new_with_grace(1, creator, 10_000_000, 604800, 5, 2, 1234567890, 604801);
     }
 
     #[test]
@@ -517,7 +534,7 @@ mod tests {
     fn test_invalid_min_members() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        Group::new(1, creator, 10_000_000, 604800, 5, 1, 1234567890, 0);
+        Group::new_with_grace(1, creator, 10_000_000, 604800, 5, 1, 1234567890, 0);
     }
 
     #[test]
@@ -525,7 +542,7 @@ mod tests {
     fn test_min_members_greater_than_max() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        Group::new(1, creator, 10_000_000, 604800, 3, 5, 1234567890, 0);
+        Group::new_with_grace(1, creator, 10_000_000, 604800, 3, 5, 1234567890, 0);
     }
 
     #[test]

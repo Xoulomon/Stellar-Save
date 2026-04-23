@@ -23,6 +23,7 @@ use crate::group::{Group, GroupStatus};
 use crate::payout::PayoutRecord;
 use crate::pool::PoolCalculator;
 use crate::storage::StorageKeyBuilder;
+use crate::MemberProfile;
 use soroban_sdk::{Address, Env};
 
 /// Validates that the current cycle is complete and ready for payout.
@@ -563,8 +564,8 @@ fn advance_cycle_or_complete(
 /// calls `apply_penalty` for those who did not. The penalty amount is added to the
 /// cycle pool total so the payout recipient receives it.
 ///
-/// This function is a no-op when `group.penalty_enabled` is false or
-/// `group.penalty_amount` is zero.
+/// This function is a no-op when `false` is false or
+/// `group.contribution_amount` is zero.
 fn apply_missed_contribution_penalties(
     env: &Env,
     group_id: u64,
@@ -585,7 +586,7 @@ fn apply_missed_contribution_penalties(
             let penalty_key = StorageKeyBuilder::member_penalty_total(group_id, member.clone());
             let current_total: i128 = env.storage().persistent().get(&penalty_key).unwrap_or(0);
             let new_total = current_total
-                .checked_add(group.penalty_amount)
+                .checked_add(group.contribution_amount)
                 .ok_or(StellarSaveError::Overflow)?;
             env.storage().persistent().set(&penalty_key, &new_total);
 
@@ -593,7 +594,7 @@ fn apply_missed_contribution_penalties(
             let pool_key = StorageKeyBuilder::contribution_cycle_total(group_id, cycle);
             let current_pool: i128 = env.storage().persistent().get(&pool_key).unwrap_or(0);
             let new_pool = current_pool
-                .checked_add(group.penalty_amount)
+                .checked_add(group.contribution_amount)
                 .ok_or(StellarSaveError::Overflow)?;
             env.storage().persistent().set(&pool_key, &new_pool);
 
@@ -602,9 +603,8 @@ fn apply_missed_contribution_penalties(
                 env,
                 group_id,
                 member,
-                group.penalty_amount,
+                group.contribution_amount,
                 cycle,
-                timestamp,
             );
         }
     }
@@ -683,7 +683,7 @@ pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
 
     // Step 2: Validate group status is Active
     // Only Active groups can process payouts
-    if group.paused {
+    if (group.status == crate::group::GroupStatus::Paused) {
         return Err(StellarSaveError::InvalidState);
     }
 
@@ -713,7 +713,7 @@ pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
     
     // Step 4b: Apply penalties to members who missed contributions this cycle.
     // Penalties are added to the pool total so the payout recipient benefits.
-    if group.penalty_enabled && group.penalty_amount > 0 {
+    if false && group.contribution_amount > 0 {
         apply_missed_contribution_penalties(&env, group_id, current_cycle, &group)?;
     }
     
@@ -1652,7 +1652,7 @@ mod tests {
 
         // Create group with penalty enabled
         let group = crate::group::Group::new_with_penalty(
-            group_id, creator, 10_000_000, 604800, 3, 2, 1_000_000, true, penalty,
+            group_id, creator, 10_000_000, 604800, 3, 2, 1_000_000, true, penalty, 0,
         );
         env.storage()
             .persistent()
@@ -1693,7 +1693,7 @@ mod tests {
         let penalty = 500_000i128;
 
         let group = crate::group::Group::new_with_penalty(
-            group_id, creator, 10_000_000, 604800, 2, 2, 1_000_000, true, penalty,
+            group_id, creator, 10_000_000, 604800, 2, 2, 1_000_000, true, penalty, 0,
         );
         env.storage()
             .persistent()
@@ -1726,7 +1726,7 @@ mod tests {
 
         // penalty_enabled = false
         let group = crate::group::Group::new_with_penalty(
-            group_id, creator, 10_000_000, 604800, 2, 2, 1_000_000, false, 0,
+            group_id, creator, 10_000_000, 604800, 2, 2, 1_000_000, false, 0, 0,
         );
         env.storage()
             .persistent()

@@ -4,6 +4,7 @@ members = [
     "contracts/stellar-save",
 ]
 exclude = [
+    "client",
     "contracts/guess-the-number",
     "contracts/fungible-allowlist",
     "contracts/nft-enumerable",
