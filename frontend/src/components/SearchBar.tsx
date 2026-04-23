@@ -1,111 +1,78 @@
-import { useState, useEffect, useRef } from 'react';
-import './SearchBar.css';
+import React, { useState, useEffect } from 'react';
+import {
+  TextField,
+  InputAdornment,
+  Box,
+  CircularProgress,
+  IconButton,
+} from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 
 interface SearchBarProps {
+  onSearch: (query: string) => void;
   placeholder?: string;
-  onSearch: (value: string) => void;
-  debounceMs?: number;
   loading?: boolean;
-  className?: string;
-  defaultValue?: string;
 }
 
-export function SearchBar({
-  placeholder = 'Search...',
+export const SearchBar: React.FC<SearchBarProps> = ({
   onSearch,
-  debounceMs = 300,
+  placeholder = "Search groups...",
   loading = false,
-  className = '',
-  defaultValue = '',
-}: SearchBarProps) {
-  const [value, setValue] = useState(defaultValue);
-  const debounceTimerRef = useRef<number | null>(null);   // ← Fixed here
+}) => {
+  const [query, setQuery] = useState('');
 
+  // Debounced search
   useEffect(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
+    const timer = setTimeout(() => {
+      onSearch(query);
+    }, 400);
 
-    debounceTimerRef.current = setTimeout(() => {
-      onSearch(value);
-    }, debounceMs);
-
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, [value, debounceMs, onSearch]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setValue(e.target.value);
-  };
+    return () => clearTimeout(timer);
+  }, [query, onSearch]);
 
   const handleClear = () => {
-    setValue('');
+    setQuery('');
+    onSearch('');
   };
 
-  const searchBarClasses = ['search-bar', className].filter(Boolean).join(' ');
-
   return (
-    <div className={searchBarClasses}>
-      <div className="search-bar-icon" aria-hidden="true">
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 20 20"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM19 19l-4.35-4.35"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </div>
-
-      <input
-        type="search"
-        className="search-bar-input"
+    <Box sx={{ width: '100%' }}>
+      <TextField
+        fullWidth
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
         placeholder={placeholder}
-        value={value}
-        onChange={handleChange}
-        aria-label="Search"
+        variant="outlined"
+        size="medium"
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="action" />
+              </InputAdornment>
+            ),
+            endAdornment: (
+              <InputAdornment position="end">
+                {loading ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : query ? (
+                  <IconButton onClick={handleClear} size="small">
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
+                ) : null}
+              </InputAdornment>
+            ),
+            sx: {
+              borderRadius: 3,
+              bgcolor: 'background.paper',
+              '&:hover': {
+                bgcolor: 'action.hover',
+              }
+            }
+          }
+        }}
       />
-
-      {loading && (
-        <div className="search-bar-loading" aria-label="Loading">
-          <span className="search-bar-spinner" />
-        </div>
-      )}
-
-      {!loading && value && (
-        <button
-          type="button"
-          className="search-bar-clear"
-          onClick={handleClear}
-          aria-label="Clear search"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M12 4L4 12M4 4l8 8"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-      )}
-    </div>
+    </Box>
   );
-}
+};

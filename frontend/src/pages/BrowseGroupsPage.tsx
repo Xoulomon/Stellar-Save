@@ -1,147 +1,196 @@
-import { useNavigate } from 'react-router-dom';
-import { Stack, Typography } from '@mui/material';
-import { AppCard, AppLayout } from '../ui';
-import { GroupCard } from '../components/GroupCard';
-import { GroupFilters } from '../components/GroupFilters';
-import { GroupList } from '../components/GroupList';
-import { SearchBar } from '../components/SearchBar';
-import { Button } from '../components/Button';
-import { useGroups } from '../hooks/useGroups';
-import { ROUTES, buildRoute } from '../routing/constants';
-import './BrowseGroupsPage.css';
+import React, { useState } from 'react';
+import {
+  Box,
+  Container,
+  Typography,
+  Grid,
+  Stack,
+  Button,
+  useMediaQuery,
+  Theme,
+  Drawer,
+  Pagination,
+  Alert,
+  Skeleton,
+} from '@mui/material';
+import TuneIcon from '@mui/icons-material/Tune';
 
-export default function BrowseGroupsPage() {
-  const navigate = useNavigate();
+import { useGroups } from '../hooks/useGroups';
+import { SearchBar } from '../components/SearchBar';
+import { GroupCard } from '../components/GroupCard';
+import { FilterSidebar } from '../components/FilterSidebar';
+import { GroupPreview } from '../components/GroupPreview';
+import { JoinGroupModal } from '../components/JoinGroupModal';
+import { PublicGroup } from '../types/group';
+
+const BrowseGroupsPage: React.FC = () => {
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'));
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [selectedGroupForPreview, setSelectedGroupForPreview] = useState<PublicGroup | null>(null);
+  const [selectedGroupForJoin, setSelectedGroupForJoin] = useState<PublicGroup | null>(null);
 
   const {
     groups,
-    filteredCount,
     pagination,
     filters,
     isLoading,
     error,
-    hasActiveFilters,
     setFilters,
     clearFilters,
     setPage,
-    setPageSize,
     refresh,
-  } = useGroups({ initialPageSize: 12 });
+  } = useGroups({ initialPageSize: 10 });
 
-  const handleCreateGroup = () => navigate(ROUTES.GROUP_CREATE);
+  const handlePreview = (group: PublicGroup) => {
+    setSelectedGroupForPreview(group);
+  };
+
+  const handleJoinInit = (group: PublicGroup) => {
+    setSelectedGroupForJoin(group);
+  };
+
+  const handleJoinConfirmed = () => {
+    // Optionally refresh or show toast
+    refresh();
+  };
 
   return (
-    <AppLayout
-      title="Browse Groups"
-      subtitle="Discover and join public savings groups"
-      footerText="Stellar Save - Built for transparent, on-chain savings"
-    >
-      <AppCard>
-        <Stack spacing={2}>
-          {/* aria-live region for error/status announcements */}
-          <div aria-live="polite" aria-atomic="true">
-            {error && (
-              <div className="browse-groups-error" role="alert">
-                <p>{error}</p>
-                <Button onClick={refresh}>Retry</Button>
-              </div>
-            )}
-          </div>
+    <Container maxWidth="xl" sx={{ py: 4, minHeight: '100vh' }}>
+      {/* Header Section */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h3" fontWeight="900" gutterBottom color="primary">
+          Browse Groups
+        </Typography>
+        <Typography variant="h6" color="text.secondary">
+          Find a community saving pool that matches your financial goals.
+        </Typography>
+      </Box>
 
-          {!error && (
-            <section aria-labelledby="browse-groups-heading">
-              <Typography id="browse-groups-heading" variant="h2" sx={{ mb: 2 }}>
-                Public Groups
-              </Typography>
+      {/* Search and Mobile Filter Toggle */}
+      <Stack direction="row" spacing={2} sx={{ mb: 4 }}>
+        <SearchBar 
+          onSearch={(q) => setFilters({ search: q })} 
+          loading={isLoading}
+        />
+        {isMobile && (
+          <Button
+            variant="outlined"
+            startIcon={<TuneIcon />}
+            onClick={() => setIsFilterDrawerOpen(true)}
+            sx={{ borderRadius: 3, px: 3 }}
+          >
+            Filters
+          </Button>
+        )}
+      </Stack>
 
-              <div className="browse-groups-controls">
-                <SearchBar
-                  placeholder="Search groups by name or keyword..."
-                  onSearch={(q) => setFilters({ search: q })}
-                  debounceMs={300}
-                  loading={isLoading}
-                  aria-label="Search groups"
-                />
-                <GroupFilters
-                  onFilterChange={(f) => setFilters(f)}
-                  initialFilters={filters}
-                />
-              </div>
+      <Grid container spacing={4}>
+        {/* Sidebar - Desktop */}
+        {!isMobile && (
+          <Grid item lg={3} md={4}>
+            <FilterSidebar
+              filters={filters}
+              onFilterChange={setFilters}
+              onClear={clearFilters}
+            />
+          </Grid>
+        )}
 
-              <div aria-busy={isLoading}>
-                <GroupList
-                  groups={groups as any}
-                  loading={isLoading}
-                  showSearch={false}
-                  showSort={false}
-                  pageSize={pagination.pageSize}
-                  pageSizeOptions={[12, 24, 48]}
-                  showPagination={filteredCount > pagination.pageSize}
-                  emptyTitle={hasActiveFilters ? 'No groups found' : 'No groups available'}
-                  emptyDescription={
-                    hasActiveFilters
-                      ? 'Try adjusting your search or filters to find groups.'
-                      : 'There are no public groups yet. Be the first to create one!'
-                  }
-                  emptyActionLabel={hasActiveFilters ? 'Clear Filters' : 'Create Group'}
-                  onEmptyAction={hasActiveFilters ? clearFilters : handleCreateGroup}
-                  renderGroupItem={(group) => (
-                    <GroupCard
-                      groupId={group.id}
-                      groupName={group.name}
-                      memberCount={group.memberCount ?? 0}
-                      contributionAmount={(group as any).contributionAmount ?? 0}
-                      currency={(group as any).currency ?? 'XLM'}
-                      status={(group as any).status ?? 'active'}
-                      onViewDetails={() => navigate(buildRoute.groupDetail(group.id))}
-                      onJoin={
-                        (group as any).status === 'active' || (group as any).status === 'pending'
-                          ? () => navigate(buildRoute.groupDetail(group.id))
-                          : undefined
-                      }
-                    />
-                  )}
-                />
-              </div>
-
-              {/* Pagination controls driven by the hook */}
-              {pagination.totalPages > 1 && (
-                <div className="browse-groups-pagination" role="navigation" aria-label="Group list pagination">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={!pagination.hasPrevPage}
-                    onClick={() => setPage(pagination.page - 1)}
-                  >
-                    Previous
-                  </Button>
-                  <span className="browse-groups-page-info">
-                    Page {pagination.page} of {pagination.totalPages}
-                  </span>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={!pagination.hasNextPage}
-                    onClick={() => setPage(pagination.page + 1)}
-                  >
-                    Next
-                  </Button>
-                  <select
-                    aria-label="Items per page"
-                    value={pagination.pageSize}
-                    onChange={(e) => setPageSize(Number(e.target.value))}
-                    className="browse-groups-page-size"
-                  >
-                    {[12, 24, 48].map((n) => (
-                      <option key={n} value={n}>{n} per page</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </section>
+        {/* Main Content */}
+        <Grid item lg={9} md={8} xs={12}>
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }} action={<Button color="inherit" size="small" onClick={refresh}>Retry</Button>}>
+              {error}
+            </Alert>
           )}
-        </Stack>
-      </AppCard>
-    </AppLayout>
+
+          <Grid container spacing={3}>
+            {isLoading ? (
+              // Loading skeletons
+              Array.from(new Array(6)).map((_, index) => (
+                <Grid item lg={4} sm={6} xs={12} key={index}>
+                  <Skeleton variant="rectangular" height={320} sx={{ borderRadius: 4 }} />
+                </Grid>
+              ))
+            ) : groups.length > 0 ? (
+              groups.map((group) => (
+                <Grid item lg={4} sm={6} xs={12} key={group.id}>
+                  <GroupCard
+                    group={group}
+                    onPreview={handlePreview}
+                    onJoin={handleJoinInit}
+                  />
+                </Grid>
+              ))
+            ) : (
+              <Grid item xs={12}>
+                <Box sx={{ textAlign: 'center', py: 10, bgcolor: 'background.paper', borderRadius: 4, border: '1px dashed', borderColor: 'divider' }}>
+                  <Typography variant="h6" gutterBottom>No groups found</Typography>
+                  <Typography color="text.secondary" sx={{ mb: 3 }}>Try adjusting your filters or search terms.</Typography>
+                  <Button variant="contained" onClick={clearFilters} sx={{ borderRadius: 2 }}>Clear All Filters</Button>
+                </Box>
+              </Grid>
+            )}
+          </Grid>
+
+          {/* Pagination */}
+          {!isLoading && pagination.totalPages > 1 && (
+            <Box sx={{ mt: 6, display: 'flex', justifyContent: 'center' }}>
+              <Pagination
+                count={pagination.totalPages}
+                page={pagination.page}
+                onChange={(_, page) => setPage(page)}
+                color="primary"
+                size={isMobile ? 'medium' : 'large'}
+                sx={{
+                  '& .MuiPaginationItem-root': {
+                    borderRadius: 2,
+                    fontWeight: 'bold',
+                  },
+                }}
+              />
+            </Box>
+          )}
+        </Grid>
+      </Grid>
+
+      {/* Mobile Filter Drawer */}
+      <Drawer
+        anchor="bottom"
+        open={isFilterDrawerOpen && isMobile}
+        onClose={() => setIsFilterDrawerOpen(false)}
+        PaperProps={{
+          sx: { borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '80vh' }
+        }}
+      >
+        <FilterSidebar
+          filters={filters}
+          onFilterChange={setFilters}
+          onClear={clearFilters}
+          onClose={() => setIsFilterDrawerOpen(false)}
+        />
+      </Drawer>
+
+      {/* Preview Side Drawer */}
+      <GroupPreview
+        group={selectedGroupForPreview}
+        open={Boolean(selectedGroupForPreview)}
+        onClose={() => setSelectedGroupForPreview(null)}
+        onJoin={(group) => {
+          setSelectedGroupForPreview(null);
+          handleJoinInit(group);
+        }}
+      />
+
+      {/* Join Confirmation Modal */}
+      <JoinGroupModal
+        group={selectedGroupForJoin}
+        open={Boolean(selectedGroupForJoin)}
+        onClose={() => setSelectedGroupForJoin(null)}
+        onJoined={handleJoinConfirmed}
+      />
+    </Container>
   );
-}
+};
+
+export default BrowseGroupsPage;

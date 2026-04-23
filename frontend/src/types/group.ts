@@ -1,6 +1,6 @@
 import type { FilterState, SortOption } from '../components/GroupFilters';
 
-export type GroupStatus = 'active' | 'completed' | 'pending';
+export type GroupStatus = 'active' | 'starting_soon' | 'completed';
 
 export interface PublicGroup {
   id: string;
@@ -10,6 +10,7 @@ export interface PublicGroup {
   contributionAmount: number; // in XLM
   currency: string;
   status: GroupStatus;
+  duration: 'short-term' | 'long-term';
   createdAt: Date;
 }
 
@@ -35,11 +36,13 @@ export type { FilterState, SortOption };
 
 export interface GroupFilters extends FilterState {
   search: string;
+  duration: 'all' | 'short-term' | 'long-term';
 }
 
 export const DEFAULT_GROUP_FILTERS: GroupFilters = {
   search: '',
   status: 'all',
+  duration: 'all',
   minAmount: '',
   maxAmount: '',
   minMembers: '',

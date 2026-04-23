@@ -1,113 +1,130 @@
-import { Link } from 'react-router-dom';
-import { buildRoute } from '../routing/constants';
-import './GroupCard.css';
-import { Button } from './Button';
-import { GroupBadge } from './GroupBadge';
+import React from 'react';
+import {
+  Card,
+  CardContent,
+  CardActions,
+  Typography,
+  Box,
+  Button,
+  Chip,
+  Stack,
+  Avatar,
+  Divider,
+} from '@mui/material';
+import GroupsIcon from '@mui/icons-material/Groups';
+import { PublicGroup } from '../types/group';
 
 interface GroupCardProps {
-  groupId?: string;
-  groupName: string;
-  memberCount: number;
-  contributionAmount: number;
-  currency?: string;
-  status?: 'active' | 'completed' | 'pending' | 'complete';
-  onClick?: () => void;
-  onViewDetails?: () => void;
-  onJoin?: () => void;
-  className?: string;
+  group: PublicGroup;
+  onPreview: (group: PublicGroup) => void;
+  onJoin: (group: PublicGroup) => void;
 }
 
-export function GroupCard({
-  groupId,
-  groupName,
-  memberCount,
-  contributionAmount,
-  currency = 'XLM',
-  status = 'active',
-  onClick,
-  onViewDetails,
-  onJoin,
-  className = '',
-}: GroupCardProps) {
-  const classes = ['group-card', className].filter(Boolean).join(' ');
-
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Prevent card click when clicking buttons
-    if ((e.target as HTMLElement).closest('button')) {
-      return;
+export const GroupCard: React.FC<GroupCardProps> = ({ group, onPreview, onJoin }) => {
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'success';
+      case 'starting_soon': return 'primary';
+      case 'completed': return 'default';
+      default: return 'default';
     }
-    onClick?.();
   };
 
-  const cardContent = (
-    <>
-      <div className="group-card-header">
-        <h3 className="group-card-title">{groupName}</h3>
-        <GroupBadge status={status} />
-      </div>
-
-      <div className="group-card-body">
-        <div className="group-card-stats">
-          <div className="group-card-stat">
-            <span className="group-card-stat-label">Members</span>
-            <span className="group-card-stat-value">{memberCount}</span>
-          </div>
-          <div className="group-card-stat">
-            <span className="group-card-stat-label">Total Contributions</span>
-            <span className="group-card-stat-value">
-              {contributionAmount.toLocaleString()} {currency}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="group-card-footer">
-        {onViewDetails && (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewDetails();
-            }}
-          >
-            View Details
-          </Button>
-        )}
-        {onJoin && (
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onJoin();
-            }}
-          >
-            Join Group
-          </Button>
-        )}
-      </div>
-    </>
-  );
-
-  // If groupId is provided, wrap in Link
-  if (groupId) {
-    return (
-      <Link 
-        to={buildRoute.groupDetail(groupId)} 
-        className={classes}
-        style={{ textDecoration: 'none', color: 'inherit' }}
-        onClick={handleCardClick}
-      >
-        {cardContent}
-      </Link>
-    );
-  }
-
-  // Otherwise, render as div
   return (
-    <div className={classes} onClick={handleCardClick}>
-      {cardContent}
-    </div>
+    <Card 
+      sx={{ 
+        height: '100%', 
+        display: 'flex', 
+        flexDirection: 'column',
+        borderRadius: 4,
+        transition: 'transform 0.2s, box-shadow 0.2s',
+        cursor: 'pointer',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: 4,
+        },
+        border: '1px solid',
+        borderColor: 'divider',
+      }}
+      onClick={() => onPreview(group)}
+    >
+      <CardContent sx={{ flexGrow: 1, p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Chip 
+            label={group.status.replace('_', ' ').toLowerCase()} 
+            color={getStatusColor(group.status) as any} 
+            size="small"
+            variant="soft"
+            sx={{ fontWeight: 'bold', borderRadius: 1.5 }}
+          />
+          <Typography variant="caption" color="text.secondary">
+            {group.duration}
+          </Typography>
+        </Box>
+
+        <Typography variant="h6" fontWeight="bold" gutterBottom noWrap>
+          {group.name}
+        </Typography>
+
+        <Typography 
+          variant="body2" 
+          color="text.secondary" 
+          sx={{ 
+            mb: 3, 
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            minHeight: '2.5rem'
+          }}
+        >
+          {group.description || 'No description available for this savings group.'}
+        </Typography>
+
+        <Divider sx={{ my: 2, borderStyle: 'dashed' }} />
+
+        <Stack direction="row" spacing={2} justifyContent="space-between">
+          <Box>
+            <Typography variant="caption" color="text.secondary" display="block">
+              CONTRIBUTION
+            </Typography>
+            <Typography variant="subtitle1" fontWeight="bold">
+              {group.contributionAmount} {group.currency}
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'right' }}>
+            <Typography variant="caption" color="text.secondary" display="block">
+              MEMBERS
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: 'flex-end' }}>
+              <GroupsIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+              <Typography variant="subtitle1" fontWeight="bold">
+                {group.memberCount}
+              </Typography>
+            </Box>
+          </Box>
+        </Stack>
+      </CardContent>
+
+      <CardActions sx={{ p: 2, pt: 0 }}>
+        <Button 
+          fullWidth 
+          variant="contained" 
+          disableElevation
+          onClick={(e) => {
+            e.stopPropagation();
+            onJoin(group);
+          }}
+          disabled={group.status === 'completed'}
+          sx={{ 
+            borderRadius: 2, 
+            textTransform: 'none', 
+            fontWeight: 'bold',
+          }}
+        >
+          {group.status === 'completed' ? 'Closed' : 'Join Group'}
+        </Button>
+      </CardActions>
+    </Card>
   );
-}
+};

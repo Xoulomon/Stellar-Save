@@ -3,10 +3,7 @@
  * TODO: replace stubs with actual Soroban contract invocations.
  */
 
-import type { GroupDetail, PublicGroup, GroupFilters } from '../types/group';
-
-// Re-export so existing imports keep working
-export type { PublicGroup, GroupDetail };
+import { GroupDetail, PublicGroup, GroupFilters } from '../types/group';
 
 export interface GroupData {
   name: string;
@@ -20,153 +17,83 @@ export interface GroupData {
 export async function createGroup(data: GroupData): Promise<string> {
   // stub — returns a mock group ID
   void data;
-  return Promise.resolve('mock-group-id');
+  return new Promise((resolve) => setTimeout(() => resolve('mock-group-id'), 1000));
 }
 
-export interface PublicGroup {
-  id: string;
-  name: string;
-  description?: string;
-  memberCount: number;
-  contributionAmount: number; // in XLM
-  currency: string;
-  status: 'active' | 'completed' | 'pending';
-  createdAt: Date;
+// Generate some mock groups for the browse page
+const generateMockGroups = (): PublicGroup[] => {
+  const groups: PublicGroup[] = [];
+  const statuses: ('active' | 'starting_soon' | 'completed')[] = ['active', 'starting_soon', 'completed'];
+  const durations: ('short-term' | 'long-term')[] = ['short-term', 'long-term'];
+
+  for (let i = 1; i <= 30; i++) {
+    groups.push({
+      id: `group-${i}`,
+      name: `Savings Pool ${i}`,
+      description: `Description for savings pool ${i}. Join us to save together and grow your wealth on the Stellar network.`,
+      memberCount: Math.floor(Math.random() * 20) + 2,
+      contributionAmount: [10, 50, 100, 500, i * 10][i % 5],
+      currency: 'XLM',
+      status: statuses[i % 3],
+      duration: durations[i % 2],
+      createdAt: new Date(Date.now() - i * 86400000),
+    });
+  }
+  return groups;
+};
+
+const MOCK_GROUPS = generateMockGroups();
+
+export async function fetchGroups(filters?: GroupFilters): Promise<PublicGroup[]> {
+  // Simulate API delay
+  await new Promise((resolve) => setTimeout(resolve, 600));
+
+  let result = [...MOCK_GROUPS];
+
+  if (filters) {
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      result = result.filter(g => g.name.toLowerCase().includes(q) || g.description?.toLowerCase().includes(q));
+    }
+    if (filters.status && filters.status !== 'all') {
+      result = result.filter(g => g.status === filters.status);
+    }
+    if (filters.duration && filters.duration !== 'all') {
+      result = result.filter(g => g.duration === filters.duration);
+    }
+    if (filters.minAmount) {
+      result = result.filter(g => g.contributionAmount >= Number(filters.minAmount));
+    }
+    if (filters.maxAmount) {
+      result = result.filter(g => g.contributionAmount <= Number(filters.maxAmount));
+    }
+  }
+
+  return Promise.resolve(result);
 }
 
-export interface DetailedGroup extends PublicGroup {
-  // Additional detailed information
-  totalMembers: number;
-  targetAmount: number;
-  currentAmount: number;
-  contributionFrequency: 'daily' | 'weekly' | 'monthly';
-  members: GroupMember[];
-  contributions: GroupContribution[];
-  cycles: GroupCycle[];
-  currentCycle?: GroupCycle;
-}
-
-export interface GroupMember {
-  id: string;
-  address: string;
-  name?: string;
-  joinedAt: Date;
-  totalContributions: number;
-  isActive: boolean;
-}
-
-export interface GroupContribution {
-  id: string;
-  memberId: string;
-  memberName?: string;
-  amount: number;
-  timestamp: Date;
-  transactionHash: string;
-  status: 'completed' | 'pending' | 'failed';
-}
-
-export interface GroupCycle {
-  cycleNumber: number;
-  startDate: Date;
-  endDate: Date;
-  targetAmount: number;
-  currentAmount: number;
-  status: 'active' | 'completed' | 'upcoming';
-}
-
-export async function fetchGroups(): Promise<PublicGroup[]> {
+export async function fetchGroup(groupId: string): Promise<GroupDetail> {
   // stub — TODO: replace with actual Soroban contract invocation
-  return Promise.resolve([]);
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  
+  const baseGroup = MOCK_GROUPS.find(g => g.id === groupId) || MOCK_GROUPS[0];
+
+  return Promise.resolve({
+    ...baseGroup,
+    creator: 'GA...' + Math.random().toString(16).slice(2, 10).toUpperCase(),
+    cycleDuration: baseGroup.duration === 'short-term' ? 604800 : 2592000,
+    maxMembers: 50,
+    minMembers: 5,
+    currentCycle: 1,
+    isActive: baseGroup.status === 'active',
+    started: baseGroup.status !== 'starting_soon',
+    startedAt: baseGroup.status !== 'starting_soon' ? new Date(baseGroup.createdAt) : null,
+  });
 }
 
-export async function fetchGroup(groupId: string): Promise<DetailedGroup> {
-  // stub — TODO: replace with actual Soroban contract invocation
-  // Mock data for development
-  const mockGroup: DetailedGroup = {
-    id: groupId,
-    name: `Savings Group ${groupId.slice(-4)}`,
-    description: 'A community savings group focused on building financial security through regular contributions and transparent payouts.',
-    memberCount: 12,
-    contributionAmount: 50,
-    currency: 'XLM',
-    status: 'active',
-    createdAt: new Date('2024-01-15'),
-    totalMembers: 12,
-    targetAmount: 600,
-    currentAmount: 450,
-    contributionFrequency: 'monthly',
-    members: [
-      {
-        id: '1',
-        address: 'GA1234567890123456789012345678901234567890',
-        name: 'Alice Johnson',
-        joinedAt: new Date('2024-01-15'),
-        totalContributions: 200,
-        isActive: true,
-      },
-      {
-        id: '2',
-        address: 'GB1234567890123456789012345678901234567890',
-        name: 'Bob Smith',
-        joinedAt: new Date('2024-01-20'),
-        totalContributions: 150,
-        isActive: true,
-      },
-      {
-        id: '3',
-        address: 'GC1234567890123456789012345678901234567890',
-        joinedAt: new Date('2024-02-01'),
-        totalContributions: 100,
-        isActive: true,
-      },
-    ],
-    contributions: [
-      {
-        id: 'c1',
-        memberId: '1',
-        memberName: 'Alice Johnson',
-        amount: 50,
-        timestamp: new Date('2024-03-01'),
-        transactionHash: 'tx1234567890',
-        status: 'completed',
-      },
-      {
-        id: 'c2',
-        memberId: '2',
-        memberName: 'Bob Smith',
-        amount: 50,
-        timestamp: new Date('2024-03-01'),
-        transactionHash: 'tx1234567891',
-        status: 'completed',
-      },
-    ],
-    cycles: [
-      {
-        cycleNumber: 1,
-        startDate: new Date('2024-01-15'),
-        endDate: new Date('2024-02-15'),
-        targetAmount: 600,
-        currentAmount: 600,
-        status: 'completed',
-      },
-      {
-        cycleNumber: 2,
-        startDate: new Date('2024-02-15'),
-        endDate: new Date('2024-03-15'),
-        targetAmount: 600,
-        currentAmount: 450,
-        status: 'active',
-      },
-    ],
-    currentCycle: {
-      cycleNumber: 2,
-      startDate: new Date('2024-02-15'),
-      endDate: new Date('2024-03-15'),
-      targetAmount: 600,
-      currentAmount: 450,
-      status: 'active',
-    },
-  };
-
-  return Promise.resolve(mockGroup);
+export async function joinGroup(groupId: string): Promise<{ success: boolean }> {
+  // Simulate API call
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+  console.log(`Joined group ${groupId}`);
+  return Promise.resolve({ success: true });
 }

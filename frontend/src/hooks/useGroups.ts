@@ -54,6 +54,10 @@ function applyFilters(groups: PublicGroup[], filters: GroupFilters): PublicGroup
     result = result.filter((g) => g.status === filters.status);
   }
 
+  if (filters.duration && filters.duration !== 'all') {
+    result = result.filter((g) => g.duration === filters.duration);
+  }
+
   if (filters.minAmount !== '') {
     const min = Number(filters.minAmount);
     result = result.filter((g) => g.contributionAmount >= min);
