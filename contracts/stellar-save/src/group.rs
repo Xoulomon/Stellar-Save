@@ -229,6 +229,31 @@ impl Group {
         created_at: u64,
         grace_period_seconds: u64,
     ) -> Self {
+        Self::new_with_penalty(
+            id,
+            creator,
+            contribution_amount,
+            cycle_duration,
+            max_members,
+            min_members,
+            created_at,
+            false,
+            0,
+        )
+    }
+
+    /// Creates a new Group with penalty configuration.
+    pub fn new_with_penalty(
+        id: u64,
+        creator: Address,
+        contribution_amount: i128,
+        cycle_duration: u64,
+        max_members: u32,
+        min_members: u32,
+        created_at: u64,
+        penalty_enabled: bool,
+        penalty_amount: i128,
+    ) -> Self {
         // Validate contribution amount
         assert!(
             contribution_amount > 0,

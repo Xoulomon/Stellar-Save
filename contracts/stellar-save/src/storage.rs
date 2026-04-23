@@ -88,6 +88,10 @@ pub enum MemberKey {
     /// Member total contributions: MEMBER_TOTAL_CONTRIB_{group_id}_{address}
     /// Tracks total amount contributed by member across all cycles.
     TotalContributions(u64, Address),
+
+    /// Member total penalties: MEMBER_PENALTY_{group_id}_{address}
+    /// Tracks cumulative penalty amount charged to a member for missed contributions.
+    PenaltyTotal(u64, Address),
 }
 
 /// Storage keys for contribution tracking.
@@ -220,6 +224,11 @@ impl StorageKeyBuilder {
     /// Creates a key for member total contributions.
     pub fn member_total_contributions(group_id: u64, address: Address) -> StorageKey {
         StorageKey::Member(MemberKey::TotalContributions(group_id, address))
+    }
+
+    /// Creates a key for member cumulative penalty total.
+    pub fn member_penalty_total(group_id: u64, address: Address) -> StorageKey {
+        StorageKey::Member(MemberKey::PenaltyTotal(group_id, address))
     }
 
     // Contribution key builders
