@@ -38,3 +38,4 @@ export { SettingsSection } from "./SettingsSection";
 export { DebounceDemo } from "./DebounceDemo";
 export { ContributionFlow } from "./ContributionFlow";
 export type { ContributionFlowProps } from "./ContributionFlow";
+export { WalletIntegration } from "./WalletIntegration";
