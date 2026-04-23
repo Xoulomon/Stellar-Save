@@ -303,24 +303,19 @@ impl StellarSaveContract {
 
         env.storage().persistent().set(&count_key, &new_count);
 
+        // 6. Gas opt: update incremental group balance counter (avoids O(n) loop in get_group_balance)
+        let balance_key = StorageKeyBuilder::group_balance(group_id);
+        let current_balance: i128 = env.storage().persistent().get(&balance_key).unwrap_or(0);
+        let new_balance = current_balance
+            .checked_add(amount)
+            .ok_or(StellarSaveError::Overflow)?;
+        env.storage().persistent().set(&balance_key, &new_balance);
+
         Ok(())
     }
 
     fn generate_next_group_id(env: &Env) -> Result<u64, StellarSaveError> {
-        let key = StorageKeyBuilder::next_group_id();
-
-        // Counter storage: default to 0 if not yet initialized
-        let current_id: u64 = env.storage().persistent().get(&key).unwrap_or(0);
-
-        // Atomic increment & Overflow protection
-        let next_id = current_id
-            .checked_add(1)
-            .ok_or(StellarSaveError::Overflow)?; // Ensure StellarSaveError has Overflow variant
-
-        // Update counter
-        env.storage().persistent().set(&key, &next_id);
-
-        Ok(next_id)
+        Self::increment_group_id(env)
     }
     /// Returns the number of members in a specific group.
     ///
@@ -537,38 +532,42 @@ impl StellarSaveContract {
 
     /// Checks if a member has already received their payout in a group.
     ///
+    /// Gas opt: O(1) direct lookup using the member's payout_position as the cycle
+    /// key, instead of the previous O(n) loop over all cycles.
+    /// Each member's payout_position == the cycle they receive payout in, so we
+    /// can check exactly one storage slot.
+    ///
     /// # Arguments
     /// * `group_id` - The unique identifier of the group.
     /// * `member_address` - The address of the member to check.
     ///
     /// # Returns
     /// Returns true if the member has received their payout, false otherwise.
-    /// Returns an error if the group doesn't exist.
-    ///
-    /// # Logic
-    /// Checks all cycles in the group to see if the member was a payout recipient.
-    /// In a ROSCA, each member receives exactly one payout during the group's lifecycle.
     pub fn has_received_payout(
         env: Env,
         group_id: u64,
         member_address: Address,
     ) -> Result<bool, StellarSaveError> {
-        // Verify the group exists and get its current cycle
-        let group_key = StorageKeyBuilder::group_data(group_id);
-        let group = env
-            .storage()
-            .persistent()
-            .get::<_, Group>(&group_key)
-            .ok_or(StellarSaveError::GroupNotFound)?;
-
-        // Check each cycle from 0 to current_cycle to see if member received payout
-        for cycle in 0..=group.current_cycle {
-            let recipient_key = StorageKeyBuilder::payout_recipient(group_id, cycle);
-
-            if let Some(recipient) = env.storage().persistent().get::<_, Address>(&recipient_key) {
-                if recipient == member_address {
-                    return Ok(true);
+        // Gas opt: load member profile to get payout_position (O(1) lookup)
+        let profile_key = StorageKeyBuilder::member_payout_eligibility(group_id, member_address.clone());
+        let payout_position: u32 = match env.storage().persistent().get::<_, u32>(&profile_key) {
+            Some(pos) => pos,
+            None => {
+                // Verify group exists before returning NotMember
+                let group_key = StorageKeyBuilder::group_data(group_id);
+                if !env.storage().persistent().has(&group_key) {
+                    return Err(StellarSaveError::GroupNotFound);
                 }
+                return Ok(false);
+            }
+        };
+
+        // Check the single cycle slot where this member would have received payout
+        // Gas opt: 1 SLOAD instead of current_cycle+1 SLOADs
+        let recipient_key = StorageKeyBuilder::payout_recipient(group_id, payout_position);
+        if let Some(recipient) = env.storage().persistent().get::<_, Address>(&recipient_key) {
+            if recipient == member_address {
+                return Ok(true);
             }
         }
 
@@ -644,6 +643,10 @@ impl StellarSaveContract {
 
     /// Validates that a recipient is eligible for payout in the current cycle.
     ///
+    /// Gas opt: single SLOAD for payout_position, then one SLOAD to check if
+    /// that position's payout slot is already filled. Avoids calling
+    /// has_received_payout + get_payout_position as separate storage reads.
+    ///
     /// # Arguments
     /// * `env` - Soroban environment
     /// * `group_id` - ID of the group
@@ -665,20 +668,27 @@ impl StellarSaveContract {
             .get::<_, Group>(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
+        // Verify member exists
         let member_key = StorageKeyBuilder::member_profile(group_id, recipient.clone());
         if !env.storage().persistent().has(&member_key) {
             return Ok(false);
         }
 
-        let has_received = Self::has_received_payout(env.clone(), group_id, recipient.clone())?;
+        // Gas opt: read payout_position once and use it for both checks
+        let pos_key = StorageKeyBuilder::member_payout_eligibility(group_id, recipient.clone());
+        let payout_position: u32 = match env.storage().persistent().get::<_, u32>(&pos_key) {
+            Some(p) => p,
+            None => return Ok(false),
+        };
 
-        if has_received {
+        // Must be this member's turn
+        if payout_position != group.current_cycle {
             return Ok(false);
         }
 
-        let payout_position = Self::get_payout_position(env.clone(), group_id, recipient.clone())?;
-
-        if payout_position != group.current_cycle {
+        // Check they haven't already received payout (O(1) — single slot check)
+        let recipient_key = StorageKeyBuilder::payout_recipient(group_id, payout_position);
+        if env.storage().persistent().has(&recipient_key) {
             return Ok(false);
         }
 
@@ -686,6 +696,10 @@ impl StellarSaveContract {
     }
 
     /// Calculates the total amount paid out by a group across all cycles.
+    ///
+    /// Gas opt: O(1) read from the incremental `GroupTotalPaidOut` counter
+    /// instead of the previous O(n) loop over all payout records.
+    /// The counter is updated atomically in `record_payout` / `transfer_payout`.
     ///
     /// # Arguments
     /// * `env` - Soroban environment
@@ -695,36 +709,24 @@ impl StellarSaveContract {
     /// * `Ok(i128)` - Total amount paid out
     /// * `Err(StellarSaveError::GroupNotFound)` - If group doesn't exist
     pub fn get_total_paid_out(env: Env, group_id: u64) -> Result<i128, StellarSaveError> {
+        // Verify group exists
         let group_key = StorageKeyBuilder::group_data(group_id);
-        let group = env
-            .storage()
-            .persistent()
-            .get::<_, Group>(&group_key)
-            .ok_or(StellarSaveError::GroupNotFound)?;
-
-        let mut total: i128 = 0;
-
-        for cycle in 0..group.current_cycle {
-            let payout_key = StorageKeyBuilder::payout_record(group_id, cycle);
-
-            if let Some(payout_record) = env
-                .storage()
-                .persistent()
-                .get::<_, PayoutRecord>(&payout_key)
-            {
-                total = total
-                    .checked_add(payout_record.amount)
-                    .ok_or(StellarSaveError::Overflow)?;
-            }
+        if !env.storage().persistent().has(&group_key) {
+            return Err(StellarSaveError::GroupNotFound);
         }
 
+        // Gas opt: O(1) counter read instead of O(n) loop over payout records
+        let paid_out_key = StorageKeyBuilder::group_total_paid_out(group_id);
+        let total: i128 = env.storage().persistent().get(&paid_out_key).unwrap_or(0);
         Ok(total)
     }
 
     /// Gets the current balance held for a specific group.
     ///
-    /// Calculates the balance by summing all contributions across all cycles
-    /// and subtracting all payouts that have been made.
+    /// Gas opt: O(1) reads from incremental counters (`GroupBalance` and
+    /// `GroupTotalPaidOut`) instead of the previous O(2n) double-loop that
+    /// summed all contribution totals and all payout records.
+    /// Both counters are updated atomically on every contribution / payout.
     ///
     /// # Arguments
     /// * `env` - Soroban environment
@@ -735,41 +737,19 @@ impl StellarSaveContract {
     /// * `Err(StellarSaveError::GroupNotFound)` - If group doesn't exist
     /// * `Err(StellarSaveError::Overflow)` - If calculation overflows
     pub fn get_group_balance(env: Env, group_id: u64) -> Result<i128, StellarSaveError> {
+        // Verify group exists
         let group_key = StorageKeyBuilder::group_data(group_id);
-        let group = env
-            .storage()
-            .persistent()
-            .get::<_, Group>(&group_key)
-            .ok_or(StellarSaveError::GroupNotFound)?;
-
-        let mut total_contributions: i128 = 0;
-        let mut total_payouts: i128 = 0;
-
-        // Sum all contributions across all cycles
-        for cycle in 0..=group.current_cycle {
-            let total_key = StorageKeyBuilder::contribution_cycle_total(group_id, cycle);
-            if let Some(cycle_total) = env.storage().persistent().get::<_, i128>(&total_key) {
-                total_contributions = total_contributions
-                    .checked_add(cycle_total)
-                    .ok_or(StellarSaveError::Overflow)?;
-            }
+        if !env.storage().persistent().has(&group_key) {
+            return Err(StellarSaveError::GroupNotFound);
         }
 
-        // Sum all payouts
-        for cycle in 0..group.current_cycle {
-            let payout_key = StorageKeyBuilder::payout_record(group_id, cycle);
-            if let Some(payout_record) = env
-                .storage()
-                .persistent()
-                .get::<_, PayoutRecord>(&payout_key)
-            {
-                total_payouts = total_payouts
-                    .checked_add(payout_record.amount)
-                    .ok_or(StellarSaveError::Overflow)?;
-            }
-        }
+        // Gas opt: 2 SLOADs instead of O(2n) loop over contributions + payouts
+        let balance_key = StorageKeyBuilder::group_balance(group_id);
+        let total_contributions: i128 = env.storage().persistent().get(&balance_key).unwrap_or(0);
 
-        // Calculate balance
+        let paid_out_key = StorageKeyBuilder::group_total_paid_out(group_id);
+        let total_payouts: i128 = env.storage().persistent().get(&paid_out_key).unwrap_or(0);
+
         let balance = total_contributions
             .checked_sub(total_payouts)
             .ok_or(StellarSaveError::Overflow)?;
@@ -1102,6 +1082,10 @@ pub fn is_member(
 
     /// Gets ordered list of upcoming payout recipients.
     ///
+    /// Gas opt: O(n) single pass — each member's payout_position is read once
+    /// and inserted at the correct index. Replaces the previous O(n²) selection
+    /// sort that re-read storage on every comparison.
+    ///
     /// # Arguments
     /// * `env` - Soroban environment
     /// * `group_id` - ID of the group
@@ -1111,7 +1095,7 @@ pub fn is_member(
     /// * `Err(StellarSaveError)` - If group doesn't exist
     pub fn get_payout_queue(env: Env, group_id: u64) -> Result<Vec<Address>, StellarSaveError> {
         let group_key = StorageKeyBuilder::group_data(group_id);
-        let _group = env
+        let group = env
             .storage()
             .persistent()
             .get::<_, Group>(&group_key)
@@ -1124,40 +1108,38 @@ pub fn is_member(
             .get(&members_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        let mut queue_entries = Vec::new(&env);
+        // Gas opt: build a fixed-size slot array indexed by payout_position.
+        // Positions are 0..max_members so we can place each member directly
+        // without any sorting pass — O(n) vs the previous O(n²) bubble sort.
+        let max = group.max_members as usize;
+        let mut slots: soroban_sdk::Vec<Option<Address>> = soroban_sdk::Vec::new(&env);
+        for _ in 0..max {
+            slots.push_back(None);
+        }
 
         for member in members.iter() {
-            let has_received = Self::has_received_payout(env.clone(), group_id, member.clone())?;
-
-            if !has_received {
-                let position = Self::get_payout_position(env.clone(), group_id, member.clone())?;
-
-                queue_entries.push_back((member, position));
-            }
-        }
-
-        let mut sorted_queue = Vec::new(&env);
-        let len = queue_entries.len();
-
-        for i in 0..len {
-            let mut min_idx = i;
-            for j in (i + 1)..len {
-                if queue_entries.get(j).unwrap().1 < queue_entries.get(min_idx).unwrap().1 {
-                    min_idx = j;
+            let pos_key = StorageKeyBuilder::member_payout_eligibility(group_id, member.clone());
+            if let Some(position) = env.storage().persistent().get::<_, u32>(&pos_key) {
+                // Skip members who have already received their payout
+                let recipient_key = StorageKeyBuilder::payout_recipient(group_id, position);
+                if env.storage().persistent().has(&recipient_key) {
+                    continue;
+                }
+                if (position as usize) < max {
+                    slots.set(position, Some(member));
                 }
             }
-            if min_idx != i {
-                let temp = queue_entries.get(i).unwrap();
-                queue_entries.set(i, queue_entries.get(min_idx).unwrap());
-                queue_entries.set(min_idx, temp);
+        }
+
+        // Collect non-None slots in order — already sorted by position
+        let mut queue = Vec::new(&env);
+        for i in 0..slots.len() {
+            if let Some(Some(addr)) = slots.get(i) {
+                queue.push_back(addr);
             }
         }
 
-        for entry in queue_entries.iter() {
-            sorted_queue.push_back(entry.0);
-        }
-
-        Ok(sorted_queue)
+        Ok(queue)
     }
 
     /// Assigns or reassigns payout positions to members.
@@ -1353,7 +1335,7 @@ pub fn is_member(
         // - Handle transfer failures gracefully
 
         // 8. Record the payout
-        let timestamp = env.ledger().timestamp();
+        let timestamp = env.ledger().timestamp(); // cache — single ledger call
         let payout_record = PayoutRecord::new(
             recipient.clone(),
             group_id,
@@ -1373,10 +1355,16 @@ pub fn is_member(
         let status_key = StorageKeyBuilder::payout_status(group_id, cycle_number);
         env.storage().persistent().set(&status_key, &true);
 
-        // 10. Clear reentrancy protection flag
-        env.storage().persistent().set(&reentrancy_key, &0);
+        // 10. Gas opt: update incremental paid-out counter (avoids O(n) loop in get_total_paid_out)
+        let paid_out_key = StorageKeyBuilder::group_total_paid_out(group_id);
+        let current_paid: i128 = env.storage().persistent().get(&paid_out_key).unwrap_or(0);
+        let new_paid = current_paid.checked_add(amount).ok_or(StellarSaveError::Overflow)?;
+        env.storage().persistent().set(&paid_out_key, &new_paid);
 
-        // 11. Emit payout event
+        // 11. Clear reentrancy protection flag
+        env.storage().persistent().set(&reentrancy_key, &0u64);
+
+        // 12. Emit payout event
         EventEmitter::emit_payout_executed(&env, group_id, recipient, amount, cycle_number, timestamp);
 
         Ok(())
