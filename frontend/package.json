@@ -12,7 +12,7 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage --run",
     "test:coverage:watch": "vitest --coverage",
-    "lhci": "lhci autorun --config .lighthouserc.json --upload.target temporary-public-storage"
+    "lhci": "lhci autorun --config .lighthouserc.json --upload.target temporary-public-storage",
     "test:e2e": "vitest run src/test/integration",
     "test:e2e:testnet": "tsx src/test/e2e-testnet/testnet.e2e.ts"
   },
@@ -23,6 +23,7 @@
     "@stellar/freighter-api": "^6.0.1",
     "@stellar/stellar-sdk": "^14.5.0",
     "react": "^19.2.0",
+    "react-big-calendar": "^1.19.4",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.2"
   },
@@ -37,6 +38,7 @@
     "@testing-library/user-event": "^14.5.2",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
+    "@types/react-big-calendar": "^1.16.3",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/coverage-v8": "^2.1.9",
@@ -49,12 +51,12 @@
     "globals": "^16.5.0",
     "jest-axe": "^10.0.0",
     "jsdom": "^25.0.1",
+    "lighthouse-ci": "^1.13.1",
     "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
     "vite": "^7.3.1",
     "vitest": "^2.1.8",
-    "lighthouse-ci": "^0.12.0"
     "vitest-axe": "^0.1.0"
   }
 }
