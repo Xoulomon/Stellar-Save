@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 const ROSCAExplanation: React.FC = () => {
   return (
@@ -7,7 +7,8 @@ const ROSCAExplanation: React.FC = () => {
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold mb-4">What is a ROSCA?</h2>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Rotating Savings and Credit Association — a time-tested savings method used by millions worldwide.
+            Rotating Savings and Credit Association — a time-tested savings
+            method used by millions worldwide.
           </p>
         </div>
 
@@ -18,7 +19,8 @@ const ROSCAExplanation: React.FC = () => {
             </div>
             <h3 className="text-2xl font-semibold mb-3">Group Savings</h3>
             <p className="text-gray-400">
-              A group of people agree to contribute a fixed amount regularly into a common pot.
+              A group of people agree to contribute a fixed amount regularly
+              into a common pot.
             </p>
           </div>
 
@@ -28,7 +30,8 @@ const ROSCAExplanation: React.FC = () => {
             </div>
             <h3 className="text-2xl font-semibold mb-3">Rotating Payouts</h3>
             <p className="text-gray-400">
-              Each cycle, one member receives the entire pot. The rotation continues until everyone has received once.
+              Each cycle, one member receives the entire pot. The rotation
+              continues until everyone has received once.
             </p>
           </div>
 
@@ -38,7 +41,8 @@ const ROSCAExplanation: React.FC = () => {
             </div>
             <h3 className="text-2xl font-semibold mb-3">Trust-Based</h3>
             <p className="text-gray-400">
-              Traditionally based on trust. Stellar-Save makes it trustless using blockchain technology.
+              Traditionally based on trust. Stellar-Save makes it trustless
+              using blockchain technology.
             </p>
           </div>
         </div>

@@ -1,7 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-
+// https://vite.dev/config/
 export default defineConfig({
+<<<<<<< HEAD
   plugins: [react()],
   test: {
     globals: true,
@@ -39,4 +40,7 @@ export default defineConfig({
       all: true,
     },
   },
+=======
+    plugins: [react()],
+>>>>>>> 0b228e5fd2b3d16ad81a5c4e0abc701ac9274bf2
 });

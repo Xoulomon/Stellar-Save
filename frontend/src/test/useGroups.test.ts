@@ -1,6 +1,6 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useGroups } from '../hooks/useGroups';
+import { useGroups, clearGroupsCache } from '../hooks/useGroups';
 import * as groupApi from '../utils/groupApi';
 import type { PublicGroup } from '../types/group';
 
@@ -37,6 +37,7 @@ const mockGroups: PublicGroup[] = [
 ];
 
 beforeEach(() => {
+  clearGroupsCache();
   vi.spyOn(groupApi, 'fetchGroups').mockResolvedValue(mockGroups);
 });
 

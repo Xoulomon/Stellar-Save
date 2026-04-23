@@ -6,7 +6,10 @@
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: border-color 0.25s, opacity 0.25s, background-color 0.25s;
+  transition:
+    border-color 0.25s,
+    opacity 0.25s,
+    background-color 0.25s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -90,5 +93,7 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }

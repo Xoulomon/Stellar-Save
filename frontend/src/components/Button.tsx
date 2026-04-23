@@ -1,47 +1,43 @@
-import './Button.css';
+import "./Button.css";
 
-type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
-type ButtonSize = 'sm' | 'md' | 'lg';
+type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
+type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
   icon?: React.ReactNode;
-  iconPosition?: 'left' | 'right';
+  iconPosition?: "left" | "right";
 }
 
 export function Button({
-  variant = 'primary',
-  size = 'md',
+  variant = "primary",
+  size = "md",
   loading = false,
   disabled = false,
   icon,
-  iconPosition = 'left',
+  iconPosition = "left",
   children,
-  className = '',
+  className = "",
   ...rest
 }: ButtonProps) {
   const classes = [
-    'btn',
+    "btn",
     `btn-${variant}`,
     `btn-${size}`,
-    loading ? 'btn-loading' : '',
+    loading ? "btn-loading" : "",
     className,
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   return (
-    <button
-      className={classes}
-      disabled={disabled || loading}
-      {...rest}
-    >
+    <button className={classes} disabled={disabled || loading} {...rest}>
       {loading && <span className="btn-spinner" aria-hidden="true" />}
-      {!loading && icon && iconPosition === 'left' && icon}
+      {!loading && icon && iconPosition === "left" && icon}
       {children}
-      {!loading && icon && iconPosition === 'right' && icon}
+      {!loading && icon && iconPosition === "right" && icon}
     </button>
   );
 }

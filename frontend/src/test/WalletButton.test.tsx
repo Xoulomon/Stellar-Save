@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { WalletButton } from '../components/WalletButton';
 import * as useWalletHook from '../hooks/useWallet';
 
@@ -14,7 +15,7 @@ describe('WalletButton', () => {
       disconnect: vi.fn(),
     } as any);
 
-    render(<WalletButton />);
+    render(<MemoryRouter><WalletButton /></MemoryRouter>);
     expect(screen.getByText('Connect Wallet')).toBeInTheDocument();
   });
 
@@ -26,7 +27,7 @@ describe('WalletButton', () => {
       disconnect: vi.fn(),
     } as any);
 
-    render(<WalletButton />);
+    render(<MemoryRouter><WalletButton /></MemoryRouter>);
     expect(screen.getByText(/GABCDE...7890/)).toBeInTheDocument();
   });
 });

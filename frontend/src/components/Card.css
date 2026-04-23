@@ -3,7 +3,10 @@
   border: 1px solid #333;
   background-color: #1a1a1a;
   overflow: hidden;
-  transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+  transition:
+    border-color 0.25s,
+    transform 0.25s,
+    box-shadow 0.25s;
   width: 100%;
   box-sizing: border-box;
 }

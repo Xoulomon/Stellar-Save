@@ -1,6 +1,6 @@
-import './Card.css';
+import "./Card.css";
 
-type CardVariant = 'default' | 'outlined' | 'elevated';
+type CardVariant = "default" | "outlined" | "elevated";
 
 interface CardProps {
   variant?: CardVariant;
@@ -13,22 +13,22 @@ interface CardProps {
 }
 
 export function Card({
-  variant = 'default',
+  variant = "default",
   hoverable = false,
   header,
   footer,
   children,
-  className = '',
+  className = "",
   onClick,
 }: CardProps) {
   const classes = [
-    'card',
+    "card",
     `card-${variant}`,
-    hoverable ? 'card-hoverable' : '',
+    hoverable ? "card-hoverable" : "",
     className,
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   return (
     <div className={classes} onClick={onClick}>

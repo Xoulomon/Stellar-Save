@@ -76,8 +76,23 @@ export function calculateCycleProgress(params: {
   now?: Date;
 }): CycleProgressResult {
   const now = params.now ?? new Date();
-  const cycleStartTime = params.cycleStart?.getTime() ?? 0;
-  const elapsedMs = Math.max(0, now.getTime() - cycleStartTime);
+  
+  // Unstarted cycle — return all zeros
+  if (!params.cycleStart) {
+    if (params.cycleDurationSeconds <= 0) throw new Error('Cycle duration must be greater than 0');
+    if (params.totalMembers <= 0) throw new Error('Total members must be greater than 0');
+    return {
+      timeProgress: 0,
+      contributionProgress: Math.min(100, Math.max(0, (params.contributedCount / params.totalMembers) * 100)),
+      overallProgress: 0,
+      isComplete: false,
+      isOverdue: false,
+      timeRemaining: null,
+      elapsedSeconds: 0,
+    };
+  }
+
+  const elapsedMs = Math.max(0, now.getTime() - params.cycleStart.getTime());
   const elapsedSeconds = Math.floor(elapsedMs / 1000);
   
   // Validate inputs

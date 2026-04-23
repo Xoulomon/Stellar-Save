@@ -18,6 +18,10 @@ interface CacheEntry {
 const CACHE_TTL_MS = 60_000; // 1 minute
 const cache = new Map<string, CacheEntry>();
 
+export function clearGroupsCache(): void {
+  cache.clear();
+}
+
 function getCacheKey(filters: GroupFilters): string {
   return JSON.stringify(filters);
 }
@@ -232,4 +236,9 @@ export function useGroups(options: UseGroupsOptions = {}): UseGroupsReturn {
     setPageSize,
     refresh,
   };
+}
+
+// Utilities (for tests/client cache control)
+export function clearGroupsCache(): void {
+  cache.clear();
 }

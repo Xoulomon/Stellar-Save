@@ -10,21 +10,21 @@ describe('Badge', () => {
 
   it('renders with different variants', () => {
     const { rerender } = render(<Badge variant="success">Success</Badge>);
-    expect(screen.getByText('Success')).toHaveClass('badge-success');
+    expect(screen.getByText('Success').closest('.badge')).toHaveClass('badge-success');
 
     rerender(<Badge variant="danger">Danger</Badge>);
-    expect(screen.getByText('Danger')).toHaveClass('badge-danger');
+    expect(screen.getByText('Danger').closest('.badge')).toHaveClass('badge-danger');
 
     rerender(<Badge variant="warning">Warning</Badge>);
-    expect(screen.getByText('Warning')).toHaveClass('badge-warning');
+    expect(screen.getByText('Warning').closest('.badge')).toHaveClass('badge-warning');
   });
 
   it('renders with different sizes', () => {
     const { rerender } = render(<Badge size="sm">Small</Badge>);
-    expect(screen.getByText('Small')).toHaveClass('badge-sm');
+    expect(screen.getByText('Small').closest('.badge')).toHaveClass('badge-sm');
 
     rerender(<Badge size="lg">Large</Badge>);
-    expect(screen.getByText('Large')).toHaveClass('badge-lg');
+    expect(screen.getByText('Large').closest('.badge')).toHaveClass('badge-lg');
   });
 
   it('renders with icon on left', () => {
@@ -41,6 +41,6 @@ describe('Badge', () => {
 
   it('applies custom className', () => {
     render(<Badge className="custom-class">Custom</Badge>);
-    expect(screen.getByText('Custom')).toHaveClass('custom-class');
+    expect(screen.getByText('Custom').closest('.badge')).toHaveClass('custom-class');
   });
 });

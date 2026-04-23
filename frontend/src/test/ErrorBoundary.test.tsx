@@ -55,19 +55,26 @@ describe('ErrorBoundary', () => {
   });
 
   it('resets error state when Retry is clicked', () => {
+    // Use a wrapper that controls whether Bomb throws
+    let throwNext = true;
+    function ControlledBomb() {
+      if (throwNext) throw new Error('Test explosion');
+      return <div>Safe content</div>;
+    }
+
     const { rerender } = render(
       <ErrorBoundary>
-        <Bomb shouldThrow={true} />
+        <ControlledBomb />
       </ErrorBoundary>,
     );
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
 
+    throwNext = false;
     fireEvent.click(screen.getByRole('button', { name: /retry/i }));
 
-    // After retry, boundary resets — re-render with non-throwing child
     rerender(
       <ErrorBoundary>
-        <Bomb shouldThrow={false} />
+        <ControlledBomb />
       </ErrorBoundary>,
     );
     expect(screen.getByText('Safe content')).toBeInTheDocument();

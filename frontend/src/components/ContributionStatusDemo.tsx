@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
-import { ContributionStatus } from './ContributionStatus'
-import { ContributionCycle } from '../types/contribution'
+import React, { useState } from "react";
+import { ContributionStatus } from "./ContributionStatus";
+import { ContributionCycle } from "../types/contribution";
 
 const MOCK_CYCLE: ContributionCycle = {
   cycleId: 3,
@@ -10,46 +10,46 @@ const MOCK_CYCLE: ContributionCycle = {
   targetAmount: 500,
   members: [
     {
-      address: 'GBVXR3LNBKWJQZB5XQXM3Y3VXQZB5XQXM3Y3VX',
-      name: 'Alice',
+      address: "GBVXR3LNBKWJQZB5XQXM3Y3VXQZB5XQXM3Y3VX",
+      name: "Alice",
       contributed: true,
       contributedAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
       amount: 100,
     },
     {
-      address: 'GCVXR3LNBKWJQZB5XQXM3Y3VXQZB5XQXM3Y3VX',
-      name: 'Bob',
+      address: "GCVXR3LNBKWJQZB5XQXM3Y3VXQZB5XQXM3Y3VX",
+      name: "Bob",
       contributed: true,
       contributedAt: new Date(Date.now() - 1000 * 60 * 60 * 5),
       amount: 100,
     },
     {
-      address: 'GDVXR3LNBKWJQZB5XQXM3Y3VXQZB5XQXM3Y3VX',
-      name: 'Carol',
+      address: "GDVXR3LNBKWJQZB5XQXM3Y3VXQZB5XQXM3Y3VX",
+      name: "Carol",
       contributed: true,
       contributedAt: new Date(Date.now() - 1000 * 60 * 30),
       amount: 100,
     },
     {
-      address: 'GEVXR3LNBKWJQZB5XQXM3Y3VXQZB5XQXM3Y3VX',
-      name: 'Dave',
+      address: "GEVXR3LNBKWJQZB5XQXM3Y3VXQZB5XQXM3Y3VX",
+      name: "Dave",
       contributed: false,
     },
     {
-      address: 'GFVXR3LNBKWJQZB5XQXM3Y3VXQZB5XQXM3Y3VX',
-      name: 'Eve',
+      address: "GFVXR3LNBKWJQZB5XQXM3Y3VXQZB5XQXM3Y3VX",
+      name: "Eve",
       contributed: false,
     },
   ],
-}
+};
 
 export default function ContributionStatusDemo() {
-  const [cycle, setCycle] = useState(MOCK_CYCLE)
+  const [cycle, setCycle] = useState(MOCK_CYCLE);
 
   const handleRefresh = () => {
     // Simulate real-time update
-    setCycle((prev) => ({ ...prev }))
-  }
+    setCycle((prev) => ({ ...prev }));
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
@@ -62,5 +62,5 @@ export default function ContributionStatusDemo() {
         />
       </div>
     </div>
-  )
+  );
 }

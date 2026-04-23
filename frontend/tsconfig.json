@@ -14,6 +14,7 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+<<<<<<< HEAD
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
@@ -23,4 +24,10 @@
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
   ]
+=======
+    "noFallthroughCasesInSwitch": true,
+    "types": ["vite/client", "vitest/globals"]
+  },
+  "include": ["src"]
+>>>>>>> 0b228e5fd2b3d16ad81a5c4e0abc701ac9274bf2
 }

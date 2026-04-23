@@ -19,6 +19,9 @@ export function WalletButton() {
           variant="secondary"
           onClick={() => setShowMenu(!showMenu)}
           className="wallet-button-connected"
+          aria-label={`Wallet connected: ${activeAddress}`}
+          aria-expanded={showMenu}
+          aria-haspopup="menu"
         >
           <span className="wallet-address">
             {activeAddress.slice(0, 6)}...{activeAddress.slice(-4)}

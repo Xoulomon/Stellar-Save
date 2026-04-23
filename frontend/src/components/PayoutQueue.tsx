@@ -1,5 +1,5 @@
-import React, { useRef } from "react"
-import { PayoutQueueData, PayoutEntry, PayoutStatus } from "../types/contribution"
+import { useRef } from "react"
+import type { PayoutQueueData, PayoutEntry, PayoutStatus } from "../types/contribution"
 
 function formatAddress(address: string): string {
   return `${address.slice(0, 6)}...${address.slice(-4)}`
@@ -69,7 +69,7 @@ function PayoutRow({
             : `Est. ${formatDate(entry.estimatedDate)}`}
         </p>
         {entry.txHash && (
-          
+          <a
             href={`https://stellar.expert/explorer/testnet/tx/${entry.txHash}`}
             target="_blank"
             rel="noopener noreferrer"

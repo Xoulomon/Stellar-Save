@@ -1,4 +1,6 @@
 export { Avatar } from "./Avatar";
+export { BalanceDisplay } from "./BalanceDisplay";
+export type { BalanceDisplayProps } from "./BalanceDisplay";
 export { Badge } from "./Badge";
 export { GroupBadge } from "./GroupBadge";
 export type { GroupBadgeStatus } from "./GroupBadge";
@@ -33,3 +35,4 @@ export { CycleProgress } from "./CycleProgress";
 export type { CycleProgressProps } from "./CycleProgress";
 export { UserStats } from "./UserStats";
 export { SettingsSection } from "./SettingsSection";
+export { DebounceDemo } from "./DebounceDemo";

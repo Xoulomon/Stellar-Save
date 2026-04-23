@@ -1,10 +1,151 @@
 //! Security Module
 //!
-//! Provides signature verification utilities for the Stellar-Save contract.
-//! Intended for future use when explicit signature verification is needed
-//! beyond Soroban built-in require_auth() mechanism.
+//! Provides authorization and signature verification utilities for the Stellar-Save contract.
+//! Implements role-based access control for sensitive operations.
 
-use soroban_sdk::{Bytes, BytesN, Env};
+use soroban_sdk::{Bytes, BytesN, Env, Address};
+use crate::error::{StellarSaveError, ContractResult};
+
+/// Role-based access control for contract operations.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Role {
+    /// Group creator - can pause, resume, and cancel groups
+    GroupCreator,
+
+    /// Group member - can contribute and receive payouts
+    GroupMember,
+
+    /// Contract admin - can pause/unpause the entire contract
+    ContractAdmin,
+
+    /// Public - no special permissions
+    Public,
+}
+
+/// Authorization context for contract operations.
+pub struct AuthContext {
+    pub caller: Address,
+    pub role: Role,
+}
+
+impl AuthContext {
+    /// Creates a new authorization context.
+    pub fn new(caller: Address, role: Role) -> Self {
+        AuthContext { caller, role }
+    }
+
+    /// Checks if the caller has the required role.
+    pub fn has_role(&self, required_role: Role) -> bool {
+        self.role == required_role
+    }
+
+    /// Checks if the caller is the group creator.
+    pub fn is_group_creator(&self) -> bool {
+        self.role == Role::GroupCreator
+    }
+
+    /// Checks if the caller is a group member.
+    pub fn is_group_member(&self) -> bool {
+        self.role == Role::GroupMember
+    }
+
+    /// Checks if the caller is a contract admin.
+    pub fn is_contract_admin(&self) -> bool {
+        self.role == Role::ContractAdmin
+    }
+}
+
+/// Authorization checks for sensitive operations.
+pub struct AuthorizationChecker;
+
+impl AuthorizationChecker {
+    /// Requires that the caller is the group creator.
+    ///
+    /// Used for operations like pause, resume, and cancel.
+    pub fn require_group_creator(caller: &Address, creator: &Address) -> ContractResult<()> {
+        if caller == creator {
+            Ok(())
+        } else {
+            Err(StellarSaveError::Unauthorized)
+        }
+    }
+
+    /// Requires that the caller is a group member.
+    ///
+    /// Used for operations like contribute and receive payout.
+    pub fn require_group_member(is_member: bool) -> ContractResult<()> {
+        if is_member {
+            Ok(())
+        } else {
+            Err(StellarSaveError::NotMember)
+        }
+    }
+
+    /// Requires that the caller is not already a member.
+    ///
+    /// Used for join operations.
+    pub fn require_not_member(is_member: bool) -> ContractResult<()> {
+        if !is_member {
+            Ok(())
+        } else {
+            Err(StellarSaveError::AlreadyMember)
+        }
+    }
+
+    /// Requires that the caller is the contract admin.
+    ///
+    /// Used for contract-level operations like pause/unpause.
+    pub fn require_contract_admin(caller: &Address, admin: &Address) -> ContractResult<()> {
+        if caller == admin {
+            Ok(())
+        } else {
+            Err(StellarSaveError::Unauthorized)
+        }
+    }
+
+    /// Requires that the caller is the specified address.
+    ///
+    /// Generic authorization check for any address-based permission.
+    pub fn require_address(caller: &Address, required: &Address) -> ContractResult<()> {
+        if caller == required {
+            Ok(())
+        } else {
+            Err(StellarSaveError::Unauthorized)
+        }
+    }
+
+    /// Checks if an operation is authorized based on the caller and context.
+    pub fn check_authorization(
+        caller: &Address,
+        operation: &str,
+        context: &AuthContext,
+    ) -> ContractResult<()> {
+        match operation {
+            "pause_group" | "resume_group" | "cancel_group" => {
+                if context.is_group_creator() {
+                    Ok(())
+                } else {
+                    Err(StellarSaveError::Unauthorized)
+                }
+            }
+            "contribute" | "claim_payout" => {
+                if context.is_group_member() {
+                    Ok(())
+                } else {
+                    Err(StellarSaveError::NotMember)
+                }
+            }
+            "pause_contract" | "unpause_contract" => {
+                if context.is_contract_admin() {
+                    Ok(())
+                } else {
+                    Err(StellarSaveError::Unauthorized)
+                }
+            }
+            _ => Ok(()), // Unknown operations are allowed by default
+        }
+    }
+}
 
 /// Verifies that an Ed25519 signature is valid for the given public key and payload.
 ///
@@ -62,7 +203,7 @@ pub fn verify_signature_bytes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::{Bytes, BytesN, Env};
+    use soroban_sdk::{Bytes, BytesN, Env, testutils::Address as _};
 
     fn bytes_of(env: &Env, len: u32, val: u8) -> Bytes {
         let mut b = Bytes::new(env);
@@ -70,6 +211,193 @@ mod tests {
             b.push_back(val);
         }
         b
+    }
+
+    // --- Authorization tests ---
+
+    #[test]
+    fn test_auth_context_creation() {
+        let env = Env::default();
+        let caller = Address::generate(&env);
+        let ctx = AuthContext::new(caller.clone(), Role::GroupCreator);
+
+        assert_eq!(ctx.caller, caller);
+        assert_eq!(ctx.role, Role::GroupCreator);
+    }
+
+    #[test]
+    fn test_auth_context_has_role() {
+        let env = Env::default();
+        let caller = Address::generate(&env);
+        let ctx = AuthContext::new(caller, Role::GroupMember);
+
+        assert!(ctx.has_role(Role::GroupMember));
+        assert!(!ctx.has_role(Role::GroupCreator));
+    }
+
+    #[test]
+    fn test_auth_context_role_checks() {
+        let env = Env::default();
+        let caller = Address::generate(&env);
+
+        let creator_ctx = AuthContext::new(caller.clone(), Role::GroupCreator);
+        assert!(creator_ctx.is_group_creator());
+        assert!(!creator_ctx.is_group_member());
+
+        let member_ctx = AuthContext::new(caller.clone(), Role::GroupMember);
+        assert!(member_ctx.is_group_member());
+        assert!(!member_ctx.is_group_creator());
+
+        let admin_ctx = AuthContext::new(caller, Role::ContractAdmin);
+        assert!(admin_ctx.is_contract_admin());
+    }
+
+    #[test]
+    fn test_require_group_creator_success() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+
+        let result = AuthorizationChecker::require_group_creator(&creator, &creator);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_require_group_creator_failure() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        let other = Address::generate(&env);
+
+        let result = AuthorizationChecker::require_group_creator(&other, &creator);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::Unauthorized);
+    }
+
+    #[test]
+    fn test_require_group_member_success() {
+        let result = AuthorizationChecker::require_group_member(true);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_require_group_member_failure() {
+        let result = AuthorizationChecker::require_group_member(false);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::NotMember);
+    }
+
+    #[test]
+    fn test_require_not_member_success() {
+        let result = AuthorizationChecker::require_not_member(false);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_require_not_member_failure() {
+        let result = AuthorizationChecker::require_not_member(true);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::AlreadyMember);
+    }
+
+    #[test]
+    fn test_require_contract_admin_success() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+
+        let result = AuthorizationChecker::require_contract_admin(&admin, &admin);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_require_contract_admin_failure() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let other = Address::generate(&env);
+
+        let result = AuthorizationChecker::require_contract_admin(&other, &admin);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::Unauthorized);
+    }
+
+    #[test]
+    fn test_require_address_success() {
+        let env = Env::default();
+        let addr = Address::generate(&env);
+
+        let result = AuthorizationChecker::require_address(&addr, &addr);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_require_address_failure() {
+        let env = Env::default();
+        let addr1 = Address::generate(&env);
+        let addr2 = Address::generate(&env);
+
+        let result = AuthorizationChecker::require_address(&addr1, &addr2);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::Unauthorized);
+    }
+
+    #[test]
+    fn test_check_authorization_pause_group() {
+        let env = Env::default();
+        let caller = Address::generate(&env);
+        let ctx = AuthContext::new(caller.clone(), Role::GroupCreator);
+
+        let result = AuthorizationChecker::check_authorization(&caller, "pause_group", &ctx);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_check_authorization_pause_group_unauthorized() {
+        let env = Env::default();
+        let caller = Address::generate(&env);
+        let ctx = AuthContext::new(caller.clone(), Role::GroupMember);
+
+        let result = AuthorizationChecker::check_authorization(&caller, "pause_group", &ctx);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::Unauthorized);
+    }
+
+    #[test]
+    fn test_check_authorization_contribute() {
+        let env = Env::default();
+        let caller = Address::generate(&env);
+        let ctx = AuthContext::new(caller.clone(), Role::GroupMember);
+
+        let result = AuthorizationChecker::check_authorization(&caller, "contribute", &ctx);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_check_authorization_contribute_unauthorized() {
+        let env = Env::default();
+        let caller = Address::generate(&env);
+        let ctx = AuthContext::new(caller.clone(), Role::Public);
+
+        let result = AuthorizationChecker::check_authorization(&caller, "contribute", &ctx);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::NotMember);
+    }
+
+    #[test]
+    fn test_check_authorization_pause_contract() {
+        let env = Env::default();
+        let caller = Address::generate(&env);
+        let ctx = AuthContext::new(caller.clone(), Role::ContractAdmin);
+
+        let result = AuthorizationChecker::check_authorization(&caller, "pause_contract", &ctx);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_check_authorization_unknown_operation() {
+        let env = Env::default();
+        let caller = Address::generate(&env);
+        let ctx = AuthContext::new(caller.clone(), Role::Public);
+
+        let result = AuthorizationChecker::check_authorization(&caller, "unknown_op", &ctx);
+        assert!(result.is_ok()); // Unknown operations are allowed by default
     }
 
     // --- verify_signature_bytes: input validation (no real crypto needed) ---

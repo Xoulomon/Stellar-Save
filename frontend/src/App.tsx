@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
@@ -33,3 +34,13 @@ function App() {
 }
 
 export default App
+=======
+import HomePage from "./pages/HomePage";
+import "./App.css";
+
+function App() {
+  return <HomePage />;
+}
+
+export default App;
+>>>>>>> 0b228e5fd2b3d16ad81a5c4e0abc701ac9274bf2

@@ -1,243 +1,321 @@
 # Stellar-Save User Guide
 
-Welcome to Stellar-Save — a decentralized rotational savings platform built on the Stellar blockchain. This guide walks you through everything you need to start saving with your community.
+Welcome to Stellar-Save, a decentralized rotational savings and credit association (ROSCA) built on the Stellar blockchain. This guide will walk you through everything you need to know to participate in community-based savings groups.
 
----
+## What is Stellar-Save?
 
-## Table of Contents
+Stellar-Save brings traditional ROSCA systems to blockchain technology. Members contribute a fixed amount regularly, and each member receives the total pool on a rotating basis. This creates:
 
-- [Getting Started](#getting-started)
-- [How to Create a Group](#how-to-create-a-group)
-- [How to Join a Group](#how-to-join-a-group)
-- [Contributing to a Cycle](#contributing-to-a-cycle)
-- [Payout Mechanics](#payout-mechanics)
-- [FAQ](#faq)
-
----
+- **Trustless savings**: No central coordinator needed
+- **Transparent transactions**: All activity is verifiable on-chain
+- **Global accessibility**: Anyone with a Stellar wallet can join
+- **Automated payouts**: Smart contracts handle distributions
 
 ## Getting Started
 
-### What is Stellar-Save?
+### Prerequisites
 
-Stellar-Save is a digital version of the traditional community savings system known as Ajo or Esusu in West Africa. A group of people pool a fixed amount of money each cycle, and one member receives the full pool. This rotates until every member has received a payout.
-
-### What You Need
-
-Before using Stellar-Save, make sure you have:
-
-1. **A Stellar wallet** — We recommend [Freighter](https://www.freighter.app/), a free browser extension wallet
-2. **XLM (Stellar Lumens)** — The native currency used for contributions. You can get XLM from any major exchange
-3. **A modern web browser** — Chrome, Firefox, or Brave
+1. **Stellar Wallet**: Install a compatible wallet like [Freighter](https://www.freighter.app/) or [Lobstr](https://lobstr.co/)
+2. **XLM Funds**: You'll need Stellar Lumens (XLM) for contributions and transaction fees
+3. **Internet Connection**: Access to the Stellar network
 
 ### Setting Up Your Wallet
 
-1. Install the [Freighter wallet extension](https://www.freighter.app/)
-2. Create a new wallet and securely save your recovery phrase — **never share this with anyone**
-3. Fund your wallet with enough XLM to cover your group's contribution amount plus a small amount for transaction fees (~0.1 XLM per transaction)
-4. Visit the Stellar-Save app and click **Connect Wallet**
-5. Approve the connection request in Freighter
+1. Install your preferred Stellar wallet
+2. Create or import a Stellar account
+3. Fund your account with XLM (available from exchanges or faucets)
+4. Connect your wallet to the Stellar-Save dApp
 
-### Choosing a Network
+### Network Selection
 
-- **Testnet** — Use this to practice with test XLM (no real money). Recommended for first-time users
-- **Mainnet** — Real XLM, real savings. Switch to this when you're ready
+Stellar-Save operates on:
+- **Testnet**: For testing and learning (recommended for beginners)
+- **Mainnet**: For real savings groups with actual value
 
----
+Start with testnet to familiarize yourself with the platform.
 
-## How to Create a Group
+## Creating a Group
 
-Creating a group makes you the group creator. You set the rules — everyone who joins agrees to them.
+As a group creator, you set the terms for your savings circle.
 
-### Step 1 — Open the Create Group Form
+### Step-by-Step Guide
 
-From the dashboard, click **Create Group**.
+1. **Access the dApp**: Navigate to the Stellar-Save interface
+2. **Connect Wallet**: Click "Connect Wallet" and approve the connection
+3. **Select "Create Group"**: Find this option in the main menu
+4. **Configure Group Settings**:
+   - **Contribution Amount**: How much each member contributes per cycle (in XLM)
+   - **Cycle Duration**: How often contributions are due (e.g., weekly, monthly)
+   - **Maximum Members**: Total number of participants (2-50 recommended)
+   - **Minimum Members**: Minimum required to start the group
+5. **Review Terms**: Double-check all settings
+6. **Create Group**: Sign the transaction with your wallet
+7. **Share Group ID**: Distribute the group identifier to potential members
 
-### Step 2 — Configure Your Group
+### Best Practices for Group Creation
 
-Fill in the following details:
+- **Realistic Amounts**: Set contribution amounts members can afford
+- **Familiar Cycles**: Choose durations that work for your community's schedule
+- **Trusted Members**: Start with people you know for your first group
+- **Clear Communication**: Discuss expectations with potential members beforehand
 
-| Field | Description | Example |
-|-------|-------------|---------|
-| Contribution Amount | Fixed XLM amount each member pays per cycle | 100 XLM |
-| Cycle Duration | How long each cycle lasts (in seconds) | 604800 (7 days) |
-| Max Members | Maximum number of members allowed | 5 |
+## Using Group Templates
 
-**Tips:**
-- Choose a contribution amount everyone in your group can comfortably afford
-- Shorter cycles (e.g. weekly) keep momentum; longer cycles (e.g. monthly) give members more time
-- The total payout per cycle = contribution amount × number of members
+Instead of configuring every setting manually, you can start from a predefined template. Templates set the cycle duration and maximum members for you — you only choose the contribution amount.
 
-### Step 3 — Confirm and Sign
+### Available Templates
 
-Click **Create Group**. Freighter will ask you to sign the transaction. Review the details and approve.
+| ID | Name             | Cycle     | Max Members | Total Duration |
+|----|------------------|-----------|-------------|----------------|
+| 1  | Weekly Saver     | 7 days    | 10          | ~10 weeks      |
+| 2  | Biweekly Saver   | 14 days   | 8           | ~16 weeks      |
+| 3  | Monthly Pool     | 30 days   | 12          | ~12 months     |
+| 4  | Quarterly Circle | 90 days   | 4           | ~12 months     |
+| 5  | Annual Pool      | 365 days  | 5           | ~5 years       |
 
-### Step 4 — Share Your Group
+### Creating a Group from a Template
 
-Once created, your group will have a unique **Group ID**. Share this ID with the people you want to invite. The group stays in `Pending` status until enough members join and you activate it.
+1. **Browse Templates**: Call `list_templates()` or select from the UI template picker
+2. **Pick a Template**: Choose the one that fits your community's rhythm
+3. **Set Contribution Amount**: Enter how much each member pays per cycle (in XLM)
+4. **Create**: Sign the transaction — the contract fills in cycle duration and member cap automatically
 
-### Managing Your Group
+### Choosing the Right Template
 
-As the creator, while the group is still `Pending` you can:
-- Update the contribution amount, cycle duration, or max members
-- Delete the group if plans change
+- **Weekly Saver** — tight-knit groups wanting frequent payouts and short commitment windows
+- **Biweekly Saver** — a middle ground with slightly larger pools and a manageable cadence
+- **Monthly Pool** — the classic Ajo/Esusu pattern; 12 members each receive one month's pool per year
+- **Quarterly Circle** — larger contribution amounts where members prefer less frequent cycles
+- **Annual Pool** — long-term capital accumulation over multiple years
 
-Once the group is `Active`, settings are locked.
+> Need something custom? Use **Create Group** instead and specify any cycle duration and member count.
 
----
+For full API details see [docs/group-templates.md](group-templates.md).
 
-## How to Join a Group
+## Joining a Group
 
-### Step 1 — Get the Group ID
+Participate in existing savings groups created by others.
 
-Ask the group creator to share the Group ID with you.
+### Finding Groups
 
-### Step 2 — Find the Group
+1. **Browse Groups**: Use the "Browse Groups" or "Join Group" section
+2. **Search by ID**: If you have a specific group ID, enter it directly
+3. **Filter Options**: Look for groups by:
+   - Contribution amount
+   - Cycle duration
+   - Current member count
+   - Group status
 
-From the dashboard, click **Join Group** and enter the Group ID. You'll see the group details — contribution amount, cycle duration, and current member count.
+### Joining Process
 
-### Step 3 — Review the Terms
+1. **Select Group**: Click on a group that interests you
+2. **Review Terms**: Carefully read the group rules and requirements
+3. **Check Compatibility**: Ensure you can meet the contribution schedule
+4. **Join Group**: Click "Join" and approve the wallet transaction
+5. **Confirm Position**: Note your payout position in the rotation
 
-Before joining, confirm you understand:
-- The exact contribution amount required each cycle
-- The cycle duration (how often you need to contribute)
-- The maximum number of members (determines how many cycles before you receive your payout)
+### What to Consider Before Joining
 
-### Step 4 — Join and Sign
+- **Trust Level**: How well do you know the group creator and other members?
+- **Financial Commitment**: Can you reliably make contributions on schedule?
+- **Group Size**: Larger groups mean longer waits for your payout but potentially more stability
+- **Duration**: Consider how long you're willing to wait for your turn
 
-Click **Join Group**. Freighter will ask you to sign the transaction. Approve it to become a member.
+## Contribution Process
 
-### Your Payout Position
+Regular contributions are the heart of the ROSCA system.
 
-When you join, you are assigned a **payout position** — this determines which cycle you receive the full pool. Positions are assigned in join order (first come, first served) by default.
+### How Contributions Work
 
-> **Example:** In a 5-member group, if you join third, you receive the payout in cycle 3.
+- **Fixed Amount**: Everyone contributes the same amount each cycle
+- **Set Schedule**: Contributions are due at regular intervals
+- **All or Nothing**: The full pool is distributed only when all members contribute
+- **Automatic Tracking**: The smart contract records all contributions
 
-### Rate Limiting
+### Making a Contribution
 
-To prevent spam, there is a short waiting period (2 minutes) between join attempts. If you see a "rate limit" error, wait a moment and try again.
+1. **Check Due Date**: Monitor your group's contribution deadline
+2. **Access Group**: Go to "My Groups" and select your active group
+3. **View Status**: See current cycle progress and who's contributed
+4. **Contribute**: Click "Contribute" and approve the XLM transfer
+5. **Confirm**: Wait for transaction confirmation on the blockchain
 
----
+### Contribution Deadlines
 
-## Contributing to a Cycle
+- **Cycle Start**: Timer begins when the group becomes active
+- **Extension Period**: Groups may have grace periods for late contributions
+- **Consequences**: Missing contributions may affect your standing or payout eligibility
 
-Every member must contribute the fixed amount each cycle for the payout to be triggered.
+### Tracking Your Contributions
 
-### When to Contribute
-
-Each cycle has a deadline. You can contribute any time after a cycle starts and before the deadline. Check the group dashboard to see:
-- The current cycle number
-- How many members have contributed so far
-- The time remaining in the cycle
-
-### How to Contribute
-
-1. Open the group from your dashboard
-2. Click **Contribute**
-3. Freighter will show the exact amount to be sent — confirm and sign
-4. Your contribution is recorded on-chain immediately
-
-### Rules
-
-- You can only contribute **once per cycle**
-- The amount must be **exactly** the group's configured contribution amount — no more, no less
-- You must be an active member of the group
-
-### Missed Contributions
-
-If you miss a cycle deadline, your contribution for that cycle is recorded as missed. Repeated missed contributions may affect your standing in the group. Always contribute before the deadline.
-
----
+- **Contribution History**: View all your past payments
+- **Cycle Progress**: See how many members have contributed this cycle
+- **Total Saved**: Track your cumulative contributions
+- **Payout Eligibility**: Monitor when you'll receive funds
 
 ## Payout Mechanics
 
+Understanding how payouts work ensures you know what to expect.
+
 ### How Payouts Work
 
-When **all members** have contributed in a cycle, the payout is automatically triggered. The full pool is sent to the member whose payout position matches the current cycle number.
+1. **Pool Formation**: All members' contributions create the cycle pool
+2. **Rotation Order**: Members receive payouts in the order they joined
+3. **Automatic Distribution**: Smart contract triggers payout when all contribute
+4. **Full Amount**: Each member receives the total pool amount
 
-```
-Payout Amount = Contribution Amount × Number of Members
-```
+### Payout Process
 
-> **Example:** 5 members each contributing 100 XLM → 500 XLM payout per cycle
+1. **Cycle Completion**: All members must contribute for the cycle to complete
+2. **Automatic Trigger**: Smart contract detects completion and initiates payout
+3. **Recipient Selection**: Next member in rotation receives the funds
+4. **Instant Transfer**: Funds are transferred directly to the recipient's wallet
 
-### Payout Order
+### Payout Schedule
 
-Payout positions are assigned when members join:
-- Position 0 → receives payout in Cycle 0 (first cycle)
-- Position 1 → receives payout in Cycle 1
-- Position 2 → receives payout in Cycle 2
-- ...and so on
+- **Position-Based**: Your payout position is determined by join order
+- **Sequential**: Payouts happen one at a time as cycles complete
+- **Predictable**: You know exactly when your turn will come
 
 ### Receiving Your Payout
 
-You don't need to do anything to receive your payout — it is sent automatically to your wallet address as soon as all members contribute in your cycle. You'll see the funds arrive in your Freighter wallet.
-
-### Group Completion
-
-Once every member has received their payout, the group moves to `Completed` status. No further contributions or payouts occur. You're free to create or join a new group.
-
-### Checking Payout Status
-
-From the group dashboard you can see:
-- Which cycle is currently active
-- Who has received payouts in past cycles
-- When your payout cycle is expected (based on cycle duration)
-
----
+1. **Monitor Progress**: Watch as cycles complete
+2. **Automatic Transfer**: Funds appear in your wallet automatically
+3. **Transaction Record**: All payouts are recorded on the blockchain
+4. **Continue Contributing**: Keep contributing even after receiving your payout
 
 ## FAQ
 
-**Q: Is my money safe?**
-All funds are held by the smart contract on the Stellar blockchain — not by any individual or company. The contract code is open source and auditable by anyone.
+### General Questions
 
----
+**Q: Is my money safe?**
+A: Your contributions are held by smart contracts on the Stellar blockchain. While smart contracts reduce counterparty risk, always research and understand the platform before participating.
 
 **Q: What happens if someone doesn't contribute?**
-The payout for that cycle cannot be triggered until all members contribute. If a member misses the deadline, the group may be stalled. Future versions will include penalty mechanisms to handle this automatically.
+A: If a member misses their contribution, the cycle cannot complete and no one receives a payout. Groups should establish clear expectations and consequences.
 
----
+**Q: Can I leave a group early?**
+A: This depends on the group's rules. Some groups may allow withdrawal, but you typically forfeit future payouts.
 
-**Q: Can I leave a group after joining?**
-You can leave a group while it is still in `Pending` status (before it activates). Once a group is `Active`, leaving is not supported in v1.0 to protect other members who are depending on your contributions.
+**Q: Are there fees?**
+A: Transaction fees are minimal (Stellar network fees), but the platform itself is free to use.
 
----
+### Technical Questions
 
-**Q: What are transaction fees?**
-Each action (join, contribute, etc.) requires a small Stellar network fee, typically less than 0.001 XLM. Make sure your wallet has a small buffer above your contribution amount to cover fees.
+**Q: What wallet should I use?**
+A: We recommend Freighter for its good Soroban support. Other compatible wallets include Lobstr and StellarX.
 
----
+**Q: How do I get test XLM?**
+A: Use the Stellar testnet faucet at https://laboratory.stellar.org/ to get free test XLM.
 
-**Q: Can I be in multiple groups at the same time?**
-Yes. You can join as many groups as you like, as long as you can meet the contribution requirements for each.
+**Q: What if I lose my wallet?**
+A: Your funds are tied to your Stellar account. Recover your wallet using your backup seed phrase.
 
----
+**Q: Can I use this on mobile?**
+A: Yes, through compatible mobile wallets that support Stellar and Soroban contracts.
 
-**Q: What is the minimum/maximum contribution amount?**
-This is set by the contract administrator. Check the app for current limits. In general, contributions must be a positive XLM amount within the configured range.
+### Group Management
 
----
+**Q: How do I change group settings?**
+A: Only the group creator can modify settings, and only before the group becomes active.
 
-**Q: What network should I use?**
-Use **Testnet** to practice with no real money. Switch to **Mainnet** when you're ready to save with real XLM.
+**Q: What if my group doesn't fill up?**
+A: Groups can start with minimum members, but work best with full participation.
 
----
+**Q: Can I be in multiple groups?**
+A: Yes, but ensure you can meet all contribution schedules.
 
-**Q: I approved a transaction but nothing happened. What do I do?**
-Wait a few seconds for the Stellar network to confirm the transaction. If it still doesn't appear, check your transaction history in Freighter. If the transaction failed, you'll see an error — try again or contact support via [GitHub Issues](https://github.com/Xoulomon/Stellar-Save/issues).
+**Q: How do I know if a group is legitimate?**
+A: Check the contract address, read reviews, and verify with other participants.
 
----
+### Troubleshooting
 
-**Q: How do I know when it's my turn to receive the payout?**
-Your payout position is shown on your group dashboard. You can calculate your expected payout cycle: if you're position 3 in a group with 7-day cycles, you'll receive your payout approximately 3 weeks after the group starts.
+**Q: My transaction is stuck**
+A: Check Stellar Explorer for transaction status. Network congestion can cause delays.
 
----
+**Q: I can't connect my wallet**
+A: Ensure your wallet is unlocked and supports the current network (testnet/mainnet).
 
-## Need More Help?
+**Q: Contribution failed**
+A: Verify you have sufficient XLM for both the contribution and transaction fees.
 
-- Browse [GitHub Issues](https://github.com/Xoulomon/Stellar-Save/issues) for known problems and solutions
-- Start a [GitHub Discussion](https://github.com/Xoulomon/Stellar-Save/discussions) for questions
-- Contact the team via Telegram: [@Xoulomon]
+**Q: Wrong contribution amount**
+A: Contributions must match the group's exact amount. Check the group settings.
 
----
+## Penalty System
 
-**Built with ❤️ for financial inclusion on Stellar**
+To encourage timely contributions and protect active members, Stellar-Save supports an optional penalty mechanism for missed contributions.
+
+### How Penalties Work
+
+When a group creator enables penalties, any member who fails to contribute during a cycle is automatically charged a fixed penalty fee at payout time. The penalty amount is added directly to the cycle pool, so the payout recipient receives the full pool **plus** any penalties collected from non-contributors.
+
+**Key points:**
+- Penalties are **optional** — the group creator decides whether to enable them at group creation.
+- The penalty amount is fixed in stroops (1 XLM = 10,000,000 stroops) and set when the group is created.
+- Penalties are applied automatically by the smart contract when `execute_payout` is called; no manual action is required.
+- A `PenaltyApplied` event is emitted on-chain for each penalty, providing a transparent audit trail.
+
+### Penalty Configuration
+
+When creating a group, the creator can set:
+
+| Field | Description |
+|---|---|
+| `penalty_enabled` | `true` to activate the penalty system, `false` to disable it |
+| `penalty_amount` | Fixed penalty in stroops charged per missed cycle (must be > 0 when enabled) |
+
+Example: a group with `contribution_amount = 10,000,000` (1 XLM) and `penalty_amount = 500,000` (0.05 XLM) means a member who misses a cycle pays an extra 0.05 XLM that goes to the current cycle's recipient.
+
+### Penalty Flow
+
+1. All members contribute (or the cycle deadline passes).
+2. `execute_payout` is called.
+3. The contract identifies members who did not contribute this cycle.
+4. For each non-contributor, `penalty_amount` is:
+   - Added to their cumulative penalty total (queryable via `get_member_penalties`).
+   - Added to the cycle pool total so the payout recipient receives it.
+5. A `PenaltyApplied` event is emitted for each penalised member.
+6. The payout is distributed to the eligible recipient (base pool + penalties).
+
+### Querying Penalties
+
+Use the `get_member_penalties(group_id, member)` contract function to check how much a member has been penalised in total across all cycles of a group.
+
+```
+get_member_penalties(group_id: u64, member: Address) -> i128
+```
+
+Returns the cumulative penalty amount in stroops. Returns `0` if no penalties have been applied.
+
+### FAQ
+
+**Q: Can penalties be changed after the group is created?**
+A: No. Penalty settings are fixed at group creation to ensure all members agree to the same terms.
+
+**Q: What if I miss a contribution — will I be removed from the group?**
+A: No. You remain a member and will still receive your payout when your turn comes. The penalty is a financial charge, not an exclusion.
+
+**Q: Does the penalty affect the payout I receive when it's my turn?**
+A: No. Your payout is based on the pool at the time of your cycle. If other members missed contributions in your cycle, their penalties are added to your payout.
+
+**Q: Can I see who was penalised?**
+A: Yes. `PenaltyApplied` events are emitted on-chain and include the group ID, member address, penalty amount, and cycle number.
+
+## Getting Help
+
+- **Documentation**: Check this guide and the technical docs
+- **Community**: Join Stellar communities for support
+- **Support**: Contact the development team through GitHub issues
+- **Stellar Resources**: Visit developers.stellar.org for technical help
+
+## Best Practices
+
+1. **Start Small**: Begin with testnet and small amounts
+2. **Build Trust**: Start groups with people you know
+3. **Stay Committed**: Reliable contributions build group trust
+4. **Communicate**: Keep open lines with group members
+5. **Learn Continuously**: Stay updated with platform changes
+
+Remember, Stellar-Save is about building financial discipline and community trust. Participate responsibly and help others do the same!</content>
+<parameter name="filePath">c:\Users\USER\Desktop\solo\Stellar-Save\docs\user-guide.md
