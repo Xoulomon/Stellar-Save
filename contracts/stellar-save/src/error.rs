@@ -22,6 +22,10 @@ pub enum StellarSaveError {
     /// Error Code: 1003
     InvalidState = 1003,
 
+    /// Invalid metadata provided (name, description, or image_url).
+    /// Error Code: 1004
+    InvalidMetadata = 1004,
+
     // Member-related errors (2000-2999)
     /// The address is already a member of this group.
     /// Error Code: 2001
@@ -86,6 +90,10 @@ pub enum StellarSaveError {
     /// Added for ID Generation: The counter has reached its maximum limit.
     /// Error Code: 9003
     Overflow = 9003,
+
+    /// The cycle deadline has passed; contributions are no longer accepted.
+    /// Error Code: 3005
+    CycleDeadlineExpired = 3005,
 }
 
 impl StellarSaveError {
@@ -104,6 +112,9 @@ impl StellarSaveError {
             }
             StellarSaveError::InvalidState => {
                 "The group is not in a valid state for this operation. Check group status."
+            }
+            StellarSaveError::InvalidMetadata => {
+                "Invalid metadata provided. Name must be 3-50 characters, description 0-500 characters."
             }
 
             // Member-related errors
@@ -160,6 +171,12 @@ impl StellarSaveError {
             StellarSaveError::Overflow => {
                 "The ID counter has reached its maximum limit. No more IDs can be generated."
             }
+            StellarSaveError::CycleDeadlineExpired => {
+                "The cycle deadline has passed. Contributions are no longer accepted for this cycle."
+            }
+            StellarSaveError::DisputeActive => {
+                "A dispute is active on this group. Contributions and payouts are blocked."
+            }
         }
     }
 
@@ -178,7 +195,7 @@ impl StellarSaveError {
             2000..=2999 => ErrorCategory::Member,
             3000..=3999 => ErrorCategory::Contribution,
             4000..=4999 => ErrorCategory::Payout,
-            5000..=5999 => ErrorCategory::Token,
+            5000..=5999 => ErrorCategory::Template,
             9000..=9999 => ErrorCategory::System,
             _ => ErrorCategory::Unknown,
         }
@@ -201,8 +218,8 @@ pub enum ErrorCategory {
     /// Errors related to payout operations.
     Payout,
 
-    /// Errors related to token validation and transfer operations.
-    Token,
+    /// Errors related to group template operations.
+    Template,
 
     /// System-level errors and internal failures.
     System,
