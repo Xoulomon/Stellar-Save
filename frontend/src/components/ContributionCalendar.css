@@ -1,0 +1,52 @@
+.contribution-calendar {
+  width: 100%;
+}
+
+/* Override rbc defaults to match app theme */
+.contribution-calendar .rbc-calendar {
+  font-family: inherit;
+}
+
+.contribution-calendar .rbc-toolbar button {
+  color: var(--color-text, #1a1a1a);
+  border-color: var(--color-border, #ccc);
+  border-radius: 6px;
+}
+
+.contribution-calendar .rbc-toolbar button.rbc-active,
+.contribution-calendar .rbc-toolbar button:hover {
+  background: var(--color-primary, #6366f1);
+  color: #fff;
+  border-color: var(--color-primary, #6366f1);
+}
+
+.contribution-calendar .rbc-today {
+  background: #eef2ff;
+}
+
+.contribution-calendar .rbc-event {
+  border-radius: 4px;
+  font-size: 0.8rem;
+  padding: 1px 4px;
+}
+
+/* Event status colours */
+.cal-event--completed {
+  background-color: #16a34a !important;
+  border-color: #15803d !important;
+}
+
+.cal-event--pending {
+  background-color: #d97706 !important;
+  border-color: #b45309 !important;
+}
+
+.cal-event--failed {
+  background-color: #dc2626 !important;
+  border-color: #b91c1c !important;
+}
+
+.cal-event--deadline {
+  background-color: #6366f1 !important;
+  border-color: #4f46e5 !important;
+}

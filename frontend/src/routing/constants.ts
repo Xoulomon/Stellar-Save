@@ -13,6 +13,7 @@ export const ROUTES = {
   ERROR: "/500",
   GROUP_CREATE: "/groups/create",
   GROUPS_BROWSE: "/groups/browse",
+  GROUP_CALENDAR: "/groups/:groupId/calendar",
 } as const;
 
 /**
@@ -25,4 +26,5 @@ export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];
  */
 export const buildRoute = {
   groupDetail: (groupId: string) => `/groups/${groupId}`,
+  groupCalendar: (groupId: string) => `/groups/${groupId}/calendar`,
 } as const;
