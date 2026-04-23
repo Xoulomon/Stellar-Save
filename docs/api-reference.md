@@ -59,6 +59,7 @@ pub struct Group {
     pub created_at: u64,              // Creation timestamp
     pub started: bool,                // Whether group has started cycles
     pub started_at: u64,              // Timestamp when group started
+    pub paused: bool,                 // Whether group is paused by creator (blocks contributions/payouts)
 }
 ```
 
@@ -458,6 +459,82 @@ pub fn activate_group(
 contract.activate_group(env, group_id, creator_address, 3);
 ```
 
+---
+
+### pause_group
+
+Pauses a group, blocking all contributions and payouts. Only the group creator can pause.
+
+**Signature:**
+```rust
+pub fn pause_group(
+    env: Env,
+    group_id: u64,
+    caller: Address,
+) -> Result<(), StellarSaveError>
+```
+
+**Parameters:**
+- `env`: Soroban environment
+- `group_id`: ID of the group to pause
+- `caller`: Address of the caller (must be group creator, requires authorization)
+
+**Returns:**
+- `Ok(())`: Group paused successfully
+- `Err(StellarSaveError)`: Error if validation fails
+
+**Errors:**
+- `GroupNotFound`: Group doesn't exist
+- `Unauthorized`: Caller is not the group creator
+- `InvalidState`: Group is not in Active status
+
+**Side Effects:**
+- Sets `group.paused = true` and `group.status = GroupStatus::Paused`
+- Emits `GroupPaused` event
+
+**Example:**
+```rust
+contract.pause_group(env, group_id, creator_address)?;
+```
+
+---
+
+### unpause_group
+
+Unpauses a paused group, re-enabling contributions and payouts. Only the group creator can unpause.
+
+**Signature:**
+```rust
+pub fn unpause_group(
+    env: Env,
+    group_id: u64,
+    caller: Address,
+) -> Result<(), StellarSaveError>
+```
+
+**Parameters:**
+- `env`: Soroban environment
+- `group_id`: ID of the group to unpause
+- `caller`: Address of the caller (must be group creator, requires authorization)
+
+**Returns:**
+- `Ok(())`: Group unpaused successfully
+- `Err(StellarSaveError)`: Error if validation fails
+
+**Errors:**
+- `GroupNotFound`: Group doesn't exist
+- `Unauthorized`: Caller is not the group creator
+- `InvalidState`: Group is not in Paused status
+
+**Side Effects:**
+- Sets `group.paused = false` and `group.status = GroupStatus::Active`
+- Emits `GroupUnpaused` event
+
+**Example:**
+```rust
+contract.unpause_group(env, group_id, creator_address)?;
+```
+
 ## Member Operations
 
 ### join_group
@@ -673,6 +750,50 @@ if received {
 ---
 
 ## Contribution Tracking
+
+### contribute
+
+Records a contribution from a member for the current cycle. Blocked when the group is paused.
+
+**Signature:**
+```rust
+pub fn contribute(
+    env: Env,
+    group_id: u64,
+    member: Address,
+    amount: i128,
+) -> Result<(), StellarSaveError>
+```
+
+**Parameters:**
+- `env`: Soroban environment
+- `group_id`: ID of the group to contribute to
+- `member`: Address of the contributing member (requires authorization)
+- `amount`: Contribution amount in stroops (must match group's required amount)
+
+**Returns:**
+- `Ok(())`: Contribution recorded successfully
+- `Err(StellarSaveError)`: Error if validation fails
+
+**Errors:**
+- `GroupNotFound`: Group doesn't exist
+- `InvalidState`: Group is paused (`group.paused == true`) or not in Active status
+- `NotMember`: Caller is not a member of the group
+- `AlreadyContributed`: Member already contributed this cycle
+- `InvalidAmount`: Amount doesn't match group's required contribution
+
+**Side Effects:**
+- Stores contribution record in persistent storage
+- Updates cycle total and contributor count
+- Emits `ContributionMade` event
+
+**Example:**
+```rust
+// Contribute 10 XLM to group 1
+contract.contribute(env, 1, member_address, 100_000_000)?;
+```
+
+---
 
 ### validate_contribution_amount
 
@@ -1195,7 +1316,7 @@ stateDiagram-v2
     Active --> Completed: All cycles finished
     Active --> Cancelled: cancel_group()
     
-    Paused --> Active: resume_group()
+    Paused --> Active: unpause_group() / resume_group()
     Paused --> Cancelled: cancel_group()
     
     Completed --> [*]

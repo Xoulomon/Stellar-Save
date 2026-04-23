@@ -703,6 +703,10 @@ pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
 
     // Step 2: Validate group status is Active
     // Only Active groups can process payouts
+    if group.paused {
+        return Err(StellarSaveError::InvalidState);
+    }
+
     if group.status != GroupStatus::Active {
         return Err(StellarSaveError::InvalidState);
     }

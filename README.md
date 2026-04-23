@@ -135,7 +135,7 @@ is_member(group_id, address) -> bool
 
 ### Contributions
 ```rust
-contribute(group_id)
+contribute(group_id, member, amount)
 get_contribution_status(group_id, cycle_number) -> Vec<(Address, bool)>
 ```
 
@@ -143,6 +143,12 @@ get_contribution_status(group_id, cycle_number) -> Vec<(Address, bool)>
 ```rust
 execute_payout(group_id)
 is_complete(group_id) -> bool
+```
+
+### Emergency Pause
+```rust
+pause_group(group_id, caller)    // Creator-only: halt contributions & payouts
+unpause_group(group_id, caller)  // Creator-only: resume contributions & payouts
 ```
 
 ## 🧪 Testing
@@ -153,6 +159,7 @@ Comprehensive test suite covering:
 - ✅ Contribution flow and tracking
 - ✅ Payout rotation and distribution
 - ✅ Group completion lifecycle
+- ✅ Emergency pause/unpause scenarios
 - ✅ Error handling and edge cases
 
 Run tests:

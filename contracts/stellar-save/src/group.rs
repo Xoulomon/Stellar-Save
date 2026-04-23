@@ -191,6 +191,11 @@ pub struct Group {
     /// Used for tracking when the first cycle started.
     /// Only set when started is true.
     pub started_at: u64,
+
+    /// Whether the group is currently paused by the creator.
+    /// When true, contributions and payouts are blocked.
+    /// Can be toggled by the group creator via pause_group/unpause_group.
+    pub paused: bool,
 }
 
 impl Group {
@@ -256,6 +261,7 @@ impl Group {
             created_at,
             started: false,
             started_at: 0,
+            paused: false,
         }
     }
 
