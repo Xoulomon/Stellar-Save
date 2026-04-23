@@ -69,6 +69,15 @@ pub enum StellarSaveError {
     /// Error Code: 4003
     InvalidRecipient = 4003,
 
+    // Token-related errors (5000-5999)
+    /// The token address failed SEP-41 validation or is not on the allowlist.
+    /// Error Code: 5001
+    InvalidToken = 5001,
+
+    /// The SEP-41 transfer_from or transfer call failed during contribution or payout.
+    /// Error Code: 5002
+    TokenTransferFailed = 5002,
+
     // System-related errors (9000-9999)
     /// An internal contract error occurred.
     /// Error Code: 9001
@@ -144,6 +153,14 @@ impl StellarSaveError {
                 "The specified recipient is not eligible for payout in this cycle."
             }
 
+            // Token-related errors
+            StellarSaveError::InvalidToken => {
+                "The token address failed SEP-41 validation or is not on the allowed token list."
+            }
+            StellarSaveError::TokenTransferFailed => {
+                "The token transfer failed. Ensure the member has granted sufficient allowance to the contract."
+            }
+
             // System-related errors
             StellarSaveError::InternalError => {
                 "An internal contract error occurred. Please try again or contact support."
@@ -178,7 +195,7 @@ impl StellarSaveError {
             2000..=2999 => ErrorCategory::Member,
             3000..=3999 => ErrorCategory::Contribution,
             4000..=4999 => ErrorCategory::Payout,
-            5000..=5999 => ErrorCategory::Template,
+            5000..=5999 => ErrorCategory::Token,
             9000..=9999 => ErrorCategory::System,
             _ => ErrorCategory::Unknown,
         }
@@ -201,8 +218,8 @@ pub enum ErrorCategory {
     /// Errors related to payout operations.
     Payout,
 
-    /// Errors related to group template operations.
-    Template,
+    /// Errors related to token validation and transfer operations.
+    Token,
 
     /// System-level errors and internal failures.
     System,
@@ -271,6 +288,14 @@ impl ErrorRecoveryStrategy {
             }
             StellarSaveError::InvalidRecipient => {
                 "The recipient is not eligible for payout in this cycle. Check the payout queue order."
+            }
+
+            // Token errors - recovery strategies
+            StellarSaveError::InvalidToken => {
+                "Ensure the token address refers to a valid SEP-41 token contract. If an allowlist is configured, verify the token has been added by the admin."
+            }
+            StellarSaveError::TokenTransferFailed => {
+                "Ensure you have called `approve` on the token contract granting the StellarSave contract an allowance of at least the contribution amount before calling `contribute`."
             }
 
             // System errors - recovery strategies
@@ -506,3 +531,53 @@ mod tests {
             &StellarSaveError::Overflow
         ));
     }
+
+    // Task 1.1: Unit tests for new token error variants (Requirements 4.4, 4.5)
+
+    #[test]
+    fn test_token_error_codes() {
+        // Verify InvalidToken = 5001 (Requirement 4.4)
+        assert_eq!(StellarSaveError::InvalidToken.code(), 5001);
+        // Verify TokenTransferFailed = 5002 (Requirement 4.5)
+        assert_eq!(StellarSaveError::TokenTransferFailed.code(), 5002);
+    }
+
+    #[test]
+    fn test_token_error_categories() {
+        // Both token errors should map to ErrorCategory::Token
+        assert_eq!(
+            StellarSaveError::InvalidToken.category(),
+            ErrorCategory::Token
+        );
+        assert_eq!(
+            StellarSaveError::TokenTransferFailed.category(),
+            ErrorCategory::Token
+        );
+    }
+
+    #[test]
+    fn test_token_error_messages() {
+        // Both variants must have non-empty messages
+        let msg_invalid = StellarSaveError::InvalidToken.message();
+        assert!(!msg_invalid.is_empty());
+        assert!(msg_invalid.len() > 10);
+
+        let msg_transfer = StellarSaveError::TokenTransferFailed.message();
+        assert!(!msg_transfer.is_empty());
+        assert!(msg_transfer.len() > 10);
+    }
+
+    #[test]
+    fn test_token_error_recovery_guidance() {
+        // Both variants must have non-empty recovery guidance
+        let guidance_invalid =
+            ErrorRecoveryStrategy::recovery_guidance(&StellarSaveError::InvalidToken);
+        assert!(!guidance_invalid.is_empty());
+        assert!(guidance_invalid.len() > 20);
+
+        let guidance_transfer =
+            ErrorRecoveryStrategy::recovery_guidance(&StellarSaveError::TokenTransferFailed);
+        assert!(!guidance_transfer.is_empty());
+        assert!(guidance_transfer.len() > 20);
+    }
+}

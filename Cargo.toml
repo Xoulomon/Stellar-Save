@@ -2,13 +2,13 @@
 resolver = "2"
 members = [
     "contracts/stellar-save",
-    "client",
 ]
 exclude = [
     "contracts/guess-the-number",
     "contracts/fungible-allowlist",
     "contracts/nft-enumerable",
     "contracts/stellar-save",
+    "client",
 ]
 
 [workspace.package]

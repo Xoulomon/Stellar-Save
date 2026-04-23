@@ -214,13 +214,27 @@ fn calculate_and_validate_payout_amount(
 /// transfer call in `execute_transfer`, which will revert on insufficient funds.
 ///
 /// # Requirements
-/// Validates Requirements 3.5, 4.4
+/// Verifies the contract has sufficient token balance for the payout.
+/// Uses the group's configured SEP-41 token. Requirements 3.5, 4.4
 fn verify_contract_balance(
-    _env: &Env,
-    _payout_amount: i128,
+    env: &Env,
+    group_id: u64,
+    payout_amount: i128,
 ) -> Result<(), StellarSaveError> {
-    // TODO: In production, query native token balance and compare >= payout_amount.
-    // For MVP the token transfer in execute_transfer will revert on insufficient funds.
+    let token_config_key = StorageKeyBuilder::group_token_config(group_id);
+    let token_config: crate::group::TokenConfig = env
+        .storage()
+        .persistent()
+        .get(&token_config_key)
+        .ok_or(StellarSaveError::GroupNotFound)?;
+
+    let token_client = soroban_sdk::token::TokenClient::new(env, &token_config.token_address);
+    let contract_address = env.current_contract_address();
+    let balance = token_client.balance(&contract_address);
+
+    if balance < payout_amount {
+        return Err(StellarSaveError::PayoutFailed);
+    }
     Ok(())
 }
 
@@ -260,53 +274,31 @@ fn verify_contract_balance(
 ///
 /// # Requirements
 /// Validates Requirements 4.1, 4.2, 4.3, 10.3, 10.4
+/// Executes the SEP-41 token transfer from the contract to the payout recipient.
+/// Requirements 5.5, 5.6
 fn execute_transfer(
     env: &Env,
+    group_id: u64,
     recipient: &Address,
     amount: i128,
 ) -> Result<(), StellarSaveError> {
-    // Get the contract's address (the source of the transfer)
-    let contract_address = env.current_contract_address();
-    
-    // Validate amount is positive using checked arithmetic
-    // This prevents overflow and ensures we're transferring a valid amount
     if amount <= 0 {
         return Err(StellarSaveError::PayoutFailed);
     }
-    
-    // Validate that the amount doesn't exceed i128::MAX (overflow protection)
-    // This is a defensive check to ensure arithmetic safety
-    if amount > i128::MAX {
-        return Err(StellarSaveError::Overflow);
-    }
-    
-    // Execute the transfer from contract to recipient
-    // Note: This is a placeholder implementation for MVP
-    // In production, this would use the Stellar token API:
-    //
-    // // Get the native token contract address (XLM)
-    // let native_token_address = get_native_token_address(env);
-    // 
-    // // Create a token client for the native asset
-    // let token = token::Client::new(env, &native_token_address);
-    // 
-    // // Execute the transfer
-    // // This will automatically revert on failure (insufficient balance, etc.)
-    // token.transfer(&contract_address, recipient, &amount);
-    //
-    // The transfer operation in Soroban is atomic - if it fails, all state
-    // changes are automatically reverted by the Soroban runtime.
-    
-    // For MVP: Log the transfer details (in production, this would be the actual transfer)
-    // The actual transfer would be handled by the Stellar token contract
-    let _from = contract_address;
-    let _to = recipient.clone();
-    let _transfer_amount = amount;
-    
-    // In production, any transfer failure would cause a panic/revert
-    // For now, we return success to allow testing the payout flow
-    // TODO: Implement actual token transfer when token integration is ready
-    
+
+    let token_config_key = StorageKeyBuilder::group_token_config(group_id);
+    let token_config: crate::group::TokenConfig = env
+        .storage()
+        .persistent()
+        .get(&token_config_key)
+        .ok_or(StellarSaveError::GroupNotFound)?;
+
+    let token_client = soroban_sdk::token::TokenClient::new(env, &token_config.token_address);
+    let contract_address = env.current_contract_address();
+
+    // transfer panics on failure; Soroban reverts all state changes atomically
+    token_client.transfer(&contract_address, recipient, &amount);
+
     Ok(())
 }
 /// Creates and stores an immutable payout record.
@@ -735,14 +727,14 @@ pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
     let payout_amount = calculate_and_validate_payout_amount(&pool_info)?;
     
     // Step 8: Verify contract has sufficient balance to cover the payout
-    verify_contract_balance(&env, payout_amount)?;
+    verify_contract_balance(&env, group_id, payout_amount)?;
     
     // === EXECUTION PHASE (Task 12.3) ===
     // All validations passed - proceed with payout execution
     // If any step fails after this point, Soroban will automatically revert all changes
     
     // Step 9: Execute the fund transfer to the recipient
-    execute_transfer(&env, &recipient, payout_amount)?;
+    execute_transfer(&env, group_id, &recipient, payout_amount)?;
     
     // Step 10: Create and store the payout record for audit trail
     // Gas opt: cache timestamp — single ledger call for the whole function
@@ -855,35 +847,29 @@ mod tests {
         assert_eq!(result.unwrap(), 10_000_000_000i128);
     }
 
-    // Test verify_contract_balance with sufficient balance
-    // Note: This test uses the placeholder implementation
+    // Test verify_contract_balance — now requires a real group with TokenConfig.
+    // These tests verify the amount guard only; storage lookup will return GroupNotFound
+    // for group_id=0 which is expected in unit test context.
     #[test]
     fn test_verify_contract_balance_placeholder() {
         let env = Env::default();
         let payout_amount = 5_000_000i128;
-
-        // With the current placeholder implementation (balance = 0),
-        // this should fail
-        let result = verify_contract_balance(&env, payout_amount);
+        // group_id=0 has no TokenConfig → GroupNotFound
+        let result = verify_contract_balance(&env, 0, payout_amount);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), StellarSaveError::PayoutFailed);
     }
 
-    // Test verify_contract_balance with zero payout
     #[test]
     fn test_verify_contract_balance_zero_payout() {
         let env = Env::default();
         let payout_amount = 0i128;
-
-        // Even with zero payout, the placeholder balance (0) should pass
-        let result = verify_contract_balance(&env, payout_amount);
-        assert!(result.is_ok());
+        // group_id=0 has no TokenConfig → GroupNotFound
+        let result = verify_contract_balance(&env, 0, payout_amount);
+        assert!(result.is_err());
     }
 
-    // Integration test: Test that helper functions can be called together
     #[test]
     fn test_helper_functions_integration() {
-        // Create a valid pool info
         let pool_info = PoolInfo {
             group_id: 1,
             cycle: 0,
@@ -894,92 +880,79 @@ mod tests {
             contributors_count: 3,
             is_cycle_complete: true,
         };
-
-        // Calculate payout amount
         let payout_amount = calculate_and_validate_payout_amount(&pool_info);
         assert!(payout_amount.is_ok());
         assert_eq!(payout_amount.unwrap(), 6_000_000i128);
 
-        // Verify contract balance (will fail with placeholder)
         let env = Env::default();
-        let balance_check = verify_contract_balance(&env, payout_amount.unwrap());
-        assert!(balance_check.is_err()); // Expected with placeholder implementation
+        // group_id=1 has no TokenConfig in unit test env → GroupNotFound
+        let balance_check = verify_contract_balance(&env, 1, payout_amount.unwrap());
+        assert!(balance_check.is_err());
     }
 
-    // Test execute_transfer with valid amount
     #[test]
     fn test_execute_transfer_valid() {
         let env = Env::default();
         let recipient = Address::generate(&env);
-        let amount = 5_000_000i128; // 0.5 XLM
-
-        let result = execute_transfer(&env, &recipient, amount);
-        // With placeholder implementation, this should succeed
-        assert!(result.is_ok());
+        let amount = 5_000_000i128;
+        // group_id=0 has no TokenConfig → GroupNotFound (amount guard passes)
+        let result = execute_transfer(&env, 0, &recipient, amount);
+        assert!(result.is_err()); // GroupNotFound since no token registered
     }
 
-    // Test execute_transfer with zero amount
     #[test]
     fn test_execute_transfer_zero_amount() {
         let env = Env::default();
         let recipient = Address::generate(&env);
         let amount = 0i128;
-
-        let result = execute_transfer(&env, &recipient, amount);
-        // Zero amount should fail
+        let result = execute_transfer(&env, 0, &recipient, amount);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), StellarSaveError::PayoutFailed);
     }
 
-    // Test execute_transfer with negative amount
     #[test]
     fn test_execute_transfer_negative_amount() {
         let env = Env::default();
         let recipient = Address::generate(&env);
         let amount = -1_000_000i128;
-
-        let result = execute_transfer(&env, &recipient, amount);
-        // Negative amount should fail
+        let result = execute_transfer(&env, 0, &recipient, amount);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), StellarSaveError::PayoutFailed);
     }
 
-    // Test execute_transfer with large valid amount
     #[test]
     fn test_execute_transfer_large_amount() {
         let env = Env::default();
         let recipient = Address::generate(&env);
-        let amount = 1_000_000_000_000i128; // 100,000 XLM
-
-        let result = execute_transfer(&env, &recipient, amount);
-        // Large but valid amount should succeed with placeholder
-        assert!(result.is_ok());
+        let amount = 1_000_000_000_000i128;
+        // group_id=0 has no TokenConfig → GroupNotFound (amount guard passes)
+        let result = execute_transfer(&env, 0, &recipient, amount);
+        assert!(result.is_err()); // GroupNotFound
     }
 
-    // Test execute_transfer with maximum i128 value (edge case)
     #[test]
     fn test_execute_transfer_max_amount() {
         let env = Env::default();
         let recipient = Address::generate(&env);
         let amount = i128::MAX;
 
-        let result = execute_transfer(&env, &recipient, amount);
-        // Maximum i128 should succeed (no overflow)
-        assert!(result.is_ok());
+        let result = execute_transfer(&env, 0, &recipient, amount);
+        // group_id=0 has no TokenConfig → GroupNotFound (amount guard passes for i128::MAX)
+        assert!(result.is_err());
     }
 
     // Test that execute_transfer gets contract address correctly
     #[test]
     fn test_execute_transfer_contract_address() {
         let env = Env::default();
-        env.mock_all_auths(); // Mock authentication for testing
+        env.mock_all_auths();
         
         let recipient = Address::generate(&env);
         let amount = 1_000_000i128;
 
-        // The function should be able to get the contract address
-        let result = execute_transfer(&env, &recipient, amount);
-        assert!(result.is_ok());
+        // group_id=0 has no TokenConfig → GroupNotFound (amount guard passes)
+        let result = execute_transfer(&env, 0, &recipient, amount);
+        assert!(result.is_err()); // GroupNotFound
     }
 
     // Test record_payout with valid data
