@@ -28,6 +28,8 @@ export { useNotification } from './useNotification';
 export type { NotificationOptions, NotifyOptions, UseNotificationReturn } from './useNotification';
 export { useClipboard } from './useClipboard';
 export type { UseClipboardOptions, UseClipboardReturn } from './useClipboard';
+export { useTheme } from './useTheme';
+export type { ThemeMode } from './useTheme';
 export { usePayouts } from './usePayouts';
 
 export { useEventService } from './useEventService';

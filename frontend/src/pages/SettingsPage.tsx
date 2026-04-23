@@ -1,10 +1,14 @@
 import { Stack, Typography } from '@mui/material';
 import { AppCard, AppLayout } from '../ui';
+import { ThemeToggle } from '../components/ThemeToggle';
+import { useTheme } from '../hooks/useTheme';
 
 /**
  * Settings page - application settings
  */
 export default function SettingsPage() {
+  const { mode, setMode } = useTheme();
+
   return (
     <AppLayout
       title="Settings"
@@ -12,11 +16,46 @@ export default function SettingsPage() {
       footerText="Stellar Save - Built for transparent, on-chain savings"
     >
       <AppCard>
-        <Stack spacing={2}>
+        <Stack spacing={3}>
           <Typography variant="h2">Settings</Typography>
-          <Typography color="text.secondary">
-            Configure your application preferences here.
-          </Typography>
+
+          {/* ── Appearance ─────────────────────────────────────── */}
+          <Stack spacing={1}>
+            <Typography variant="subtitle1" fontWeight={600}>
+              Appearance
+            </Typography>
+            <Typography color="text.secondary" variant="body2">
+              Choose how Stellar Save looks to you.
+            </Typography>
+
+            <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
+              {(["light", "dark", "system"] as const).map((opt) => (
+                <label
+                  key={opt}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    cursor: "pointer",
+                    fontSize: "0.875rem",
+                    fontWeight: mode === opt ? 600 : 400,
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="theme"
+                    value={opt}
+                    checked={mode === opt}
+                    onChange={() => setMode(opt)}
+                    style={{ accentColor: "var(--color-primary)" }}
+                  />
+                  {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                </label>
+              ))}
+
+              <ThemeToggle variant="labelled" />
+            </Stack>
+          </Stack>
         </Stack>
       </AppCard>
     </AppLayout>

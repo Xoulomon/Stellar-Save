@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { isConnected, getPublicKey, requestAccess } from '@stellar/freighter-api';
 import { ROUTES } from '../routing/constants';
+import { ThemeToggle } from './ThemeToggle';
 import './Header.css';
 
 export default function Header() {
@@ -44,6 +45,8 @@ export default function Header() {
           <Link to={ROUTES.DASHBOARD}>Dashboard</Link>
           <Link to={ROUTES.PROFILE}>Profile</Link>
         </nav>
+
+        <ThemeToggle />
 
         <button 
           className="wallet-button"
