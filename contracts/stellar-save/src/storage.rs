@@ -61,9 +61,19 @@ pub enum GroupKey {
     /// Stores the list of member addresses for efficient member enumeration.
     Members(u64),
 
+    /// Group payout sequence: GROUP_PAYOUT_SEQUENCE_{id}
+    /// Stores the randomized payout order as a vector of addresses.
+    PayoutSequence(u64),
+
     /// Group status: GROUP_STATUS_{id}
     /// Stores the current GroupStatus for quick status checks.
     Status(u64),
+
+    /// Token configuration: GROUP_TOKEN_CONFIG_{id}
+    /// Stores the TokenConfig (token address + decimals) for a specific group.
+    TokenConfig(u64),
+    /// Dispute reason string: GROUP_DISPUTE_REASON_{id}
+    DisputeReason(u64),
 }
 
 /// Storage keys for member-related data.
@@ -194,6 +204,10 @@ pub enum CounterKey {
     /// Emergency pause flag: COUNTER_EMERGENCY_PAUSE
     /// Tracks if the contract is paused by admin.
     EmergencyPause,
+
+    /// Allowed tokens list: COUNTER_ALLOWED_TOKENS
+    /// Stores the optional admin-managed allowlist of permitted token addresses.
+    AllowedTokens,
 }
 
 /// Utility functions for creating storage keys with consistent formatting.
@@ -215,9 +229,18 @@ impl StorageKeyBuilder {
         StorageKey::Group(GroupKey::Members(group_id))
     }
 
+    /// Creates a key for storing the randomized payout order sequence.
+    pub fn payout_sequence(group_id: u64) -> StorageKey {
+        StorageKey::Group(GroupKey::PayoutSequence(group_id))
+    }
+
     /// Creates a key for storing group status.
     pub fn group_status(group_id: u64) -> StorageKey {
         StorageKey::Group(GroupKey::Status(group_id))
+    }
+
+    pub fn group_dispute_reason(group_id: u64) -> StorageKey {
+        StorageKey::Group(GroupKey::DisputeReason(group_id))
     }
 
     // Member key builders
@@ -351,6 +374,16 @@ impl StorageKeyBuilder {
     /// Creates a key for the global emergency pause flag.
     pub fn emergency_pause() -> StorageKey {
         StorageKey::Counter(CounterKey::EmergencyPause)
+    }
+
+    /// Creates a key for the token configuration of a specific group.
+    pub fn group_token_config(group_id: u64) -> StorageKey {
+        StorageKey::Group(GroupKey::TokenConfig(group_id))
+    }
+
+    /// Creates a key for the admin-managed allowed tokens list.
+    pub fn allowed_tokens() -> StorageKey {
+        StorageKey::Counter(CounterKey::AllowedTokens)
     }
 
     /// Creates a key storing the timestamp of a user's last group creation.

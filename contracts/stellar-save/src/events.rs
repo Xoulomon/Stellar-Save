@@ -77,6 +77,18 @@ pub struct GroupStatusChanged {
     pub changed_at: u64,
 }
 
+/// Event emitted when a group's metadata is updated.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GroupMetadataUpdated {
+    pub group_id: u64,
+    pub updated_by: Address,
+    pub name: String,
+    pub description: String,
+    pub image_url: String,
+    pub updated_at: u64,
+}
+
 /// Event emitted when contract is paused.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -312,6 +324,26 @@ impl EventEmitter {
             changed_at,
         };
         env.events().publish(("group_status_changed",), event);
+    }
+
+    pub fn emit_group_metadata_updated(
+        env: &Env,
+        group_id: u64,
+        updated_by: Address,
+        name: String,
+        description: String,
+        image_url: String,
+        updated_at: u64,
+    ) {
+        let event = GroupMetadataUpdated {
+            group_id,
+            updated_by,
+            name,
+            description,
+            image_url,
+            updated_at,
+        };
+        env.events().publish(("group_metadata_updated",), event);
     }
 
     pub fn emit_contract_paused(env: &Env, admin: Address, timestamp: u64) {

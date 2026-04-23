@@ -59,6 +59,39 @@ As a group creator, you set the terms for your savings circle.
 - **Trusted Members**: Start with people you know for your first group
 - **Clear Communication**: Discuss expectations with potential members beforehand
 
+## Using Group Templates
+
+Instead of configuring every setting manually, you can start from a predefined template. Templates set the cycle duration and maximum members for you — you only choose the contribution amount.
+
+### Available Templates
+
+| ID | Name             | Cycle     | Max Members | Total Duration |
+|----|------------------|-----------|-------------|----------------|
+| 1  | Weekly Saver     | 7 days    | 10          | ~10 weeks      |
+| 2  | Biweekly Saver   | 14 days   | 8           | ~16 weeks      |
+| 3  | Monthly Pool     | 30 days   | 12          | ~12 months     |
+| 4  | Quarterly Circle | 90 days   | 4           | ~12 months     |
+| 5  | Annual Pool      | 365 days  | 5           | ~5 years       |
+
+### Creating a Group from a Template
+
+1. **Browse Templates**: Call `list_templates()` or select from the UI template picker
+2. **Pick a Template**: Choose the one that fits your community's rhythm
+3. **Set Contribution Amount**: Enter how much each member pays per cycle (in XLM)
+4. **Create**: Sign the transaction — the contract fills in cycle duration and member cap automatically
+
+### Choosing the Right Template
+
+- **Weekly Saver** — tight-knit groups wanting frequent payouts and short commitment windows
+- **Biweekly Saver** — a middle ground with slightly larger pools and a manageable cadence
+- **Monthly Pool** — the classic Ajo/Esusu pattern; 12 members each receive one month's pool per year
+- **Quarterly Circle** — larger contribution amounts where members prefer less frequent cycles
+- **Annual Pool** — long-term capital accumulation over multiple years
+
+> Need something custom? Use **Create Group** instead and specify any cycle duration and member count.
+
+For full API details see [docs/group-templates.md](group-templates.md).
+
 ## Joining a Group
 
 Participate in existing savings groups created by others.

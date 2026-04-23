@@ -11,6 +11,7 @@ export type { PublicGroup, GroupDetail };
 export interface GroupData {
   name: string;
   description: string;
+  image_url: string;
   contribution_amount: number; // stroops = XLM * 10_000_000
   cycle_duration: number;      // seconds
   max_members: number;
