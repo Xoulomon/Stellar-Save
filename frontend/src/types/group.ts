@@ -6,6 +6,7 @@ export interface PublicGroup {
   id: string;
   name: string;
   description?: string;
+  imageUrl?: string;
   memberCount: number;
   contributionAmount: number; // in XLM
   currency: string;

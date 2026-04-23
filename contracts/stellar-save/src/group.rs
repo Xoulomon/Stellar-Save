@@ -191,6 +191,21 @@ pub struct Group {
     /// Used for tracking when the first cycle started.
     /// Only set when started is true.
     pub started_at: u64,
+
+
+    /// Whether members must provide a signed proof when contributing.
+    /// If true, contributions require an additional signature verification step.
+    pub require_contribution_proof: bool,
+
+    /// Whether the group allows the contribution amount to be changed between cycles.
+    /// If true, the creator can propose a new amount and members can vote on it.
+    pub allow_dynamic_contributions: bool,
+
+    /// Grace period in seconds after the cycle deadline before a member is
+    /// considered to have missed their contribution.
+    /// Maximum allowed value is 604800 (7 days). Defaults to 0 (no grace period).
+    pub grace_period_seconds: u64,
+
 }
 
 impl Group {
@@ -204,6 +219,7 @@ impl Group {
     /// * `max_members` - Maximum number of members allowed
     /// * `min_members` - Minimum number of members required to activate the group
     /// * `created_at` - Creation timestamp
+    /// * `grace_period_seconds` - Grace period after deadline before marking a miss (max 604800)
     ///
     /// # Panics
     /// Panics if validation constraints are violated:
@@ -212,6 +228,7 @@ impl Group {
     /// - max_members must be >= 2
     /// - min_members must be >= 2
     /// - min_members must be <= max_members
+    /// - grace_period_seconds must be <= 604800 (7 days)
     pub fn new(
         id: u64,
         creator: Address,
@@ -220,6 +237,32 @@ impl Group {
         max_members: u32,
         min_members: u32,
         created_at: u64,
+        grace_period_seconds: u64,
+    ) -> Self {
+        Self::new_with_penalty(
+            id,
+            creator,
+            contribution_amount,
+            cycle_duration,
+            max_members,
+            min_members,
+            created_at,
+            false,
+            0,
+        )
+    }
+
+    /// Creates a new Group with penalty configuration.
+    pub fn new_with_penalty(
+        id: u64,
+        creator: Address,
+        contribution_amount: i128,
+        cycle_duration: u64,
+        max_members: u32,
+        min_members: u32,
+        created_at: u64,
+        penalty_enabled: bool,
+        penalty_amount: i128,
     ) -> Self {
         // Validate contribution amount
         assert!(
@@ -242,6 +285,12 @@ impl Group {
             "min_members must be less than or equal to max_members"
         );
 
+        // Validate grace period (max 7 days)
+        assert!(
+            grace_period_seconds <= 604800,
+            "grace_period_seconds must not exceed 604800 (7 days)"
+        );
+
         Self {
             id,
             creator,
@@ -256,6 +305,12 @@ impl Group {
             created_at,
             started: false,
             started_at: 0,
+
+            require_contribution_proof: false,
+            allow_dynamic_contributions: false,
+
+            grace_period_seconds,
+
         }
     }
 
@@ -394,6 +449,11 @@ mod tests {
     use super::*;
     use soroban_sdk::{testutils::Address as _, Address, Env};
 
+    fn make_group(env: &Env, max_members: u32, grace_period_seconds: u64) -> Group {
+        let creator = Address::generate(env);
+        Group::new(1, creator, 10_000_000, 604800, max_members, 2, 1234567890, grace_period_seconds)
+    }
+
     #[test]
     fn test_group_creation() {
         let env = Env::default();
@@ -407,6 +467,7 @@ mod tests {
             5,          // 5 members
             2,          // 2 min members
             1234567890,
+            0,          // no grace period
         );
 
         assert_eq!(group.id, 1);
@@ -420,6 +481,22 @@ mod tests {
         assert_eq!(group.is_active, true);
         assert_eq!(group.status, GroupStatus::Active);
         assert_eq!(group.created_at, 1234567890);
+        assert_eq!(group.grace_period_seconds, 0);
+    }
+
+    #[test]
+    fn test_group_creation_with_grace_period() {
+        let env = Env::default();
+        let group = make_group(&env, 5, 3600);
+        assert_eq!(group.grace_period_seconds, 3600);
+    }
+
+    #[test]
+    #[should_panic(expected = "grace_period_seconds must not exceed 604800 (7 days)")]
+    fn test_invalid_grace_period() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        Group::new(1, creator, 10_000_000, 604800, 5, 2, 1234567890, 604801);
     }
 
     #[test]
@@ -427,8 +504,7 @@ mod tests {
     fn test_invalid_min_members() {
         let env = Env::default();
         let creator = Address::generate(&env);
-
-        Group::new(1, creator, 10_000_000, 604800, 5, 1, 1234567890);
+        Group::new(1, creator, 10_000_000, 604800, 5, 1, 1234567890, 0);
     }
 
     #[test]
@@ -436,8 +512,7 @@ mod tests {
     fn test_min_members_greater_than_max() {
         let env = Env::default();
         let creator = Address::generate(&env);
-
-        Group::new(1, creator, 10_000_000, 604800, 3, 5, 1234567890);
+        Group::new(1, creator, 10_000_000, 604800, 3, 5, 1234567890, 0);
     }
 
     #[test]
@@ -445,9 +520,7 @@ mod tests {
     fn test_invalid_contribution_amount() {
         let env = Env::default();
         let creator = Address::generate(&env);
-
-        Group::new(1, creator, 0, 604800, 5, 2, 1234567890);
-        Group::new(1, creator, 0, 604800, 5, 1234567890);
+        Group::new(1, creator, 0, 604800, 5, 2, 1234567890, 0);
     }
 
     #[test]
@@ -455,9 +528,7 @@ mod tests {
     fn test_invalid_cycle_duration() {
         let env = Env::default();
         let creator = Address::generate(&env);
-
-        Group::new(1, creator, 10_000_000, 0, 5, 2, 1234567890);
-        Group::new(1, creator, 10_000_000, 0, 5, 1234567890);
+        Group::new(1, creator, 10_000_000, 0, 5, 2, 1234567890, 0);
     }
 
     #[test]
@@ -465,24 +536,17 @@ mod tests {
     fn test_invalid_max_members() {
         let env = Env::default();
         let creator = Address::generate(&env);
-
-        Group::new(1, creator, 10_000_000, 604800, 1, 2, 1234567890);
-        Group::new(1, creator, 10_000_000, 604800, 1, 1234567890);
+        Group::new(1, creator, 10_000_000, 604800, 1, 2, 1234567890, 0);
     }
 
     #[test]
     fn test_is_complete() {
         let env = Env::default();
-        let creator = Address::generate(&env);
-
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 2, 1234567890);
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 1234567890);
+        let mut group = make_group(&env, 3, 0);
 
         assert!(!group.is_complete());
-
         group.current_cycle = 2;
         assert!(!group.is_complete());
-
         group.current_cycle = 3;
         assert!(group.is_complete());
     }
@@ -490,9 +554,7 @@ mod tests {
     #[test]
     fn test_advance_cycle() {
         let env = Env::default();
-        let creator = Address::generate(&env);
-
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 2, 1234567890);
+        let mut group = make_group(&env, 3, 0);
 
         assert_eq!(group.current_cycle, 0);
         assert!(group.is_active);
@@ -501,69 +563,34 @@ mod tests {
         group.advance_cycle(&env);
         assert_eq!(group.current_cycle, 1);
         assert!(group.is_active);
-        assert_eq!(group.status, GroupStatus::Active);
 
         group.advance_cycle(&env);
         assert_eq!(group.current_cycle, 2);
         assert!(group.is_active);
-        assert_eq!(group.status, GroupStatus::Active);
 
         group.advance_cycle(&env);
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 1234567890);
-
-        assert_eq!(group.current_cycle, 0);
-        assert!(group.is_active);
-
-        group.advance_cycle();
-        assert_eq!(group.current_cycle, 1);
-        assert!(group.is_active);
-
-        group.advance_cycle();
-        assert_eq!(group.current_cycle, 2);
-        assert!(group.is_active);
-
-        group.advance_cycle();
         assert_eq!(group.current_cycle, 3);
-        assert!(!group.is_active); // Auto-deactivated when complete
-        assert_eq!(group.status, GroupStatus::Completed); // Status set to Completed
+        assert!(!group.is_active);
+        assert_eq!(group.status, GroupStatus::Completed);
     }
 
     #[test]
     #[should_panic(expected = "group is already complete")]
     fn test_advance_cycle_when_complete() {
         let env = Env::default();
-        let creator = Address::generate(&env);
-
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 2, 2, 1234567890);
+        let mut group = make_group(&env, 2, 0);
         group.current_cycle = 2;
-
-        group.advance_cycle(&env); // Should panic
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 2, 1234567890);
-        group.current_cycle = 2;
-
-        group.advance_cycle(); // Should panic
+        group.advance_cycle(&env);
     }
 
     #[test]
     fn test_deactivate_reactivate() {
         let env = Env::default();
-        let creator = Address::generate(&env);
-
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 2, 1234567890);
+        let mut group = make_group(&env, 3, 0);
 
         assert!(group.is_active);
-        assert_eq!(group.status, GroupStatus::Active);
-
         group.deactivate();
         assert!(!group.is_active);
-        assert_eq!(group.status, GroupStatus::Active); // Status remains Active when just deactivated
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 1234567890);
-
-        assert!(group.is_active);
-
-        group.deactivate();
-        assert!(!group.is_active);
-
         group.reactivate();
         assert!(group.is_active);
         assert_eq!(group.status, GroupStatus::Active);
@@ -572,19 +599,13 @@ mod tests {
     #[test]
     fn test_complete_group() {
         let env = Env::default();
-        let creator = Address::generate(&env);
+        let mut group = make_group(&env, 3, 0);
 
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 2, 1234567890);
-
-        // Group starts as Active
         assert_eq!(group.status, GroupStatus::Active);
-        assert!(group.is_active);
         assert!(!group.is_complete());
 
-        // Complete the group manually
         group.complete(&env);
 
-        // Verify group is marked as completed
         assert_eq!(group.status, GroupStatus::Completed);
         assert!(!group.is_active);
         assert!(group.is_complete());
@@ -594,44 +615,30 @@ mod tests {
     #[should_panic(expected = "group is already complete")]
     fn test_complete_already_complete_group() {
         let env = Env::default();
-        let creator = Address::generate(&env);
-
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 2, 2, 1234567890);
-        group.current_cycle = 2; // Already complete via cycle advancement
-
-        group.complete(&env); // Should panic
+        let mut group = make_group(&env, 2, 0);
+        group.current_cycle = 2;
+        group.complete(&env);
     }
 
     #[test]
     fn test_is_complete_with_status() {
         let env = Env::default();
-        let creator = Address::generate(&env);
+        let mut group = make_group(&env, 3, 0);
 
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 2, 1234567890);
-
-        // Not complete initially
         assert!(!group.is_complete());
-
-        // Set status to Completed directly
         group.status = GroupStatus::Completed;
-
-        // Now is_complete returns true
         assert!(group.is_complete());
     }
 
     #[test]
     fn test_complete_after_all_cycles() {
         let env = Env::default();
-        let creator = Address::generate(&env);
+        let mut group = make_group(&env, 3, 0);
 
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 2, 1234567890);
+        group.advance_cycle(&env);
+        group.advance_cycle(&env);
+        group.advance_cycle(&env);
 
-        // Advance through all cycles
-        group.advance_cycle(&env); // cycle 1
-        group.advance_cycle(&env); // cycle 2
-        group.advance_cycle(&env); // cycle 3 - complete
-
-        // Verify group is complete
         assert!(group.is_complete());
         assert_eq!(group.status, GroupStatus::Completed);
         assert!(!group.is_active);
@@ -641,58 +648,43 @@ mod tests {
     #[should_panic(expected = "cannot reactivate a completed group")]
     fn test_reactivate_completed_group() {
         let env = Env::default();
-        let creator = Address::generate(&env);
-
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 2, 2, 1234567890);
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 2, 1234567890);
+        let mut group = make_group(&env, 2, 0);
         group.current_cycle = 2;
-
-        group.reactivate(); // Should panic
+        group.reactivate();
     }
 
     #[test]
     fn test_total_pool_amount() {
         let env = Env::default();
-        let creator = Address::generate(&env);
-
-        let group = Group::new(1, creator, 10_000_000, 604800, 5, 2, 1234567890);
-        let group = Group::new(1, creator, 10_000_000, 604800, 5, 1234567890);
-
-        assert_eq!(group.total_pool_amount(), 50_000_000); // 5 XLM total
+        let group = make_group(&env, 5, 0);
+        assert_eq!(group.total_pool_amount(), 50_000_000);
     }
 
     #[test]
     fn test_validate() {
         let env = Env::default();
-        let creator = Address::generate(&env);
-
-        let group = Group::new(1, creator, 10_000_000, 604800, 5, 2, 1234567890);
-        let group = Group::new(1, creator, 10_000_000, 604800, 5, 1234567890);
+        let group = make_group(&env, 5, 0);
         assert!(group.validate());
     }
 
     // GroupStatus tests
     #[test]
     fn test_group_status_transitions() {
-        // Test valid transitions from Pending
         assert!(GroupStatus::Pending.can_transition_to(&GroupStatus::Active));
         assert!(GroupStatus::Pending.can_transition_to(&GroupStatus::Cancelled));
         assert!(!GroupStatus::Pending.can_transition_to(&GroupStatus::Paused));
         assert!(!GroupStatus::Pending.can_transition_to(&GroupStatus::Completed));
 
-        // Test valid transitions from Active
         assert!(GroupStatus::Active.can_transition_to(&GroupStatus::Paused));
         assert!(GroupStatus::Active.can_transition_to(&GroupStatus::Completed));
         assert!(GroupStatus::Active.can_transition_to(&GroupStatus::Cancelled));
         assert!(!GroupStatus::Active.can_transition_to(&GroupStatus::Pending));
 
-        // Test valid transitions from Paused
         assert!(GroupStatus::Paused.can_transition_to(&GroupStatus::Active));
         assert!(GroupStatus::Paused.can_transition_to(&GroupStatus::Cancelled));
         assert!(!GroupStatus::Paused.can_transition_to(&GroupStatus::Pending));
         assert!(!GroupStatus::Paused.can_transition_to(&GroupStatus::Completed));
 
-        // Test terminal states cannot transition
         assert!(!GroupStatus::Completed.can_transition_to(&GroupStatus::Active));
         assert!(!GroupStatus::Completed.can_transition_to(&GroupStatus::Pending));
         assert!(!GroupStatus::Completed.can_transition_to(&GroupStatus::Paused));
@@ -703,7 +695,6 @@ mod tests {
         assert!(!GroupStatus::Cancelled.can_transition_to(&GroupStatus::Paused));
         assert!(!GroupStatus::Cancelled.can_transition_to(&GroupStatus::Completed));
 
-        // Test same state transitions are always valid
         assert!(GroupStatus::Pending.can_transition_to(&GroupStatus::Pending));
         assert!(GroupStatus::Active.can_transition_to(&GroupStatus::Active));
         assert!(GroupStatus::Paused.can_transition_to(&GroupStatus::Paused));

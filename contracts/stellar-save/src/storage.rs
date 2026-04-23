@@ -88,6 +88,10 @@ pub enum MemberKey {
     /// Member total contributions: MEMBER_TOTAL_CONTRIB_{group_id}_{address}
     /// Tracks total amount contributed by member across all cycles.
     TotalContributions(u64, Address),
+
+    /// Member total penalties: MEMBER_PENALTY_{group_id}_{address}
+    /// Tracks cumulative penalty amount charged to a member for missed contributions.
+    PenaltyTotal(u64, Address),
 }
 
 /// Storage keys for contribution tracking.
@@ -108,6 +112,22 @@ pub enum ContributionKey {
     /// Cycle contributor count: CONTRIB_COUNT_{group_id}_{cycle}
     /// Tracks how many members have contributed in the current cycle.
     CycleCount(u64, u32),
+
+    /// Proof verified flag: CONTRIB_PROOF_{group_id}_{cycle}_{address}
+    /// Tracks whether a member's contribution proof has been verified for a cycle.
+    ProofVerified(u64, u32, Address),
+
+    /// Pending amount change: CONTRIB_PENDING_AMOUNT_{group_id}
+    /// Stores a proposed new contribution amount awaiting approval.
+    PendingAmountChange(u64),
+
+    /// Amount change vote count: CONTRIB_VOTE_COUNT_{group_id}
+    /// Tracks how many members have voted to approve the pending amount change.
+    AmountChangeVoteCount(u64),
+
+    /// Member vote record: CONTRIB_VOTE_{group_id}_{address}
+    /// Tracks whether a specific member has voted on the pending amount change.
+    MemberVote(u64, Address),
 }
 
 /// Storage keys for payout records.
@@ -222,6 +242,11 @@ impl StorageKeyBuilder {
         StorageKey::Member(MemberKey::TotalContributions(group_id, address))
     }
 
+    /// Creates a key for member cumulative penalty total.
+    pub fn member_penalty_total(group_id: u64, address: Address) -> StorageKey {
+        StorageKey::Member(MemberKey::PenaltyTotal(group_id, address))
+    }
+
     // Contribution key builders
 
     /// Creates a key for individual contribution records.
@@ -237,6 +262,26 @@ impl StorageKeyBuilder {
     /// Creates a key for cycle contributor count.
     pub fn contribution_cycle_count(group_id: u64, cycle: u32) -> StorageKey {
         StorageKey::Contribution(ContributionKey::CycleCount(group_id, cycle))
+    }
+
+    /// Creates a key for tracking whether a member's proof was verified for a cycle.
+    pub fn contribution_proof_verified(group_id: u64, cycle: u32, address: Address) -> StorageKey {
+        StorageKey::Contribution(ContributionKey::ProofVerified(group_id, cycle, address))
+    }
+
+    /// Creates a key for a pending contribution amount change proposal.
+    pub fn contribution_pending_amount(group_id: u64) -> StorageKey {
+        StorageKey::Contribution(ContributionKey::PendingAmountChange(group_id))
+    }
+
+    /// Creates a key for the vote count on a pending amount change.
+    pub fn contribution_amount_vote_count(group_id: u64) -> StorageKey {
+        StorageKey::Contribution(ContributionKey::AmountChangeVoteCount(group_id))
+    }
+
+    /// Creates a key for tracking whether a member has voted on the pending amount change.
+    pub fn contribution_member_vote(group_id: u64, address: Address) -> StorageKey {
+        StorageKey::Contribution(ContributionKey::MemberVote(group_id, address))
     }
 
     // Payout key builders

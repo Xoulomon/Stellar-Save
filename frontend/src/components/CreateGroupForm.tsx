@@ -13,6 +13,7 @@ export const CYCLE_DURATION_OPTIONS = [
 interface FormData {
   name: string;
   description: string;
+  imageUrl: string;
   contributionAmount: string;
   cycleDuration: string;
   maxMembers: string;
@@ -41,8 +42,8 @@ export function validateStep(
     }
     if (!formData.description.trim()) {
       newErrors.description = "Description is required";
-    } else if (formData.description.trim().length > 200) {
-      newErrors.description = "Description must be 200 characters or fewer";
+    } else if (formData.description.trim().length > 500) {
+      newErrors.description = "Description must be 500 characters or fewer";
     }
   }
 
@@ -84,6 +85,7 @@ export function CreateGroupForm({
   const [formData, setFormData] = useState<FormData>({
     name: "",
     description: "",
+    imageUrl: "",
     contributionAmount: "",
     cycleDuration: "",
     maxMembers: "",
@@ -115,6 +117,7 @@ export function CreateGroupForm({
       onSubmit({
         name: formData.name.trim(),
         description: formData.description.trim(),
+        image_url: formData.imageUrl.trim(),
         contribution_amount: Math.round(
           parseFloat(formData.contributionAmount) * 10_000_000,
         ),
@@ -163,6 +166,15 @@ export function CreateGroupForm({
             error={errors.description}
             required
             aria-required="true"
+            disabled={isSubmitting}
+          />
+          <Input
+            label="Image URL (Optional)"
+            type="url"
+            value={formData.imageUrl}
+            onChange={(e) => updateField("imageUrl", e.target.value)}
+            error={errors.imageUrl}
+            helperText="URL to a group image for visual identification"
             disabled={isSubmitting}
           />
         </div>
@@ -258,6 +270,12 @@ export function CreateGroupForm({
               <span className="review-label">Description:</span>
               <span>{formData.description}</span>
             </div>
+            {formData.imageUrl && (
+              <div className="review-item">
+                <span className="review-label">Image URL:</span>
+                <span>{formData.imageUrl}</span>
+              </div>
+            )}
             <div className="review-item">
               <span className="review-label">Contribution:</span>
               <span>{formData.contributionAmount} XLM</span>

@@ -22,6 +22,10 @@ pub enum StellarSaveError {
     /// Error Code: 1003
     InvalidState = 1003,
 
+    /// Invalid metadata provided (name, description, or image_url).
+    /// Error Code: 1004
+    InvalidMetadata = 1004,
+
     // Member-related errors (2000-2999)
     /// The address is already a member of this group.
     /// Error Code: 2001
@@ -78,10 +82,9 @@ pub enum StellarSaveError {
     /// Error Code: 9003
     Overflow = 9003,
 
-    // Template-related errors (5000-5999)
-    /// The specified template ID does not exist.
-    /// Error Code: 5001
-    TemplateNotFound = 5001,
+    /// The cycle deadline has passed; contributions are no longer accepted.
+    /// Error Code: 3005
+    CycleDeadlineExpired = 3005,
 }
 
 impl StellarSaveError {
@@ -100,6 +103,9 @@ impl StellarSaveError {
             }
             StellarSaveError::InvalidState => {
                 "The group is not in a valid state for this operation. Check group status."
+            }
+            StellarSaveError::InvalidMetadata => {
+                "Invalid metadata provided. Name must be 3-50 characters, description 0-500 characters."
             }
 
             // Member-related errors
@@ -148,8 +154,8 @@ impl StellarSaveError {
             StellarSaveError::Overflow => {
                 "The ID counter has reached its maximum limit. No more IDs can be generated."
             }
-            StellarSaveError::TemplateNotFound => {
-                "The specified template does not exist. Please verify the template ID."
+            StellarSaveError::CycleDeadlineExpired => {
+                "The cycle deadline has passed. Contributions are no longer accepted for this cycle."
             }
         }
     }
