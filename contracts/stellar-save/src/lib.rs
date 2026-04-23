@@ -1,4 +1,4 @@
-#![no_std]
+﻿#![no_std]
 
 //! # Stellar-Save Smart Contract
 //!
@@ -1811,6 +1811,10 @@ pub fn is_member(
     }
 
     /// Lists groups with cursor-based pagination and optional status filtering.
+    ///
+    /// Archived groups are excluded from results by default. Pass
+    /// `include_archived: true` to include them.
+    ///
     /// Tasks: Pagination, Status Filtering, Gas Optimization.
     pub fn list_groups(
         env: Env,
@@ -1837,6 +1841,17 @@ pub fn is_member(
 
             let group_key = StorageKeyBuilder::group_data(id);
             if let Some(group) = env.storage().persistent().get::<_, Group>(&group_key) {
+                // Skip archived groups — they are excluded from the default listing
+                let archived_key = StorageKeyBuilder::group_archived(id);
+                let is_archived: bool = env
+                    .storage()
+                    .persistent()
+                    .get(&archived_key)
+                    .unwrap_or(false);
+                if is_archived {
+                    continue;
+                }
+
                 // 3. Optional Status Filtering
                 if let Some(ref filter) = status_filter {
                     let status_key = StorageKeyBuilder::group_status(id);
@@ -1865,6 +1880,131 @@ pub fn is_member(
     pub fn get_total_groups_created(env: Env) -> u64 {
         let key = StorageKeyBuilder::next_group_id();
         env.storage().persistent().get(&key).unwrap_or(0)
+    }
+
+    // ============================================================================
+    // Group Archival
+    // ============================================================================
+
+    /// Archives a completed group, removing it from the default `list_groups` results.
+    ///
+    /// Archiving is a one-way operation intended to reduce active storage query load
+    /// once a group has finished all its cycles. Only the group creator may archive,
+    /// and only after the group has reached the `Completed` status.
+    ///
+    /// # Arguments
+    /// * `env`      - Soroban environment
+    /// * `group_id` - ID of the group to archive
+    /// * `caller`   - Address of the caller (must be the group creator)
+    ///
+    /// # Returns
+    /// * `Ok(())` - Group archived successfully
+    ///
+    /// # Errors
+    /// - `GroupNotFound`       - Group does not exist
+    /// - `Unauthorized`        - Caller is not the group creator
+    /// - `InvalidState`        - Group is not in `Completed` status
+    /// - `GroupAlreadyArchived`- Group has already been archived
+    pub fn archive_group(
+        env: Env,
+        group_id: u64,
+        caller: Address,
+    ) -> Result<(), StellarSaveError> {
+        caller.require_auth();
+
+        // 1. Load group — returns GroupNotFound if missing
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let mut group: Group = env
+            .storage()
+            .persistent()
+            .get(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // 2. Only the creator may archive
+        if group.creator != caller {
+            return Err(StellarSaveError::Unauthorized);
+        }
+
+        // 3. Guard: already archived?
+        let archived_key = StorageKeyBuilder::group_archived(group_id);
+        let already_archived: bool = env
+            .storage()
+            .persistent()
+            .get(&archived_key)
+            .unwrap_or(false);
+        if already_archived {
+            return Err(StellarSaveError::GroupAlreadyArchived);
+        }
+
+        // 4. Only completed groups can be archived
+        if group.status != GroupStatus::Completed {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        // 5. Flip the flag on the Group struct and persist
+        group.archived = true;
+        env.storage().persistent().set(&group_key, &group);
+
+        // 6. Write the dedicated archived index key (enables O(1) lookup and
+        //    efficient iteration in list_archived_groups without loading the
+        //    full Group struct for every ID).
+        env.storage().persistent().set(&archived_key, &true);
+
+        // 7. Emit event
+        let timestamp = env.ledger().timestamp();
+        EventEmitter::emit_group_archived(&env, group_id, caller, timestamp);
+
+        Ok(())
+    }
+
+    /// Lists archived groups with cursor-based pagination.
+    ///
+    /// Returns groups that have been explicitly archived via `archive_group`.
+    /// Results are returned newest-first (descending by group ID).
+    ///
+    /// # Arguments
+    /// * `env`    - Soroban environment
+    /// * `cursor` - Start scanning from this group ID (inclusive, 0 = latest)
+    /// * `limit`  - Maximum number of groups to return (capped at 50)
+    ///
+    /// # Returns
+    /// * `Ok(Vec<Group>)` - Archived groups in descending ID order
+    pub fn list_archived_groups(
+        env: Env,
+        cursor: u64,
+        limit: u32,
+    ) -> Result<Vec<Group>, StellarSaveError> {
+        let mut groups = Vec::new(&env);
+        let max_id_key = StorageKeyBuilder::next_group_id();
+        let current_max_id: u64 = env.storage().persistent().get(&max_id_key).unwrap_or(0);
+
+        let start = if cursor == 0 { current_max_id } else { cursor };
+        let page_limit = if limit > 50 { 50 } else { limit };
+        let mut count = 0u32;
+
+        for id in (1..=start).rev() {
+            if count >= page_limit {
+                break;
+            }
+
+            // O(1) archived check — only load the full Group struct when confirmed archived
+            let archived_key = StorageKeyBuilder::group_archived(id);
+            let is_archived: bool = env
+                .storage()
+                .persistent()
+                .get(&archived_key)
+                .unwrap_or(false);
+
+            if is_archived {
+                let group_key = StorageKeyBuilder::group_data(id);
+                if let Some(group) = env.storage().persistent().get::<_, Group>(&group_key) {
+                    groups.push_back(group);
+                    count += 1;
+                }
+            }
+        }
+
+        Ok(groups)
     }
 
     /// Gets the total XLM balance held by the contract.
@@ -9234,18 +9374,21 @@ mod tests {
 
     #[test]
     fn test_validate_string_valid() {
+        let env = Env::default();
         let result = StellarSaveContract::validate_string(&soroban_sdk::String::from_str(&env, "Test Group"), 100);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_validate_string_invalid_empty() {
+        let env = Env::default();
         let result = StellarSaveContract::validate_string(&soroban_sdk::String::from_str(&env, ""), 100);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_validate_string_invalid_too_long() {
+        let env = Env::default();
         let result = StellarSaveContract::validate_string(&soroban_sdk::String::from_str(&env, "This is a very long string"), 10);
         assert!(result.is_err());
     }
@@ -10318,5 +10461,256 @@ mod gas_benchmark_tests {
             "returned cycle_total must match storage — no extra SLOAD needed for event"
         );
         assert_eq!(stored_total, contribution_amount * 3);
+    }
+}
+
+// ============================================================================
+// Archival Tests
+// ============================================================================
+
+#[cfg(test)]
+mod archival_tests {
+    use super::*;
+    use soroban_sdk::{testutils::Address as _, Address, Env};
+
+    /// Helper: create a group via the contract client and return
+    /// (env, client, group_id, creator).
+    fn setup_completed_group(
+        env: &Env,
+        client: &StellarSaveContractClient,
+    ) -> (u64, Address) {
+        let creator = Address::generate(env);
+        env.mock_all_auths();
+
+        // Create the group
+        let group_id = client.create_group(&creator, &10_000_000, &604800, &3, &0);
+
+        // Join with 2 more members so min_members (2) is satisfied
+        let m1 = Address::generate(env);
+        let m2 = Address::generate(env);
+        client.join_group(&group_id, &m1);
+        client.join_group(&group_id, &m2);
+
+        // Manually flip the group to Completed status so we can archive it
+        // (full cycle execution is out of scope for archival tests)
+        env.as_contract(&client.address, || {
+            let group_key = StorageKeyBuilder::group_data(group_id);
+            let mut group: Group = env.storage().persistent().get(&group_key).unwrap();
+            group.status = GroupStatus::Completed;
+            group.is_active = false;
+            group.current_cycle = group.max_members; // mark all cycles done
+            env.storage().persistent().set(&group_key, &group);
+
+            let status_key = StorageKeyBuilder::group_status(group_id);
+            env.storage().persistent().set(&status_key, &GroupStatus::Completed);
+        });
+
+        (group_id, creator)
+    }
+
+    // ── archive_group ─────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_archive_group_success() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let (group_id, creator) = setup_completed_group(&env, &client);
+
+        client.archive_group(&group_id, &creator);
+
+        // Verify the group struct has archived = true
+        let group = client.get_group(&group_id);
+        assert!(group.archived, "group.archived should be true after archival");
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_archive_group_not_found() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let caller = Address::generate(&env);
+
+        client.archive_group(&999u64, &caller); // should panic — GroupNotFound
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_archive_group_unauthorized() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let (group_id, _creator) = setup_completed_group(&env, &client);
+        let stranger = Address::generate(&env);
+
+        client.archive_group(&group_id, &stranger); // should panic — Unauthorized
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_archive_group_not_completed_active() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(&creator, &10_000_000, &604800, &3, &0);
+
+        // Group is still Active — archiving should fail
+        client.archive_group(&group_id, &creator);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_archive_group_already_archived() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let (group_id, creator) = setup_completed_group(&env, &client);
+
+        client.archive_group(&group_id, &creator); // first — ok
+        client.archive_group(&group_id, &creator); // second — should panic
+    }
+
+    // ── list_groups filters archived ──────────────────────────────────────────
+
+    #[test]
+    fn test_list_groups_excludes_archived() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let (group_id, creator) = setup_completed_group(&env, &client);
+
+        // Before archival: group appears in list_groups
+        let before = client.list_groups(&0u64, &10u32, &None);
+        assert_eq!(before.len(), 1, "group should appear before archival");
+
+        // Archive the group
+        client.archive_group(&group_id, &creator);
+
+        // After archival: group must NOT appear in list_groups
+        let after = client.list_groups(&0u64, &10u32, &None);
+        assert_eq!(after.len(), 0, "archived group must be excluded from list_groups");
+    }
+
+    #[test]
+    fn test_list_groups_non_archived_still_visible() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        // Group 1 — will be completed + archived
+        let (group_id1, creator1) = setup_completed_group(&env, &client);
+
+        // Group 2 — Active (stays visible)
+        let creator2 = Address::generate(&env);
+        let _group_id2 = client.create_group(&creator2, &10_000_000, &604800, &3, &0);
+
+        // Archive group 1
+        client.archive_group(&group_id1, &creator1);
+
+        // list_groups should return only group 2
+        let groups = client.list_groups(&0u64, &10u32, &None);
+        assert_eq!(groups.len(), 1);
+        assert_ne!(groups.get(0).unwrap().id, group_id1);
+    }
+
+    // ── list_archived_groups ──────────────────────────────────────────────────
+
+    #[test]
+    fn test_list_archived_groups_empty_when_none_archived() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let _group = setup_completed_group(&env, &client);
+
+        let archived = client.list_archived_groups(&0u64, &10u32);
+        assert_eq!(archived.len(), 0, "no archived groups yet");
+    }
+
+    #[test]
+    fn test_list_archived_groups_returns_archived() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let (group_id, creator) = setup_completed_group(&env, &client);
+        client.archive_group(&group_id, &creator);
+
+        let archived = client.list_archived_groups(&0u64, &10u32);
+        assert_eq!(archived.len(), 1);
+        assert_eq!(archived.get(0).unwrap().id, group_id);
+        assert!(archived.get(0).unwrap().archived);
+    }
+
+    #[test]
+    fn test_list_archived_groups_pagination() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        // Create and archive 3 completed groups — IDs will be 1, 2, 3
+        for _ in 0..3 {
+            let (gid, creator) = setup_completed_group(&env, &client);
+            client.archive_group(&gid, &creator);
+        }
+
+        // Page 1: cursor=0 (latest), limit=2 → groups 3, 2 (newest first)
+        let page1 = client.list_archived_groups(&0u64, &2u32);
+        assert_eq!(page1.len(), 2);
+        assert_eq!(page1.get(0).unwrap().id, 3);
+        assert_eq!(page1.get(1).unwrap().id, 2);
+
+        // Page 2: cursor = id of last item on page1 - 1 = 1, limit=2 → group 1 only
+        let last_id_on_page1 = page1.get(1).unwrap().id;
+        let page2 = client.list_archived_groups(&(last_id_on_page1 - 1), &2u32);
+        assert_eq!(page2.len(), 1);
+        assert_eq!(page2.get(0).unwrap().id, 1);
+    }
+
+    #[test]
+    fn test_list_archived_groups_does_not_include_active() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        // Group 1 — completed + archived
+        let (group_id1, creator1) = setup_completed_group(&env, &client);
+        client.archive_group(&group_id1, &creator1);
+
+        // Group 2 — active (not archived)
+        let creator2 = Address::generate(&env);
+        let _group_id2 = client.create_group(&creator2, &10_000_000, &604800, &3, &0);
+
+        let archived = client.list_archived_groups(&0u64, &10u32);
+        assert_eq!(archived.len(), 1);
+        assert_eq!(archived.get(0).unwrap().id, group_id1);
+    }
+
+    // ── Group struct default ──────────────────────────────────────────────────
+
+    #[test]
+    fn test_new_group_archived_defaults_false() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        let group = Group::new_with_grace(1, creator, 10_000_000, 604800, 3, 2, 1_000_000, 0);
+        assert!(!group.archived, "newly created group must not be archived");
     }
 }

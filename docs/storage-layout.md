@@ -23,8 +23,8 @@ The following table summarizes all `StorageKey` variants used in the contract:
 | **Admin** | `EmergencyPause` | Instance | Boolean flag to pause/unpause contract operations. |
 | **Security** | `ReentrancyGuard` | Temporary | Flag to prevent reentrancy during fund transfers. |
 | **Rate Limiting** | `LastGroupCreation(Address)`, `LastGroupJoin(Address)` | Temporary | Timestamps of a user's last major actions. |
-| **Group Data** | `Data(u64)` | Persistent | The core `Group` struct containing configuration, state, and `grace_period_seconds`. |
-| **Group State** | `Members(u64)`, `Status(u64)`, `GroupBalance(u64)`, `GroupTotalPaidOut(u64)` | Persistent | Member list (Vec), group lifecycle status, and incremental balances. |
+| **Group Data** | `Data(u64)` | Persistent | The core `Group` struct containing configuration, state, `grace_period_seconds`, and `archived` flag. |
+| **Group State** | `Members(u64)`, `Status(u64)`, `Archived(u64)`, `GroupBalance(u64)`, `GroupTotalPaidOut(u64)` | Persistent | Member list (Vec), group lifecycle status, archived index flag, and incremental balances. |
 | **Member Data** | `Profile(u64, Address)`, `PayoutEligibility(u64, Address)`, `TotalContributions(u64, Address)` | Persistent | Individual member profiles, payout positions, and aggregate contributions. |
 | **Transactions** | `Individual(u64, cycle, Address)`, `CycleTotal(u64, cycle)`, `CycleCount(u64, cycle)` | Persistent | Contribution records, totals, and counts per group and cycle. |
 | **Payouts** | `Record(u64, cycle)`, `Recipient(u64, cycle)`, `Status(u64, cycle)` | Persistent | Payout records, recipient lookups, and execution status. |
@@ -42,6 +42,11 @@ The `Group` struct is the central entity for any ROSCA. It stores:
 
 #### `grace_period_seconds`
 An optional window (in seconds) after the cycle deadline during which a member may still contribute without being counted as having missed the cycle. Validated at group creation; maximum value is **604800** (7 days). Defaults to `0` (no grace period). Stored as part of the `Group` struct at `GroupKey::Data(id)`.
+
+#### `archived`
+A boolean flag on the `Group` struct that is `false` by default and set to `true` when the group creator calls `archive_group`. Archival is **irreversible** and only permitted once the group has reached `Completed` status. Archived groups are excluded from `list_groups()` results by default and are only returned by `list_archived_groups()`.
+
+A dedicated index key `GroupKey::Archived(id)` is also written at archival time. This enables O(1) archived-status checks and efficient iteration in `list_archived_groups` without loading the full `Group` struct for every ID scanned.
 
 ### Member Tracking
 Member tracking is handled via a combination of a membership list and individual profiles:

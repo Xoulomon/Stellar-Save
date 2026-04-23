@@ -163,6 +163,15 @@ pub struct CycleEnded {
     pub ended_at: u64,
 }
 
+/// Event emitted when a completed group is archived by its creator.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GroupArchived {
+    pub group_id: u64,
+    pub archived_by: Address,
+    pub archived_at: u64,
+}
+
 /// Utility functions for emitting events.
 pub struct EventEmitter;
 
@@ -432,6 +441,15 @@ impl EventEmitter {
     pub fn emit_cycle_ended(env: &Env, group_id: u64, cycle_id: u32, ended_at: u64) {
         let event = CycleEnded { group_id, cycle_id, ended_at };
         env.events().publish(("cycle_ended",), event);
+    }
+
+    pub fn emit_group_archived(env: &Env, group_id: u64, archived_by: Address, archived_at: u64) {
+        let event = GroupArchived {
+            group_id,
+            archived_by,
+            archived_at,
+        };
+        env.events().publish(("group_archived",), event);
     }
 }
 

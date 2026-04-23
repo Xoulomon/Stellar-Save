@@ -206,6 +206,13 @@ pub struct Group {
     /// Maximum allowed value is 604800 (7 days). Defaults to 0 (no grace period).
     pub grace_period_seconds: u64,
 
+    /// Whether this group has been archived by its creator.
+    ///
+    /// Archived groups are excluded from `list_groups()` by default to reduce
+    /// active storage query load. Only completed groups can be archived.
+    /// Archival is irreversible — once archived a group cannot be un-archived.
+    pub archived: bool,
+
 }
 
 impl Group {
@@ -327,7 +334,7 @@ impl Group {
             allow_dynamic_contributions: false,
 
             grace_period_seconds,
-
+            archived: false,
         }
     }
 

@@ -81,6 +81,10 @@ pub enum StellarSaveError {
     /// The cycle deadline has passed; contributions are no longer accepted.
     /// Error Code: 3005
     CycleDeadlineExpired = 3005,
+
+    /// The group has already been archived and cannot be archived again.
+    /// Error Code: 1004
+    GroupAlreadyArchived = 1004,
 }
 
 impl StellarSaveError {
@@ -149,6 +153,9 @@ impl StellarSaveError {
             }
             StellarSaveError::CycleDeadlineExpired => {
                 "The cycle deadline has passed. Contributions are no longer accepted for this cycle."
+            }
+            StellarSaveError::GroupAlreadyArchived => {
+                "The group has already been archived. Archival is irreversible."
             }
         }
     }
@@ -271,6 +278,9 @@ impl ErrorRecoveryStrategy {
             }
             StellarSaveError::CycleDeadlineExpired => {
                 "The contribution deadline for this cycle has passed. Wait for the next cycle."
+            }
+            StellarSaveError::GroupAlreadyArchived => {
+                "The group is already archived. Archival is a one-way operation."
             }
         }
     }

@@ -64,6 +64,11 @@ pub enum GroupKey {
     /// Group status: GROUP_STATUS_{id}
     /// Stores the current GroupStatus for quick status checks.
     Status(u64),
+
+    /// Archived group index entry: GROUP_ARCHIVED_{id}
+    /// A boolean flag stored per group ID to enable O(1) archived-status checks
+    /// and to support efficient iteration over the archived group list.
+    Archived(u64),
 }
 
 /// Storage keys for member-related data.
@@ -218,6 +223,14 @@ impl StorageKeyBuilder {
     /// Creates a key for storing group status.
     pub fn group_status(group_id: u64) -> StorageKey {
         StorageKey::Group(GroupKey::Status(group_id))
+    }
+
+    /// Creates a key for the archived flag of a specific group.
+    ///
+    /// Stores a `bool` that is `true` when the group has been archived.
+    /// Used for O(1) archived-status checks and for building the archived list.
+    pub fn group_archived(group_id: u64) -> StorageKey {
+        StorageKey::Group(GroupKey::Archived(group_id))
     }
 
     // Member key builders
@@ -419,6 +432,7 @@ pub mod key_prefixes {
 /// - `GROUP_{id}`: Complete group data (configuration, state)
 /// - `GROUP_MEMBERS_{id}`: List of member addresses
 /// - `GROUP_STATUS_{id}`: Current group status
+/// - `GROUP_ARCHIVED_{id}`: Boolean archived flag (true when group is archived)
 ///
 /// ## Member Storage (MemberKey)
 /// - `MEMBER_{group_id}_{address}`: Member profile (join date, status)
