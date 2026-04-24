@@ -13,7 +13,11 @@ export const ROUTES = {
   ERROR: "/500",
   GROUP_CREATE: "/groups/create",
   GROUPS_BROWSE: "/groups/browse",
+
   GROUP_CALENDAR: "/groups/:groupId/calendar",
+
+  GROUPS_COMPARE: "/groups/compare",
+
 } as const;
 
 /**
