@@ -12,7 +12,11 @@ const ProfilePage = lazy(() => import("../pages/ProfilePage"));
 const SettingsPage = lazy(() => import("../pages/SettingsPage"));
 const CreateGroupPage = lazy(() => import("../pages/CreateGroupPage"));
 const BrowseGroupsPage = lazy(() => import("../pages/BrowseGroupsPage"));
+
+const ContributionCalendarPage = lazy(() => import("../pages/ContributionCalendarPage"));
+
 const GroupComparisonPage = lazy(() => import("../pages/GroupComparisonPage"));
+
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
 const ErrorPage = lazy(() => import("../pages/ErrorPage"));
 /**
@@ -56,11 +60,19 @@ export const routeConfig: RouteConfig[] = [
     description: "Discover and join public savings groups",
   },
   {
+
+    path: ROUTES.GROUP_CALENDAR,
+    component: ContributionCalendarPage,
+    protected: true,
+    title: "Contribution Calendar - Stellar Save",
+    description: "View contribution deadlines and payment history",
+
     path: ROUTES.GROUPS_COMPARE,
     component: GroupComparisonPage,
     protected: true,
     title: "Compare Groups - Stellar Save",
     description: "Compare savings groups side-by-side before joining",
+
   },
   {
     path: ROUTES.GROUP_DETAIL,
