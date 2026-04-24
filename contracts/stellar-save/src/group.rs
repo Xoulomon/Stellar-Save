@@ -219,6 +219,12 @@ pub struct Group {
     /// Maximum allowed value is 604800 (7 days). Defaults to 0 (no grace period).
     pub grace_period_seconds: u64,
 
+    /// When true, only addresses explicitly invited by the creator may join.
+    pub invitation_only: bool,
+    /// Accumulated reward pool from contribution fees (1% of each contribution).
+    /// Distributed equally among members who complete all cycles.
+    pub reward_pool: i128,
+
 }
 
 impl Group {
@@ -324,6 +330,8 @@ impl Group {
 
             grace_period_seconds,
 
+            invitation_only: false,
+            reward_pool: 0,
         }
     }
 

@@ -33,6 +33,10 @@ pub mod storage;
 pub mod token;
 
 mod multi_token_tests;
+mod merge_tests;
+mod milestone_tests;
+mod invitation_tests;
+pub mod milestones;
 
 // Re-export for convenience
 pub use contribution::{ContributionPage, ContributionRecord};
@@ -290,6 +294,9 @@ impl StellarSaveContract {
             .ok_or(StellarSaveError::Overflow)?;
         env.storage().persistent().set(&balance_key, &new_balance);
 
+        // 7. Update contribution streak and emit milestone events if thresholds crossed
+        milestones::update_streak(env, group_id, member_address, cycle_number);
+
         Ok(())
     }
 
@@ -357,6 +364,54 @@ impl StellarSaveContract {
         Ok(())
     }
 
+    /// Updates the global contribution amount limits.
+    ///
+    /// Only the contract admin can call this function.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `admin` - Admin address (must match stored config admin)
+    /// * `min_contribution` - New minimum contribution amount (must be > 0)
+    /// * `max_contribution` - New maximum contribution amount (must be >= min_contribution)
+    ///
+    /// # Returns
+    /// * `Ok(())` - Limits updated successfully
+    /// * `Err(StellarSaveError::Unauthorized)` - Caller is not the admin
+    /// * `Err(StellarSaveError::ContributionTooLow)` - min_contribution <= 0
+    /// * `Err(StellarSaveError::ContributionTooHigh)` - max_contribution < min_contribution
+    pub fn update_contribution_limits(
+        env: Env,
+        admin: Address,
+        min_contribution: i128,
+        max_contribution: i128,
+    ) -> Result<(), StellarSaveError> {
+        admin.require_auth();
+
+        if min_contribution <= 0 {
+            return Err(StellarSaveError::ContributionTooLow);
+        }
+        if max_contribution < min_contribution {
+            return Err(StellarSaveError::ContributionTooHigh);
+        }
+
+        let key = StorageKeyBuilder::contract_config();
+        let mut config = env
+            .storage()
+            .persistent()
+            .get::<_, ContractConfig>(&key)
+            .ok_or(StellarSaveError::Unauthorized)?;
+
+        if config.admin != admin {
+            return Err(StellarSaveError::Unauthorized);
+        }
+
+        config.min_contribution = min_contribution;
+        config.max_contribution = max_contribution;
+        env.storage().persistent().set(&key, &config);
+
+        Ok(())
+    }
+
     /// Creates a new savings group (ROSCA).
     /// Tasks: Validate parameters, Generate ID, Initialize Struct, Store Data, Emit Event.
     pub fn create_group(
@@ -382,9 +437,13 @@ impl StellarSaveContract {
             .persistent()
             .get::<_, ContractConfig>(&config_key)
         {
-            if contribution_amount < config.min_contribution
-                || contribution_amount > config.max_contribution
-                || max_members < config.min_members
+            if contribution_amount < config.min_contribution {
+                return Err(StellarSaveError::ContributionTooLow);
+            }
+            if contribution_amount > config.max_contribution {
+                return Err(StellarSaveError::ContributionTooHigh);
+            }
+            if max_members < config.min_members
                 || max_members > config.max_members
                 || cycle_duration < config.min_cycle_duration
                 || cycle_duration > config.max_cycle_duration
@@ -1828,6 +1887,337 @@ pub fn is_member(
         Ok(())
     }
 
+    /// Enables or disables invitation-only mode for a group.
+    /// Only the creator can call this while the group is Pending.
+    pub fn set_invitation_only(
+        env: Env,
+        group_id: u64,
+        enabled: bool,
+    ) -> Result<(), StellarSaveError> {
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let mut group = env
+            .storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        group.creator.require_auth();
+
+        let status: GroupStatus = env
+            .storage()
+            .persistent()
+            .get(&StorageKeyBuilder::group_status(group_id))
+            .unwrap_or(GroupStatus::Pending);
+        if status != GroupStatus::Pending {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        group.invitation_only = enabled;
+        env.storage().persistent().set(&group_key, &group);
+        Ok(())
+    }
+
+    /// Invites an address to join an invitation-only group.
+    /// Only the group creator can call this; group must be Pending.
+    ///
+    /// # Errors
+    /// - `GroupNotFound` - Group doesn't exist
+    /// - `Unauthorized` - Caller is not the group creator
+    /// - `InvalidState` - Group is not Pending
+    /// - `AlreadyMember` - Address is already a member
+    pub fn invite_member(
+        env: Env,
+        group_id: u64,
+        invitee: Address,
+    ) -> Result<(), StellarSaveError> {
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env
+            .storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        group.creator.require_auth();
+
+        let status: GroupStatus = env
+            .storage()
+            .persistent()
+            .get(&StorageKeyBuilder::group_status(group_id))
+            .unwrap_or(GroupStatus::Pending);
+        if status != GroupStatus::Pending {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        // Reject if already a member
+        if env
+            .storage()
+            .persistent()
+            .has(&StorageKeyBuilder::member_profile(group_id, invitee.clone()))
+        {
+            return Err(StellarSaveError::AlreadyMember);
+        }
+
+        let inv_key = StorageKeyBuilder::group_invitations(group_id);
+        let mut invitations: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&inv_key)
+            .unwrap_or(Vec::new(&env));
+
+        if !invitations.contains(&invitee) {
+            invitations.push_back(invitee.clone());
+            env.storage().persistent().set(&inv_key, &invitations);
+        }
+
+        let timestamp = env.ledger().timestamp();
+        EventEmitter::emit_member_invited(&env, group_id, invitee, group.creator, timestamp);
+        Ok(())
+    }
+
+    /// Revokes a pending invitation for an address.
+    /// Only the group creator can call this; group must be Pending.
+    ///
+    /// # Errors
+    /// - `GroupNotFound` - Group doesn't exist
+    /// - `Unauthorized` - Caller is not the group creator
+    /// - `InvalidState` - Group is not Pending
+    /// - `NotInvited` - Address was not invited
+    pub fn revoke_invitation(
+        env: Env,
+        group_id: u64,
+        invitee: Address,
+    ) -> Result<(), StellarSaveError> {
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group = env
+            .storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        group.creator.require_auth();
+
+        let status: GroupStatus = env
+            .storage()
+            .persistent()
+            .get(&StorageKeyBuilder::group_status(group_id))
+            .unwrap_or(GroupStatus::Pending);
+        if status != GroupStatus::Pending {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        let inv_key = StorageKeyBuilder::group_invitations(group_id);
+        let invitations: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&inv_key)
+            .unwrap_or(Vec::new(&env));
+
+        if !invitations.contains(&invitee) {
+            return Err(StellarSaveError::NotInvited);
+        }
+
+        let mut new_list: Vec<Address> = Vec::new(&env);
+        for addr in invitations.iter() {
+            if addr != invitee {
+                new_list.push_back(addr);
+            }
+        }
+        env.storage().persistent().set(&inv_key, &new_list);
+
+        let timestamp = env.ledger().timestamp();
+        EventEmitter::emit_invitation_revoked(&env, group_id, invitee, group.creator, timestamp);
+        Ok(())
+    }
+
+    /// Merges two compatible Pending groups into a new group.
+    ///
+    /// Compatibility requires both groups to have the same `contribution_amount`
+    /// and `cycle_duration`. Both source groups must be in `Pending` status.
+    /// The caller must be the creator of group_id_1.
+    ///
+    /// The merged group inherits:
+    /// - contribution_amount and cycle_duration from the source groups
+    /// - max_members = sum of both groups' max_members
+    /// - combined member list with recalculated sequential payout positions
+    /// - combined balance (sum of both groups' balances)
+    ///
+    /// Both source groups are marked Cancelled after the merge.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id_1` - ID of the first source group (caller must be its creator)
+    /// * `group_id_2` - ID of the second source group
+    ///
+    /// # Returns
+    /// * `Ok(u64)` - ID of the newly created merged group
+    /// * `Err(StellarSaveError::GroupNotFound)` - Either group doesn't exist
+    /// * `Err(StellarSaveError::Unauthorized)` - Caller is not creator of group_id_1
+    /// * `Err(StellarSaveError::InvalidState)` - Either group is not Pending
+    /// * `Err(StellarSaveError::MergeIncompatible)` - Groups have different contribution_amount or cycle_duration
+    pub fn merge_groups(
+        env: Env,
+        group_id_1: u64,
+        group_id_2: u64,
+    ) -> Result<u64, StellarSaveError> {
+        // 1. Load both groups
+        let group1: Group = env
+            .storage()
+            .persistent()
+            .get(&StorageKeyBuilder::group_data(group_id_1))
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        let group2: Group = env
+            .storage()
+            .persistent()
+            .get(&StorageKeyBuilder::group_data(group_id_2))
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // 2. Authorize: caller must be creator of group 1
+        group1.creator.require_auth();
+
+        // 3. Both groups must be Pending
+        let status1: GroupStatus = env
+            .storage()
+            .persistent()
+            .get(&StorageKeyBuilder::group_status(group_id_1))
+            .unwrap_or(GroupStatus::Pending);
+        let status2: GroupStatus = env
+            .storage()
+            .persistent()
+            .get(&StorageKeyBuilder::group_status(group_id_2))
+            .unwrap_or(GroupStatus::Pending);
+
+        if status1 != GroupStatus::Pending || status2 != GroupStatus::Pending {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        // 4. Validate compatibility
+        if group1.contribution_amount != group2.contribution_amount
+            || group1.cycle_duration != group2.cycle_duration
+        {
+            return Err(StellarSaveError::MergeIncompatible);
+        }
+
+        // 5. Load member lists from both groups
+        let members1: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&StorageKeyBuilder::group_members(group_id_1))
+            .unwrap_or(Vec::new(&env));
+        let members2: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&StorageKeyBuilder::group_members(group_id_2))
+            .unwrap_or(Vec::new(&env));
+
+        // 6. Combine member lists
+        let mut combined_members: Vec<Address> = Vec::new(&env);
+        for m in members1.iter() {
+            combined_members.push_back(m);
+        }
+        for m in members2.iter() {
+            combined_members.push_back(m);
+        }
+        let total_members = combined_members.len();
+
+        // 7. Compute combined balance
+        let balance1: i128 = env
+            .storage()
+            .persistent()
+            .get(&StorageKeyBuilder::group_balance(group_id_1))
+            .unwrap_or(0);
+        let balance2: i128 = env
+            .storage()
+            .persistent()
+            .get(&StorageKeyBuilder::group_balance(group_id_2))
+            .unwrap_or(0);
+        let combined_balance = balance1.checked_add(balance2).ok_or(StellarSaveError::Overflow)?;
+
+        // 8. Create merged group
+        let merged_id = Self::generate_next_group_id(&env)?;
+        let timestamp = env.ledger().timestamp();
+        let new_max_members = group1
+            .max_members
+            .checked_add(group2.max_members)
+            .ok_or(StellarSaveError::Overflow)?;
+        let new_min_members = group1.min_members.min(group2.min_members);
+
+        let mut merged_group = Group::new(
+            merged_id,
+            group1.creator.clone(),
+            group1.contribution_amount,
+            group1.cycle_duration,
+            new_max_members,
+            new_min_members,
+            timestamp,
+            group1.grace_period_seconds,
+        );
+        merged_group.member_count = total_members;
+
+        // 9. Store merged group data
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_data(merged_id), &merged_group);
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_status(merged_id), &GroupStatus::Pending);
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_members(merged_id), &combined_members);
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_balance(merged_id), &combined_balance);
+
+        // 10. Store merged-from provenance
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_merged_from(merged_id),
+            &(group_id_1, group_id_2),
+        );
+
+        // 11. Assign sequential payout positions to all combined members
+        for i in 0..combined_members.len() {
+            let member = combined_members.get(i).unwrap();
+            let position = i;
+            let profile = MemberProfile {
+                address: member.clone(),
+                group_id: merged_id,
+                payout_position: position,
+                joined_at: timestamp,
+            };
+            env.storage().persistent().set(
+                &StorageKeyBuilder::member_profile(merged_id, member.clone()),
+                &profile,
+            );
+            env.storage().persistent().set(
+                &StorageKeyBuilder::member_payout_eligibility(merged_id, member.clone()),
+                &position,
+            );
+        }
+
+        // 12. Cancel both source groups
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_status(group_id_1),
+            &GroupStatus::Cancelled,
+        );
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_status(group_id_2),
+            &GroupStatus::Cancelled,
+        );
+
+        // 13. Emit GroupsMerged event
+        EventEmitter::emit_groups_merged(
+            &env,
+            merged_id,
+            group_id_1,
+            group_id_2,
+            total_members,
+            combined_balance,
+            timestamp,
+        );
+
+        Ok(merged_id)
+    }
+
     // ============================================================================
     // ISSUE #426: Query Functions
     // ============================================================================
@@ -1843,6 +2233,28 @@ pub fn is_member(
     /// * `Err(StellarSaveError::GroupNotFound)` - If group doesn't exist
     pub fn get_group_info(env: Env, group_id: u64) -> Result<Group, StellarSaveError> {
         Self::get_group(env, group_id)
+    }
+
+    /// Returns all contribution milestones reached by a member in a group.
+    ///
+    /// A milestone is reached when a member achieves a consecutive-contribution
+    /// streak of 5, 10, or 20 cycles without missing a single cycle.
+    ///
+    /// # Arguments
+    /// * `env`      - Soroban environment
+    /// * `group_id` - ID of the group
+    /// * `member`   - Address of the member to query
+    ///
+    /// # Returns
+    /// * `Ok(Vec<MemberMilestone>)` - Milestones reached, ordered by threshold
+    /// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
+    /// * `Err(StellarSaveError::NotMember)` - Member not in group
+    pub fn get_member_milestones(
+        env: Env,
+        group_id: u64,
+        member: Address,
+    ) -> Result<Vec<milestones::MemberMilestone>, StellarSaveError> {
+        milestones::get_member_milestones(&env, group_id, member)
     }
 
     /// Gets all members of a group.
@@ -2766,6 +3178,19 @@ pub fn is_member(
             return Err(StellarSaveError::GroupFull);
         }
 
+        // Task 3b: Check invitation if group is invitation-only
+        if group.invitation_only {
+            let inv_key = StorageKeyBuilder::group_invitations(group_id);
+            let invitations: Vec<Address> = env
+                .storage()
+                .persistent()
+                .get(&inv_key)
+                .unwrap_or(Vec::new(&env));
+            if !invitations.contains(&member) {
+                return Err(StellarSaveError::NotInvited);
+            }
+        }
+
         // Task 4: Assign payout position
         // Payout position is based on join order (member_count)
         let payout_position = group.member_count;
@@ -2835,7 +3260,7 @@ pub fn is_member(
         member.require_auth();
 
         let group_key = StorageKeyBuilder::group_data(group_id);
-        let group: Group = env
+        let mut group: Group = env
             .storage()
             .persistent()
             .get(&group_key)
@@ -2859,8 +3284,16 @@ pub fn is_member(
         // Validate contribution amount matches group requirement
         Self::validate_contribution_amount(&env, group_id, amount)?;
 
+        // Collect 1% reward fee and accumulate in group.reward_pool
+        let reward_amount = amount / 100;
+        let net_contribution = amount - reward_amount;
+        group.reward_pool = group.reward_pool
+            .checked_add(reward_amount)
+            .ok_or(StellarSaveError::Overflow)?;
+        env.storage().persistent().set(&group_key, &group);
+
         let timestamp = env.ledger().timestamp();
-        Self::record_contribution(&env, group_id, group.current_cycle, member.clone(), amount, timestamp)?;
+        Self::record_contribution(&env, group_id, group.current_cycle, member.clone(), net_contribution, timestamp)?;
 
         EventEmitter::emit_contribution_made(
             &env,
@@ -2944,6 +3377,98 @@ pub fn is_member(
 
         let withdrawal_key = StorageKeyBuilder::member_profile(group_id, member.clone());
         env.storage().persistent().remove(&withdrawal_key);
+
+        Ok(())
+    }
+
+    /// Claims the completion reward for a member who participated in all cycles.
+    ///
+    /// The reward pool is accumulated from 1% of each contribution. After the group
+    /// completes, eligible members (those who contributed every cycle) can claim an
+    /// equal share of the reward pool.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `member` - Address of the member claiming the reward
+    /// * `group_id` - ID of the completed group
+    ///
+    /// # Returns
+    /// * `Ok(())` - Reward claimed successfully
+    /// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
+    /// * `Err(StellarSaveError::NotMember)` - Caller is not a member
+    /// * `Err(StellarSaveError::InvalidState)` - Group is not yet complete
+    /// * `Err(StellarSaveError::RewardNotEligible)` - Member missed at least one cycle
+    /// * `Err(StellarSaveError::RewardAlreadyClaimed)` - Reward already claimed
+    pub fn claim_completion_reward(
+        env: Env,
+        member: Address,
+        group_id: u64,
+    ) -> Result<(), StellarSaveError> {
+        member.require_auth();
+
+        // Load group
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group: Group = env
+            .storage()
+            .persistent()
+            .get(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // Group must be complete
+        if !group.is_complete() {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        // Verify member exists
+        let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
+        if !env.storage().persistent().has(&member_key) {
+            return Err(StellarSaveError::NotMember);
+        }
+
+        // Prevent double claiming
+        let claimed_key = StorageKeyBuilder::member_reward_claimed(group_id, member.clone());
+        if env.storage().persistent().has(&claimed_key) {
+            return Err(StellarSaveError::RewardAlreadyClaimed);
+        }
+
+        // Verify member contributed in every cycle (0..max_members)
+        for cycle in 0..group.max_members {
+            let contrib_key = StorageKeyBuilder::contribution_individual(
+                group_id,
+                cycle,
+                member.clone(),
+            );
+            if !env.storage().persistent().has(&contrib_key) {
+                return Err(StellarSaveError::RewardNotEligible);
+            }
+        }
+
+        // Calculate equal share: reward_pool / max_members
+        let reward_share = group.reward_pool
+            .checked_div(group.max_members as i128)
+            .unwrap_or(0);
+
+        if reward_share <= 0 {
+            return Err(StellarSaveError::RewardNotEligible);
+        }
+
+        // Mark as claimed before transfer (checks-effects-interactions)
+        env.storage().persistent().set(&claimed_key, &true);
+
+        // Transfer reward via the group's token
+        let token_config_key = StorageKeyBuilder::group_token_config(group_id);
+        if let Some(token_config) = env
+            .storage()
+            .persistent()
+            .get::<_, crate::group::TokenConfig>(&token_config_key)
+        {
+            let token_client = soroban_sdk::token::TokenClient::new(&env, &token_config.token_address);
+            token_client.transfer(&env.current_contract_address(), &member, &reward_share);
+        }
+
+        // Emit RewardClaimed event
+        let timestamp = env.ledger().timestamp();
+        EventEmitter::emit_reward_claimed(&env, group_id, member, reward_share, timestamp);
 
         Ok(())
     }
