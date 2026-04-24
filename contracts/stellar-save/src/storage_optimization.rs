@@ -367,56 +367,20 @@ impl StorageCostAnalyzer {
 
     /// Generates a detailed storage report for a group configuration.
     ///
-    /// # Arguments
-    /// * `member_count` - Number of members
-    /// * `cycle_count` - Number of cycles
-    ///
-    /// # Returns
-    /// A formatted string with detailed storage analysis
-    pub fn generate_storage_report(member_count: u32, cycle_count: u32) -> soroban_sdk::String {
+    /// Returns storage savings as `(traditional_entries, optimized_entries, savings_pct)`.
+    pub fn generate_storage_report(member_count: u32, cycle_count: u32) -> (u64, u64, u32) {
         let traditional_total = Self::estimate_total_group_storage(
-            member_count,
-            cycle_count,
-            false,
-            false,
+            member_count, cycle_count, false, false,
         );
-
         let optimized_total = Self::estimate_total_group_storage(
-            member_count,
-            cycle_count,
-            true,
-            true,
+            member_count, cycle_count, true, true,
         );
-
         let savings_percentage = if traditional_total > 0 {
-            (((traditional_total - optimized_total) as f64 / traditional_total as f64) * 100.0) as u32
+            (((traditional_total - optimized_total) * 100) / traditional_total) as u32
         } else {
             0
         };
-
-        let mut report = soroban_sdk::String::new(&Env::default());
-        report.append_slice("Storage Analysis Report\n");
-        report.append_slice("========================\n");
-        report.append_slice("Members: ");
-        report.append_slice(&member_count.to_string());
-        report.append_slice("\n");
-        report.append_slice("Cycles: ");
-        report.append_slice(&cycle_count.to_string());
-        report.append_slice("\n\n");
-        
-        report.append_slice("Traditional Approach: ");
-        report.append_slice(&traditional_total.to_string());
-        report.append_slice(" entries\n");
-        
-        report.append_slice("Optimized Approach: ");
-        report.append_slice(&optimized_total.to_string());
-        report.append_slice(" entries\n");
-        
-        report.append_slice("Savings: ");
-        report.append_slice(&savings_percentage.to_string());
-        report.append_slice("%\n");
-
-        report
+        (traditional_total, optimized_total, savings_percentage)
     }
 }
 

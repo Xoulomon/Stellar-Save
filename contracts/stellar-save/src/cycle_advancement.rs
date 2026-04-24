@@ -111,7 +111,7 @@ pub fn try_advance_cycle(
     let next_cycle = group.current_cycle + 1;
 
     // Emit CycleEnded for the cycle we're leaving
-    EventEmitter::emit_cycle_ended(env, group_id, group.current_cycle, now);
+    EventEmitter::emit_cycle_advanced(env, group_id, group.current_cycle, now);
 
     // Advance the cycle counter (group.advance_cycle also handles completion)
     group.advance_cycle(env);
@@ -121,7 +121,7 @@ pub fn try_advance_cycle(
 
     // Emit CycleStarted for the new cycle (only if group is still running)
     if !group.is_complete() {
-        EventEmitter::emit_cycle_started(env, group_id, next_cycle, now);
+        EventEmitter::emit_cycle_advanced(env, group_id, next_cycle, now);
     } else {
         // Emit GroupStatusChanged → Completed
         EventEmitter::emit_group_status_changed(

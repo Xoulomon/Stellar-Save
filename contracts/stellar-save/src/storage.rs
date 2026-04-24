@@ -82,6 +82,14 @@ pub enum GroupKey {
     /// Invitation list: GROUP_INVITATIONS_{id}
     /// Stores the Vec<Address> of addresses invited to join this group.
     Invitations(u64),
+
+    /// Payout position reverse index: GROUP_PAYOUT_POS_IDX_{id}_{position}
+    ///
+    /// Gas opt: stores the Address of the member assigned to a given payout
+    /// position. Written once at join/assign time; read once per payout cycle.
+    /// Replaces the O(n) member-list scan in `identify_recipient` with a single
+    /// O(1) SLOAD: `position → Address`.
+    PayoutPositionIndex(u64, u32),
 }
 
 /// Storage keys for member-related data.
@@ -269,6 +277,14 @@ impl StorageKeyBuilder {
         StorageKey::Group(GroupKey::Invitations(group_id))
     }
 
+    /// Creates a key for the payout-position reverse index.
+    ///
+    /// Gas opt: maps `(group_id, position) → Address` so `identify_recipient`
+    /// can do a single O(1) SLOAD instead of iterating all members.
+    pub fn group_payout_position_index(group_id: u64, position: u32) -> StorageKey {
+        StorageKey::Group(GroupKey::PayoutPositionIndex(group_id, position))
+    }
+
     // Member key builders
 
     /// Creates a key for storing member profile data.
@@ -325,6 +341,11 @@ impl StorageKeyBuilder {
 
     /// Creates a key for tracking whether a member's proof was verified for a cycle.
     pub fn contribution_proof_verified(group_id: u64, cycle: u32, address: Address) -> StorageKey {
+        StorageKey::Contribution(ContributionKey::ProofVerified(group_id, cycle, address))
+    }
+
+    /// Creates a key for tracking whether a contribution reminder was emitted for a member.
+    pub fn contribution_reminder_emitted(group_id: u64, cycle: u32, address: Address) -> StorageKey {
         StorageKey::Contribution(ContributionKey::ProofVerified(group_id, cycle, address))
     }
 

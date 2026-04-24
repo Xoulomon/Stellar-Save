@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, Env};
+use soroban_sdk::{contracttype, Address, Env, String};
 
 /// Event emitted when a new savings group is created.
 #[contracttype]
@@ -297,6 +297,21 @@ impl EventEmitter {
         env.events().publish(("member_left",), event);
     }
 
+    /// Emits a reminder event when a contribution is due for a member.
+    pub fn emit_contribution_due(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        cycle: u32,
+        deadline: u64,
+        emitted_at: u64,
+    ) {
+        env.events().publish(
+            (soroban_sdk::Symbol::new(env, "contribution_due"), group_id),
+            (member, cycle, deadline, emitted_at),
+        );
+    }
+
     pub fn emit_contribution_made(
         env: &Env,
         group_id: u64,
@@ -305,8 +320,7 @@ impl EventEmitter {
         cycle: u32,
         cycle_total: i128,
         contributed_at: u64,
-    ) {
-        let event = ContributionMade {
+    ) {        let event = ContributionMade {
             group_id,
             contributor,
             amount,

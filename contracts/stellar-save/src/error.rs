@@ -119,6 +119,10 @@ pub enum StellarSaveError {
     /// The address has not been invited to join this invitation-only group.
     /// Error Code: 2004
     NotInvited = 2004,
+
+    /// A dispute is currently active for this group; payouts are blocked.
+    /// Error Code: 1006
+    DisputeActive = 1006,
 }
 
 impl StellarSaveError {
@@ -218,6 +222,18 @@ impl StellarSaveError {
             }
             StellarSaveError::NotInvited => {
                 "This address has not been invited to join the group. Only invited addresses can join invitation-only groups."
+            }
+            StellarSaveError::DisputeActive => {
+                "A dispute is currently active for this group. Payouts are blocked until the dispute is resolved."
+            }
+            StellarSaveError::InvalidMetadata => {
+                "Invalid metadata provided. Name must be 3-50 characters, description 0-500 characters."
+            }
+            StellarSaveError::ContributionTooLow => {
+                "The contribution amount is below the configured minimum."
+            }
+            StellarSaveError::ContributionTooHigh => {
+                "The contribution amount exceeds the configured maximum."
             }
         }
     }
@@ -370,6 +386,18 @@ impl ErrorRecoveryStrategy {
             }
             StellarSaveError::NotInvited => {
                 "Ask the group creator to invite your address before attempting to join."
+            }
+            StellarSaveError::DisputeActive => {
+                "A dispute is active for this group. Wait for the dispute to be resolved before payouts can proceed."
+            }
+            StellarSaveError::InvalidMetadata => {
+                "Check that the group name is 3-50 characters and description is 0-500 characters."
+            }
+            StellarSaveError::ContributionTooLow => {
+                "Increase the contribution amount to meet the configured minimum."
+            }
+            StellarSaveError::ContributionTooHigh => {
+                "Decrease the contribution amount to stay within the configured maximum."
             }
         }
     }

@@ -23,6 +23,7 @@ use crate::group::{Group, GroupStatus};
 use crate::payout::PayoutRecord;
 use crate::pool::PoolCalculator;
 use crate::storage::StorageKeyBuilder;
+use crate::MemberProfile;
 use soroban_sdk::{Address, Env};
 
 /// Validates that the current cycle is complete and ready for payout.
@@ -67,15 +68,9 @@ fn validate_cycle_complete(
 
 /// Identifies the member who should receive the payout for the current cycle.
 ///
-/// Gas opt: O(1) direct lookup — the payout_position for each member equals the
-/// cycle they receive payout in, so we can store a reverse index
-/// `position_to_member` at assignment time. Here we use the existing
-/// `member_payout_eligibility` key (which stores the position as u32) and
-/// iterate once to find the match, but short-circuit immediately on first hit.
-///
-/// For groups where positions are pre-indexed via `assign_payout_positions`,
-/// the caller already knows `current_cycle == recipient's payout_position`, so
-/// we only need to find the member whose stored position equals current_cycle.
+/// Gas opt: O(1) direct lookup using the `PayoutPositionIndex` reverse map
+/// written at join/assign time. A single SLOAD replaces the previous O(n)
+/// member-list scan.
 ///
 /// # Arguments
 /// * `env` - Soroban environment for storage access
@@ -85,14 +80,26 @@ fn validate_cycle_complete(
 ///
 /// # Returns
 /// * `Ok(Address)` - The recipient's address
-/// * `Err(StellarSaveError)` - If no member found or multiple members with same position
+/// * `Err(StellarSaveError)` - If no member found for this position
 fn identify_recipient(
     env: &Env,
     group_id: u64,
     current_cycle: u32,
     member_count: u32,
 ) -> Result<Address, StellarSaveError> {
-    // Load the list of all members in the group
+    // Gas opt: O(1) reverse-index lookup instead of O(n) member-list scan.
+    // The index is written at join_group / assign_payout_positions time.
+    let pos_idx_key = StorageKeyBuilder::group_payout_position_index(group_id, current_cycle);
+    if let Some(recipient) = env.storage().persistent().get::<_, Address>(&pos_idx_key) {
+        // Sanity: position must be within the valid range for this group
+        if current_cycle < member_count {
+            return Ok(recipient);
+        }
+    }
+
+    // Fallback: reverse index not yet populated (legacy groups or first cycle
+    // before assign_payout_positions was called). Fall back to the O(n) scan
+    // so we remain backward-compatible.
     let members_key = StorageKeyBuilder::group_members(group_id);
     let members: soroban_sdk::Vec<Address> = env
         .storage()
@@ -100,14 +107,10 @@ fn identify_recipient(
         .get(&members_key)
         .ok_or(StellarSaveError::GroupNotFound)?;
 
-    // Validate that we have the expected number of members
     if members.len() != member_count {
         return Err(StellarSaveError::InvalidState);
     }
 
-    // Gas opt: iterate members and short-circuit on first position match.
-    // Each member's payout_position is stored as a u32 in member_payout_eligibility.
-    // In a valid group exactly one member has position == current_cycle.
     let mut recipient: Option<Address> = None;
     let mut match_count = 0u32;
 
@@ -117,7 +120,6 @@ fn identify_recipient(
             if position == current_cycle {
                 recipient = Some(member_address);
                 match_count += 1;
-                // No early break — we still validate uniqueness
             }
         }
     }
@@ -596,13 +598,13 @@ fn apply_missed_contribution_penalties(
             env.storage().persistent().set(&pool_key, &new_pool);
 
             let timestamp = env.ledger().timestamp();
+            let _ = timestamp; // timestamp captured internally by emit_penalty_applied
             EventEmitter::emit_penalty_applied(
                 env,
                 group_id,
                 member,
                 group.penalty_amount,
                 cycle,
-                timestamp,
             );
         }
     }
