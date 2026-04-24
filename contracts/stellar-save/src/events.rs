@@ -172,6 +172,18 @@ pub struct GroupsMerged {
     pub merged_at: u64,
 }
 
+/// Event emitted when a member reaches a contribution streak milestone.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MilestoneReached {
+    pub group_id: u64,
+    pub member: Address,
+    /// The streak threshold crossed (e.g. 5, 10, 20).
+    pub threshold: u32,
+    /// The cycle number on which the milestone was reached.
+    pub reached_at_cycle: u32,
+}
+
 /// Event emitted when a penalty is applied to a member for a missed contribution.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -452,6 +464,22 @@ impl EventEmitter {
             recovered_at: env.ledger().timestamp(),
         };
         env.events().publish(("penalty_recovered",), event);
+    }
+
+    pub fn emit_milestone_reached(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        threshold: u32,
+        reached_at_cycle: u32,
+    ) {
+        let event = MilestoneReached {
+            group_id,
+            member,
+            threshold,
+            reached_at_cycle,
+        };
+        env.events().publish(("milestone_reached",), event);
     }
 
     pub fn emit_groups_merged(

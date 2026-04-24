@@ -34,6 +34,8 @@ pub mod token;
 
 mod multi_token_tests;
 mod merge_tests;
+mod milestone_tests;
+pub mod milestones;
 
 // Re-export for convenience
 pub use contribution::{ContributionPage, ContributionRecord};
@@ -290,6 +292,9 @@ impl StellarSaveContract {
             .checked_add(amount)
             .ok_or(StellarSaveError::Overflow)?;
         env.storage().persistent().set(&balance_key, &new_balance);
+
+        // 7. Update contribution streak and emit milestone events if thresholds crossed
+        milestones::update_streak(env, group_id, member_address, cycle_number);
 
         Ok(())
     }
@@ -2033,6 +2038,28 @@ pub fn is_member(
     /// * `Err(StellarSaveError::GroupNotFound)` - If group doesn't exist
     pub fn get_group_info(env: Env, group_id: u64) -> Result<Group, StellarSaveError> {
         Self::get_group(env, group_id)
+    }
+
+    /// Returns all contribution milestones reached by a member in a group.
+    ///
+    /// A milestone is reached when a member achieves a consecutive-contribution
+    /// streak of 5, 10, or 20 cycles without missing a single cycle.
+    ///
+    /// # Arguments
+    /// * `env`      - Soroban environment
+    /// * `group_id` - ID of the group
+    /// * `member`   - Address of the member to query
+    ///
+    /// # Returns
+    /// * `Ok(Vec<MemberMilestone>)` - Milestones reached, ordered by threshold
+    /// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
+    /// * `Err(StellarSaveError::NotMember)` - Member not in group
+    pub fn get_member_milestones(
+        env: Env,
+        group_id: u64,
+        member: Address,
+    ) -> Result<Vec<milestones::MemberMilestone>, StellarSaveError> {
+        milestones::get_member_milestones(&env, group_id, member)
     }
 
     /// Gets all members of a group.

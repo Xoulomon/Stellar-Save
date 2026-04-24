@@ -106,6 +106,10 @@ pub enum MemberKey {
     /// Member total penalties: MEMBER_PENALTY_{group_id}_{address}
     /// Tracks cumulative penalty amount charged to a member for missed contributions.
     PenaltyTotal(u64, Address),
+
+    /// Member contribution streak: MEMBER_STREAK_{group_id}_{address}
+    /// Tracks the current and best consecutive-contribution streak for a member.
+    Streak(u64, Address),
 }
 
 /// Storage keys for contribution tracking.
@@ -277,6 +281,11 @@ impl StorageKeyBuilder {
     /// Creates a key for member cumulative penalty total.
     pub fn member_penalty_total(group_id: u64, address: Address) -> StorageKey {
         StorageKey::Member(MemberKey::PenaltyTotal(group_id, address))
+    }
+
+    /// Creates a key for member contribution streak.
+    pub fn member_streak(group_id: u64, address: Address) -> StorageKey {
+        StorageKey::Member(MemberKey::Streak(group_id, address))
     }
 
     // Contribution key builders
