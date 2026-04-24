@@ -14,6 +14,7 @@ const CreateGroupPage = lazy(() => import("../pages/CreateGroupPage"));
 const BrowseGroupsPage = lazy(() => import("../pages/BrowseGroupsPage"));
 
 const ContributionCalendarPage = lazy(() => import("../pages/ContributionCalendarPage"));
+const LeaderboardPage = lazy(() => import("../pages/LeaderboardPage"));
 
 const GroupComparisonPage = lazy(() => import("../pages/GroupComparisonPage"));
 
@@ -103,5 +104,12 @@ export const routeConfig: RouteConfig[] = [
     component: ErrorPage,
     protected: false,
     title: "Error - Stellar Save",
+  },
+  {
+    path: ROUTES.LEADERBOARD,
+    component: LeaderboardPage,
+    protected: true,
+    title: "Leaderboard - Stellar Save",
+    description: "Top-performing groups and contributors",
   },
 ];

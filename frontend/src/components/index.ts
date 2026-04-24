@@ -47,3 +47,5 @@ export type { ContributionFlowProps } from "./ContributionFlow";
 export { WalletIntegration } from "./WalletIntegration";
 export { ActivityFeed } from "./ActivityFeed/ActivityFeed";
 export type { ActivityFeedProps } from "./ActivityFeed/ActivityFeed";
+export { Leaderboard, PeriodTabs } from "./Leaderboard";
+export type { LeaderboardProps } from "./Leaderboard";

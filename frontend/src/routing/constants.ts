@@ -18,6 +18,8 @@ export const ROUTES = {
 
   GROUPS_COMPARE: "/groups/compare",
 
+  LEADERBOARD: "/leaderboard",
+
 } as const;
 
 /**
