@@ -245,6 +245,14 @@ pub struct Group {
 
     /// Optional image URL for the group.
     pub image_url: Option<soroban_sdk::String>,
+
+    /// Whether this group has been archived by its creator.
+    ///
+    /// Archiving is only allowed after the group reaches a terminal state
+    /// (Completed or Cancelled). Archived groups are excluded from the default
+    /// `list_groups()` results and are only visible via `list_archived_groups()`.
+    /// This reduces active storage scan costs and improves query performance.
+    pub archived: bool,
 }
 impl Group {
     /// Creates a new Group with validation.
@@ -357,6 +365,7 @@ impl Group {
             name: None,
             description: None,
             image_url: None,
+            archived: false,
         }
     }
     /// Checks if the group has completed all cycles.

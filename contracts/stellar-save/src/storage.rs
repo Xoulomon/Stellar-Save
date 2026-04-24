@@ -90,6 +90,12 @@ pub enum GroupKey {
     /// Replaces the O(n) member-list scan in `identify_recipient` with a single
     /// O(1) SLOAD: `position → Address`.
     PayoutPositionIndex(u64, u32),
+
+    /// Archived flag: GROUP_ARCHIVED_{id}
+    /// Stores a bool indicating whether the group has been archived by its creator.
+    /// Archived groups are excluded from `list_groups()` by default and are only
+    /// visible via `list_archived_groups()`.
+    Archived(u64),
 }
 
 /// Storage keys for member-related data.
@@ -283,6 +289,14 @@ impl StorageKeyBuilder {
     /// can do a single O(1) SLOAD instead of iterating all members.
     pub fn group_payout_position_index(group_id: u64, position: u32) -> StorageKey {
         StorageKey::Group(GroupKey::PayoutPositionIndex(group_id, position))
+    }
+
+    /// Creates a key for the archived flag of a group.
+    ///
+    /// Stores a `bool` indicating whether the group has been archived.
+    /// Archived groups are hidden from `list_groups()` by default.
+    pub fn group_archived(group_id: u64) -> StorageKey {
+        StorageKey::Group(GroupKey::Archived(group_id))
     }
 
     // Member key builders
@@ -509,6 +523,11 @@ pub mod key_prefixes {
 /// - `GROUP_{id}`: Complete group data (configuration, state)
 /// - `GROUP_MEMBERS_{id}`: List of member addresses
 /// - `GROUP_STATUS_{id}`: Current group status
+/// - `GROUP_ARCHIVED_{id}`: Boolean flag indicating whether the group has been archived
+///
+/// Archived groups are excluded from `list_groups()` by default and are only
+/// visible via `list_archived_groups()`. Archiving is a one-way, creator-only
+/// operation available after a group reaches a terminal state (Completed or Cancelled).
 ///
 /// ## Member Storage (MemberKey)
 /// - `MEMBER_{group_id}_{address}`: Member profile (join date, status)
@@ -561,7 +580,7 @@ impl StorageLayout {
 
     /// Returns the estimated storage overhead per group.
     pub fn estimated_overhead_per_group() -> &'static str {
-        "Approximately 5-10 storage entries per group (group data, members list, status, balance, paid_out)"
+        "Approximately 6-11 storage entries per group (group data, members list, status, balance, paid_out, archived flag)"
     }
 
     /// Returns the estimated storage overhead per member.
