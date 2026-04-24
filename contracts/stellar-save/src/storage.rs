@@ -107,6 +107,10 @@ pub enum MemberKey {
     /// Tracks total amount contributed by member across all cycles.
     TotalContributions(u64, Address),
 
+    /// Member reward claimed flag: MEMBER_REWARD_CLAIMED_{group_id}_{address}
+    /// Tracks whether a member has claimed their completion reward.
+    RewardClaimed(u64, Address),
+
     /// Member total penalties: MEMBER_PENALTY_{group_id}_{address}
     /// Tracks cumulative penalty amount charged to a member for missed contributions.
     PenaltyTotal(u64, Address),
@@ -285,6 +289,11 @@ impl StorageKeyBuilder {
     /// Creates a key for member total contributions.
     pub fn member_total_contributions(group_id: u64, address: Address) -> StorageKey {
         StorageKey::Member(MemberKey::TotalContributions(group_id, address))
+    }
+
+    /// Creates a key for tracking whether a member has claimed their completion reward.
+    pub fn member_reward_claimed(group_id: u64, address: Address) -> StorageKey {
+        StorageKey::Member(MemberKey::RewardClaimed(group_id, address))
     }
 
     /// Creates a key for member cumulative penalty total.

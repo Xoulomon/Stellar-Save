@@ -540,20 +540,18 @@ fn advance_cycle_or_complete(
     group: &mut Group,
 ) -> Result<(), StellarSaveError> {
     // Call group.advance_cycle to increment cycle and handle completion logic
-    // This method:
-    // - Increments current_cycle by 1
-    // - Checks if current_cycle >= max_members (group is complete)
-    // - If complete: sets status = Completed, is_active = false
-    // - If complete: emits GroupCompleted event automatically
-    // - Panics if group is already complete (defensive check)
     group.advance_cycle(env);
 
     // Save the updated group to storage
-    // This persists the incremented cycle number and any status changes
     let group_key = StorageKeyBuilder::group_data(group.id);
     env.storage().persistent().set(&group_key, group);
 
-    // Cycle advancement and storage completed successfully
+    // Emit CycleAdvanced event (only when group is not yet complete)
+    if !group.is_complete() {
+        let timestamp = env.ledger().timestamp();
+        EventEmitter::emit_cycle_advanced(env, group.id, group.current_cycle, timestamp);
+    }
+
     Ok(())
 }
 

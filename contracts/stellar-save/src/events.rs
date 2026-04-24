@@ -157,6 +157,25 @@ pub struct GroupUnpaused {
     pub unpaused_at: u64,
 }
 
+/// Event emitted when a cycle advances to the next cycle.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CycleAdvanced {
+    pub group_id: u64,
+    pub new_cycle: u32,
+    pub advanced_at: u64,
+}
+
+/// Event emitted when a member claims their completion reward.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RewardClaimed {
+    pub group_id: u64,
+    pub member: Address,
+    pub amount: i128,
+    pub claimed_at: u64,
+}
+
 /// Utility functions for emitting events.
 pub struct EventEmitter;
 
@@ -552,6 +571,25 @@ impl EventEmitter {
             merged_at,
         };
         env.events().publish(("groups_merged",), event);
+    }
+
+    pub fn emit_cycle_advanced(env: &Env, group_id: u64, new_cycle: u32, advanced_at: u64) {
+        let event = CycleAdvanced {
+            group_id,
+            new_cycle,
+            advanced_at,
+        };
+        env.events().publish(("cycle_advanced",), event);
+    }
+
+    pub fn emit_reward_claimed(env: &Env, group_id: u64, member: Address, amount: i128, claimed_at: u64) {
+        let event = RewardClaimed {
+            group_id,
+            member,
+            amount,
+            claimed_at,
+        };
+        env.events().publish(("reward_claimed",), event);
     }
 }
 

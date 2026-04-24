@@ -32,3 +32,11 @@ export { usePayouts } from './usePayouts';
 
 export { useEventService } from './useEventService';
 export type { UseEventServiceReturn } from './useEventService';
+
+export { useActivityFeed } from './useActivityFeed';
+export type {
+  ActivityItem,
+  ActivityFeedFilter,
+  UseActivityFeedOptions,
+  UseActivityFeedReturn,
+} from './useActivityFeed';

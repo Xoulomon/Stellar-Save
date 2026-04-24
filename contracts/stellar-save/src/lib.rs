@@ -364,6 +364,54 @@ impl StellarSaveContract {
         Ok(())
     }
 
+    /// Updates the global contribution amount limits.
+    ///
+    /// Only the contract admin can call this function.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `admin` - Admin address (must match stored config admin)
+    /// * `min_contribution` - New minimum contribution amount (must be > 0)
+    /// * `max_contribution` - New maximum contribution amount (must be >= min_contribution)
+    ///
+    /// # Returns
+    /// * `Ok(())` - Limits updated successfully
+    /// * `Err(StellarSaveError::Unauthorized)` - Caller is not the admin
+    /// * `Err(StellarSaveError::ContributionTooLow)` - min_contribution <= 0
+    /// * `Err(StellarSaveError::ContributionTooHigh)` - max_contribution < min_contribution
+    pub fn update_contribution_limits(
+        env: Env,
+        admin: Address,
+        min_contribution: i128,
+        max_contribution: i128,
+    ) -> Result<(), StellarSaveError> {
+        admin.require_auth();
+
+        if min_contribution <= 0 {
+            return Err(StellarSaveError::ContributionTooLow);
+        }
+        if max_contribution < min_contribution {
+            return Err(StellarSaveError::ContributionTooHigh);
+        }
+
+        let key = StorageKeyBuilder::contract_config();
+        let mut config = env
+            .storage()
+            .persistent()
+            .get::<_, ContractConfig>(&key)
+            .ok_or(StellarSaveError::Unauthorized)?;
+
+        if config.admin != admin {
+            return Err(StellarSaveError::Unauthorized);
+        }
+
+        config.min_contribution = min_contribution;
+        config.max_contribution = max_contribution;
+        env.storage().persistent().set(&key, &config);
+
+        Ok(())
+    }
+
     /// Creates a new savings group (ROSCA).
     /// Tasks: Validate parameters, Generate ID, Initialize Struct, Store Data, Emit Event.
     pub fn create_group(
@@ -389,9 +437,13 @@ impl StellarSaveContract {
             .persistent()
             .get::<_, ContractConfig>(&config_key)
         {
-            if contribution_amount < config.min_contribution
-                || contribution_amount > config.max_contribution
-                || max_members < config.min_members
+            if contribution_amount < config.min_contribution {
+                return Err(StellarSaveError::ContributionTooLow);
+            }
+            if contribution_amount > config.max_contribution {
+                return Err(StellarSaveError::ContributionTooHigh);
+            }
+            if max_members < config.min_members
                 || max_members > config.max_members
                 || cycle_duration < config.min_cycle_duration
                 || cycle_duration > config.max_cycle_duration
@@ -3208,7 +3260,7 @@ pub fn is_member(
         member.require_auth();
 
         let group_key = StorageKeyBuilder::group_data(group_id);
-        let group: Group = env
+        let mut group: Group = env
             .storage()
             .persistent()
             .get(&group_key)
@@ -3232,8 +3284,16 @@ pub fn is_member(
         // Validate contribution amount matches group requirement
         Self::validate_contribution_amount(&env, group_id, amount)?;
 
+        // Collect 1% reward fee and accumulate in group.reward_pool
+        let reward_amount = amount / 100;
+        let net_contribution = amount - reward_amount;
+        group.reward_pool = group.reward_pool
+            .checked_add(reward_amount)
+            .ok_or(StellarSaveError::Overflow)?;
+        env.storage().persistent().set(&group_key, &group);
+
         let timestamp = env.ledger().timestamp();
-        Self::record_contribution(&env, group_id, group.current_cycle, member.clone(), amount, timestamp)?;
+        Self::record_contribution(&env, group_id, group.current_cycle, member.clone(), net_contribution, timestamp)?;
 
         EventEmitter::emit_contribution_made(
             &env,
@@ -3317,6 +3377,98 @@ pub fn is_member(
 
         let withdrawal_key = StorageKeyBuilder::member_profile(group_id, member.clone());
         env.storage().persistent().remove(&withdrawal_key);
+
+        Ok(())
+    }
+
+    /// Claims the completion reward for a member who participated in all cycles.
+    ///
+    /// The reward pool is accumulated from 1% of each contribution. After the group
+    /// completes, eligible members (those who contributed every cycle) can claim an
+    /// equal share of the reward pool.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `member` - Address of the member claiming the reward
+    /// * `group_id` - ID of the completed group
+    ///
+    /// # Returns
+    /// * `Ok(())` - Reward claimed successfully
+    /// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
+    /// * `Err(StellarSaveError::NotMember)` - Caller is not a member
+    /// * `Err(StellarSaveError::InvalidState)` - Group is not yet complete
+    /// * `Err(StellarSaveError::RewardNotEligible)` - Member missed at least one cycle
+    /// * `Err(StellarSaveError::RewardAlreadyClaimed)` - Reward already claimed
+    pub fn claim_completion_reward(
+        env: Env,
+        member: Address,
+        group_id: u64,
+    ) -> Result<(), StellarSaveError> {
+        member.require_auth();
+
+        // Load group
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group: Group = env
+            .storage()
+            .persistent()
+            .get(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // Group must be complete
+        if !group.is_complete() {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        // Verify member exists
+        let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
+        if !env.storage().persistent().has(&member_key) {
+            return Err(StellarSaveError::NotMember);
+        }
+
+        // Prevent double claiming
+        let claimed_key = StorageKeyBuilder::member_reward_claimed(group_id, member.clone());
+        if env.storage().persistent().has(&claimed_key) {
+            return Err(StellarSaveError::RewardAlreadyClaimed);
+        }
+
+        // Verify member contributed in every cycle (0..max_members)
+        for cycle in 0..group.max_members {
+            let contrib_key = StorageKeyBuilder::contribution_individual(
+                group_id,
+                cycle,
+                member.clone(),
+            );
+            if !env.storage().persistent().has(&contrib_key) {
+                return Err(StellarSaveError::RewardNotEligible);
+            }
+        }
+
+        // Calculate equal share: reward_pool / max_members
+        let reward_share = group.reward_pool
+            .checked_div(group.max_members as i128)
+            .unwrap_or(0);
+
+        if reward_share <= 0 {
+            return Err(StellarSaveError::RewardNotEligible);
+        }
+
+        // Mark as claimed before transfer (checks-effects-interactions)
+        env.storage().persistent().set(&claimed_key, &true);
+
+        // Transfer reward via the group's token
+        let token_config_key = StorageKeyBuilder::group_token_config(group_id);
+        if let Some(token_config) = env
+            .storage()
+            .persistent()
+            .get::<_, crate::group::TokenConfig>(&token_config_key)
+        {
+            let token_client = soroban_sdk::token::TokenClient::new(&env, &token_config.token_address);
+            token_client.transfer(&env.current_contract_address(), &member, &reward_share);
+        }
+
+        // Emit RewardClaimed event
+        let timestamp = env.ledger().timestamp();
+        EventEmitter::emit_reward_claimed(&env, group_id, member, reward_share, timestamp);
 
         Ok(())
     }
