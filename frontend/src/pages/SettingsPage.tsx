@@ -1,7 +1,7 @@
 import { Stack, Typography, Divider } from '@mui/material';
 import { AppCard, AppLayout } from '../ui';
 import { ThemeToggle } from '../components/ThemeToggle';
-import { ReminderPreferencesSection } from '../components/ReminderPreferencesSection';
+import { LanguageSelector } from '../components/LanguageSelector';
 import { useTheme } from '../hooks/useTheme';
 
 /**
@@ -58,11 +58,16 @@ export default function SettingsPage() {
             </Stack>
           </Stack>
 
-          {/* ── Divider ────────────────────────────────────────── */}
-          <Divider />
-
-          {/* ── Reminders ──────────────────────────────────────── */}
-          <ReminderPreferencesSection />
+          {/* ── Language ───────────────────────────────────────── */}
+          <Stack spacing={1}>
+            <Typography variant="subtitle1" fontWeight={600}>
+              Language
+            </Typography>
+            <Typography color="text.secondary" variant="body2">
+              Choose your preferred language.
+            </Typography>
+            <LanguageSelector />
+          </Stack>
         </Stack>
       </AppCard>
     </AppLayout>

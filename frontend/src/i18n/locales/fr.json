@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "groups": "Groupes",
+    "profile": "Profil",
+    "settings": "Paramètres",
+    "leaderboard": "Classement"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "subtitle": "Configurez vos préférences",
+    "appearance": "Apparence",
+    "appearanceDesc": "Choisissez l'apparence de Stellar Save.",
+    "language": "Langue",
+    "languageDesc": "Choisissez votre langue préférée.",
+    "theme": {
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Système"
+    }
+  },
+  "scheduler": {
+    "title": "Planifier une contribution",
+    "amount": "Montant (XLM)",
+    "dateTime": "Date et heure prévues",
+    "note": "Note (facultatif)",
+    "schedule": "Planifier",
+    "scheduled": "Planifié",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "edit": "Modifier",
+    "balanceWarning": "Votre solde ({{balance}} XLM) peut être insuffisant pour couvrir toutes les contributions planifiées ({{total}} XLM au total).",
+    "validation": {
+      "positiveAmount": "Le montant doit être un nombre positif.",
+      "selectDate": "Veuillez sélectionner une date et une heure.",
+      "futureDate": "La date planifiée doit être dans le futur."
+    }
+  },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Une erreur s'est produite.",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "confirm": "Confirmer"
+  }
+}
