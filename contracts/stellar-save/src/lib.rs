@@ -34,7 +34,10 @@ pub mod storage;
 pub mod token;
 pub mod storage_optimization;
 pub mod storage_benchmark;
+pub mod migration;
+pub mod migrations;
 
+mod migration_tests;
 mod multi_token_tests;
 mod merge_tests;
 mod milestone_tests;
