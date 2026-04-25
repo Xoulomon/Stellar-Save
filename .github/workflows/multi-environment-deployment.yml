@@ -177,7 +177,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-dev
           path: build-artifacts
@@ -226,7 +226,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-staging
           path: build-artifacts
@@ -279,7 +279,7 @@ jobs:
           echo "✓ Production deployment approved"
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-production
           path: build-artifacts
