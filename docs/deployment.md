@@ -2,22 +2,150 @@
 
 Complete guide for deploying the Stellar-Save smart contract to Stellar testnet and mainnet.
 
-**Version**: 1.0.0  
-**Last Updated**: 2026-02-24
+**Version**: 2.0.0  
+**Last Updated**: 2026-04-25
 
 ---
 
 ## Table of Contents
 
-1. [Prerequisites](#prerequisites)
-2. [Environment Setup](#environment-setup)
-3. [Building the Contract](#building-the-contract)
-4. [Testnet Deployment](#testnet-deployment)
-5. [Mainnet Deployment](#mainnet-deployment)
-6. [Post-Deployment Configuration](#post-deployment-configuration)
-7. [Verification](#verification)
-8. [Troubleshooting](#troubleshooting)
-9. [Deployment Checklist](#deployment-checklist)
+1. [Automated CI/CD Pipeline](#automated-cicd-pipeline)
+   - [Pipeline Overview](#pipeline-overview)
+   - [Required Secrets](#required-secrets)
+   - [GitHub Environments](#github-environments)
+   - [Triggering a Deploy](#triggering-a-deploy)
+   - [Rollback Procedure](#rollback-procedure)
+   - [Pipeline Scripts Reference](#pipeline-scripts-reference)
+2. [Prerequisites](#prerequisites)
+3. [Environment Setup](#environment-setup)
+4. [Building the Contract](#building-the-contract)
+5. [Testnet Deployment](#testnet-deployment)
+6. [Mainnet Deployment](#mainnet-deployment)
+7. [Post-Deployment Configuration](#post-deployment-configuration)
+8. [Verification](#verification)
+9. [Troubleshooting](#troubleshooting)
+10. [Deployment Checklist](#deployment-checklist)
+
+---
+
+## Automated CI/CD Pipeline
+
+### Pipeline Overview
+
+The deployment pipeline lives in `.github/workflows/deploy.yml` and runs four jobs in sequence:
+
+```
+push / workflow_dispatch
+        │
+        ▼
+┌─────────────────────┐
+│  pre-deploy         │  clippy · cargo audit · WASM size · secrets scan · unit tests
+└────────┬────────────┘
+         │ artifact: stellar_save.wasm + sha256 hash
+         ▼
+┌─────────────────────┐        ┌─────────────────────┐
+│  deploy-testnet     │  OR    │  deploy-mainnet      │
+│  (develop branch)   │        │  (main branch)       │
+│                     │        │  ⚠️ requires approval │
+└────────┬────────────┘        └────────┬─────────────┘
+         │                              │
+         ▼                              ▼
+  verify_contract.sh            verify_contract.sh
+  smoke_test_post_deploy.sh     smoke_test_post_deploy.sh
+  deployment-record artifact    GitHub Release created
+```
+
+**Rollback** is a separate manual job triggered via `workflow_dispatch` with a `rollback_artifact` run ID.
+
+### Required Secrets
+
+Configure these in **Settings → Secrets and variables → Actions**:
+
+| Secret | Description |
+|--------|-------------|
+| `TESTNET_DEPLOYER_SECRET` | Stellar secret key (`S…`) for the testnet deployer account |
+| `MAINNET_DEPLOYER_SECRET` | Stellar secret key (`S…`) for the mainnet deployer account |
+
+The deployer accounts must be funded before deployment:
+- Testnet: use [Friendbot](https://friendbot.stellar.org/?addr=<PUBLIC_KEY>)
+- Mainnet: fund with real XLM (minimum ~2 XLM for contract deployment fees)
+
+### GitHub Environments
+
+Create two environments in **Settings → Environments**:
+
+**`testnet`**
+- No required reviewers (auto-deploys from `develop`)
+- Optional: add deployment branch rule to `develop` only
+
+**`production`**
+- Add at least one required reviewer
+- Restrict to `main` branch only
+- This gate is what prevents accidental mainnet deploys
+
+### Triggering a Deploy
+
+**Automatic (recommended)**
+
+| Branch push | Target |
+|-------------|--------|
+| `develop` | Testnet |
+| `main` | Mainnet (after reviewer approval) |
+
+**Manual via workflow_dispatch**
+
+```
+GitHub → Actions → "Contract Deployment Pipeline" → Run workflow
+  network: testnet | mainnet
+  rollback_artifact: (leave empty for normal deploy)
+```
+
+### Rollback Procedure
+
+1. Find the GitHub Actions **run ID** of the last known-good deployment (visible in the Actions URL: `.../runs/<RUN_ID>`).
+2. Trigger the workflow manually:
+   ```
+   network: testnet | mainnet
+   rollback_artifact: <RUN_ID>
+   ```
+3. The pipeline will:
+   - Download the WASM from that run's artifact
+   - Re-deploy it to the target network
+   - Run `verify_contract.sh` and `smoke_test_post_deploy.sh`
+   - Print the new contract ID
+
+> **Note**: Soroban contracts are immutable once deployed. "Rollback" means deploying a new contract instance from the old WASM. Update your frontend `CONTRACT_ID` env var to point to the new address.
+
+### Pipeline Scripts Reference
+
+| Script | Purpose | Key checks |
+|--------|---------|------------|
+| `scripts/pre_deploy_check.sh` | Validation gate — blocks deploy on failure | Clippy, cargo audit, WASM size ≤ 100 KB, secrets scan, unit tests |
+| `scripts/verify_contract.sh` | Post-deploy integrity check | Contract exists on-chain, WASM hash matches, contract is callable |
+| `scripts/smoke_test_post_deploy.sh` | Live network smoke tests | RPC reachable, contract exists, read-only call, write-path (testnet only) |
+| `scripts/rollback.sh` | Re-deploy previous WASM | Downloads artifact, deploys, verifies, smoke tests |
+
+**Running scripts locally**
+
+```bash
+# Pre-deploy check (builds WASM if needed)
+WASM_SIZE_LIMIT_KB=100 bash scripts/pre_deploy_check.sh
+
+# Verify a deployed contract
+CONTRACT_ID=C... \
+STELLAR_NETWORK=testnet \
+STELLAR_RPC_URL=https://soroban-testnet.stellar.org \
+EXPECTED_WASM_HASH=<sha256> \
+bash scripts/verify_contract.sh
+
+# Smoke test a deployed contract
+CONTRACT_ID=C... \
+STELLAR_NETWORK=testnet \
+STELLAR_RPC_URL=https://soroban-testnet.stellar.org \
+bash scripts/smoke_test_post_deploy.sh
+```
+
+---
 
 ---
 

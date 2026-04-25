@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 use core::fmt;
 use soroban_sdk::{contracttype, Address};
 
@@ -204,7 +205,6 @@ pub struct Group {
     /// Used for tracking when the first cycle started.
     /// Only set when started is true.
     pub started_at: u64,
-
 
     /// Whether members must provide a signed proof when contributing.
     /// If true, contributions require an additional signature verification step.
@@ -505,7 +505,16 @@ mod tests {
 
     fn make_group(env: &Env, max_members: u32, grace_period_seconds: u64) -> Group {
         let creator = Address::generate(env);
-        Group::new(1, creator, 10_000_000, 604800, max_members, 2, 1234567890, grace_period_seconds)
+        Group::new(
+            1,
+            creator,
+            10_000_000,
+            604800,
+            max_members,
+            2,
+            1234567890,
+            grace_period_seconds,
+        )
     }
 
     #[test]
@@ -521,7 +530,7 @@ mod tests {
             5,          // 5 members
             2,          // 2 min members
             1234567890,
-            0,          // no grace period
+            0, // no grace period
         );
 
         assert_eq!(group.id, 1);

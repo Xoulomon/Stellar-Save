@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 use soroban_sdk::{contracttype, Address, Env, String};
 
 /// Event emitted when a new savings group is created.
@@ -104,8 +105,6 @@ pub struct ContractUnpaused {
     pub admin: Address,
     pub timestamp: u64,
 }
-
-
 
 /// Event emitted when a contribution proof is verified (#479).
 #[contracttype]
@@ -361,7 +360,8 @@ impl EventEmitter {
         cycle: u32,
         cycle_total: i128,
         contributed_at: u64,
-    ) {        let event = ContributionMade {
+    ) {
+        let event = ContributionMade {
             group_id,
             contributor,
             amount,
@@ -456,8 +456,6 @@ impl EventEmitter {
         env.events().publish(("contract_unpaused",), event);
     }
 
-
-
     pub fn emit_contribution_verified(
         env: &Env,
         group_id: u64,
@@ -489,7 +487,8 @@ impl EventEmitter {
             new_amount,
             proposed_at,
         };
-        env.events().publish(("contribution_amount_proposed",), event);
+        env.events()
+            .publish(("contribution_amount_proposed",), event);
     }
 
     pub fn emit_contribution_amount_changed(
@@ -507,7 +506,8 @@ impl EventEmitter {
             effective_cycle,
             changed_at,
         };
-        env.events().publish(("contribution_amount_changed",), event);
+        env.events()
+            .publish(("contribution_amount_changed",), event);
     }
 
     pub fn emit_group_paused(env: &Env, group_id: u64, paused_by: Address, paused_at: u64) {
@@ -545,12 +545,7 @@ impl EventEmitter {
         env.events().publish(("penalty_applied",), event);
     }
 
-    pub fn emit_penalty_recovered(
-        env: &Env,
-        group_id: u64,
-        member: Address,
-        cycle_id: u32,
-    ) {
+    pub fn emit_penalty_recovered(env: &Env, group_id: u64, member: Address, cycle_id: u32) {
         let event = PenaltyRecovered {
             group_id,
             member,
@@ -637,7 +632,13 @@ impl EventEmitter {
         env.events().publish(("cycle_advanced",), event);
     }
 
-    pub fn emit_reward_claimed(env: &Env, group_id: u64, member: Address, amount: i128, claimed_at: u64) {
+    pub fn emit_reward_claimed(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        amount: i128,
+        claimed_at: u64,
+    ) {
         let event = RewardClaimed {
             group_id,
             member,
@@ -888,7 +889,15 @@ mod tests {
         let env = Env::default();
         let contributor = Address::generate(&env);
 
-        EventEmitter::emit_contribution_made(&env, 1, contributor, 10_000_000, 1, 50_000_000, 1234567890);
+        EventEmitter::emit_contribution_made(
+            &env,
+            1,
+            contributor,
+            10_000_000,
+            1,
+            50_000_000,
+            1234567890,
+        );
     }
 
     #[test]

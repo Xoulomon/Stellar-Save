@@ -1,3 +1,4 @@
+use crate::error::StellarSaveError;
 /// Storage Optimization Module for Stellar-Save
 ///
 /// This module implements storage cost reduction strategies for groups with many members
@@ -8,10 +9,7 @@
 /// 2. Compact member profile storage using bit-packing
 /// 3. Storage cost estimation and analysis functions
 /// 4. Benchmarking utilities for measuring improvements
-
 use soroban_sdk::{contracttype, Address, Env};
-use crate::error::StellarSaveError;
-use crate::storage::StorageKeyBuilder;
 
 /// Bitmap for tracking member contributions in a cycle.
 ///
@@ -59,7 +57,7 @@ impl ContributionBitmap {
         // Calculate number of u64 chunks needed (each u64 holds 64 bits)
         let chunks_needed = ((member_count as usize + 63) / 64) as u32;
         let mut bitmap = soroban_sdk::Vec::new(&Env::default());
-        
+
         for _ in 0..chunks_needed {
             bitmap.push_back(0u64);
         }
@@ -83,7 +81,11 @@ impl ContributionBitmap {
     /// # Returns
     /// * `Ok(())` if successful
     /// * `Err(StellarSaveError)` if member_index is out of bounds
-    pub fn set_contribution(&mut self, member_index: u32, amount: i128) -> Result<(), StellarSaveError> {
+    pub fn set_contribution(
+        &mut self,
+        member_index: u32,
+        amount: i128,
+    ) -> Result<(), StellarSaveError> {
         if member_index >= self.member_count {
             return Err(StellarSaveError::InvalidState);
         }
@@ -92,19 +94,22 @@ impl ContributionBitmap {
         let bit_position = member_index % 64;
 
         // Check if bit is already set (member already contributed)
-        let chunk = self.bitmap.get(chunk_index as u32)
+        let chunk = self
+            .bitmap
+            .get(chunk_index as u32)
             .ok_or(StellarSaveError::InvalidState)?;
-        
+
         let bit_set = (chunk & (1u64 << bit_position)) != 0;
 
         if !bit_set {
             // Set the bit
             let new_chunk = chunk | (1u64 << bit_position);
             self.bitmap.set(chunk_index as u32, new_chunk);
-            
+
             // Update counters
             self.contributors_count += 1;
-            self.total_amount = self.total_amount
+            self.total_amount = self
+                .total_amount
                 .checked_add(amount)
                 .ok_or(StellarSaveError::InternalError)?;
         }
@@ -129,9 +134,11 @@ impl ContributionBitmap {
         let chunk_index = (member_index / 64) as usize;
         let bit_position = member_index % 64;
 
-        let chunk = self.bitmap.get(chunk_index as u32)
+        let chunk = self
+            .bitmap
+            .get(chunk_index as u32)
             .ok_or(StellarSaveError::InvalidState)?;
-        
+
         Ok((chunk & (1u64 << bit_position)) != 0)
     }
 
@@ -175,12 +182,7 @@ pub struct CompactMemberProfile {
 
 impl CompactMemberProfile {
     /// Creates a new compact member profile.
-    pub fn new(
-        address: Address,
-        group_id: u64,
-        payout_position: u32,
-        joined_at: u64,
-    ) -> Self {
+    pub fn new(address: Address, group_id: u64, payout_position: u32, joined_at: u64) -> Self {
         Self {
             address,
             group_id,
@@ -251,10 +253,7 @@ impl StorageCostAnalyzer {
     ///
     /// # Returns
     /// Estimated number of storage entries
-    pub fn estimate_traditional_contribution_storage(
-        member_count: u32,
-        cycle_count: u32,
-    ) -> u64 {
+    pub fn estimate_traditional_contribution_storage(member_count: u32, cycle_count: u32) -> u64 {
         (member_count as u64) * (cycle_count as u64)
     }
 
@@ -270,10 +269,7 @@ impl StorageCostAnalyzer {
     ///
     /// # Returns
     /// Estimated number of storage entries
-    pub fn estimate_bitmap_contribution_storage(
-        member_count: u32,
-        cycle_count: u32,
-    ) -> u64 {
+    pub fn estimate_bitmap_contribution_storage(_member_count: u32, cycle_count: u32) -> u64 {
         // One bitmap per cycle + cycle total + cycle count
         (cycle_count as u64) * 3
     }
@@ -286,13 +282,11 @@ impl StorageCostAnalyzer {
     ///
     /// # Returns
     /// Tuple of (traditional_cost, bitmap_cost, savings_percentage)
-    pub fn calculate_bitmap_savings(
-        member_count: u32,
-        cycle_count: u32,
-    ) -> (u64, u64, u32) {
-        let traditional = Self::estimate_traditional_contribution_storage(member_count, cycle_count);
+    pub fn calculate_bitmap_savings(member_count: u32, cycle_count: u32) -> (u64, u64, u32) {
+        let traditional =
+            Self::estimate_traditional_contribution_storage(member_count, cycle_count);
         let bitmap = Self::estimate_bitmap_contribution_storage(member_count, cycle_count);
-        
+
         let savings = if traditional > 0 {
             (((traditional - bitmap) as f64 / traditional as f64) * 100.0) as u32
         } else {
@@ -349,7 +343,8 @@ impl StorageCostAnalyzer {
         let group_overhead = 5u64;
 
         // Member storage
-        let per_member = Self::estimate_member_storage_per_member(member_count, use_compact_profiles);
+        let per_member =
+            Self::estimate_member_storage_per_member(member_count, use_compact_profiles);
         let member_storage = (member_count as u64) * (per_member as u64);
 
         // Contribution storage
@@ -369,12 +364,10 @@ impl StorageCostAnalyzer {
     ///
     /// Returns storage savings as `(traditional_entries, optimized_entries, savings_pct)`.
     pub fn generate_storage_report(member_count: u32, cycle_count: u32) -> (u64, u64, u32) {
-        let traditional_total = Self::estimate_total_group_storage(
-            member_count, cycle_count, false, false,
-        );
-        let optimized_total = Self::estimate_total_group_storage(
-            member_count, cycle_count, true, true,
-        );
+        let traditional_total =
+            Self::estimate_total_group_storage(member_count, cycle_count, false, false);
+        let optimized_total =
+            Self::estimate_total_group_storage(member_count, cycle_count, true, true);
         let savings_percentage = if traditional_total > 0 {
             (((traditional_total - optimized_total) * 100) / traditional_total) as u32
         } else {
@@ -429,7 +422,7 @@ mod tests {
     fn test_contribution_bitmap_set_and_check() {
         let env = Env::default();
         let mut bitmap = ContributionBitmap::new(1, 0, 10);
-        
+
         let result = bitmap.set_contribution(0, 1_000_000);
         assert!(result.is_ok());
         assert_eq!(bitmap.contributors_count, 1);
@@ -443,7 +436,7 @@ mod tests {
     #[test]
     fn test_contribution_bitmap_out_of_bounds() {
         let mut bitmap = ContributionBitmap::new(1, 0, 10);
-        
+
         let result = bitmap.set_contribution(10, 1_000_000);
         assert!(result.is_err());
     }
@@ -451,13 +444,13 @@ mod tests {
     #[test]
     fn test_contribution_bitmap_is_complete() {
         let mut bitmap = ContributionBitmap::new(1, 0, 3);
-        
+
         assert!(!bitmap.is_complete());
-        
+
         let _ = bitmap.set_contribution(0, 1_000_000);
         let _ = bitmap.set_contribution(1, 1_000_000);
         let _ = bitmap.set_contribution(2, 1_000_000);
-        
+
         assert!(bitmap.is_complete());
     }
 
@@ -484,7 +477,7 @@ mod tests {
     #[test]
     fn test_storage_cost_analyzer_bitmap_savings() {
         let (traditional, bitmap, savings) = StorageCostAnalyzer::calculate_bitmap_savings(100, 10);
-        
+
         assert_eq!(traditional, 1000); // 100 members * 10 cycles
         assert_eq!(bitmap, 30); // 10 cycles * 3 entries
         assert!(savings > 95); // Should be ~97% savings
@@ -492,8 +485,9 @@ mod tests {
 
     #[test]
     fn test_storage_cost_analyzer_large_group() {
-        let (traditional, bitmap, savings) = StorageCostAnalyzer::calculate_bitmap_savings(1000, 50);
-        
+        let (traditional, bitmap, savings) =
+            StorageCostAnalyzer::calculate_bitmap_savings(1000, 50);
+
         assert_eq!(traditional, 50000);
         assert_eq!(bitmap, 150);
         assert!(savings > 99);
@@ -503,7 +497,7 @@ mod tests {
     fn test_storage_cost_analyzer_total_group_storage() {
         let traditional = StorageCostAnalyzer::estimate_total_group_storage(100, 10, false, false);
         let optimized = StorageCostAnalyzer::estimate_total_group_storage(100, 10, true, true);
-        
+
         assert!(optimized < traditional);
     }
 }

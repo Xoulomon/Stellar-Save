@@ -31,7 +31,7 @@ fn mint_tokens(env: &Env, token: &Address, recipient: &Address, amount: i128) {
     let sac_client = StellarAssetClient::new(env, &sac.address());
     // If token address matches, mint; otherwise use the token address directly
     let _ = sac_client; // suppress unused warning
-    // Use the token address passed in
+                        // Use the token address passed in
     let sac_client2 = StellarAssetClient::new(env, token);
     sac_client2.mint(recipient, &amount);
 }
@@ -313,6 +313,10 @@ fn prop_wrong_amount_rejected() {
     for wrong_amount in [500_000i128, 999_999i128, 1_000_001i128, 2_000_000i128] {
         token_client.approve(&member, &contract_id, &wrong_amount, &expiry);
         let result = client.try_contribute(&group_id, &member, &wrong_amount);
-        assert!(result.is_err(), "Expected error for amount {}", wrong_amount);
+        assert!(
+            result.is_err(),
+            "Expected error for amount {}",
+            wrong_amount
+        );
     }
 }

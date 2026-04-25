@@ -34,9 +34,10 @@ mod upgrade_tests {
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Active);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_status(group_id),
+            &GroupStatus::Active,
+        );
         group
     }
 
@@ -49,9 +50,10 @@ mod upgrade_tests {
             joined_at: env.ledger().timestamp(),
             auto_contribute_enabled: false,
         };
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::member_profile(group_id, member.clone()), &profile);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::member_profile(group_id, member.clone()),
+            &profile,
+        );
     }
 
     /// Seed a contribution record directly into storage.
@@ -74,7 +76,9 @@ mod upgrade_tests {
         // Update cycle count
         let count_key = StorageKeyBuilder::contribution_cycle_count(group_id, cycle);
         let prev_count: u32 = env.storage().persistent().get(&count_key).unwrap_or(0);
-        env.storage().persistent().set(&count_key, &(prev_count + 1));
+        env.storage()
+            .persistent()
+            .set(&count_key, &(prev_count + 1));
     }
 
     // ── 1. Data migration tests ───────────────────────────────────────────────
@@ -95,7 +99,9 @@ mod upgrade_tests {
             .persistent()
             .set(&StorageKeyBuilder::next_group_id(), &1u64);
 
-        let fetched = client.get_group(&1).expect("group should be readable after upgrade");
+        let fetched = client
+            .get_group(&1)
+            .expect("group should be readable after upgrade");
         assert_eq!(fetched.id, seeded.id);
         assert_eq!(fetched.contribution_amount, seeded.contribution_amount);
         assert_eq!(fetched.cycle_duration, seeded.cycle_duration);
@@ -125,7 +131,10 @@ mod upgrade_tests {
             .persistent()
             .set(&StorageKeyBuilder::next_group_id(), &1u64);
 
-        assert!(client.is_member(&1, &member), "member should still be recognised after upgrade");
+        assert!(
+            client.is_member(&1, &member),
+            "member should still be recognised after upgrade"
+        );
     }
 
     /// Contribution records written before an upgrade must still be readable.
@@ -164,7 +173,11 @@ mod upgrade_tests {
             (GroupStatus::Completed, 3u32),
             (GroupStatus::Cancelled, 4u32),
         ] {
-            assert_eq!(raw.as_u32(), expected, "status discriminant must not change across upgrades");
+            assert_eq!(
+                raw.as_u32(),
+                expected,
+                "status discriminant must not change across upgrades"
+            );
             assert_eq!(
                 GroupStatus::from_u32(expected),
                 Some(raw),
@@ -184,7 +197,10 @@ mod upgrade_tests {
         let client = crate::StellarSaveContractClient::new(&env, &contract_id);
 
         let result = client.try_get_group(&999);
-        assert!(result.is_err(), "get_group on missing id must return an error");
+        assert!(
+            result.is_err(),
+            "get_group on missing id must return an error"
+        );
     }
 
     /// `get_member_count` must return 0 for a group with no members.
@@ -201,7 +217,9 @@ mod upgrade_tests {
             .persistent()
             .set(&StorageKeyBuilder::next_group_id(), &1u64);
 
-        let count = client.get_member_count(&1).expect("should return member count");
+        let count = client
+            .get_member_count(&1)
+            .expect("should return member count");
         assert_eq!(count, 0);
     }
 

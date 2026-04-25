@@ -1,10 +1,10 @@
-use soroban_sdk::{Address, Env};
 use crate::{
     error::StellarSaveError,
     events::EventEmitter,
     group::{Group, GroupStatus},
     storage::StorageKeyBuilder,
 };
+use soroban_sdk::{Address, Env};
 
 // ─── Cycle Calculation ────────────────────────────────────────────────────────
 
@@ -30,7 +30,10 @@ pub fn get_cycle_start(group: &Group, cycle_number: u32) -> Result<u64, StellarS
     let offset = (cycle_number as u64)
         .checked_mul(group.cycle_duration)
         .ok_or(StellarSaveError::Overflow)?;
-    group.started_at.checked_add(offset).ok_or(StellarSaveError::Overflow)
+    group
+        .started_at
+        .checked_add(offset)
+        .ok_or(StellarSaveError::Overflow)
 }
 
 /// Returns the deadline (end timestamp) of a given cycle.
@@ -43,7 +46,10 @@ pub fn get_cycle_deadline(group: &Group, cycle_number: u32) -> Result<u64, Stell
     let offset = next
         .checked_mul(group.cycle_duration)
         .ok_or(StellarSaveError::Overflow)?;
-    group.started_at.checked_add(offset).ok_or(StellarSaveError::Overflow)
+    group
+        .started_at
+        .checked_add(offset)
+        .ok_or(StellarSaveError::Overflow)
 }
 
 // ─── Deadline Validation ──────────────────────────────────────────────────────
@@ -141,10 +147,7 @@ pub fn try_advance_cycle(
 ///
 /// Useful for unit tests and scenarios where storage is managed externally.
 /// Returns `Err(InvalidState)` if the group is already complete.
-pub fn advance_group_cycle_logic(
-    env: &Env,
-    group: &mut Group,
-) -> Result<(), StellarSaveError> {
+pub fn advance_group_cycle_logic(env: &Env, group: &mut Group) -> Result<(), StellarSaveError> {
     if group.is_complete() {
         return Err(StellarSaveError::InvalidState);
     }
@@ -161,7 +164,15 @@ mod tests {
 
     fn make_group(env: &Env, max_members: u32, cycle_duration: u64, started_at: u64) -> Group {
         let creator = Address::generate(env);
-        let mut g = Group::new(1, creator, 10_000_000, cycle_duration, max_members, 2, started_at);
+        let mut g = Group::new(
+            1,
+            creator,
+            10_000_000,
+            cycle_duration,
+            max_members,
+            2,
+            started_at,
+        );
         // Simulate min members joined so activate works
         g.member_count = max_members;
         g.activate(started_at);

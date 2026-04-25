@@ -13,14 +13,19 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@apollo/server": "^4.12.2",
     "@elastic/elasticsearch": "^9.3.4",
+    "@graphql-tools/schema": "^10.0.13",
     "@stellar/stellar-sdk": "^15.0.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "graphql": "^16.10.0",
+    "graphql-depth-limit": "^1.1.0",
     "stellar-sdk": "^13.3.0"
   },
   "devDependencies": {
+    "@types/graphql-depth-limit": "^1.1.5",
     "tsx": "^4.21.0"
   }
 }

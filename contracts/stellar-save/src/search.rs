@@ -124,7 +124,7 @@ pub fn search_groups(env: &Env, params: SearchParams) -> SearchResult {
                 if id == 0 {
                     break;
                 }
-                if matched.len() as u32 >= limit {
+                if matched.len() >= limit {
                     // Record where to resume on the next page
                     next_cursor = id;
                     break;
@@ -158,7 +158,7 @@ pub fn search_groups(env: &Env, params: SearchParams) -> SearchResult {
                 if id > current_max_id {
                     break;
                 }
-                if matched.len() as u32 >= limit {
+                if matched.len() >= limit {
                     next_cursor = id;
                     break;
                 }
@@ -272,7 +272,7 @@ fn sort_by_member_count(env: &Env, groups: &Vec<Group>, descending: bool) -> Sea
     SearchResult {
         groups: sorted,
         next_cursor: 0, // member-count sort loads all matches; no cursor support
-        scanned: len as u32,
+        scanned: len,
     }
 }
 

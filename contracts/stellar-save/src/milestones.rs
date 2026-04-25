@@ -28,6 +28,7 @@ pub struct ContributionStreak {
 }
 
 impl ContributionStreak {
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         Self {
             current_streak: 0,

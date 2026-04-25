@@ -23,9 +23,10 @@ mod tests {
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_status(group_id),
+            &GroupStatus::Pending,
+        );
     }
 
     fn setup_invitation_only_group(env: &Env, group_id: u64, creator: &Address) {
@@ -43,9 +44,10 @@ mod tests {
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_status(group_id),
+            &GroupStatus::Pending,
+        );
     }
 
     // ── set_invitation_only ───────────────────────────────────────────────────
@@ -194,9 +196,10 @@ mod tests {
             joined_at: 0,
             auto_contribute_enabled: false,
         };
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::member_profile(1, invitee.clone()), &profile);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::member_profile(1, invitee.clone()),
+            &profile,
+        );
 
         let result = client.try_invite_member(&1u64, &invitee);
         assert_eq!(result, Err(Ok(StellarSaveError::AlreadyMember)));
@@ -389,6 +392,9 @@ mod tests {
         client.revoke_invitation(&1u64, &invitee);
 
         let all_events = env.events().all();
-        assert!(all_events.len() > events_before, "expected InvitationRevoked event");
+        assert!(
+            all_events.len() > events_before,
+            "expected InvitationRevoked event"
+        );
     }
 }

@@ -1,13 +1,13 @@
 use soroban_sdk::{contracttype, Address};
 
-/// Storage key structure for efficient data access in the Stellar-Save contract.
-///
-/// This module defines a consistent key naming convention for all contract data,
-/// enabling efficient storage and retrieval operations. Keys are designed to:
-/// - Provide fast lookups for specific data types
-/// - Support range queries where needed
-/// - Maintain clear separation between different data categories
-/// - Enable efficient iteration over related records
+// Storage key structure for efficient data access in the Stellar-Save contract.
+//
+// This module defines a consistent key naming convention for all contract data,
+// enabling efficient storage and retrieval operations. Keys are designed to:
+// - Provide fast lookups for specific data types
+// - Support range queries where needed
+// - Maintain clear separation between different data categories
+// - Enable efficient iteration over related records
 
 /// Main storage key enum that encompasses all data types stored in the contract.
 ///
@@ -386,7 +386,11 @@ impl StorageKeyBuilder {
     }
 
     /// Creates a key for tracking whether a contribution reminder was emitted for a member.
-    pub fn contribution_reminder_emitted(group_id: u64, cycle: u32, address: Address) -> StorageKey {
+    pub fn contribution_reminder_emitted(
+        group_id: u64,
+        cycle: u32,
+        address: Address,
+    ) -> StorageKey {
         StorageKey::Contribution(ContributionKey::ProofVerified(group_id, cycle, address))
     }
 
