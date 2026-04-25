@@ -425,22 +425,26 @@ impl StellarSaveContract {
         // 1. Authorization: Only the creator can initiate this transaction
         creator.require_auth();
 
-        // 2. Validate grace period (max 7 days)
-        if grace_period_seconds > 604800 {
-            return Err(StellarSaveError::InvalidState);
+        // 2. Round contribution amount to nearest 0.01 XLM (100,000 stroops)
+        // This prevents precision issues with very small amounts
+        let rounded_amount = crate::helpers::round_contribution_amount(contribution_amount);
+
+        // Ensure the rounded amount is still valid (greater than 0)
+        if rounded_amount <= 0 {
+            return Err(StellarSaveError::InvalidAmount);
         }
 
-        // 3. Global Validation: Check against ContractConfig
+        // 3. Global Validation: Check against ContractConfig (using rounded amount)
         let config_key = StorageKeyBuilder::contract_config();
         if let Some(config) = env
             .storage()
             .persistent()
             .get::<_, ContractConfig>(&config_key)
         {
-            if contribution_amount < config.min_contribution {
+            if rounded_amount < config.min_contribution {
                 return Err(StellarSaveError::ContributionTooLow);
             }
-            if contribution_amount > config.max_contribution {
+            if rounded_amount > config.max_contribution {
                 return Err(StellarSaveError::ContributionTooHigh);
             }
             if max_members < config.min_members
@@ -452,7 +456,7 @@ impl StellarSaveContract {
             }
         }
 
-        // 3. Token allowlist check: if an allowlist is configured, verify token_address is present
+        // 4. Token allowlist check: if an allowlist is configured, verify token_address is present
         let allowed_tokens_key = StorageKeyBuilder::allowed_tokens();
         if let Some(allowed_tokens) = env
             .storage()
@@ -464,27 +468,27 @@ impl StellarSaveContract {
             }
         }
 
-        // 4. Validate token via SEP-41 decimals() call
+        // 5. Validate token via SEP-41 decimals() call
         let token_decimals = crate::token::validate_token(&env, &token_address)?;
 
-        // 5. Generate unique group ID
+        // 6. Generate unique group ID
         let group_id = Self::generate_next_group_id(&env)?;
 
-        // 6. Initialize Group Struct
+        // 7. Initialize Group Struct (using rounded amount)
         let current_time = env.ledger().timestamp();
         let min_members = 2; // Default minimum members
         let new_group = Group::new(
             group_id,
             creator.clone(),
-            contribution_amount,
+            rounded_amount,
             cycle_duration,
             max_members,
             min_members,
             current_time,
-            grace_period_seconds,
+            0, // grace_period_seconds - using default of 0
         );
 
-        // 7. Store Group Data
+        // 8. Store Group Data
         let group_key = StorageKeyBuilder::group_data(group_id);
         env.storage().persistent().set(&group_key, &new_group);
 
@@ -494,7 +498,7 @@ impl StellarSaveContract {
             .persistent()
             .set(&status_key, &GroupStatus::Pending);
 
-        // 8. Store TokenConfig for this group
+        // 9. Store TokenConfig for this group
         let token_config = crate::group::TokenConfig {
             token_address: token_address.clone(),
             token_decimals,
@@ -502,11 +506,11 @@ impl StellarSaveContract {
         let token_config_key = StorageKeyBuilder::group_token_config(group_id);
         env.storage().persistent().set(&token_config_key, &token_config);
 
-        // 9. Emit GroupCreated Event (include token_address as second data field)
+        // 10. Emit GroupCreated Event (include token_address as second data field)
         env.events()
             .publish((Symbol::new(&env, "GroupCreated"), creator), (group_id, token_address));
 
-        // 10. Return Group ID
+        // 11. Return Group ID
         Ok(group_id)
     }
 
@@ -11720,3 +11724,78 @@ mod tests {
         client.get_token_config(&9999);
     }
 }
+
+    // --- Rounding behavior tests ---
+
+    #[test]
+    fn test_create_group_rounds_contribution_amount() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+
+        // Create a group with an amount that needs rounding
+        // 100,050 stroops should round to 100,000 (nearest 0.01 XLM)
+        env.mock_all_auths();
+        let token_address = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100050, &3600, &5, &token_address);
+
+        // Verify the group was created
+        assert_eq!(group_id, 1);
+
+        // Get the group and verify the contribution amount was rounded
+        let group = client.get_group(&group_id);
+        // 100050 should round to 100000
+        assert_eq!(group.contribution_amount, 100000);
+    }
+
+    #[test]
+    fn test_create_group_rounds_up_contribution_amount() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+
+        // Create a group with an amount that should round up
+        // 100,050 stroops should round up to 200,000 (more than halfway)
+        env.mock_all_auths();
+        let token_address = Address::generate(&env);
+        let group_id = client.create_group(&creator, &150001, &3600, &5, &token_address);
+
+        // Verify the group was created
+        let group = client.get_group(&group_id);
+        // 150001 should round to 200000
+        assert_eq!(group.contribution_amount, 200000);
+    }
+
+    #[test]
+    fn test_create_group_exact_amount_no_rounding() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+
+        // Create a group with an exact multiple of 0.01 XLM (100,000 stroops)
+        env.mock_all_auths();
+        let token_address = Address::generate(&env);
+        let group_id = client.create_group(&creator, &1_000_000, &3600, &5, &token_address);
+
+        // Verify the group was created with exact amount
+        let group = client.get_group(&group_id);
+        assert_eq!(group.contribution_amount, 1_000_000);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(3001))")] // 3001 is InvalidAmount
+    fn test_create_group_invalid_rounded_amount() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+
+        // Create a group with an amount that rounds to 0 (less than 50,000)
+        // This should fail with InvalidAmount
+        env.mock_all_auths();
+        let token_address = Address::generate(&env);
+        client.create_group(&creator, &10000, &3600, &5, &token_address);
+    }

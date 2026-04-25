@@ -3,6 +3,42 @@
 use soroban_sdk::{String, Env, Bytes};
 use crate::{Group, StellarSaveError, StorageKeyBuilder};
 
+/// Rounding precision for contribution amounts (0.01 XLM = 10^5 stroops).
+/// This prevents precision issues with very small amounts.
+pub const ROUNDING_PRECISION: i128 = 100_000; // 10^5 stroops = 0.01 XLM
+
+/// Rounds a contribution amount to the nearest 0.01 XLM (or token equivalent).
+///
+/// This prevents precision issues that can occur with very small amounts by
+/// rounding to the nearest 0.01 unit (100,000 stroops for XLM).
+///
+/// # Arguments
+/// * `amount` - The contribution amount in stroops (e.g., 1 XLM = 10,000,000 stroops)
+///
+/// # Returns
+/// The rounded amount in stroops
+///
+/// # Examples
+/// ```
+/// // 1,234,567 stroops -> 1,200,000 (rounded to nearest 0.01 XLM)
+/// let rounded = round_contribution_amount(1_234_567);
+/// ```
+///
+/// ```
+/// // 1,255,555 stroops -> 1,300,000 (rounded up)
+/// let rounded = round_contribution_amount(1_255_555);
+/// ```
+pub fn round_contribution_amount(amount: i128) -> i128 {
+    if amount <= 0 {
+        return amount;
+    }
+    
+    // Round to nearest ROUNDING_PRECISION
+    // For positive numbers: (amount + ROUNDING_PRECISION/2) / ROUNDING_PRECISION * ROUNDING_PRECISION
+    let half_precision = ROUNDING_PRECISION / 2;
+    ((amount + half_precision) / ROUNDING_PRECISION) * ROUNDING_PRECISION
+}
+
 /// Formats a group ID for display with a "GROUP-" prefix.
 /// 
 /// # Arguments
@@ -301,4 +337,59 @@ mod tests {
         env.ledger().set_timestamp(started_at + cycle_duration * 1000);
         let result = calculate_current_cycle(&env, 1);
         assert_eq!(result, Ok(max_members - 1));
+    }
+
+    // --- round_contribution_amount tests ---
+
+    #[test]
+    fn test_round_contribution_amount_exact() {
+        // Exact multiple of 0.01 XLM (100,000 stroops)
+        assert_eq!(round_contribution_amount(100_000), 100_000);
+        assert_eq!(round_contribution_amount(1_000_000), 1_000_000);
+        assert_eq!(round_contribution_amount(10_000_000), 10_000_000);
+    }
+
+    #[test]
+    fn test_round_contribution_amount_rounds_down() {
+        // Amounts that should round down (less than halfway)
+        assert_eq!(round_contribution_amount(49_999), 0);
+        assert_eq!(round_contribution_amount(149_999), 100_000);
+        assert_eq!(round_contribution_amount(1_049_999), 1_000_000);
+    }
+
+    #[test]
+    fn test_round_contribution_amount_rounds_up() {
+        // Amounts that should round up (more than halfway)
+        assert_eq!(round_contribution_amount(50_001), 100_000);
+        assert_eq!(round_contribution_amount(150_001), 200_000);
+        assert_eq!(round_contribution_amount(1_050_001), 1_100_000);
+    }
+
+    #[test]
+    fn test_round_contribution_amount_at_halfway() {
+        // Exactly at halfway point - should round up
+        assert_eq!(round_contribution_amount(50_000), 100_000);
+        assert_eq!(round_contribution_amount(150_000), 200_000);
+    }
+
+    #[test]
+    fn test_round_contribution_amount_zero() {
+        // Zero should remain zero
+        assert_eq!(round_contribution_amount(0), 0);
+    }
+
+    #[test]
+    fn test_round_contribution_amount_negative() {
+        // Negative amounts should remain unchanged
+        assert_eq!(round_contribution_amount(-100_000), -100_000);
+        assert_eq!(round_contribution_amount(-1), -1);
+    }
+
+    #[test]
+    fn test_round_contribution_amount_typical_values() {
+        // Typical contribution amounts in stroops
+        assert_eq!(round_contribution_amount(50_000_000), 50_000_000);
+        assert_eq!(round_contribution_amount(100_000_000), 100_000_000);
+        assert_eq!(round_contribution_amount(255_000_000), 255_000_000);
+        assert_eq!(round_contribution_amount(1_002_500_000), 1_002_500_000);
     }
