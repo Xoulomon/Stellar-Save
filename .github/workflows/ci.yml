@@ -98,7 +98,7 @@ jobs:
         run: npm run test:coverage
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: frontend-coverage
@@ -173,7 +173,7 @@ jobs:
             -- --test-threads=1
 
       - name: Upload Rust coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: rust-coverage
@@ -270,7 +270,7 @@ jobs:
           kill $PID || true
 
       - name: Upload Lighthouse report logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: lighthouse-report-log

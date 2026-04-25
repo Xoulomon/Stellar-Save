@@ -160,7 +160,7 @@ jobs:
           echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> build-artifacts/BUILD_INFO.txt
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-${{ needs.configure-environment.outputs.environment }}
           path: build-artifacts/
@@ -363,7 +363,7 @@ jobs:
           echo "✓ Promotion completed successfully"
 
       - name: Upload promotion report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: promotion-${{ github.event.inputs.promotion_from }}-to-${{ github.event.inputs.environment }}
           path: promotion-artifacts/
@@ -426,7 +426,7 @@ jobs:
           cat deployment-report.md
 
       - name: Upload deployment report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deployment-report-${{ needs.configure-environment.outputs.environment }}
           path: deployment-report.md
