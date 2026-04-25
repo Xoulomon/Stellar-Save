@@ -61,3 +61,28 @@ export interface ExportJob {
   fileUrl?: string;
   error?: string;
 }
+
+export type BackupType = 'full' | 'incremental';
+export type BackupStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+export interface BackupJob {
+  id: string;
+  type: BackupType;
+  status: BackupStatus;
+  createdAt: number;
+  completedAt?: number;
+  s3Key?: string;
+  sizeBytes?: number;
+  checksum?: string;
+  baseBackupId?: string; // for incremental: the full backup it's based on
+  error?: string;
+}
+
+export interface BackupAlert {
+  id: string;
+  backupJobId: string;
+  level: 'warning' | 'error';
+  message: string;
+  timestamp: number;
+  acknowledged: boolean;
+}
