@@ -6,13 +6,15 @@ import { expressMiddleware } from '@apollo/server/express4';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { RecommendationEngine } from './recommendation';
 import { ABTestingFramework } from './ab_testing';
-import { Group, UserInteraction, UserPreference } from './models';
+import { Group, UserInteraction, UserPreference, Member, Transaction } from './models';
 import { EmailService } from './email_service';
 import { ExportService } from './export_service';
 import { BackupService, S3HttpClient } from './backup_service';
 import { BackupScheduler } from './backup_scheduler';
 import { RecoveryService } from './recovery_service';
 import { BackupMonitor } from './backup_monitor';
+import { AdminService } from './admin_service';
+import { adminAuthMiddleware, AuthenticatedRequest } from './auth_middleware';
 
 dotenv.config();
 
@@ -46,29 +48,7 @@ apolloServer.start().then(() => {
 
 const PORT = process.env.PORT || 3001;
 
-// Mock Data
-const mockGroups: Group[] = [
-  { id: '1', name: 'Weekly Savers', contributionAmount: 100, cycleDuration: 604800, maxMembers: 10, currentMembers: 5, status: 'Active', tags: ['weekly', 'low-entry'] },
-  { id: '2', name: 'Monthly Builders', contributionAmount: 1000, cycleDuration: 2592000, maxMembers: 12, currentMembers: 3, status: 'Active', tags: ['monthly', 'high-entry'] },
-  { id: '3', name: 'Student Circle', contributionAmount: 50, cycleDuration: 604800, maxMembers: 5, currentMembers: 4, status: 'Active', tags: ['weekly', 'students'] },
-];
-
-const mockMembers: Member[] = [
-  { id: 'm1', name: 'Alice Johnson', address: 'G...ALICE', joinedAt: Date.now(), groupIds: ['1', '2'] },
-  { id: 'm2', name: 'Bob Smith', address: 'G...BOB', joinedAt: Date.now(), groupIds: ['1'] },
-  { id: 'm3', name: 'Charlie Davis', address: 'G...CHARLIE', joinedAt: Date.now(), groupIds: ['3'] },
-];
-
-const mockTransactions: Transaction[] = [
-  { id: 't1', groupId: '1', memberAddress: 'G...ALICE', amount: 100, type: 'contribution', timestamp: Date.now(), stellarTxHash: 'hash1...' },
-  { id: 't2', groupId: '1', memberAddress: 'G...BOB', amount: 100, type: 'contribution', timestamp: Date.now(), stellarTxHash: 'hash2...' },
-];
-
-const mockInteractions: UserInteraction[] = [
-  { userId: 'user1', groupId: '1', interactionType: 'join', timestamp: Date.now() },
-  { userId: 'user1', groupId: '2', interactionType: 'join', timestamp: Date.now() },
-  { userId: 'user2', groupId: '1', interactionType: 'join', timestamp: Date.now() },
-];
+import { mockGroups, mockMembers, mockTransactions, mockInteractions } from './mock_data';
 
 const engine = new RecommendationEngine(mockGroups, mockInteractions);
 const abTest = new ABTestingFramework();
@@ -87,6 +67,8 @@ const recoveryService = new RecoveryService(backupService, s3Client);
 const backupMonitor = new BackupMonitor(backupService, {
   alertWebhookUrl: process.env.BACKUP_ALERT_WEBHOOK_URL,
 });
+
+const adminService = new AdminService();
 
 if (process.env.BACKUP_ENABLED === 'true') {
   backupScheduler.start();
@@ -277,6 +259,61 @@ app.post('/backup/alerts/:alertId/acknowledge', (req, res) => {
   if (!ok) return res.status(404).json({ error: 'Alert not found' });
   res.json({ acknowledged: true });
 });
+
+// ── Admin Routes ────────────────────────────────────────────────────────────
+
+const adminRouter = express.Router();
+adminRouter.use(adminAuthMiddleware);
+
+/**
+ * @api {get} /admin/stats Get platform statistics
+ */
+adminRouter.get('/stats', (req, res) => {
+  res.json(adminService.getPlatformStats());
+});
+
+/**
+ * @api {get} /admin/users List all users
+ */
+adminRouter.get('/users', (req, res) => {
+  res.json(adminService.getUsers());
+});
+
+/**
+ * @api {get} /admin/users/:id Get user details
+ */
+adminRouter.get('/users/:id', (req, res) => {
+  const user = adminService.getUserById(req.params.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json(user);
+});
+
+/**
+ * @api {patch} /admin/users/:id Update user details
+ */
+adminRouter.patch('/users/:id', (req: AuthenticatedRequest, res) => {
+  const user = adminService.updateUser(req.params.id, req.body, req.adminId!);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json(user);
+});
+
+/**
+ * @api {delete} /admin/users/:id Delete user
+ */
+adminRouter.delete('/users/:id', (req: AuthenticatedRequest, res) => {
+  const success = adminService.deleteUser(req.params.id, req.adminId!);
+  if (!success) return res.status(404).json({ error: 'User not found' });
+  res.json({ message: 'User deleted' });
+});
+
+/**
+ * @api {get} /admin/audit-logs Get audit logs
+ */
+adminRouter.get('/audit-logs', (req, res) => {
+  res.json(adminService.getAuditLogs());
+});
+
+app.use('/admin', adminRouter);
 
 app.listen(PORT, () => {
   console.log(`Recommendation Engine running on port ${PORT}`);

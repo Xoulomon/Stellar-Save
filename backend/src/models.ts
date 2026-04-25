@@ -86,3 +86,13 @@ export interface BackupAlert {
   timestamp: number;
   acknowledged: boolean;
 }
+
+export interface AuditLog {
+  id: string;
+  userId: string; // The admin who performed the action
+  action: string;
+  targetId?: string;
+  targetType?: string;
+  timestamp: number;
+  metadata?: any;
+}
