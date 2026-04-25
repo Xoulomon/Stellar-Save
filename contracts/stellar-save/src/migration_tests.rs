@@ -57,9 +57,10 @@ mod migration_tests {
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Active);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_status(group_id),
+            &GroupStatus::Active,
+        );
     }
 
     fn set_total_groups(env: &Env, n: u64) {
@@ -116,10 +117,9 @@ mod migration_tests {
             token_address: custom_token.clone(),
             token_decimals: 6,
         };
-        env.storage().persistent().set(
-            &StorageKey::Group(GroupKey::TokenConfig(1)),
-            &custom_config,
-        );
+        env.storage()
+            .persistent()
+            .set(&StorageKey::Group(GroupKey::TokenConfig(1)), &custom_config);
 
         v1_to_v2::apply(&env, &admin, xlm.clone());
 

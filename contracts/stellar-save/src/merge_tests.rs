@@ -31,9 +31,10 @@ mod tests {
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_status(group_id),
+            &GroupStatus::Pending,
+        );
 
         let mut member_vec: Vec<Address> = Vec::new(env);
         for (i, m) in members.iter().enumerate() {
@@ -45,9 +46,10 @@ mod tests {
                 joined_at: env.ledger().timestamp(),
                 auto_contribute_enabled: false,
             };
-            env.storage()
-                .persistent()
-                .set(&StorageKeyBuilder::member_profile(group_id, m.clone()), &profile);
+            env.storage().persistent().set(
+                &StorageKeyBuilder::member_profile(group_id, m.clone()),
+                &profile,
+            );
             env.storage().persistent().set(
                 &StorageKeyBuilder::member_payout_eligibility(group_id, m.clone()),
                 &(i as u32),
@@ -80,8 +82,24 @@ mod tests {
             .persistent()
             .set(&StorageKeyBuilder::next_group_id(), &2u64);
 
-        setup_pending_group(&env, 1, &creator, 100, 3600, 3, &[creator.clone(), m1.clone()]);
-        setup_pending_group(&env, 2, &creator, 100, 3600, 3, &[m2.clone(), m3.clone(), m4.clone()]);
+        setup_pending_group(
+            &env,
+            1,
+            &creator,
+            100,
+            3600,
+            3,
+            &[creator.clone(), m1.clone()],
+        );
+        setup_pending_group(
+            &env,
+            2,
+            &creator,
+            100,
+            3600,
+            3,
+            &[m2.clone(), m3.clone(), m4.clone()],
+        );
 
         let merged_id = client.merge_groups(&1u64, &2u64);
 
@@ -130,7 +148,9 @@ mod tests {
             let pos: u32 = env
                 .storage()
                 .persistent()
-                .get(&StorageKeyBuilder::member_payout_eligibility(merged_id, member))
+                .get(&StorageKeyBuilder::member_payout_eligibility(
+                    merged_id, member,
+                ))
                 .unwrap();
             assert_eq!(pos, i);
         }
@@ -152,7 +172,15 @@ mod tests {
             .persistent()
             .set(&StorageKeyBuilder::next_group_id(), &2u64);
 
-        setup_pending_group(&env, 1, &creator, 100, 3600, 3, &[creator.clone(), m1.clone()]);
+        setup_pending_group(
+            &env,
+            1,
+            &creator,
+            100,
+            3600,
+            3,
+            &[creator.clone(), m1.clone()],
+        );
         setup_pending_group(&env, 2, &creator, 200, 3600, 3, &[m1.clone()]); // different amount
 
         let result = client.try_merge_groups(&1u64, &2u64);
@@ -175,7 +203,15 @@ mod tests {
             .persistent()
             .set(&StorageKeyBuilder::next_group_id(), &2u64);
 
-        setup_pending_group(&env, 1, &creator, 100, 3600, 3, &[creator.clone(), m1.clone()]);
+        setup_pending_group(
+            &env,
+            1,
+            &creator,
+            100,
+            3600,
+            3,
+            &[creator.clone(), m1.clone()],
+        );
         setup_pending_group(&env, 2, &creator, 100, 7200, 3, &[m1.clone()]); // different duration
 
         let result = client.try_merge_groups(&1u64, &2u64);
@@ -198,7 +234,15 @@ mod tests {
             .persistent()
             .set(&StorageKeyBuilder::next_group_id(), &2u64);
 
-        setup_pending_group(&env, 1, &creator, 100, 3600, 3, &[creator.clone(), m1.clone()]);
+        setup_pending_group(
+            &env,
+            1,
+            &creator,
+            100,
+            3600,
+            3,
+            &[creator.clone(), m1.clone()],
+        );
         setup_pending_group(&env, 2, &creator, 100, 3600, 3, &[m1.clone()]);
 
         // Force group 1 to Active
@@ -226,7 +270,15 @@ mod tests {
             .persistent()
             .set(&StorageKeyBuilder::next_group_id(), &1u64);
 
-        setup_pending_group(&env, 1, &creator, 100, 3600, 3, &[creator.clone(), m1.clone()]);
+        setup_pending_group(
+            &env,
+            1,
+            &creator,
+            100,
+            3600,
+            3,
+            &[creator.clone(), m1.clone()],
+        );
 
         let result = client.try_merge_groups(&1u64, &999u64);
         assert_eq!(result, Err(Ok(StellarSaveError::GroupNotFound)));
@@ -248,7 +300,15 @@ mod tests {
             .persistent()
             .set(&StorageKeyBuilder::next_group_id(), &2u64);
 
-        setup_pending_group(&env, 1, &creator, 100, 3600, 3, &[creator.clone(), m1.clone()]);
+        setup_pending_group(
+            &env,
+            1,
+            &creator,
+            100,
+            3600,
+            3,
+            &[creator.clone(), m1.clone()],
+        );
         setup_pending_group(&env, 2, &creator, 100, 3600, 3, &[m1.clone()]);
 
         // Seed balances for both source groups

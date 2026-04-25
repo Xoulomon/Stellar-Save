@@ -45,11 +45,7 @@ pub fn validate_token(env: &Env, token_address: &Address) -> Result<u32, Stellar
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::{
-        testutils::Address as _,
-        token::TokenClient,
-        Address, Env,
-    };
+    use soroban_sdk::{testutils::Address as _, token::TokenClient, Address, Env};
 
     /// Deploy a mock SEP-41 token (Stellar Asset Contract) in the test environment.
     fn deploy_mock_token(env: &Env, admin: &Address) -> Address {

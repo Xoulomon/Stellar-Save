@@ -97,8 +97,8 @@
 /// Returns `(ops_before, ops_after)` for a single contribution call.
 pub fn profile_contribute_ops() -> (u32, u32) {
     // Before optimization
-    let ops_before: u32 = 0
-        + 2  // load group ×2 (contribute + validate_contribution_amount)
+    let ops_before: u32 =
+          2  // load group ×2 (contribute + validate_contribution_amount)
         + 1  // has member_profile
         + 1  // read reentrancy guard
         + 2  // write reentrancy guard (set 1, set 0)
@@ -112,8 +112,8 @@ pub fn profile_contribute_ops() -> (u32, u32) {
         + 1; // re-read cycle_total for event
 
     // After optimization
-    let ops_after: u32 = 0
-        + 1  // load group ×1 (amount validated from in-memory copy)
+    let ops_after: u32 =
+          1  // load group ×1 (amount validated from in-memory copy)
         + 1  // has member_profile
         + 1  // read reentrancy guard
         + 2  // write reentrancy guard (set 1, set 0)
@@ -136,8 +136,8 @@ pub fn profile_contribute_ops() -> (u32, u32) {
 /// members.
 pub fn profile_payout_ops(member_count: u32) -> (u32, u32) {
     // Before optimization (O(n) scan in identify_recipient)
-    let ops_before: u32 = 0
-        + 1  // load group
+    let ops_before: u32 =
+          1  // load group
         + 1  // load group again inside get_pool_info
         + 1  // load cycle total
         + 1  // load cycle count
@@ -154,8 +154,8 @@ pub fn profile_payout_ops(member_count: u32) -> (u32, u32) {
         + 1; // write group (advance_cycle_or_complete)
 
     // After optimization (O(1) reverse-index lookup)
-    let ops_after: u32 = 0
-        + 1  // load group
+    let ops_after: u32 =
+          1  // load group
         + 1  // load group again inside get_pool_info
         + 1  // load cycle total
         + 1  // load cycle count
@@ -188,10 +188,10 @@ pub fn full_lifecycle_savings(member_count: u32, cycle_count: u32) -> (u64, u64,
     let total_contributions = member_count as u64 * cycle_count as u64;
     let total_payouts = cycle_count as u64;
 
-    let total_before = (contrib_before as u64 * total_contributions)
-        + (payout_before as u64 * total_payouts);
-    let total_after = (contrib_after as u64 * total_contributions)
-        + (payout_after as u64 * total_payouts);
+    let total_before =
+        (contrib_before as u64 * total_contributions) + (payout_before as u64 * total_payouts);
+    let total_after =
+        (contrib_after as u64 * total_contributions) + (payout_after as u64 * total_payouts);
 
     let saved = total_before.saturating_sub(total_after);
     let pct = if total_before > 0 {
@@ -211,7 +211,10 @@ mod tests {
     fn test_contribute_ops_reduction() {
         let (before, after) = profile_contribute_ops();
         // Must have fewer ops after optimization
-        assert!(after < before, "contribute() should use fewer ops after optimization");
+        assert!(
+            after < before,
+            "contribute() should use fewer ops after optimization"
+        );
         // Verify the exact counts match our analysis
         assert_eq!(before, 19, "before: expected 19 ops");
         assert_eq!(after, 17, "after: expected 17 ops");

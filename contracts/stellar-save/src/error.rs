@@ -579,7 +579,11 @@ mod tests {
 
         for error in &errors {
             let guidance = ErrorRecoveryStrategy::recovery_guidance(error);
-            assert!(!guidance.is_empty(), "Error {:?} has no recovery guidance", error);
+            assert!(
+                !guidance.is_empty(),
+                "Error {:?} has no recovery guidance",
+                error
+            );
             assert!(
                 guidance.len() > 20,
                 "Error {:?} has insufficient recovery guidance",

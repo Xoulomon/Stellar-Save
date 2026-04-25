@@ -1,4 +1,5 @@
 #![no_std]
+#![allow(deprecated)]
 
 //! # Stellar-Save Smart Contract
 //!
@@ -24,6 +25,8 @@ pub mod cycle_advancement;
 pub mod error;
 pub mod events;
 pub mod group;
+pub mod migration;
+pub mod migrations;
 pub mod payout;
 pub mod payout_executor;
 pub mod penalty;
@@ -31,21 +34,19 @@ pub mod pool;
 pub mod rating;
 pub mod status;
 pub mod storage;
-pub mod token;
-pub mod storage_optimization;
 pub mod storage_benchmark;
-pub mod migration;
-pub mod migrations;
+pub mod storage_optimization;
+pub mod token;
 
-mod migration_tests;
-mod multi_token_tests;
-mod merge_tests;
-mod milestone_tests;
-mod invitation_tests;
-mod upgrade_tests;
-pub mod milestones;
-pub mod gas_benchmark;
 mod auto_contribution_tests;
+pub mod gas_benchmark;
+mod invitation_tests;
+mod merge_tests;
+mod migration_tests;
+mod milestone_tests;
+pub mod milestones;
+mod multi_token_tests;
+pub mod search;
 mod upgrade_tests;
 
 // Re-export for convenience
@@ -58,6 +59,7 @@ pub use group::{Group, GroupStatus};
 pub use payout::PayoutRecord;
 pub use pool::{PoolCalculator, PoolInfo};
 pub use rating::{GroupRating, RatingAggregate, RatingEntry};
+pub use search::{SearchParams, SearchResult};
 #[cfg(test)]
 use soroban_sdk::testutils::{Events, Ledger};
 use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String, Symbol, Vec};
@@ -198,13 +200,19 @@ impl StellarSaveContract {
     /// ```
     pub fn validate_cycle_duration(env: &Env, cycle_duration: u64) -> Result<(), StellarSaveError> {
         let config_key = StorageKeyBuilder::contract_config();
-        
-        if let Some(config) = env.storage().persistent().get::<_, ContractConfig>(&config_key) {
-            if cycle_duration < config.min_cycle_duration || cycle_duration > config.max_cycle_duration {
+
+        if let Some(config) = env
+            .storage()
+            .persistent()
+            .get::<_, ContractConfig>(&config_key)
+        {
+            if cycle_duration < config.min_cycle_duration
+                || cycle_duration > config.max_cycle_duration
+            {
                 return Err(StellarSaveError::InvalidState);
             }
         }
-        
+
         Ok(())
     }
 
@@ -501,11 +509,15 @@ impl StellarSaveContract {
             token_decimals,
         };
         let token_config_key = StorageKeyBuilder::group_token_config(group_id);
-        env.storage().persistent().set(&token_config_key, &token_config);
+        env.storage()
+            .persistent()
+            .set(&token_config_key, &token_config);
 
         // 9. Emit GroupCreated Event (include token_address as second data field)
-        env.events()
-            .publish((Symbol::new(&env, "GroupCreated"), creator), (group_id, token_address));
+        env.events().publish(
+            (Symbol::new(&env, "GroupCreated"), creator),
+            (group_id, token_address),
+        );
 
         // 10. Return Group ID
         Ok(group_id)
@@ -679,11 +691,7 @@ impl StellarSaveContract {
     /// Returns true if the token is permitted (open mode or on allowlist). Requirements: 6.4, 6.5
     pub fn is_token_allowed(env: Env, token_address: Address) -> bool {
         let list_key = StorageKeyBuilder::allowed_tokens();
-        match env
-            .storage()
-            .persistent()
-            .get::<_, Vec<Address>>(&list_key)
-        {
+        match env.storage().persistent().get::<_, Vec<Address>>(&list_key) {
             Some(list) => list.contains(&token_address),
             None => true, // open mode — no allowlist configured
         }
@@ -783,7 +791,8 @@ impl StellarSaveContract {
         member_address: Address,
     ) -> Result<bool, StellarSaveError> {
         // Gas opt: load member profile to get payout_position (O(1) lookup)
-        let profile_key = StorageKeyBuilder::member_payout_eligibility(group_id, member_address.clone());
+        let profile_key =
+            StorageKeyBuilder::member_payout_eligibility(group_id, member_address.clone());
         let payout_position: u32 = match env.storage().persistent().get::<_, u32>(&profile_key) {
             Some(pos) => pos,
             None => {
@@ -993,90 +1002,86 @@ impl StellarSaveContract {
 }
 
 impl StellarSaveContract {
-/// Returns all members of a group.
-/// 
-/// Loads the complete member list from storage. For large groups, consider using
-/// the paginated `get_group_members` function instead.
-/// 
-/// # Arguments
-/// * `env` - Soroban environment
-/// * `group_id` - ID of the group
-/// 
-/// # Returns
-/// * `Ok(Vec<Address>)` - Complete list of member addresses
-/// * `Err(StellarSaveError::GroupNotFound)` - If group or members list missing
-///
-/// # Example
-/// ```ignore
-/// let members = contract.get_members(env, group_id)?;
-/// ```
-pub fn get_members(env: Env, group_id: u64) -> Result<Vec<Address>, StellarSaveError> {
-    // Verify group exists first
-    let _group = Self::get_group(env.clone(), group_id)?;
+    /// Returns all members of a group.
+    ///
+    /// Loads the complete member list from storage. For large groups, consider using
+    /// the paginated `get_group_members` function instead.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    ///
+    /// # Returns
+    /// * `Ok(Vec<Address>)` - Complete list of member addresses
+    /// * `Err(StellarSaveError::GroupNotFound)` - If group or members list missing
+    ///
+    /// # Example
+    /// ```ignore
+    /// let members = contract.get_members(env, group_id)?;
+    /// ```
+    pub fn get_members(env: Env, group_id: u64) -> Result<Vec<Address>, StellarSaveError> {
+        // Verify group exists first
+        let _group = Self::get_group(env.clone(), group_id)?;
 
-    let members_key = StorageKeyBuilder::group_members(group_id);
-    let members: Vec<Address> = env
-        .storage()
-        .persistent()
-        .get(&members_key)
-        .ok_or(StellarSaveError::GroupNotFound)?;
+        let members_key = StorageKeyBuilder::group_members(group_id);
+        let members: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&members_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
 
-    Ok(members)
-}
+        Ok(members)
+    }
 
-/// Gets the complete profile of a specific member in a group.
-/// 
-/// # Arguments
-/// * `env` - Soroban environment
-/// * `group_id` - ID of the group
-/// * `address` - Address of the member
-/// 
-/// # Returns
-/// * `Ok(MemberProfile)` - Member profile data
-/// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
-/// * `Err(StellarSaveError::NotMember)` - Member not found in group
-pub fn get_member(
-    env: Env,
-    group_id: u64,
-    address: Address,
-) -> Result<MemberProfile, StellarSaveError> {
-    // Verify group exists
-    let _group = Self::get_group(env.clone(), group_id)?;
+    /// Gets the complete profile of a specific member in a group.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    /// * `address` - Address of the member
+    ///
+    /// # Returns
+    /// * `Ok(MemberProfile)` - Member profile data
+    /// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
+    /// * `Err(StellarSaveError::NotMember)` - Member not found in group
+    pub fn get_member(
+        env: Env,
+        group_id: u64,
+        address: Address,
+    ) -> Result<MemberProfile, StellarSaveError> {
+        // Verify group exists
+        let _group = Self::get_group(env.clone(), group_id)?;
 
-    let member_key = StorageKeyBuilder::member_profile(group_id, address.clone());
-    env.storage()
-        .persistent()
-        .get::<_, MemberProfile>(&member_key)
-        .ok_or(StellarSaveError::NotMember)
-}
+        let member_key = StorageKeyBuilder::member_profile(group_id, address.clone());
+        env.storage()
+            .persistent()
+            .get::<_, MemberProfile>(&member_key)
+            .ok_or(StellarSaveError::NotMember)
+    }
 
-/// Checks if an address is a member of a specific group.
-/// 
-/// # Arguments
-/// * `env` - Soroban environment
-/// * `group_id` - ID of the group
-/// * `address` - Address to check
-/// 
-/// # Returns
-/// * `Ok(true)` - Address is a member
-/// * `Ok(false)` - Address is not a member
-/// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
-pub fn is_member(
-    env: Env,
-    group_id: u64,
-    address: Address,
-) -> Result<bool, StellarSaveError> {
-    // Verify group exists
-    let _group = Self::get_group(env.clone(), group_id)?;
+    /// Checks if an address is a member of a specific group.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    /// * `address` - Address to check
+    ///
+    /// # Returns
+    /// * `Ok(true)` - Address is a member
+    /// * `Ok(false)` - Address is not a member
+    /// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
+    pub fn is_member(env: Env, group_id: u64, address: Address) -> Result<bool, StellarSaveError> {
+        // Verify group exists
+        let _group = Self::get_group(env.clone(), group_id)?;
 
-    let member_key = StorageKeyBuilder::member_profile(group_id, address);
-    Ok(env.storage().persistent().has(&member_key))
-}
+        let member_key = StorageKeyBuilder::member_profile(group_id, address);
+        Ok(env.storage().persistent().has(&member_key))
+    }
 }
 
 impl StellarSaveContract {
-/// Gets all payout records for a group with pagination and sorting.
-///
+    /// Gets all payout records for a group with pagination and sorting.
+    ///
     /// This function retrieves the complete payout history for a specific group,
     /// allowing for pagination to handle large datasets and sorting by cycle number.
     ///
@@ -1438,11 +1443,7 @@ impl StellarSaveContract {
             }
             AssignmentMode::Randomized => {
                 let seed = env.ledger().timestamp();
-                let position_order = Self::randomize_payout_order(
-                    env.clone(),
-                    group_id,
-                    seed,
-                )?;
+                let position_order = Self::randomize_payout_order(env.clone(), group_id, seed)?;
                 let mut pos = Vec::new(&env);
                 for i in 0..position_order.len() {
                     pos.push_back(position_order.get(i).unwrap());
@@ -1515,11 +1516,12 @@ impl StellarSaveContract {
         // 2. Reentrancy protection - set transfer in progress flag
         let reentrancy_key = StorageKeyBuilder::reentrancy_guard();
         let guard_value: u64 = env.storage().persistent().get(&reentrancy_key).unwrap_or(0);
-        
-        if guard_value != 0 { // Non-zero value indicates operation in progress
+
+        if guard_value != 0 {
+            // Non-zero value indicates operation in progress
             return Err(StellarSaveError::InternalError);
         }
-        
+
         // Set reentrancy protection flag
         env.storage().persistent().set(&reentrancy_key, &1);
 
@@ -1538,12 +1540,9 @@ impl StellarSaveContract {
         }
 
         // 4. Validate recipient is eligible for this cycle
-        let is_eligible = Self::validate_payout_recipient(
-            env.clone(),
-            group_id,
-            recipient.clone(),
-        )?;
-        
+        let is_eligible =
+            Self::validate_payout_recipient(env.clone(), group_id, recipient.clone())?;
+
         if !is_eligible {
             // Clear reentrancy flag before returning error
             env.storage().persistent().set(&reentrancy_key, &0);
@@ -1551,9 +1550,11 @@ impl StellarSaveContract {
         }
 
         // 5. Validate amount matches expected pool amount
-        let expected_amount = group.contribution_amount.checked_mul(group.member_count as i128)
+        let expected_amount = group
+            .contribution_amount
+            .checked_mul(group.member_count as i128)
             .ok_or(StellarSaveError::Overflow)?;
-        
+
         if amount != expected_amount {
             // Clear reentrancy flag before returning error
             env.storage().persistent().set(&reentrancy_key, &0);
@@ -1571,7 +1572,7 @@ impl StellarSaveContract {
         // 7. Execute the transfer (for XLM, this is a native transfer)
         // In Soroban, native XLM transfers are handled through the contract's internal accounting
         // The actual token movement would be handled by the contract's balance management
-        
+
         // For now, we'll simulate the transfer by recording it and emitting an event
         // In a full implementation, you would:
         // - Use token contracts for non-native assets
@@ -1580,13 +1581,8 @@ impl StellarSaveContract {
 
         // 8. Record the payout
         let timestamp = env.ledger().timestamp(); // cache — single ledger call
-        let payout_record = PayoutRecord::new(
-            recipient.clone(),
-            group_id,
-            cycle_number,
-            amount,
-            timestamp,
-        );
+        let payout_record =
+            PayoutRecord::new(recipient.clone(), group_id, cycle_number, amount, timestamp);
 
         // Store payout record
         let payout_key = StorageKeyBuilder::payout_record(group_id, cycle_number);
@@ -1602,14 +1598,23 @@ impl StellarSaveContract {
         // 10. Gas opt: update incremental paid-out counter (avoids O(n) loop in get_total_paid_out)
         let paid_out_key = StorageKeyBuilder::group_total_paid_out(group_id);
         let current_paid: i128 = env.storage().persistent().get(&paid_out_key).unwrap_or(0);
-        let new_paid = current_paid.checked_add(amount).ok_or(StellarSaveError::Overflow)?;
+        let new_paid = current_paid
+            .checked_add(amount)
+            .ok_or(StellarSaveError::Overflow)?;
         env.storage().persistent().set(&paid_out_key, &new_paid);
 
         // 11. Clear reentrancy protection flag
         env.storage().persistent().set(&reentrancy_key, &0u64);
 
         // 12. Emit payout event
-        EventEmitter::emit_payout_executed(&env, group_id, recipient, amount, cycle_number, timestamp);
+        EventEmitter::emit_payout_executed(
+            &env,
+            group_id,
+            recipient,
+            amount,
+            cycle_number,
+            timestamp,
+        );
 
         Ok(())
     }
@@ -1955,7 +1960,10 @@ impl StellarSaveContract {
         if env
             .storage()
             .persistent()
-            .has(&StorageKeyBuilder::member_profile(group_id, invitee.clone()))
+            .has(&StorageKeyBuilder::member_profile(
+                group_id,
+                invitee.clone(),
+            ))
         {
             return Err(StellarSaveError::AlreadyMember);
         }
@@ -2134,7 +2142,9 @@ impl StellarSaveContract {
             .persistent()
             .get(&StorageKeyBuilder::group_balance(group_id_2))
             .unwrap_or(0);
-        let combined_balance = balance1.checked_add(balance2).ok_or(StellarSaveError::Overflow)?;
+        let combined_balance = balance1
+            .checked_add(balance2)
+            .ok_or(StellarSaveError::Overflow)?;
 
         // 8. Create merged group
         let merged_id = Self::generate_next_group_id(&env)?;
@@ -2161,15 +2171,18 @@ impl StellarSaveContract {
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_data(merged_id), &merged_group);
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::group_status(merged_id), &GroupStatus::Pending);
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::group_members(merged_id), &combined_members);
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::group_balance(merged_id), &combined_balance);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_status(merged_id),
+            &GroupStatus::Pending,
+        );
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_members(merged_id),
+            &combined_members,
+        );
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_balance(merged_id),
+            &combined_balance,
+        );
 
         // 10. Store merged-from provenance
         env.storage().persistent().set(
@@ -2302,7 +2315,8 @@ impl StellarSaveContract {
         let mut status = Vec::new(&env);
 
         for member in members.iter() {
-            let contrib_key = StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
+            let contrib_key =
+                StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
             let has_contributed = env.storage().persistent().has(&contrib_key);
             status.push_back((member, has_contributed));
         }
@@ -2334,7 +2348,11 @@ impl StellarSaveContract {
 
         for cycle in 0..group.current_cycle {
             let payout_key = StorageKeyBuilder::payout_record(group_id, cycle);
-            if let Some(payout) = env.storage().persistent().get::<_, PayoutRecord>(&payout_key) {
+            if let Some(payout) = env
+                .storage()
+                .persistent()
+                .get::<_, PayoutRecord>(&payout_key)
+            {
                 payouts.push_back(payout);
             }
         }
@@ -2418,7 +2436,10 @@ impl StellarSaveContract {
     /// # Returns
     /// * `Ok(())` - Bounds are valid
     /// * `Err(StellarSaveError::InvalidState)` - Bounds are invalid
-    pub fn validate_member_bounds(min_members: u32, max_members: u32) -> Result<(), StellarSaveError> {
+    pub fn validate_member_bounds(
+        min_members: u32,
+        max_members: u32,
+    ) -> Result<(), StellarSaveError> {
         if min_members < 2 || max_members < min_members {
             return Err(StellarSaveError::InvalidState);
         }
@@ -2469,7 +2490,7 @@ impl StellarSaveContract {
 
     /// Lists groups with cursor-based pagination and optional status filtering.
     /// Tasks: Pagination, Status Filtering, Gas Optimization.
-    /// 
+    ///
     /// By default, archived groups are excluded from the results. To view archived
     /// groups, use `list_archived_groups()` instead.
     pub fn list_groups(
@@ -2557,11 +2578,7 @@ impl StellarSaveContract {
     /// * `Err(StellarSaveError::Unauthorized)` if the caller is not the creator
     /// * `Err(StellarSaveError::GroupNotArchivable)` if the group is not in a terminal state
     /// * `Err(StellarSaveError::InvalidState)` if the group is already archived
-    pub fn archive_group(
-        env: Env,
-        caller: Address,
-        group_id: u64,
-    ) -> Result<(), StellarSaveError> {
+    pub fn archive_group(env: Env, caller: Address, group_id: u64) -> Result<(), StellarSaveError> {
         // 1. Authorization
         caller.require_auth();
 
@@ -2747,7 +2764,7 @@ impl StellarSaveContract {
     ///
     /// # Returns
     /// Returns the contract's current XLM balance in stroops (1 XLM = 10^7 stroops).
-    /// 
+    ///
     /// # Note
     /// This is a placeholder implementation. To get the actual balance, you would need to:
     /// 1. Get the native token contract address
@@ -2847,7 +2864,13 @@ impl StellarSaveContract {
             .ok_or(StellarSaveError::GroupNotFound)?;
 
         // 2. Cap limit at 50 for gas optimization
-        let page_limit = if limit > 50 { 50 } else if limit == 0 { 10 } else { limit };
+        let page_limit = if limit > 50 {
+            50
+        } else if limit == 0 {
+            10
+        } else {
+            limit
+        };
 
         // 3. Collect up to page_limit+1 records to detect has_more
         let mut items = Vec::new(&env);
@@ -3004,8 +3027,8 @@ impl StellarSaveContract {
 
         // 2. Only report misses after the grace period has elapsed
         if group.started {
-            let cycle_deadline = group.started_at
-                + (group.cycle_duration * (cycle_number as u64 + 1));
+            let cycle_deadline =
+                group.started_at + (group.cycle_duration * (cycle_number as u64 + 1));
             let grace_end = cycle_deadline + group.grace_period_seconds;
             if env.ledger().timestamp() <= grace_end {
                 return Ok(Vec::new(&env));
@@ -3193,7 +3216,6 @@ impl StellarSaveContract {
     /// ```ignore
     /// contract.join_group(env, 1, member_address)?;
     /// ```
-
     /// Retrieves members who need a contribution reminder for the current cycle.
     ///
     /// Returns members who:
@@ -3274,7 +3296,8 @@ impl StellarSaveContract {
         let mut members_needing_reminder = Vec::new(&env);
         for member in members.iter() {
             // Check if member has already contributed in this cycle
-            let contrib_key = StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
+            let contrib_key =
+                StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
             let has_contributed = env
                 .storage()
                 .persistent()
@@ -3316,7 +3339,8 @@ impl StellarSaveContract {
         cycle: u32,
     ) -> Result<u32, StellarSaveError> {
         // 1. Get members needing reminders
-        let members_needing_reminder = Self::get_members_needing_reminder(env.clone(), group_id, cycle)?;
+        let members_needing_reminder =
+            Self::get_members_needing_reminder(env.clone(), group_id, cycle)?;
 
         // 2. Load the group to get deadline
         let group_key = StorageKeyBuilder::group_data(group_id);
@@ -3328,7 +3352,12 @@ impl StellarSaveContract {
 
         let deadline = group
             .started_at
-            .checked_add(group.cycle_duration.checked_mul(cycle as u64 + 1).ok_or(StellarSaveError::InternalError)?)
+            .checked_add(
+                group
+                    .cycle_duration
+                    .checked_mul(cycle as u64 + 1)
+                    .ok_or(StellarSaveError::InternalError)?,
+            )
             .ok_or(StellarSaveError::InternalError)?;
 
         let current_time = env.ledger().timestamp();
@@ -3336,7 +3365,8 @@ impl StellarSaveContract {
 
         // 3. Emit reminder for each member who hasn't been reminded yet
         for member in members_needing_reminder.iter() {
-            let reminder_key = StorageKeyBuilder::contribution_reminder_emitted(group_id, cycle, member.clone());
+            let reminder_key =
+                StorageKeyBuilder::contribution_reminder_emitted(group_id, cycle, member.clone());
             let already_reminded = env
                 .storage()
                 .persistent()
@@ -3356,7 +3386,9 @@ impl StellarSaveContract {
 
                 // Mark as reminded
                 env.storage().persistent().set(&reminder_key, &true);
-                reminders_emitted = reminders_emitted.checked_add(1).ok_or(StellarSaveError::Overflow)?;
+                reminders_emitted = reminders_emitted
+                    .checked_add(1)
+                    .ok_or(StellarSaveError::Overflow)?;
             }
         }
 
@@ -3585,18 +3617,16 @@ impl StellarSaveContract {
 
         // Verify member contributed in every cycle (0..max_members)
         for cycle in 0..group.max_members {
-            let contrib_key = StorageKeyBuilder::contribution_individual(
-                group_id,
-                cycle,
-                member.clone(),
-            );
+            let contrib_key =
+                StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
             if !env.storage().persistent().has(&contrib_key) {
                 return Err(StellarSaveError::RewardNotEligible);
             }
         }
 
         // Calculate equal share: reward_pool / max_members
-        let reward_share = group.reward_pool
+        let reward_share = group
+            .reward_pool
             .checked_div(group.max_members as i128)
             .unwrap_or(0);
 
@@ -3614,7 +3644,8 @@ impl StellarSaveContract {
             .persistent()
             .get::<_, crate::group::TokenConfig>(&token_config_key)
         {
-            let token_client = soroban_sdk::token::TokenClient::new(&env, &token_config.token_address);
+            let token_client =
+                soroban_sdk::token::TokenClient::new(&env, &token_config.token_address);
             token_client.transfer(&env.current_contract_address(), &member, &reward_share);
         }
 
@@ -3775,8 +3806,7 @@ impl StellarSaveContract {
             604800,     // Default cycle duration
             5,          // Default max members
             2,          // Default min members
-            timestamp,
-            0,          // No grace period
+            timestamp, 0, // No grace period
         );
 
         // Simulate adding members (in production, this would be tracked in storage)
@@ -3818,20 +3848,15 @@ impl StellarSaveContract {
         timestamp: u64,
     ) -> Result<(), StellarSaveError> {
         let record_key = StorageKeyBuilder::payout_record(group_id, cycle_number);
-        
+
         // 1. Check if payout was already recorded to prevent overwriting/double payouts
         if env.storage().persistent().has(&record_key) {
-            return Err(StellarSaveError::InvalidState); 
+            return Err(StellarSaveError::InvalidState);
         }
 
         // 2. Create the PayoutRecord
-        let payout = PayoutRecord::new(
-            recipient.clone(),
-            group_id,
-            cycle_number,
-            amount,
-            timestamp,
-        );
+        let payout =
+            PayoutRecord::new(recipient.clone(), group_id, cycle_number, amount, timestamp);
 
         // 3. Store the full record with proper key
         env.storage().persistent().set(&record_key, &payout);
@@ -3946,12 +3971,7 @@ impl StellarSaveContract {
         let token_client = soroban_sdk::token::TokenClient::new(&env, &token_config.token_address);
         let contract_address = env.current_contract_address();
 
-        token_client.transfer_from(
-            &contract_address,
-            &member,
-            &contract_address,
-            &amount,
-        );
+        token_client.transfer_from(&contract_address, &member, &contract_address, &amount);
 
         // ── Step 8: Record contribution and release guard ─────────────────────
         let timestamp = env.ledger().timestamp();
@@ -4164,10 +4184,7 @@ impl StellarSaveContract {
     /// * `Ok(u32)` - Number of auto-contributions successfully executed
     /// * `Err(StellarSaveError::GroupNotFound)` - Group doesn't exist
     /// * `Err(StellarSaveError::InvalidState)` - Group is not Active
-    pub fn execute_auto_contributions(
-        env: Env,
-        group_id: u64,
-    ) -> Result<u32, StellarSaveError> {
+    pub fn execute_auto_contributions(env: Env, group_id: u64) -> Result<u32, StellarSaveError> {
         // ── 1. Load group — single SLOAD, reused for all checks ───────────────
         let group_key = StorageKeyBuilder::group_data(group_id);
         let group: Group = env
@@ -4191,8 +4208,7 @@ impl StellarSaveContract {
             .get(&token_config_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        let token_client =
-            soroban_sdk::token::TokenClient::new(&env, &token_config.token_address);
+        let token_client = soroban_sdk::token::TokenClient::new(&env, &token_config.token_address);
         let contract_address = env.current_contract_address();
 
         // ── 3. Load member list ───────────────────────────────────────────────
@@ -4209,8 +4225,7 @@ impl StellarSaveContract {
         // ── 4. Iterate members ────────────────────────────────────────────────
         for member in members.iter() {
             // 4a. Check if auto-contribute is enabled for this member (O(1) flag lookup)
-            let flag_key =
-                StorageKeyBuilder::member_auto_contribute(group_id, member.clone());
+            let flag_key = StorageKeyBuilder::member_auto_contribute(group_id, member.clone());
             let auto_enabled: bool = env
                 .storage()
                 .persistent()
@@ -4222,11 +4237,8 @@ impl StellarSaveContract {
             }
 
             // 4b. Skip if member already contributed this cycle
-            let contrib_key = StorageKeyBuilder::contribution_individual(
-                group_id,
-                current_cycle,
-                member.clone(),
-            );
+            let contrib_key =
+                StorageKeyBuilder::contribution_individual(group_id, current_cycle, member.clone());
             if env.storage().persistent().has(&contrib_key) {
                 continue;
             }
@@ -4301,7 +4313,6 @@ impl StellarSaveContract {
 
         Ok(executed_count)
     }
-
 } // close impl StellarSaveContract
 
 /// Validates a string input (group name, description).
@@ -4315,7 +4326,11 @@ pub fn validate_string(text: &str, max_length: usize) -> Result<(), StellarSaveE
 /// Validates that a contribution amount is within the allowed range.
 pub fn validate_amount_range(env: &Env, amount: i128) -> Result<(), StellarSaveError> {
     let config_key = StorageKeyBuilder::contract_config();
-    if let Some(config) = env.storage().persistent().get::<_, ContractConfig>(&config_key) {
+    if let Some(config) = env
+        .storage()
+        .persistent()
+        .get::<_, ContractConfig>(&config_key)
+    {
         if amount < config.min_contribution || amount > config.max_contribution {
             return Err(StellarSaveError::InvalidAmount);
         }
@@ -4425,13 +4440,25 @@ impl StellarSaveContract {
                 group.current_cycle,
                 member.clone(),
             );
-            if !env.storage().persistent().get::<_, bool>(&proof_key).unwrap_or(false) {
+            if !env
+                .storage()
+                .persistent()
+                .get::<_, bool>(&proof_key)
+                .unwrap_or(false)
+            {
                 return Err(StellarSaveError::Unauthorized);
             }
         }
 
         let timestamp = env.ledger().timestamp();
-        Self::record_contribution(&env, group_id, group.current_cycle, member.clone(), amount, timestamp)?;
+        Self::record_contribution(
+            &env,
+            group_id,
+            group.current_cycle,
+            member.clone(),
+            amount,
+            timestamp,
+        )?;
 
         let cycle_total_key =
             StorageKeyBuilder::contribution_cycle_total(group_id, group.current_cycle);
@@ -4576,7 +4603,9 @@ impl StellarSaveContract {
         // Increment vote count
         let vote_key = StorageKeyBuilder::contribution_amount_vote_count(group_id);
         let vote_count: u32 = env.storage().persistent().get(&vote_key).unwrap_or(0);
-        let new_vote_count = vote_count.checked_add(1).ok_or(StellarSaveError::Overflow)?;
+        let new_vote_count = vote_count
+            .checked_add(1)
+            .ok_or(StellarSaveError::Overflow)?;
         env.storage().persistent().set(&vote_key, &new_vote_count);
 
         // Apply change if majority reached (> 50% of members)
@@ -4644,8 +4673,7 @@ impl StellarSaveContract {
         }
 
         // Total distributed = cycles completed * pool amount per cycle
-        let total_distributed: i128 =
-            (group.current_cycle as i128) * group.total_pool_amount();
+        let total_distributed: i128 = (group.current_cycle as i128) * group.total_pool_amount();
 
         // TVL = contributions received but not yet paid out
         let tvl = total_contributions.saturating_sub(total_distributed);
@@ -4691,8 +4719,10 @@ impl StellarSaveContract {
         for cycle in 0..group.current_cycle {
             let contrib_key =
                 StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
-            if let Some(record) =
-                env.storage().persistent().get::<_, ContributionRecord>(&contrib_key)
+            if let Some(record) = env
+                .storage()
+                .persistent()
+                .get::<_, ContributionRecord>(&contrib_key)
             {
                 cycles_contributed += 1;
                 total_contributed = total_contributed.saturating_add(record.amount);
@@ -4718,7 +4748,12 @@ impl StellarSaveContract {
             }
         }
 
-        Ok((cycles_contributed, total_contributed, on_time_rate, received_payout))
+        Ok((
+            cycles_contributed,
+            total_contributed,
+            on_time_rate,
+            received_payout,
+        ))
     }
 
     // ─── Penalty System ───────────────────────────────────────────────────────
@@ -4839,7 +4874,6 @@ impl StellarSaveContract {
         penalty::set_penalty_config(&env, group_id, config);
         Ok(())
     }
-
 } // close impl StellarSaveContract (proof/dynamic contributions block)
 
 fn emit_group_activated(env: &Env, group_id: u64, timestamp: u64, member_count: u32) {
@@ -5225,7 +5259,9 @@ mod tests {
 
         // Create first group
         env.mock_all_auths();
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         client.create_group(&creator, &100, &3600, &5, &token_address);
 
         let count = client.get_total_groups_created();
@@ -5242,7 +5278,7 @@ mod tests {
     fn test_get_contract_balance() {
         let env = Env::default();
         env.mock_all_auths();
-        
+
         let contract_id = env.register(StellarSaveContract, ());
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
@@ -5560,7 +5596,10 @@ mod tests {
         // Verify order and content
         for i in 0..5 {
             assert_eq!(history.items.get(i as u32).unwrap().cycle_number, i);
-            assert_eq!(history.items.get(i as u32).unwrap().amount, contribution_amount);
+            assert_eq!(
+                history.items.get(i as u32).unwrap().amount,
+                contribution_amount
+            );
         }
     }
 
@@ -5777,7 +5816,15 @@ mod tests {
         let contribution_amount = 10_000_000i128;
         let total_cycles: u32 = 110;
 
-        let mut group = Group::new(group_id, member.clone(), contribution_amount, 3600, 200, 2, 0);
+        let mut group = Group::new(
+            group_id,
+            member.clone(),
+            contribution_amount,
+            3600,
+            200,
+            2,
+            0,
+        );
         group.current_cycle = total_cycles - 1;
         env.storage()
             .persistent()
@@ -6734,9 +6781,10 @@ mod tests {
                 joined_at: 1000,
                 auto_contribute_enabled: false,
             };
-            env.storage()
-                .persistent()
-                .set(&StorageKeyBuilder::member_profile(group_id, member), &profile);
+            env.storage().persistent().set(
+                &StorageKeyBuilder::member_profile(group_id, member),
+                &profile,
+            );
         }
         env.storage()
             .persistent()
@@ -7091,14 +7139,32 @@ mod tests {
         // Create multiple groups with different contribution amounts
         let group1_id = 1;
         let group1_amount = 10_000_000; // 1 XLM
-        let group1 = Group::new(group1_id, creator.clone(), group1_amount, 3600, 5, 2, 12345, 0);
+        let group1 = Group::new(
+            group1_id,
+            creator.clone(),
+            group1_amount,
+            3600,
+            5,
+            2,
+            12345,
+            0,
+        );
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_data(group1_id), &group1);
 
         let group2_id = 2;
         let group2_amount = 50_000_000; // 5 XLM
-        let group2 = Group::new(group2_id, creator.clone(), group2_amount, 3600, 5, 2, 12345, 0);
+        let group2 = Group::new(
+            group2_id,
+            creator.clone(),
+            group2_amount,
+            3600,
+            5,
+            2,
+            12345,
+            0,
+        );
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_data(group2_id), &group2);
@@ -7269,8 +7335,8 @@ mod tests {
 
         let config = ContractConfig {
             admin,
-            min_contribution: 1_000_000,      // 0.1 XLM
-            max_contribution: 1_000_000_000,  // 100 XLM
+            min_contribution: 1_000_000,     // 0.1 XLM
+            max_contribution: 1_000_000_000, // 100 XLM
             min_members: 2,
             max_members: 100,
             min_cycle_duration: 3600,
@@ -8007,9 +8073,7 @@ mod tests {
             .set(&StorageKeyBuilder::group_data(group_id), &group);
 
         // Test valid amount (10 XLM)
-        let result = env.as_contract(&contract_id, || {
-            validate_amount_range(&env, 100_000_000)
-        });
+        let result = env.as_contract(&contract_id, || validate_amount_range(&env, 100_000_000));
         assert!(result.is_ok());
     }
 
@@ -8041,9 +8105,7 @@ mod tests {
             .set(&StorageKeyBuilder::group_data(group_id), &group);
 
         // Test amount below minimum
-        let result = env.as_contract(&contract_id, || {
-            validate_amount_range(&env, 500_000)
-        });
+        let result = env.as_contract(&contract_id, || validate_amount_range(&env, 500_000));
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), StellarSaveError::InvalidAmount);
     }
@@ -8076,9 +8138,7 @@ mod tests {
             .set(&StorageKeyBuilder::group_data(group_id), &group);
 
         // Test amount above maximum
-        let result = env.as_contract(&contract_id, || {
-            validate_amount_range(&env, 2_000_000_000)
-        });
+        let result = env.as_contract(&contract_id, || validate_amount_range(&env, 2_000_000_000));
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), StellarSaveError::InvalidAmount);
     }
@@ -8091,9 +8151,7 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         // Test without config (should pass)
-        let result = env.as_contract(&contract_id, || {
-            validate_amount_range(&env, 100_000_000)
-        });
+        let result = env.as_contract(&contract_id, || validate_amount_range(&env, 100_000_000));
         assert!(result.is_ok());
     }
 
@@ -8140,7 +8198,16 @@ mod tests {
         // Test with 1 week duration
         let group1_id = 1;
         let duration1 = 604800u64; // 1 week
-        let mut group1 = Group::new(group1_id, creator.clone(), 100, duration1, 5, 2, started_at, 0);
+        let mut group1 = Group::new(
+            group1_id,
+            creator.clone(),
+            100,
+            duration1,
+            5,
+            2,
+            started_at,
+            0,
+        );
         group1.started = true;
         group1.started_at = started_at;
         env.storage()
@@ -8150,7 +8217,16 @@ mod tests {
         // Test with 1 month duration
         let group2_id = 2;
         let duration2 = 2592000u64; // 30 days
-        let mut group2 = Group::new(group2_id, creator.clone(), 100, duration2, 5, 2, started_at, 0);
+        let mut group2 = Group::new(
+            group2_id,
+            creator.clone(),
+            100,
+            duration2,
+            5,
+            2,
+            started_at,
+            0,
+        );
         group2.started = true;
         group2.started_at = started_at;
         env.storage()
@@ -8433,7 +8509,16 @@ mod tests {
         // Test with 1 hour duration
         let group1_id = 1;
         let duration1 = 3600u64; // 1 hour
-        let mut group1 = Group::new(group1_id, creator.clone(), 100, duration1, 5, 2, started_at, 0);
+        let mut group1 = Group::new(
+            group1_id,
+            creator.clone(),
+            100,
+            duration1,
+            5,
+            2,
+            started_at,
+            0,
+        );
         group1.started = true;
         group1.started_at = started_at;
         group1.current_cycle = 0;
@@ -8444,7 +8529,16 @@ mod tests {
         // Test with 1 week duration
         let group2_id = 2;
         let duration2 = 604800u64; // 1 week
-        let mut group2 = Group::new(group2_id, creator.clone(), 100, duration2, 5, 2, started_at, 0);
+        let mut group2 = Group::new(
+            group2_id,
+            creator.clone(),
+            100,
+            duration2,
+            5,
+            2,
+            started_at,
+            0,
+        );
         group2.started = true;
         group2.started_at = started_at;
         group2.current_cycle = 0;
@@ -9219,12 +9313,14 @@ mod tests {
             .set(&StorageKeyBuilder::group_data(group_id), &group);
 
         // Add contributions for cycles 0 and 1
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::contribution_cycle_total(group_id, 0), &300_i128);
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::contribution_cycle_total(group_id, 1), &300_i128);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::contribution_cycle_total(group_id, 0),
+            &300_i128,
+        );
+        env.storage().persistent().set(
+            &StorageKeyBuilder::contribution_cycle_total(group_id, 1),
+            &300_i128,
+        );
 
         // Add payout for cycle 0
         let payout = PayoutRecord::new(creator.clone(), group_id, 0, 300, env.ledger().timestamp());
@@ -9358,7 +9454,9 @@ mod tests {
         let creator = Address::generate(&env);
         let group_id = client.create_group(&creator, &100, &3600, &10);
 
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &5, &token_address);
 
         for i in 0..5 {
@@ -9384,7 +9482,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         client.join_group(&group_id, &creator);
@@ -9424,7 +9524,9 @@ mod tests {
 
         let creator = Address::generate(&env);
         let cycle_duration = 3600u64;
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &cycle_duration, &3, &token_address);
 
         client.join_group(&group_id, &creator);
@@ -9510,7 +9612,9 @@ mod tests {
         let creator = Address::generate(&env);
         let member = Address::generate(&env);
         let cycle_duration = 3600u64;
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &cycle_duration, &3, &token_address);
 
         client.join_group(&group_id, &creator);
@@ -9563,7 +9667,9 @@ mod tests {
         let creator = Address::generate(&env);
         let member = Address::generate(&env);
         let cycle_duration = 3600u64;
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &cycle_duration, &3, &token_address);
 
         client.join_group(&group_id, &creator);
@@ -9614,7 +9720,9 @@ mod tests {
 
         let creator = Address::generate(&env);
         let non_member = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         // Add member to group
@@ -9634,7 +9742,9 @@ mod tests {
 
         let creator = Address::generate(&env);
         let member = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         // Add member to group
@@ -9671,7 +9781,9 @@ mod tests {
 
         let creator = Address::generate(&env);
         let member = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         // Add members to group
@@ -9726,7 +9838,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let member = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         client.join_group(&group_id, &creator);
@@ -9759,7 +9873,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         let result = client.try_get_payout_schedule(&group_id);
@@ -9774,7 +9890,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         client.join_group(&group_id, &creator);
@@ -9806,7 +9924,9 @@ mod tests {
         let creator = Address::generate(&env);
         let member1 = Address::generate(&env);
         let member2 = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         client.join_group(&group_id, &creator);
@@ -9850,7 +9970,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         let is_complete = client.is_complete(&group_id);
@@ -9865,7 +9987,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         let mut group: Group = env
@@ -9890,7 +10014,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         let mut group: Group = env
@@ -10000,7 +10126,9 @@ mod tests {
         let creator = Address::generate(&env);
         let member1 = Address::generate(&env);
         let member2 = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         client.join_group(&group_id, &creator);
@@ -10038,7 +10166,7 @@ mod tests {
     fn test_record_payout_success() {
         let env = Env::default();
         let contract_id = env.register(StellarSaveContract, ());
-        
+
         let recipient = Address::generate(&env);
         let group_id = 1;
         let cycle = 0;
@@ -10084,7 +10212,7 @@ mod tests {
     fn test_record_payout_already_executed() {
         let env = Env::default();
         let contract_id = env.register(StellarSaveContract, ());
-        
+
         let recipient = Address::generate(&env);
         let group_id = 1;
         let cycle = 0;
@@ -10094,14 +10222,25 @@ mod tests {
         // Setup: Record payout for the first time
         env.as_contract(&contract_id, || {
             StellarSaveContract::record_payout(
-                &env, group_id, cycle, recipient.clone(), amount, timestamp,
+                &env,
+                group_id,
+                cycle,
+                recipient.clone(),
+                amount,
+                timestamp,
             )
-        }).unwrap();
+        })
+        .unwrap();
 
         // Action: Try to record the same payout again
         let result = env.as_contract(&contract_id, || {
             StellarSaveContract::record_payout(
-                &env, group_id, cycle, recipient.clone(), amount, timestamp,
+                &env,
+                group_id,
+                cycle,
+                recipient.clone(),
+                amount,
+                timestamp,
             )
         });
 
@@ -10134,7 +10273,9 @@ mod tests {
         env.storage().persistent().set(&group_key, &group);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &10, &token_address);
 
         let amount = 200; // 2 members * 100 each
@@ -10175,7 +10316,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         // Setup: Create a group with 2 payouts
@@ -10209,7 +10352,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         // Group is in Pending state by default, should fail
@@ -10239,7 +10384,9 @@ mod tests {
         env.storage().persistent().set(&group_key, &group);
 
         let status_key = StorageKeyBuilder::group_status(group_id);
-        env.storage().persistent().set(&status_key, &GroupStatus::Active);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Active);
 
         // Creator (position 0) should not be eligible for cycle 1
         let amount = 200; // 2 members * 100 each
@@ -10255,7 +10402,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &5, &token_address);
 
         // Setup: Create payouts out of order in storage
@@ -10280,7 +10429,9 @@ mod tests {
         env.storage().persistent().set(&group_key, &group);
 
         let status_key = StorageKeyBuilder::group_status(group_id);
-        env.storage().persistent().set(&status_key, &GroupStatus::Active);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Active);
 
         // Wrong amount (should be 200 for 2 members * 100 each)
         let wrong_amount = 150;
@@ -10297,7 +10448,9 @@ mod tests {
 
         let creator = Address::generate(&env);
         let member = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         client.join_group(&group_id, &creator);
@@ -10311,7 +10464,9 @@ mod tests {
         env.storage().persistent().set(&group_key, &group);
 
         let status_key = StorageKeyBuilder::group_status(group_id);
-        env.storage().persistent().set(&status_key, &GroupStatus::Active);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Active);
 
         // Manually set that payout was already processed for cycle 0
         let recipient_key = StorageKeyBuilder::payout_recipient(group_id, 0);
@@ -10331,7 +10486,9 @@ mod tests {
 
         let creator = Address::generate(&env);
         let member = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         client.join_group(&group_id, &creator);
@@ -10345,7 +10502,9 @@ mod tests {
         env.storage().persistent().set(&group_key, &group);
 
         let status_key = StorageKeyBuilder::group_status(group_id);
-        env.storage().persistent().set(&status_key, &GroupStatus::Active);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Active);
 
         // Manually set reentrancy guard
         let reentrancy_key = StorageKeyBuilder::reentrancy_guard();
@@ -10370,7 +10529,9 @@ mod tests {
         let creator = Address::generate(&env);
         let member1 = Address::generate(&env);
         let member2 = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         client.join_group(&group_id, &creator);
@@ -10384,7 +10545,9 @@ mod tests {
         env.storage().persistent().set(&group_key, &group);
 
         let status_key = StorageKeyBuilder::group_status(group_id);
-        env.storage().persistent().set(&status_key, &GroupStatus::Active);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Active);
 
         let amount = 200; // 2 members * 100 each
         client.transfer_payout(&group_id, &creator, &amount, &0);
@@ -10392,12 +10555,13 @@ mod tests {
         // Check that an event was emitted
         let events = env.events().all();
         assert!(events.len() > 0);
-        
+
         // Find the payout_executed event
         let payout_event = events.iter().find(|event| {
-            event.topics.len() >= 1 && event.topics.get(0).unwrap() == &Symbol::new(&env, "payout_executed")
+            event.topics.len() >= 1
+                && event.topics.get(0).unwrap() == &Symbol::new(&env, "payout_executed")
         });
-        
+
         assert!(payout_event.is_some());
     }
 
@@ -10425,7 +10589,9 @@ mod tests {
 
         let creator = Address::generate(&env);
         let non_member = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         // Add one member
@@ -10445,7 +10611,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         let group_id = client.create_group(&creator, &100, &3600, &5);
@@ -10475,7 +10643,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         client.join_group(&group_id, &creator);
@@ -10506,7 +10676,9 @@ mod tests {
         let creator = Address::generate(&env);
         let member1 = Address::generate(&env);
         let member2 = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         // Add 5 members
@@ -10578,7 +10750,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         // Add 5 members
@@ -10613,7 +10787,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         // Add members
@@ -10632,7 +10808,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         let mut group: Group = env
@@ -10687,7 +10865,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         client.join_group(&group_id, &creator);
@@ -10715,7 +10895,9 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
 
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         client.join_group(&group_id, &creator);
@@ -10746,7 +10928,9 @@ mod tests {
         let creator = Address::generate(&env);
         let member1 = Address::generate(&env);
         let member2 = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         client.join_group(&group_id, &creator);
@@ -10837,7 +11021,9 @@ mod tests {
         env.storage().persistent().set(&group_key, &group);
 
         let status_key = StorageKeyBuilder::group_status(group_id);
-        env.storage().persistent().set(&status_key, &GroupStatus::Active);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Active);
 
         // This should fail due to overflow in amount calculation
         let result = client.try_transfer_payout(&group_id, &creator, &i128::MAX, &0);
@@ -10858,7 +11044,7 @@ mod tests {
 
         // Create and setup group
         let group_id = client.create_group(&creator, &100, &3600, &2);
-        
+
         // Setup group as active
         let group_key = StorageKeyBuilder::group_data(group_id);
         let mut group: Group = env.storage().persistent().get(&group_key).unwrap();
@@ -10868,7 +11054,9 @@ mod tests {
         env.storage().persistent().set(&group_key, &group);
 
         let status_key = StorageKeyBuilder::group_status(group_id);
-        env.storage().persistent().set(&status_key, &GroupStatus::Active);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Active);
 
         // Execute payout should succeed
         let result = client.try_execute_payout(&group_id);
@@ -10899,10 +11087,12 @@ mod tests {
         let creator = Address::generate(&env);
 
         let group_id = client.create_group(&creator, &100, &3600, &2);
-        
+
         // Set group to active
         let status_key = StorageKeyBuilder::group_status(group_id);
-        env.storage().persistent().set(&status_key, &GroupStatus::Active);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Active);
 
         // Pause should succeed
         let result = client.try_pause_group(&group_id, &creator);
@@ -10923,9 +11113,11 @@ mod tests {
         let other = Address::generate(&env);
 
         let group_id = client.create_group(&creator, &100, &3600, &2);
-        
+
         let status_key = StorageKeyBuilder::group_status(group_id);
-        env.storage().persistent().set(&status_key, &GroupStatus::Active);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Active);
 
         // Pause by non-creator should fail
         let result = client.try_pause_group(&group_id, &other);
@@ -10941,10 +11133,12 @@ mod tests {
         let creator = Address::generate(&env);
 
         let group_id = client.create_group(&creator, &100, &3600, &2);
-        
+
         // Set group to paused
         let status_key = StorageKeyBuilder::group_status(group_id);
-        env.storage().persistent().set(&status_key, &GroupStatus::Paused);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Paused);
 
         // Resume should succeed
         let result = client.try_resume_group(&group_id, &creator);
@@ -10964,10 +11158,12 @@ mod tests {
         let creator = Address::generate(&env);
 
         let group_id = client.create_group(&creator, &100, &3600, &2);
-        
+
         // Set group to active
         let status_key = StorageKeyBuilder::group_status(group_id);
-        env.storage().persistent().set(&status_key, &GroupStatus::Active);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Active);
 
         // Cancel should succeed
         let result = client.try_cancel_group(&group_id, &creator);
@@ -10987,10 +11183,12 @@ mod tests {
         let creator = Address::generate(&env);
 
         let group_id = client.create_group(&creator, &100, &3600, &2);
-        
+
         // Set group to completed (terminal state)
         let status_key = StorageKeyBuilder::group_status(group_id);
-        env.storage().persistent().set(&status_key, &GroupStatus::Completed);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Completed);
 
         // Cancel should fail
         let result = client.try_cancel_group(&group_id, &creator);
@@ -11109,9 +11307,10 @@ mod tests {
             joined_at: 12345,
             auto_contribute_enabled: false,
         };
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::member_profile(1, member.clone()), &profile);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::member_profile(1, member.clone()),
+            &profile,
+        );
 
         let is_member = client.is_member_of_group(&1, &member);
         assert!(is_member);
@@ -11125,7 +11324,7 @@ mod tests {
     fn test_validate_address() {
         let env = Env::default();
         let address = Address::generate(&env);
-        
+
         let result = StellarSaveContract::validate_address(&address);
         assert!(result.is_ok());
     }
@@ -11202,7 +11401,6 @@ mod tests {
         assert_eq!(GroupStatus::from_u32(4), Some(GroupStatus::Cancelled));
         assert_eq!(GroupStatus::from_u32(5), None);
     }
-
 
     // =========================================================================
     // Tests for #479: Contribution Proof Verification
@@ -11424,7 +11622,10 @@ mod tests {
         env.storage().persistent().set(&group_key, &group);
 
         // Store member profiles
-        for (i, m) in [creator.clone(), member1.clone(), member2.clone()].iter().enumerate() {
+        for (i, m) in [creator.clone(), member1.clone(), member2.clone()]
+            .iter()
+            .enumerate()
+        {
             let profile = MemberProfile {
                 address: m.clone(),
                 group_id,
@@ -11461,7 +11662,9 @@ mod tests {
         let contract_id = env.register(StellarSaveContract, ());
         let client = StellarSaveContractClient::new(&env, &contract_id);
         let creator = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &5, &token_address);
 
         let (completion_rate, total_contributions, total_distributed, active_members, tvl) =
@@ -11574,8 +11777,12 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
         let creator = Address::generate(&env);
         let member = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
-        let group_id = client.create_group(&creator, &100, &3600, &2, &token_address).unwrap();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
+        let group_id = client
+            .create_group(&creator, &100, &3600, &2, &token_address)
+            .unwrap();
 
         // Set up group at cycle 1 with member who received payout
         let group_key = StorageKeyBuilder::group_data(group_id);
@@ -11608,10 +11815,9 @@ mod tests {
         );
 
         // Member received payout in cycle 0
-        env.storage().persistent().set(
-            &StorageKeyBuilder::payout_recipient(group_id, 0),
-            &member,
-        );
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::payout_recipient(group_id, 0), &member);
 
         let (_cycles, _total, _rate, received_payout) =
             client.get_member_statistics(&group_id, &member);
@@ -11630,7 +11836,9 @@ mod tests {
         let client = StellarSaveContractClient::new(env, &contract_id);
         let creator = Address::generate(env);
         env.mock_all_auths();
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(env))
+            .address();
         let group_id = client
             .create_group(&creator, &10_000_000, &604800, &5, &token_address)
             .unwrap();
@@ -11686,7 +11894,9 @@ mod tests {
         let creator = Address::generate(&env);
         let member1 = Address::generate(&env);
         let member2 = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &3, &token_address);
 
         client.join_group(&group_id, &creator);
@@ -11736,7 +11946,9 @@ mod tests {
 
         let creator1 = Address::generate(&env);
         let creator2 = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id1 = client.create_group(&creator1, &100, &3600, &3, &token_address);
         let group_id2 = client.create_group(&creator2, &200, &7200, &5, &token_address);
 
@@ -11781,13 +11993,17 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
         let creator = Address::generate(&env);
         let member = Address::generate(&env);
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
 
         env.mock_all_auths();
         env.ledger().set_timestamp(started_at);
 
         // Create and setup group
-        let group_id = client.create_group(&creator, &100, &3600, &2, &token_address).unwrap();
+        let group_id = client
+            .create_group(&creator, &100, &3600, &2, &token_address)
+            .unwrap();
 
         // Setup group as active
         let group_key = StorageKeyBuilder::group_data(group_id);
@@ -11815,11 +12031,15 @@ mod tests {
         let creator = Address::random(&env);
         let group_id = 1u64;
 
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &2, &token_address);
-        
+
         let status_key = StorageKeyBuilder::group_status(group_id);
-        env.storage().persistent().set(&status_key, &GroupStatus::Active);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Active);
 
         let group_key = StorageKeyBuilder::group_data(group_id);
         env.storage().persistent().set(&group_key, &group);
@@ -11842,12 +12062,16 @@ mod tests {
         let creator = Address::random(&env);
         let group_id = 1u64;
 
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &2, &token_address);
-        
+
         // Set group to paused
         let status_key = StorageKeyBuilder::group_status(group_id);
-        env.storage().persistent().set(&status_key, &GroupStatus::Paused);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Paused);
 
         let group_key = StorageKeyBuilder::group_data(group_id);
         env.storage().persistent().set(&group_key, &group);
@@ -11874,12 +12098,16 @@ mod tests {
         let creator = Address::random(&env);
         let group_id = 1u64;
 
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &2, &token_address);
-        
+
         // Set group to active
         let status_key = StorageKeyBuilder::group_status(group_id);
-        env.storage().persistent().set(&status_key, &GroupStatus::Active);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Active);
 
         let group_key = StorageKeyBuilder::group_data(group_id);
         env.storage().persistent().set(&group_key, &group);
@@ -11909,12 +12137,16 @@ mod tests {
         let other_user = Address::random(&env);
         let group_id = 1u64;
 
-        let token_address = env.register_stellar_asset_contract_v2(Address::generate(&env)).address();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
         let group_id = client.create_group(&creator, &100, &3600, &2, &token_address);
-        
+
         // Set group to completed (terminal state)
         let status_key = StorageKeyBuilder::group_status(group_id);
-        env.storage().persistent().set(&status_key, &GroupStatus::Completed);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Completed);
 
         let group_key = StorageKeyBuilder::group_data(group_id);
         env.storage().persistent().set(&group_key, &group);
@@ -11997,11 +12229,7 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
         let (group_id, _creator, member) = setup_group_with_member(&env);
 
-        client.raise_dispute(
-            &group_id,
-            &member,
-            &String::from_str(&env, "funds missing"),
-        );
+        client.raise_dispute(&group_id, &member, &String::from_str(&env, "funds missing"));
 
         let group: Group = env
             .storage()
@@ -12078,7 +12306,11 @@ mod tests {
         let client = StellarSaveContractClient::new(&env, &contract_id);
         let (group_id, creator, _member) = setup_group_with_member(&env);
 
-        client.resolve_dispute(&group_id, &creator, &String::from_str(&env, "nothing to resolve"));
+        client.resolve_dispute(
+            &group_id,
+            &creator,
+            &String::from_str(&env, "nothing to resolve"),
+        );
     }
 
     // Task 5.1: Unit tests for get_token_config (Requirements 2.3, 2.4)
@@ -12206,11 +12438,18 @@ mod tests {
 
         // The group should now have archived = true
         let group = client.get_group(&1);
-        assert!(group.archived, "group.archived should be true after archiving");
+        assert!(
+            group.archived,
+            "group.archived should be true after archiving"
+        );
 
         // The archived flag in storage should also be set
         let archived_key = StorageKeyBuilder::group_archived(1);
-        let flag: bool = env.storage().persistent().get(&archived_key).unwrap_or(false);
+        let flag: bool = env
+            .storage()
+            .persistent()
+            .get(&archived_key)
+            .unwrap_or(false);
         assert!(flag, "storage archived flag should be true");
     }
 
@@ -12428,4 +12667,3 @@ mod tests {
         assert!(found, "group_archived event should have been emitted");
     }
 }
-
