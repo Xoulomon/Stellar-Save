@@ -96,6 +96,14 @@ pub enum GroupKey {
     /// Archived groups are excluded from `list_groups()` by default and are only
     /// visible via `list_archived_groups()`.
     Archived(u64),
+
+    /// Per-member rating: GROUP_RATING_{id}_{member}
+    /// Stores the RatingEntry submitted by a specific member for this group.
+    Rating(u64, Address),
+
+    /// Rating aggregate: GROUP_RATING_AGG_{id}
+    /// Stores the running RatingAggregate (total_stars + rating_count) for a group.
+    RatingAggregate(u64),
 }
 
 /// Storage keys for member-related data.
@@ -301,6 +309,16 @@ impl StorageKeyBuilder {
     /// Archived groups are hidden from `list_groups()` by default.
     pub fn group_archived(group_id: u64) -> StorageKey {
         StorageKey::Group(GroupKey::Archived(group_id))
+    }
+
+    /// Creates a key for a member's individual rating of a group.
+    pub fn group_rating(group_id: u64, member: Address) -> StorageKey {
+        StorageKey::Group(GroupKey::Rating(group_id, member))
+    }
+
+    /// Creates a key for the rating aggregate of a group.
+    pub fn group_rating_aggregate(group_id: u64) -> StorageKey {
+        StorageKey::Group(GroupKey::RatingAggregate(group_id))
     }
 
     // Member key builders

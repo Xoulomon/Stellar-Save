@@ -21,6 +21,8 @@ const GroupComparisonPage = lazy(() => import("../pages/GroupComparisonPage"));
 
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
 const ErrorPage = lazy(() => import("../pages/ErrorPage"));
+const TemplateGalleryPage = lazy(() => import("../pages/TemplateGalleryPage"));
+const AnalyticsDashboardPage = lazy(() => import("../pages/AnalyticsDashboardPage"));
 /**
  * Centralized route configuration.
  * All application routes are defined here with their properties.
@@ -119,6 +121,20 @@ export const routeConfig: RouteConfig[] = [
     component: ErrorPage,
     protected: false,
     title: "Error - Stellar Save",
+  },
+  {
+    path: ROUTES.TEMPLATES,
+    component: TemplateGalleryPage,
+    protected: true,
+    title: "Group Templates - Stellar Save",
+    description: "Browse and use group templates",
+  },
+  {
+    path: ROUTES.ANALYTICS,
+    component: AnalyticsDashboardPage,
+    protected: true,
+    title: "Analytics - Stellar Save",
+    description: "Your contribution analytics and statistics",
   },
   {
     path: ROUTES.LEADERBOARD,

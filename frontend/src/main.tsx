@@ -7,6 +7,15 @@ import { ToastProvider } from './components/Toast';
 import { AppRouter } from './routing/AppRouter';
 import './index.css';
 
+// Register service worker for PWA support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // SW registration failure is non-fatal
+    });
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AppThemeProvider>

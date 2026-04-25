@@ -24,6 +24,24 @@ export interface UserInteraction {
   timestamp: number;
 }
 
+export interface Member {
+  id: string;
+  address: string;
+  name: string;
+  joinedAt: number;
+  groupIds: string[];
+}
+
+export interface Transaction {
+  id: string;
+  groupId: string;
+  memberAddress: string;
+  amount: number;
+  type: 'contribution' | 'payout';
+  timestamp: number;
+  stellarTxHash: string;
+}
+
 export interface Recommendation {
   groupId: string;
   score: number;

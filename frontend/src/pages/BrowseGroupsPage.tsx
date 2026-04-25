@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Stack, Typography } from '@mui/material';
 import { AppCard, AppLayout } from '../ui';
@@ -12,27 +12,67 @@ import { ToastProvider } from '../components/Toast/ToastProvider';
 import { useToast } from '../components/Toast/useToast';
 import { Button } from '../components/Button';
 import { useGroups } from '../hooks/useGroups';
-import { ROUTES, buildRoute } from '../routing/constants';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { ROUTES } from '../routing/constants';
 import type { PublicGroup } from '../types/group';
+import type { GroupFilters as GroupFiltersType } from '../types/group';
 import './BrowseGroupsPage.css';
+
+const SAVED_SEARCH_KEY = 'stellar-save:search-preferences';
 
 function BrowseGroupsContent() {
   const navigate = useNavigate();
   const { addToast } = useToast();
 
+  const [savedSearch, setSavedSearch] = useLocalStorage<Partial<GroupFiltersType>>(
+    SAVED_SEARCH_KEY,
+    {}
+  );
+
   const {
-    groups, filteredCount, pagination, filters,
-    isLoading, error, hasActiveFilters,
-    setFilters, clearFilters, setPage, setPageSize, refresh,
-  } = useGroups({ initialPageSize: 10 });
+    groups,
+    filteredCount,
+    pagination,
+    filters,
+    isLoading,
+    error,
+    hasActiveFilters,
+    setFilters,
+    clearFilters,
+    setPage,
+    setPageSize,
+    refresh,
+  } = useGroups({ initialFilters: savedSearch, initialPageSize: 10 });
 
   const [previewGroup, setPreviewGroup] = useState<PublicGroup | null>(null);
   const [joinGroup, setJoinGroup] = useState<PublicGroup | null>(null);
 
+  // Derive autocomplete suggestions from all loaded group names
+  const suggestions = useMemo(() => groups.map((g) => g.name), [groups]);
+
+  const handleSearch = (q: string) => {
+    setFilters({ search: q });
+    setSavedSearch((prev) => ({ ...prev, search: q }));
+  };
+
+  const handleFilterChange = (f: Parameters<typeof setFilters>[0]) => {
+    setFilters(f);
+    setSavedSearch((prev) => ({ ...prev, ...f }));
+  };
+
+  const handleClearFilters = () => {
+    clearFilters();
+    setSavedSearch({});
+  };
+
   const handleJoinConfirm = (group: PublicGroup) => {
     setJoinGroup(null);
     setPreviewGroup(null);
-    addToast({ message: `Join request sent for "${group.name}"!`, type: 'success', duration: 4000 });
+    addToast({
+      message: `Join request sent for "${group.name}"!`,
+      type: 'success',
+      duration: 4000,
+    });
   };
 
   return (
@@ -57,12 +97,25 @@ function BrowseGroupsContent() {
               <div className="browse-groups-controls">
                 <SearchBar
                   placeholder="Search groups by name or keyword..."
-                  onSearch={(q) => setFilters({ search: q })}
+                  onSearch={handleSearch}
                   debounceMs={300}
                   loading={isLoading}
+                  defaultValue={filters.search}
+                  suggestions={suggestions}
                 />
-                <GroupFilters onFilterChange={(f) => setFilters(f)} initialFilters={filters} />
+                <GroupFilters onFilterChange={handleFilterChange} initialFilters={filters} />
               </div>
+
+              {!isLoading && (
+                <p className="browse-groups-result-count" aria-live="polite">
+                  {filteredCount} {filteredCount === 1 ? 'group' : 'groups'} found
+                  {hasActiveFilters && (
+                    <button className="browse-groups-clear-filters" onClick={handleClearFilters}>
+                      Clear filters
+                    </button>
+                  )}
+                </p>
+              )}
 
               <div aria-busy={isLoading}>
                 <GroupList
@@ -80,7 +133,9 @@ function BrowseGroupsContent() {
                       : 'No public groups yet. Be the first to create one!'
                   }
                   emptyActionLabel={hasActiveFilters ? 'Clear Filters' : 'Create Group'}
-                  onEmptyAction={hasActiveFilters ? clearFilters : () => navigate(ROUTES.GROUP_CREATE)}
+                  onEmptyAction={
+                    hasActiveFilters ? handleClearFilters : () => navigate(ROUTES.GROUP_CREATE)
+                  }
                   renderGroupItem={(group) => (
                     <GroupCard
                       groupId={group.id}
@@ -102,14 +157,28 @@ function BrowseGroupsContent() {
               </div>
 
               {pagination.totalPages > 1 && (
-                <div className="browse-groups-pagination" role="navigation" aria-label="Group list pagination">
-                  <Button variant="secondary" size="sm" disabled={!pagination.hasPrevPage} onClick={() => setPage(pagination.page - 1)}>
+                <div
+                  className="browse-groups-pagination"
+                  role="navigation"
+                  aria-label="Group list pagination"
+                >
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={!pagination.hasPrevPage}
+                    onClick={() => setPage(pagination.page - 1)}
+                  >
                     Previous
                   </Button>
                   <span className="browse-groups-page-info">
                     Page {pagination.page} of {pagination.totalPages}
                   </span>
-                  <Button variant="secondary" size="sm" disabled={!pagination.hasNextPage} onClick={() => setPage(pagination.page + 1)}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={!pagination.hasNextPage}
+                    onClick={() => setPage(pagination.page + 1)}
+                  >
                     Next
                   </Button>
                   <select
@@ -118,7 +187,11 @@ function BrowseGroupsContent() {
                     onChange={(e) => setPageSize(Number(e.target.value))}
                     className="browse-groups-page-size"
                   >
-                    {[10, 20, 50].map((n) => <option key={n} value={n}>{n} per page</option>)}
+                    {[10, 20, 50].map((n) => (
+                      <option key={n} value={n}>
+                        {n} per page
+                      </option>
+                    ))}
                   </select>
                 </div>
               )}
@@ -131,7 +204,10 @@ function BrowseGroupsContent() {
       <GroupPreview
         group={previewGroup}
         onClose={() => setPreviewGroup(null)}
-        onJoin={(g) => { setPreviewGroup(null); setJoinGroup(g); }}
+        onJoin={(g) => {
+          setPreviewGroup(null);
+          setJoinGroup(g);
+        }}
       />
 
       {/* Join confirmation modal */}
@@ -152,7 +228,9 @@ export default function BrowseGroupsPage() {
         title="Browse Groups"
         subtitle="Discover and join public savings groups"
         footerText="Stellar Save - Built for transparent, on-chain savings"
-        navItems={[{ key: 'create', label: 'Create Group', onClick: () => navigate(ROUTES.GROUP_CREATE) }]}
+        navItems={[
+          { key: 'create', label: 'Create Group', onClick: () => navigate(ROUTES.GROUP_CREATE) },
+        ]}
       >
         <BrowseGroupsContent />
       </AppLayout>

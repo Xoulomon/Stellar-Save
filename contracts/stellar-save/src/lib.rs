@@ -28,6 +28,7 @@ pub mod payout;
 pub mod payout_executor;
 pub mod penalty;
 pub mod pool;
+pub mod rating;
 pub mod status;
 pub mod storage;
 pub mod token;
@@ -38,9 +39,11 @@ mod multi_token_tests;
 mod merge_tests;
 mod milestone_tests;
 mod invitation_tests;
+mod upgrade_tests;
 pub mod milestones;
 pub mod gas_benchmark;
 mod auto_contribution_tests;
+mod upgrade_tests;
 
 // Re-export for convenience
 pub use contribution::{ContributionPage, ContributionRecord};
@@ -51,6 +54,7 @@ pub use events::*;
 pub use group::{Group, GroupStatus};
 pub use payout::PayoutRecord;
 pub use pool::{PoolCalculator, PoolInfo};
+pub use rating::{GroupRating, RatingAggregate, RatingEntry};
 #[cfg(test)]
 use soroban_sdk::testutils::{Events, Ledger};
 use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String, Symbol, Vec};
@@ -2652,11 +2656,85 @@ impl StellarSaveContract {
         Ok(groups)
     }
 
+    /// Searches and filters groups by various criteria with pagination and sorting.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `params` - [`SearchParams`] struct containing all filter, pagination, and sort options
+    ///
+    /// # Filter fields (all optional)
+    /// * `status` - Only return groups with this [`GroupStatus`]
+    /// * `min_amount` / `max_amount` - Contribution amount range (in stroops)
+    /// * `min_members` / `max_members` - Current member count range
+    ///
+    /// # Pagination
+    /// * `cursor` - Pass `0` for the first page; use `SearchResult::next_cursor` for subsequent pages
+    /// * `limit` - Results per page (capped at 50)
+    ///
+    /// # Sorting
+    /// * `sort` - [`SortOrder::CreatedDesc`] (default), [`SortOrder::CreatedAsc`],
+    ///   [`SortOrder::MemberCountDesc`], or [`SortOrder::MemberCountAsc`]
+    ///
+    /// # Returns
+    /// A [`SearchResult`] containing the matching groups, the next cursor, and scan count.
+    ///
+    /// # Notes
+    /// - Archived groups are always excluded from results.
+    /// - Member-count sorts load all matching groups before sorting; `next_cursor` will be `0`.
+    pub fn search_groups(env: Env, params: SearchParams) -> SearchResult {
+        search::search_groups(&env, params)
+    }
+
     /// Returns the total number of groups created.
     /// Reads the existing counter from storage without modification.
     pub fn get_total_groups_created(env: Env) -> u64 {
         let key = StorageKeyBuilder::next_group_id();
         env.storage().persistent().get(&key).unwrap_or(0)
+    }
+
+    /// Submits a 1–5 star rating (with optional comment) for a completed or cancelled group.
+    ///
+    /// # Rules
+    /// - Group must be in a terminal state (Completed or Cancelled).
+    /// - Caller must be a member of the group.
+    /// - Each member may only rate once per group.
+    /// - `stars` must be 1–5.
+    /// - `comment` must be ≤ 280 characters (pass an empty string for no comment).
+    ///
+    /// # Errors
+    /// - `GroupNotFound` – group does not exist
+    /// - `InvalidState` – group is not yet in a terminal state
+    /// - `NotMember` – caller is not a member of the group
+    /// - `InvalidAmount` – stars is 0 or > 5
+    /// - `InvalidMetadata` – comment exceeds 280 characters
+    /// - `AlreadyContributed` – member has already rated this group
+    pub fn rate_group(
+        env: Env,
+        caller: Address,
+        group_id: u64,
+        stars: u32,
+        comment: String,
+    ) -> Result<(), StellarSaveError> {
+        rating::rate_group(&env, caller, group_id, stars, comment)
+    }
+
+    /// Returns the aggregated rating summary for a group.
+    ///
+    /// Returns a [`GroupRating`] with `rating_count`, `total_stars`, and
+    /// `average_scaled` (average × 100, e.g. 450 = 4.50 stars).
+    /// Returns zeroed counts if no ratings have been submitted yet.
+    pub fn get_group_rating(env: Env, group_id: u64) -> Result<GroupRating, StellarSaveError> {
+        rating::get_group_rating(&env, group_id)
+    }
+
+    /// Returns the individual rating submitted by a specific member for a group.
+    /// Returns `None` if the member has not yet rated the group.
+    pub fn get_member_rating(
+        env: Env,
+        group_id: u64,
+        member: Address,
+    ) -> Result<Option<RatingEntry>, StellarSaveError> {
+        rating::get_member_rating(&env, group_id, member)
     }
 
     /// Gets the total XLM balance held by the contract.

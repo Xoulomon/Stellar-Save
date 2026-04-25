@@ -21,7 +21,8 @@ export const ROUTES = {
   GROUP_MEMBERS: "/groups/:groupId/members",
 
   LEADERBOARD: "/leaderboard",
-
+  TEMPLATES: "/templates",
+  ANALYTICS: "/analytics",
 } as const;
 
 /**

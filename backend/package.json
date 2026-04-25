@@ -13,6 +13,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@elastic/elasticsearch": "^9.3.4",
     "@stellar/stellar-sdk": "^15.0.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
