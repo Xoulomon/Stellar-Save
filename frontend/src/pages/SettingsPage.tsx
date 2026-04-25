@@ -1,6 +1,7 @@
-import { Stack, Typography } from '@mui/material';
+import { Stack, Typography, Divider } from '@mui/material';
 import { AppCard, AppLayout } from '../ui';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { ReminderPreferencesSection } from '../components/ReminderPreferencesSection';
 import { useTheme } from '../hooks/useTheme';
 
 /**
@@ -56,6 +57,12 @@ export default function SettingsPage() {
               <ThemeToggle variant="labelled" />
             </Stack>
           </Stack>
+
+          {/* ── Divider ────────────────────────────────────────── */}
+          <Divider />
+
+          {/* ── Reminders ──────────────────────────────────────── */}
+          <ReminderPreferencesSection />
         </Stack>
       </AppCard>
     </AppLayout>
