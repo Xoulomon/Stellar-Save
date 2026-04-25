@@ -47,3 +47,17 @@ export interface Recommendation {
   score: number;
   algorithm: string;
 }
+
+export type ExportFormat = 'CSV' | 'JSON';
+export type ExportStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+export interface ExportJob {
+  id: string;
+  userId: string;
+  format: ExportFormat;
+  status: ExportStatus;
+  createdAt: number;
+  completedAt?: number;
+  fileUrl?: string;
+  error?: string;
+}
