@@ -6,6 +6,10 @@ import { ABTestingFramework } from './ab_testing';
 import { Group, UserInteraction, UserPreference } from './models';
 import { EmailService } from './email_service';
 import { ExportService } from './export_service';
+import { BackupService, S3HttpClient } from './backup_service';
+import { BackupScheduler } from './backup_scheduler';
+import { RecoveryService } from './recovery_service';
+import { BackupMonitor } from './backup_monitor';
 
 dotenv.config();
 
@@ -47,6 +51,20 @@ const exportService = new ExportService(
   engine.getInteractions(),
   engine.getPreferences()
 );
+
+// Backup system
+const s3Client = new S3HttpClient();
+const backupService = new BackupService(s3Client);
+const backupScheduler = new BackupScheduler(backupService);
+const recoveryService = new RecoveryService(backupService, s3Client);
+const backupMonitor = new BackupMonitor(backupService, {
+  alertWebhookUrl: process.env.BACKUP_ALERT_WEBHOOK_URL,
+});
+
+if (process.env.BACKUP_ENABLED === 'true') {
+  backupScheduler.start();
+  backupMonitor.start();
+}
 
 // API Endpoints
 
@@ -167,6 +185,70 @@ app.get('/export/:jobId/download', (req, res) => {
   }
   
   res.json({ url: job.fileUrl });
+});
+
+// ── Backup Routes ────────────────────────────────────────────────────────────
+
+/**
+ * @api {post} /backup Trigger a manual backup
+ * Body: { type: 'full' | 'incremental' }
+ */
+app.post('/backup', async (req, res) => {
+  const { type } = req.body;
+  if (type !== 'full' && type !== 'incremental') {
+    return res.status(400).json({ error: 'type must be "full" or "incremental"' });
+  }
+  const job = await backupScheduler.triggerManual(type);
+  res.status(202).json(job);
+});
+
+/**
+ * @api {get} /backup List all backup jobs
+ */
+app.get('/backup', (_req, res) => {
+  res.json(backupService.listJobs());
+});
+
+/**
+ * @api {get} /backup/:jobId Get a specific backup job
+ */
+app.get('/backup/:jobId', (req, res) => {
+  const job = backupService.getJob(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Backup job not found' });
+  res.json(job);
+});
+
+/**
+ * @api {post} /backup/restore Restore from a backup
+ * Body: { jobId?: string }  — omit jobId to restore latest
+ */
+app.post('/backup/restore', async (req, res) => {
+  try {
+    const result = req.body.jobId
+      ? await recoveryService.restore(req.body.jobId)
+      : await recoveryService.restoreLatest();
+    res.json(result);
+  } catch (err: unknown) {
+    res.status(400).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+/**
+ * @api {get} /backup/alerts Get backup alerts
+ * Query: unacknowledgedOnly=true
+ */
+app.get('/backup/alerts', (req, res) => {
+  const unacknowledgedOnly = req.query.unacknowledgedOnly === 'true';
+  res.json(backupMonitor.getAlerts(unacknowledgedOnly));
+});
+
+/**
+ * @api {post} /backup/alerts/:alertId/acknowledge Acknowledge an alert
+ */
+app.post('/backup/alerts/:alertId/acknowledge', (req, res) => {
+  const ok = backupMonitor.acknowledge(req.params.alertId);
+  if (!ok) return res.status(404).json({ error: 'Alert not found' });
+  res.json({ acknowledged: true });
 });
 
 app.listen(PORT, () => {
