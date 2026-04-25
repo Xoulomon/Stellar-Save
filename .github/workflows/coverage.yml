@@ -59,7 +59,7 @@ jobs:
       # ── Upload ────────────────────────────────────────────────────────────
       - name: Upload combined coverage to Codecov
         if: ${{ github.event.inputs.upload_to_codecov != 'false' }}
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           files: frontend/coverage/lcov.info,rust-lcov.info
           flags: combined
