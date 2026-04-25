@@ -1,4 +1,4 @@
-import { Stack, Typography } from '@mui/material';
+import { Stack, Typography, Divider } from '@mui/material';
 import { AppCard, AppLayout } from '../ui';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { LanguageSelector } from '../components/LanguageSelector';

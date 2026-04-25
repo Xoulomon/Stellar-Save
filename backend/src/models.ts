@@ -24,8 +24,40 @@ export interface UserInteraction {
   timestamp: number;
 }
 
+export interface Member {
+  id: string;
+  address: string;
+  name: string;
+  joinedAt: number;
+  groupIds: string[];
+}
+
+export interface Transaction {
+  id: string;
+  groupId: string;
+  memberAddress: string;
+  amount: number;
+  type: 'contribution' | 'payout';
+  timestamp: number;
+  stellarTxHash: string;
+}
+
 export interface Recommendation {
   groupId: string;
   score: number;
   algorithm: string;
+}
+
+export type ExportFormat = 'CSV' | 'JSON';
+export type ExportStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+export interface ExportJob {
+  id: string;
+  userId: string;
+  format: ExportFormat;
+  status: ExportStatus;
+  createdAt: number;
+  completedAt?: number;
+  fileUrl?: string;
+  error?: string;
 }

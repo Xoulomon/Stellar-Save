@@ -253,6 +253,17 @@ pub struct AutoContributionFailed {
     pub failed_at: u64,
 }
 
+/// Event emitted when a member rates a group after completion.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GroupRated {
+    pub group_id: u64,
+    pub member: Address,
+    pub stars: u32,
+    pub comment: String,
+    pub rated_at: u64,
+}
+
 /// Event emitted when a penalty is applied to a member for a missed contribution.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -680,6 +691,25 @@ impl EventEmitter {
             failed_at,
         };
         env.events().publish(("auto_contribution_failed",), event);
+    }
+
+    /// Emits an event when a member rates a group.
+    pub fn emit_group_rated(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        stars: u32,
+        comment: String,
+        rated_at: u64,
+    ) {
+        let event = GroupRated {
+            group_id,
+            member,
+            stars,
+            comment,
+            rated_at,
+        };
+        env.events().publish(("group_rated",), event);
     }
 }
 

@@ -14,6 +14,14 @@ export class RecommendationEngine {
     this.preferences.set(preference.userId, preference);
   }
 
+  getInteractions(): UserInteraction[] {
+    return this.interactions;
+  }
+
+  getPreferences(): Map<string, UserPreference> {
+    return this.preferences;
+  }
+
   getRecommendations(userId: string, algorithm: 'content' | 'collaborative'): Recommendation[] {
     if (algorithm === 'content') {
       return this.getContentBasedRecommendations(userId);

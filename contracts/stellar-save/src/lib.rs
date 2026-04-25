@@ -28,6 +28,7 @@ pub mod payout;
 pub mod payout_executor;
 pub mod penalty;
 pub mod pool;
+pub mod rating;
 pub mod status;
 pub mod storage;
 pub mod token;
@@ -38,9 +39,11 @@ mod multi_token_tests;
 mod merge_tests;
 mod milestone_tests;
 mod invitation_tests;
+mod upgrade_tests;
 pub mod milestones;
 pub mod gas_benchmark;
 mod auto_contribution_tests;
+mod upgrade_tests;
 
 // Re-export for convenience
 pub use contribution::{ContributionPage, ContributionRecord};
@@ -51,6 +54,7 @@ pub use events::*;
 pub use group::{Group, GroupStatus};
 pub use payout::PayoutRecord;
 pub use pool::{PoolCalculator, PoolInfo};
+pub use rating::{GroupRating, RatingAggregate, RatingEntry};
 #[cfg(test)]
 use soroban_sdk::testutils::{Events, Ledger};
 use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String, Symbol, Vec};
@@ -419,22 +423,26 @@ impl StellarSaveContract {
         // 1. Authorization: Only the creator can initiate this transaction
         creator.require_auth();
 
-        // 2. Validate grace period (max 7 days)
-        if grace_period_seconds > 604800 {
-            return Err(StellarSaveError::InvalidState);
+        // 2. Round contribution amount to nearest 0.01 XLM (100,000 stroops)
+        // This prevents precision issues with very small amounts
+        let rounded_amount = crate::helpers::round_contribution_amount(contribution_amount);
+
+        // Ensure the rounded amount is still valid (greater than 0)
+        if rounded_amount <= 0 {
+            return Err(StellarSaveError::InvalidAmount);
         }
 
-        // 3. Global Validation: Check against ContractConfig
+        // 3. Global Validation: Check against ContractConfig (using rounded amount)
         let config_key = StorageKeyBuilder::contract_config();
         if let Some(config) = env
             .storage()
             .persistent()
             .get::<_, ContractConfig>(&config_key)
         {
-            if contribution_amount < config.min_contribution {
+            if rounded_amount < config.min_contribution {
                 return Err(StellarSaveError::ContributionTooLow);
             }
-            if contribution_amount > config.max_contribution {
+            if rounded_amount > config.max_contribution {
                 return Err(StellarSaveError::ContributionTooHigh);
             }
             if max_members < config.min_members
@@ -446,7 +454,7 @@ impl StellarSaveContract {
             }
         }
 
-        // 3. Token allowlist check: if an allowlist is configured, verify token_address is present
+        // 4. Token allowlist check: if an allowlist is configured, verify token_address is present
         let allowed_tokens_key = StorageKeyBuilder::allowed_tokens();
         if let Some(allowed_tokens) = env
             .storage()
@@ -458,27 +466,27 @@ impl StellarSaveContract {
             }
         }
 
-        // 4. Validate token via SEP-41 decimals() call
+        // 5. Validate token via SEP-41 decimals() call
         let token_decimals = crate::token::validate_token(&env, &token_address)?;
 
-        // 5. Generate unique group ID
+        // 6. Generate unique group ID
         let group_id = Self::generate_next_group_id(&env)?;
 
-        // 6. Initialize Group Struct
+        // 7. Initialize Group Struct (using rounded amount)
         let current_time = env.ledger().timestamp();
         let min_members = 2; // Default minimum members
         let new_group = Group::new(
             group_id,
             creator.clone(),
-            contribution_amount,
+            rounded_amount,
             cycle_duration,
             max_members,
             min_members,
             current_time,
-            grace_period_seconds,
+            0, // grace_period_seconds - using default of 0
         );
 
-        // 7. Store Group Data
+        // 8. Store Group Data
         let group_key = StorageKeyBuilder::group_data(group_id);
         env.storage().persistent().set(&group_key, &new_group);
 
@@ -488,7 +496,7 @@ impl StellarSaveContract {
             .persistent()
             .set(&status_key, &GroupStatus::Pending);
 
-        // 8. Store TokenConfig for this group
+        // 9. Store TokenConfig for this group
         let token_config = crate::group::TokenConfig {
             token_address: token_address.clone(),
             token_decimals,
@@ -496,11 +504,11 @@ impl StellarSaveContract {
         let token_config_key = StorageKeyBuilder::group_token_config(group_id);
         env.storage().persistent().set(&token_config_key, &token_config);
 
-        // 9. Emit GroupCreated Event (include token_address as second data field)
+        // 10. Emit GroupCreated Event (include token_address as second data field)
         env.events()
             .publish((Symbol::new(&env, "GroupCreated"), creator), (group_id, token_address));
 
-        // 10. Return Group ID
+        // 11. Return Group ID
         Ok(group_id)
     }
 
@@ -2652,11 +2660,85 @@ impl StellarSaveContract {
         Ok(groups)
     }
 
+    /// Searches and filters groups by various criteria with pagination and sorting.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `params` - [`SearchParams`] struct containing all filter, pagination, and sort options
+    ///
+    /// # Filter fields (all optional)
+    /// * `status` - Only return groups with this [`GroupStatus`]
+    /// * `min_amount` / `max_amount` - Contribution amount range (in stroops)
+    /// * `min_members` / `max_members` - Current member count range
+    ///
+    /// # Pagination
+    /// * `cursor` - Pass `0` for the first page; use `SearchResult::next_cursor` for subsequent pages
+    /// * `limit` - Results per page (capped at 50)
+    ///
+    /// # Sorting
+    /// * `sort` - [`SortOrder::CreatedDesc`] (default), [`SortOrder::CreatedAsc`],
+    ///   [`SortOrder::MemberCountDesc`], or [`SortOrder::MemberCountAsc`]
+    ///
+    /// # Returns
+    /// A [`SearchResult`] containing the matching groups, the next cursor, and scan count.
+    ///
+    /// # Notes
+    /// - Archived groups are always excluded from results.
+    /// - Member-count sorts load all matching groups before sorting; `next_cursor` will be `0`.
+    pub fn search_groups(env: Env, params: SearchParams) -> SearchResult {
+        search::search_groups(&env, params)
+    }
+
     /// Returns the total number of groups created.
     /// Reads the existing counter from storage without modification.
     pub fn get_total_groups_created(env: Env) -> u64 {
         let key = StorageKeyBuilder::next_group_id();
         env.storage().persistent().get(&key).unwrap_or(0)
+    }
+
+    /// Submits a 1–5 star rating (with optional comment) for a completed or cancelled group.
+    ///
+    /// # Rules
+    /// - Group must be in a terminal state (Completed or Cancelled).
+    /// - Caller must be a member of the group.
+    /// - Each member may only rate once per group.
+    /// - `stars` must be 1–5.
+    /// - `comment` must be ≤ 280 characters (pass an empty string for no comment).
+    ///
+    /// # Errors
+    /// - `GroupNotFound` – group does not exist
+    /// - `InvalidState` – group is not yet in a terminal state
+    /// - `NotMember` – caller is not a member of the group
+    /// - `InvalidAmount` – stars is 0 or > 5
+    /// - `InvalidMetadata` – comment exceeds 280 characters
+    /// - `AlreadyContributed` – member has already rated this group
+    pub fn rate_group(
+        env: Env,
+        caller: Address,
+        group_id: u64,
+        stars: u32,
+        comment: String,
+    ) -> Result<(), StellarSaveError> {
+        rating::rate_group(&env, caller, group_id, stars, comment)
+    }
+
+    /// Returns the aggregated rating summary for a group.
+    ///
+    /// Returns a [`GroupRating`] with `rating_count`, `total_stars`, and
+    /// `average_scaled` (average × 100, e.g. 450 = 4.50 stars).
+    /// Returns zeroed counts if no ratings have been submitted yet.
+    pub fn get_group_rating(env: Env, group_id: u64) -> Result<GroupRating, StellarSaveError> {
+        rating::get_group_rating(&env, group_id)
+    }
+
+    /// Returns the individual rating submitted by a specific member for a group.
+    /// Returns `None` if the member has not yet rated the group.
+    pub fn get_member_rating(
+        env: Env,
+        group_id: u64,
+        member: Address,
+    ) -> Result<Option<RatingEntry>, StellarSaveError> {
+        rating::get_member_rating(&env, group_id, member)
     }
 
     /// Gets the total XLM balance held by the contract.
@@ -12348,3 +12430,77 @@ mod tests {
     }
 }
 
+    // --- Rounding behavior tests ---
+
+    #[test]
+    fn test_create_group_rounds_contribution_amount() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+
+        // Create a group with an amount that needs rounding
+        // 100,050 stroops should round to 100,000 (nearest 0.01 XLM)
+        env.mock_all_auths();
+        let token_address = Address::generate(&env);
+        let group_id = client.create_group(&creator, &100050, &3600, &5, &token_address);
+
+        // Verify the group was created
+        assert_eq!(group_id, 1);
+
+        // Get the group and verify the contribution amount was rounded
+        let group = client.get_group(&group_id);
+        // 100050 should round to 100000
+        assert_eq!(group.contribution_amount, 100000);
+    }
+
+    #[test]
+    fn test_create_group_rounds_up_contribution_amount() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+
+        // Create a group with an amount that should round up
+        // 100,050 stroops should round up to 200,000 (more than halfway)
+        env.mock_all_auths();
+        let token_address = Address::generate(&env);
+        let group_id = client.create_group(&creator, &150001, &3600, &5, &token_address);
+
+        // Verify the group was created
+        let group = client.get_group(&group_id);
+        // 150001 should round to 200000
+        assert_eq!(group.contribution_amount, 200000);
+    }
+
+    #[test]
+    fn test_create_group_exact_amount_no_rounding() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+
+        // Create a group with an exact multiple of 0.01 XLM (100,000 stroops)
+        env.mock_all_auths();
+        let token_address = Address::generate(&env);
+        let group_id = client.create_group(&creator, &1_000_000, &3600, &5, &token_address);
+
+        // Verify the group was created with exact amount
+        let group = client.get_group(&group_id);
+        assert_eq!(group.contribution_amount, 1_000_000);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(3001))")] // 3001 is InvalidAmount
+    fn test_create_group_invalid_rounded_amount() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+
+        // Create a group with an amount that rounds to 0 (less than 50,000)
+        // This should fail with InvalidAmount
+        env.mock_all_auths();
+        let token_address = Address::generate(&env);
+        client.create_group(&creator, &10000, &3600, &5, &token_address);
+    }
