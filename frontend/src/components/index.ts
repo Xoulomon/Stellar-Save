@@ -13,6 +13,7 @@ export { GroupSkeleton } from "./Skeleton/GroupSkeleton";
 export { GroupCardSkeleton } from "./Skeleton/GroupCardSkeleton";
 export { ContributionSkeleton } from "./Skeleton/ContributionSkeleton";
 export { WalletButton } from "./WalletButton";
+export { WalletStatusIndicator } from "./WalletStatusIndicator";
 export { NetworkIndicator } from "./NetworkIndicator";
 export { SearchBar } from "./SearchBar";
 export { Pagination } from "./Pagination";
