@@ -3,6 +3,7 @@ import type {
   TransactionStatus,
   ContributeButtonProps,
 } from "../types/contribution";
+import { ContributionSuccessModal } from "./ContributionSuccessModal";
 
 // ── Status helpers ──────────────────────────────────────────────────────────
 
@@ -303,6 +304,7 @@ export function ContributeButton({
   const [showConfirm, setShowConfirm] = useState(false);
   const [txHash, setTxHash] = useState<string>();
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const isLoading = ["confirming", "pending", "submitting"].includes(status);
   const isDisabled =
@@ -327,6 +329,7 @@ export function ContributeButton({
       await new Promise((r) => setTimeout(r, 800));
       setTxHash(hash);
       setStatus("success");
+      setShowSuccess(true);
       onSuccess?.(hash);
     } catch (err) {
       const error =
@@ -376,6 +379,17 @@ export function ContributeButton({
           onCancel={() => setShowConfirm(false)}
         />
       )}
+
+      <ContributionSuccessModal
+        open={showSuccess}
+        amount={amount}
+        cycleId={cycleId}
+        txHash={txHash}
+        onClose={() => {
+          setShowSuccess(false);
+          setStatus("idle");
+        }}
+      />
     </div>
   );
 }

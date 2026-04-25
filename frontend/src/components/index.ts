@@ -46,6 +46,8 @@ export { ReminderPreferencesSection } from "./ReminderPreferencesSection";
 export { DebounceDemo } from "./DebounceDemo";
 export { ContributionFlow } from "./ContributionFlow";
 export type { ContributionFlowProps } from "./ContributionFlow";
+export { ContributionSuccessModal } from "./ContributionSuccessModal";
+export type { ContributionSuccessModalProps } from "./ContributionSuccessModal";
 export { WalletIntegration } from "./WalletIntegration";
 export { ActivityFeed } from "./ActivityFeed/ActivityFeed";
 export type { ActivityFeedProps } from "./ActivityFeed/ActivityFeed";
