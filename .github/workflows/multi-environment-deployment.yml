@@ -35,7 +35,7 @@ jobs:
       deployment_enabled: ${{ steps.determine.outputs.deployment_enabled }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Determine target environment
         id: determine
@@ -117,10 +117,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
@@ -160,7 +160,7 @@ jobs:
           echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> build-artifacts/BUILD_INFO.txt
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-${{ needs.configure-environment.outputs.environment }}
           path: build-artifacts/
@@ -174,10 +174,10 @@ jobs:
     if: needs.configure-environment.outputs.environment == 'dev'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-dev
           path: build-artifacts
@@ -203,7 +203,7 @@ jobs:
           echo "✓ Smoke tests completed"
 
       - name: Post deployment summary
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             github.rest.issues.createComment({
@@ -223,10 +223,10 @@ jobs:
       github.ref == 'refs/heads/develop'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-staging
           path: build-artifacts
@@ -268,7 +268,7 @@ jobs:
       url: https://stellar-save.app
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Verify production deployment
         run: |
@@ -279,7 +279,7 @@ jobs:
           echo "✓ Production deployment approved"
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-production
           path: build-artifacts
@@ -308,7 +308,7 @@ jobs:
           git push origin "v$(date +%Y.%m.%d)"
 
       - name: Notify production deployment
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             github.rest.repos.createRelease({
@@ -327,7 +327,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Validate promotion path
         run: |
@@ -363,7 +363,7 @@ jobs:
           echo "✓ Promotion completed successfully"
 
       - name: Upload promotion report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: promotion-${{ github.event.inputs.promotion_from }}-to-${{ github.event.inputs.environment }}
           path: promotion-artifacts/
@@ -376,7 +376,7 @@ jobs:
     if: always()
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Check frontend health
         run: |
@@ -426,7 +426,7 @@ jobs:
           cat deployment-report.md
 
       - name: Upload deployment report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deployment-report-${{ needs.configure-environment.outputs.environment }}
           path: deployment-report.md
