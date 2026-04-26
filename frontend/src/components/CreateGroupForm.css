@@ -4,29 +4,93 @@
   padding: 2rem;
 }
 
-/* Progress indicator */
-.form-progress {
+/* Wizard step progress */
+.wizard-steps {
   display: flex;
-  gap: 0.5rem;
+  gap: 0;
   margin-bottom: 0.75rem;
+  counter-reset: step;
 }
 
-.progress-step {
+.wizard-step {
   flex: 1;
-  height: 4px;
-  background: var(--color-border, #e5e7eb);
-  border-radius: 2px;
-  transition: background 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  position: relative;
+  font-size: 0.75rem;
 }
 
-.progress-step.active {
+/* connector line between steps */
+.wizard-step + .wizard-step::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: -50%;
+  width: 100%;
+  height: 2px;
+  background: var(--color-border, #e5e7eb);
+  z-index: 0;
+}
+
+.wizard-step--completed + .wizard-step::before,
+.wizard-step--current + .wizard-step::before {
   background: var(--color-primary, #3b82f6);
+}
+
+.wizard-step__number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 2px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg, #fff);
+  position: relative;
+  z-index: 1;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.wizard-step--completed .wizard-step__number {
+  background: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+  color: #fff;
+}
+
+.wizard-step--current .wizard-step__number {
+  border-color: var(--color-primary, #3b82f6);
+  color: var(--color-primary, #3b82f6);
+}
+
+.wizard-step__label {
+  color: var(--color-text-secondary, #6b7280);
+  font-weight: 500;
+}
+
+.wizard-step--current .wizard-step__label {
+  color: var(--color-primary, #3b82f6);
+  font-weight: 700;
+}
+
+.wizard-step--completed .wizard-step__label {
+  color: var(--color-text-secondary, #6b7280);
 }
 
 .form-step-label {
   font-size: 0.8rem;
   color: var(--color-text-secondary, #6b7280);
   margin: 0 0 1.5rem 0;
+}
+
+/* Helper text below selects */
+.input-helper {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, #6b7280);
+  margin: 0.25rem 0 0.5rem 0;
 }
 
 /* Step content */
