@@ -24,6 +24,7 @@ const ErrorPage = lazy(() => import("../pages/ErrorPage"));
 const TemplateGalleryPage = lazy(() => import("../pages/TemplateGalleryPage"));
 const AnalyticsDashboardPage = lazy(() => import("../pages/AnalyticsDashboardPage"));
 const JoinGroupPage = lazy(() => import("../pages/JoinGroupPage"));
+const MemberProfilePage = lazy(() => import("../pages/MemberProfilePage"));
 /**
  * Centralized route configuration.
  * All application routes are defined here with their properties.
@@ -150,5 +151,12 @@ export const routeConfig: RouteConfig[] = [
     protected: false,
     title: "Join Group - Stellar Save",
     description: "Join a savings group via invitation link",
+  },
+  {
+    path: ROUTES.MEMBER_PROFILE,
+    component: MemberProfilePage,
+    protected: false,
+    title: "Member Profile - Stellar Save",
+    description: "View a member's contribution history and reputation",
   },
 ];
