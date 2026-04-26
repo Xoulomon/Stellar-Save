@@ -23,6 +23,7 @@ export { useTransaction } from './useTransaction';
 export type { TransactionStatus, TransactionResult, UseTransactionReturn } from './useTransaction';
 export { useTransactions } from './useTransactions';
 export { useUserProfile } from './useUserProfile';
+export { useMemberContributionHistory } from './useMemberContributionHistory';
 export { useWallet } from './useWallet';
 export { useNotification } from './useNotification';
 export type { NotificationOptions, NotifyOptions, UseNotificationReturn } from './useNotification';

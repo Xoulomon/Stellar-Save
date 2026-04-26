@@ -27,6 +27,8 @@ export { CreateGroupForm } from "./CreateGroupForm";
 export { GroupStats } from "./GroupStats";
 export { GroupTimeline } from "./GroupTimeline";
 export type { TimelineEvent, TimelineEventType, GroupTimelineProps } from "./GroupTimeline";
+export { MemberContributionTimeline } from './MemberContributionTimeline';
+export type { ContributionTimelineEvent, ContributionEventType } from './MemberContributionTimeline';
 export { MemberList } from "./MemberList";
 export type { Member } from "./MemberList";
 export { JoinGroupButton } from "./JoinGroupButton";

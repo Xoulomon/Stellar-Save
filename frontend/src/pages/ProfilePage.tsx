@@ -24,11 +24,13 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { AppCard, AppLayout } from '../ui';
 import { Button } from '../components/Button';
+import MemberContributionTimeline from '../components/MemberContributionTimeline';
 import { UserStats } from '../components/UserStats';
 import TransactionTable from '../components/TransactionTables';
 import { useWallet } from '../hooks/useWallet';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useTransactions } from '../hooks/useTransactions';
+import { useMemberContributionHistory } from '../hooks/useMemberContributionHistory';
 import { useClipboard } from '../hooks/useClipboard';
 import type { Transaction } from '../types/transaction';
 
@@ -309,6 +311,7 @@ export default function ProfilePage() {
   const { activeAddress } = useWallet();
   const { profile, isLoading: profileLoading } = useUserProfile(activeAddress ?? undefined);
   const { transactions, isLoading: transactionsLoading } = useTransactions();
+  const { events: contributionEvents, isLoading: timelineLoading } = useMemberContributionHistory();
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [displayName, setDisplayName] = useState('Stellar Saver');
   const [editingName, setEditingName] = useState(false);
@@ -317,6 +320,10 @@ export default function ProfilePage() {
 
   const handleTransactionClick = (tx: Transaction) => {
     console.log('Transaction clicked:', tx);
+  };
+
+  const handleTimelineEventClick = (event: { id: string; type: string; groupName: string }) => {
+    console.log('Timeline event clicked:', event);
   };
 
   const handleSaveSettings = (name: string, _theme: string, _language: string) => {
@@ -420,13 +427,24 @@ export default function ProfilePage() {
             )}
 
             {activeTab === 'history' && (
-              <Stack spacing={2}>
-                <Typography variant="h3">Transaction History</Typography>
-                <TransactionTable
-                  transactions={transactions}
-                  isLoading={transactionsLoading}
-                  onRowClick={handleTransactionClick}
-                />
+              <Stack spacing={4}>
+                {timelineLoading ? (
+                  <Skeleton variant="rectangular" height={320} />
+                ) : (
+                  <MemberContributionTimeline
+                    events={contributionEvents}
+                    onEventClick={handleTimelineEventClick}
+                  />
+                )}
+
+                <Stack spacing={2}>
+                  <Typography variant="h3">Transaction History</Typography>
+                  <TransactionTable
+                    transactions={transactions}
+                    isLoading={transactionsLoading}
+                    onRowClick={handleTransactionClick}
+                  />
+                </Stack>
               </Stack>
             )}
 
