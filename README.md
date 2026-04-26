@@ -117,6 +117,7 @@ Follow the step-by-step guide in [demo/demo-script.md](demo/demo-script.md)
 - [Storage Layout](docs/storage-layout.md)
 - [Threat Model & Security](docs/threat-model.md)
 - [Roadmap](docs/roadmap.md)
+- [Frequently Asked Questions (FAQ)](docs/faq.md)
 
 ## 🎓 Smart Contract API
 
