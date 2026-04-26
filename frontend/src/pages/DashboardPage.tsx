@@ -6,16 +6,22 @@ import { DashboardGroupCard } from '../components/dashboard/DashboardGroupCard';
 import { PayoutSchedule } from '../components/dashboard/PayoutSchedule';
 import { TransactionTable } from '../components/dashboard/TransactionTable';
 import { QuickActionSidebar } from '../components/dashboard/QuickActionSidebar';
+import { BalanceWarningBanner } from '../components/BalanceWarningBanner';
 import { useDashboard } from '../hooks/useDashboard';
+import { useBalanceWarning } from '../hooks/useBalanceWarning';
 
 function DashboardContent() {
   const { stats, groups, payouts, transactions, isLoading } = useDashboard();
+  const balanceWarning = useBalanceWarning(groups);
 
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 280px' }, gap: 3, alignItems: 'start' }}>
 
       {/* Left column */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+
+        {/* Balance warning banner */}
+        <BalanceWarningBanner warning={balanceWarning} />
 
         {/* 1. Overview hero */}
         <DashboardOverview stats={stats} isLoading={isLoading} />
