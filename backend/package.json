@@ -3,11 +3,6 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
-    "start": "tsx src/index.ts",
-    "dev": "tsx watch src/index.ts",
-    "test": "tsx src/tests/recommendation.test.ts"
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -22,10 +17,18 @@
     "express": "^5.2.1",
     "graphql": "^16.10.0",
     "graphql-depth-limit": "^1.1.0",
+    "mongodb": "^5.10.0",
     "stellar-sdk": "^13.3.0"
   },
   "devDependencies": {
     "@types/graphql-depth-limit": "^1.1.5",
+    "@types/node": "^18.0.0",
     "tsx": "^4.21.0"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "test": "tsx src/tests/recommendation.test.ts",
+    "test:indexer": "tsx src/tests/indexer.test.ts"
   }
 }

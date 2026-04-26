@@ -13,6 +13,7 @@ import { BackupService, S3HttpClient } from './backup_service';
 import { BackupScheduler } from './backup_scheduler';
 import { RecoveryService } from './recovery_service';
 import { BackupMonitor } from './backup_monitor';
+import { StellarEventIndexer } from './stellar_event_indexer';
 import { versionMiddleware } from './versioning';
 import { createV1Router } from './routes/v1';
 import { createV2Router } from './routes/v2';
@@ -80,6 +81,14 @@ const backupMonitor = new BackupMonitor(backupService, {
   alertWebhookUrl: process.env.BACKUP_ALERT_WEBHOOK_URL,
 });
 
+const indexer = new StellarEventIndexer({
+  horizonUrl: process.env.HORIZON_URL,
+  mongodbUri: process.env.MONGODB_URI,
+  dbName: process.env.MONGODB_DB,
+  collectionName: process.env.INDEXER_COLLECTION_NAME,
+  pollIntervalMs: process.env.INDEXER_POLL_INTERVAL_MS ? Number(process.env.INDEXER_POLL_INTERVAL_MS) : undefined,
+});
+
 const adminService = new AdminService();
 
 if (process.env.BACKUP_ENABLED === 'true') {
@@ -87,7 +96,13 @@ if (process.env.BACKUP_ENABLED === 'true') {
   backupMonitor.start();
 }
 
-const services = { engine, abTest, exportService, backupService, backupScheduler, recoveryService, backupMonitor };
+const services = { engine, abTest, exportService, backupService, backupScheduler, recoveryService, backupMonitor, indexer };
+
+if (process.env.INDEXER_ENABLED !== 'false') {
+  void indexer.start().catch((err) => {
+    console.error('Indexer failed to start:', err);
+  });
+}
 
 // ── Versioned API routes ──────────────────────────────────────────────────────
 app.use('/api', versionMiddleware);

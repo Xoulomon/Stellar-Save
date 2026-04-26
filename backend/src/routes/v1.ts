@@ -8,6 +8,8 @@ import { BackupScheduler } from './backup_scheduler';
 import { RecoveryService } from './recovery_service';
 import { BackupMonitor } from './backup_monitor';
 import { Group, UserInteraction, UserPreference } from './models';
+import { createIndexerRouter } from './routes/indexer';
+import type { StellarEventIndexer } from './stellar_event_indexer';
 
 // ── Shared service instances (passed in from app) ────────────────────────────
 export interface V1Services {
@@ -18,6 +20,7 @@ export interface V1Services {
   backupScheduler: BackupScheduler;
   recoveryService: RecoveryService;
   backupMonitor: BackupMonitor;
+  indexer?: StellarEventIndexer;
 }
 
 export function createV1Router(services: V1Services): Router {
@@ -111,6 +114,10 @@ export function createV1Router(services: V1Services): Router {
     const job = await backupScheduler.triggerManual(type);
     res.status(202).json(job);
   });
+
+  if (services.indexer) {
+    router.use('/indexer', createIndexerRouter(services.indexer));
+  }
 
   router.get('/backup', (_req, res) => res.json(backupService.listJobs()));
 

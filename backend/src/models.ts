@@ -96,3 +96,18 @@ export interface AuditLog {
   timestamp: number;
   metadata?: any;
 }
+
+export interface ContractEvent {
+  id: string;
+  pagingToken: string;
+  type: string;
+  typeI?: number;
+  ledger: number;
+  createdAt: Date;
+  transactionHash?: string;
+  sourceAccount?: string;
+  contractId?: string;
+  topic?: string;
+  data?: any;
+  raw: any;
+}
