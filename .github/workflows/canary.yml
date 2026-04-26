@@ -1,0 +1,218 @@
+name: Canary Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Target network'
+        required: true
+        type: choice
+        options: [testnet, mainnet]
+      canary_weight:
+        description: 'Initial canary traffic % (default: 10)'
+        required: false
+        default: '10'
+        type: string
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options: [deploy, promote, rollback, monitor]
+
+concurrency:
+  group: canary-${{ github.event.inputs.network }}
+  cancel-in-progress: false
+
+env:
+  WASM_PATH: target/wasm32-unknown-unknown/release/stellar_save.wasm
+
+jobs:
+  # ─── Build WASM (shared by deploy) ─────────────────────────────────────────
+  build:
+    name: Build WASM
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action == 'deploy'
+    outputs:
+      wasm_hash: ${{ steps.hash.outputs.wasm_hash }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Build
+        run: |
+          cargo build \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            --target wasm32-unknown-unknown \
+            --release
+
+      - id: hash
+        run: |
+          HASH=$(sha256sum "${{ env.WASM_PATH }}" | awk '{print $1}')
+          echo "wasm_hash=${HASH}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wasm-canary-${{ github.sha }}
+          path: ${{ env.WASM_PATH }}
+          retention-days: 90
+
+  # ─── Deploy canary ──────────────────────────────────────────────────────────
+  deploy-canary:
+    name: Deploy Canary (${{ github.event.inputs.network }})
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action == 'deploy'
+    environment:
+      name: ${{ github.event.inputs.network == 'mainnet' && 'production' || 'testnet' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Stellar CLI
+        run: |
+          curl -sSL https://github.com/stellar/stellar-cli/releases/download/v22.7.1/stellar-cli-22.7.1-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz -C /usr/local/bin stellar
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: wasm-canary-${{ github.sha }}
+          path: target/wasm32-unknown-unknown/release/
+
+      - name: Deploy canary
+        run: bash scripts/canary_deploy.sh
+        env:
+          STELLAR_NETWORK: ${{ github.event.inputs.network }}
+          STELLAR_RPC_URL: ${{ github.event.inputs.network == 'mainnet' && 'https://soroban-rpc.mainnet.stellar.gateway.fm' || 'https://soroban-testnet.stellar.org' }}
+          DEPLOYER_SECRET: ${{ github.event.inputs.network == 'mainnet' && secrets.MAINNET_DEPLOYER_SECRET || secrets.TESTNET_DEPLOYER_SECRET }}
+          CANARY_WEIGHT: ${{ github.event.inputs.canary_weight }}
+          WASM_PATH: target/wasm32-unknown-unknown/release/stellar_save.wasm
+
+      - name: Initial health check
+        run: bash scripts/canary_monitor.sh
+        env:
+          STELLAR_NETWORK: ${{ github.event.inputs.network }}
+          STELLAR_RPC_URL: ${{ github.event.inputs.network == 'mainnet' && 'https://soroban-rpc.mainnet.stellar.gateway.fm' || 'https://soroban-testnet.stellar.org' }}
+
+      - name: Auto-rollback on health failure
+        if: failure()
+        run: bash scripts/canary_rollback.sh
+        env:
+          STELLAR_NETWORK: ${{ github.event.inputs.network }}
+          ROLLBACK_REASON: initial_health_check_failed
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: canary-registry-${{ github.sha }}
+          path: deployment-records/
+          retention-days: 90
+
+  # ─── Promote canary ─────────────────────────────────────────────────────────
+  promote-canary:
+    name: Promote Canary (${{ github.event.inputs.network }})
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action == 'promote'
+    environment:
+      name: ${{ github.event.inputs.network == 'mainnet' && 'production' || 'testnet' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Stellar CLI
+        run: |
+          curl -sSL https://github.com/stellar/stellar-cli/releases/download/v22.7.1/stellar-cli-22.7.1-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz -C /usr/local/bin stellar
+
+      - name: Download registry
+        uses: actions/download-artifact@v4
+        with:
+          pattern: canary-registry-*
+          merge-multiple: true
+          path: deployment-records/
+
+      - name: Promote canary
+        run: bash scripts/canary_promote.sh
+        env:
+          STELLAR_NETWORK: ${{ github.event.inputs.network }}
+          STELLAR_RPC_URL: ${{ github.event.inputs.network == 'mainnet' && 'https://soroban-rpc.mainnet.stellar.gateway.fm' || 'https://soroban-testnet.stellar.org' }}
+          STEP_INTERVAL_SECONDS: '60'   # shorter in CI; adjust for production
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: canary-registry-promoted-${{ github.sha }}
+          path: deployment-records/
+          retention-days: 90
+
+  # ─── Rollback canary ────────────────────────────────────────────────────────
+  rollback-canary:
+    name: Rollback Canary (${{ github.event.inputs.network }})
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action == 'rollback'
+    environment:
+      name: ${{ github.event.inputs.network == 'mainnet' && 'production' || 'testnet' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download registry
+        uses: actions/download-artifact@v4
+        with:
+          pattern: canary-registry-*
+          merge-multiple: true
+          path: deployment-records/
+
+      - name: Rollback canary
+        run: bash scripts/canary_rollback.sh
+        env:
+          STELLAR_NETWORK: ${{ github.event.inputs.network }}
+          ROLLBACK_REASON: manual_rollback
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: canary-registry-rolled-back-${{ github.sha }}
+          path: deployment-records/
+          retention-days: 90
+
+  # ─── Monitor canary ─────────────────────────────────────────────────────────
+  monitor-canary:
+    name: Monitor Canary (${{ github.event.inputs.network }})
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action == 'monitor'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Stellar CLI
+        run: |
+          curl -sSL https://github.com/stellar/stellar-cli/releases/download/v22.7.1/stellar-cli-22.7.1-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz -C /usr/local/bin stellar
+
+      - name: Download registry
+        uses: actions/download-artifact@v4
+        with:
+          pattern: canary-registry-*
+          merge-multiple: true
+          path: deployment-records/
+
+      - name: Run health check
+        id: monitor
+        run: bash scripts/canary_monitor.sh
+        env:
+          STELLAR_NETWORK: ${{ github.event.inputs.network }}
+          STELLAR_RPC_URL: ${{ github.event.inputs.network == 'mainnet' && 'https://soroban-rpc.mainnet.stellar.gateway.fm' || 'https://soroban-testnet.stellar.org' }}
+
+      - name: Auto-rollback on threshold breach
+        if: failure()
+        run: bash scripts/canary_rollback.sh
+        env:
+          STELLAR_NETWORK: ${{ github.event.inputs.network }}
+          ROLLBACK_REASON: monitor_threshold_breach
