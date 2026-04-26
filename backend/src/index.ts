@@ -6,15 +6,16 @@ import { expressMiddleware } from '@apollo/server/express4';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { RecommendationEngine } from './recommendation';
 import { ABTestingFramework } from './ab_testing';
-import { Group, UserInteraction, UserPreference, Member, Transaction } from './models';
+import { Group, UserInteraction } from './models';
 import { EmailService } from './email_service';
 import { ExportService } from './export_service';
 import { BackupService, S3HttpClient } from './backup_service';
 import { BackupScheduler } from './backup_scheduler';
 import { RecoveryService } from './recovery_service';
 import { BackupMonitor } from './backup_monitor';
-import { AdminService } from './admin_service';
-import { adminAuthMiddleware, AuthenticatedRequest } from './auth_middleware';
+import { versionMiddleware } from './versioning';
+import { createV1Router } from './routes/v1';
+import { createV2Router } from './routes/v2';
 
 dotenv.config();
 
@@ -48,18 +49,24 @@ apolloServer.start().then(() => {
 
 const PORT = process.env.PORT || 3001;
 
-import { mockGroups, mockMembers, mockTransactions, mockInteractions } from './mock_data';
+// ── Mock Data ────────────────────────────────────────────────────────────────
+const mockGroups: Group[] = [
+  { id: '1', name: 'Weekly Savers', contributionAmount: 100, cycleDuration: 604800, maxMembers: 10, currentMembers: 5, status: 'Active', tags: ['weekly', 'low-entry'] },
+  { id: '2', name: 'Monthly Builders', contributionAmount: 1000, cycleDuration: 2592000, maxMembers: 12, currentMembers: 3, status: 'Active', tags: ['monthly', 'high-entry'] },
+  { id: '3', name: 'Student Circle', contributionAmount: 50, cycleDuration: 604800, maxMembers: 5, currentMembers: 4, status: 'Active', tags: ['weekly', 'students'] },
+];
 
+const mockInteractions: UserInteraction[] = [
+  { userId: 'user1', groupId: '1', interactionType: 'join', timestamp: Date.now() },
+  { userId: 'user1', groupId: '2', interactionType: 'join', timestamp: Date.now() },
+  { userId: 'user2', groupId: '1', interactionType: 'join', timestamp: Date.now() },
+];
+
+// ── Services ─────────────────────────────────────────────────────────────────
 const engine = new RecommendationEngine(mockGroups, mockInteractions);
 const abTest = new ABTestingFramework();
 const emailService = new EmailService();
-const exportService = new ExportService(
-  emailService,
-  engine.getInteractions(),
-  engine.getPreferences()
-);
-
-// Backup system
+const exportService = new ExportService(emailService, engine.getInteractions(), engine.getPreferences());
 const s3Client = new S3HttpClient();
 const backupService = new BackupService(s3Client);
 const backupScheduler = new BackupScheduler(backupService);
@@ -75,190 +82,24 @@ if (process.env.BACKUP_ENABLED === 'true') {
   backupMonitor.start();
 }
 
-// API Endpoints
+const services = { engine, abTest, exportService, backupService, backupScheduler, recoveryService, backupMonitor };
 
-/**
- * @api {get} /search Search across groups, members, and transactions
- */
-app.get('/search', async (req, res) => {
-  const { q } = req.query;
-  if (!q) {
-    return res.status(400).json({ error: 'Query parameter q is required' });
+// ── Versioned API routes ──────────────────────────────────────────────────────
+app.use('/api', versionMiddleware);
+app.use('/api/v1', createV1Router(services));
+app.use('/api/v2', createV2Router(services));
+
+// ── Legacy unversioned routes (redirect to v1 for backward compatibility) ────
+app.use((req, res, next) => {
+  const legacyPaths = ['/health', '/recommendations', '/preferences', '/export', '/backup', '/search'];
+  if (legacyPaths.some(p => req.path.startsWith(p))) {
+    res.setHeader('X-API-Deprecation-Notice', 'Unversioned paths are deprecated. Use /api/v1/...');
+    res.setHeader('Deprecation', 'true');
+    res.setHeader('Sunset', '2027-01-01');
   }
-  try {
-    const results = await searchService.globalSearch(q as string);
-    res.json(results);
-  } catch (error) {
-    res.status(500).json({ error: 'Search failed' });
-  }
+  next();
 });
-
-/**
- * @api {get} /search/autocomplete Get autocomplete suggestions
- */
-app.get('/search/autocomplete', async (req, res) => {
-  const { q } = req.query;
-  if (!q) {
-    return res.status(400).json({ error: 'Query parameter q is required' });
-  }
-  try {
-    const suggestions = await searchService.autocomplete(q as string);
-    res.json(suggestions);
-  } catch (error) {
-    res.status(500).json({ error: 'Autocomplete failed' });
-  }
-});
-
-/**
- * @api {post} /preferences Collect user preference data
- */
-app.post('/preferences', (req, res) => {
-  const pref: UserPreference = req.body;
-  if (!pref.userId) {
-    return res.status(400).json({ error: 'userId is required' });
-  }
-  engine.setPreference(pref);
-  res.status(200).json({ message: 'Preferences updated' });
-});
-
-/**
- * @api {get} /recommendations/:userId Get recommended groups
- */
-app.get('/recommendations/:userId', (req, res) => {
-  const { userId } = req.params;
-  const bucket = abTest.getBucket(userId);
-  
-  // A/B Test: Bucket A gets content-based, Bucket B gets collaborative
-  const algorithm = bucket === 'A' ? 'content' : 'collaborative';
-  const recommendations = engine.getRecommendations(userId, algorithm);
-  
-  res.json({
-    userId,
-    bucket,
-    algorithm,
-    recommendations
-  });
-});
-
-/**
- * @api {get} /health Health check
- */
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
-/**
- * @api {post} /export Trigger data export
- */
-app.post('/export', async (req, res) => {
-  const { userId, email, format } = req.body;
-  if (!userId || !email || !format) {
-    return res.status(400).json({ error: 'userId, email, and format are required' });
-  }
-  
-  if (format !== 'CSV' && format !== 'JSON') {
-    return res.status(400).json({ error: 'Invalid format. Use CSV or JSON' });
-  }
-
-  const jobId = await exportService.createJob(userId, email, format);
-  res.status(202).json({ jobId, message: 'Export job created' });
-});
-
-/**
- * @api {get} /export/:jobId Get export status
- */
-app.get('/export/:jobId', (req, res) => {
-  const { jobId } = req.params;
-  const job = exportService.getJob(jobId);
-  
-  if (!job) {
-    return res.status(404).json({ error: 'Job not found' });
-  }
-  
-  res.json(job);
-});
-
-/**
- * @api {get} /export/:jobId/download Download export file
- */
-app.get('/export/:jobId/download', (req, res) => {
-  const { jobId } = req.params;
-  const job = exportService.getJob(jobId);
-  
-  if (!job) {
-    return res.status(404).json({ error: 'Job not found' });
-  }
-  
-  if (job.status !== 'completed') {
-    return res.status(400).json({ error: 'Job is not completed yet' });
-  }
-  
-  res.json({ url: job.fileUrl });
-});
-
-// ── Backup Routes ────────────────────────────────────────────────────────────
-
-/**
- * @api {post} /backup Trigger a manual backup
- * Body: { type: 'full' | 'incremental' }
- */
-app.post('/backup', async (req, res) => {
-  const { type } = req.body;
-  if (type !== 'full' && type !== 'incremental') {
-    return res.status(400).json({ error: 'type must be "full" or "incremental"' });
-  }
-  const job = await backupScheduler.triggerManual(type);
-  res.status(202).json(job);
-});
-
-/**
- * @api {get} /backup List all backup jobs
- */
-app.get('/backup', (_req, res) => {
-  res.json(backupService.listJobs());
-});
-
-/**
- * @api {get} /backup/:jobId Get a specific backup job
- */
-app.get('/backup/:jobId', (req, res) => {
-  const job = backupService.getJob(req.params.jobId);
-  if (!job) return res.status(404).json({ error: 'Backup job not found' });
-  res.json(job);
-});
-
-/**
- * @api {post} /backup/restore Restore from a backup
- * Body: { jobId?: string }  — omit jobId to restore latest
- */
-app.post('/backup/restore', async (req, res) => {
-  try {
-    const result = req.body.jobId
-      ? await recoveryService.restore(req.body.jobId)
-      : await recoveryService.restoreLatest();
-    res.json(result);
-  } catch (err: unknown) {
-    res.status(400).json({ error: err instanceof Error ? err.message : String(err) });
-  }
-});
-
-/**
- * @api {get} /backup/alerts Get backup alerts
- * Query: unacknowledgedOnly=true
- */
-app.get('/backup/alerts', (req, res) => {
-  const unacknowledgedOnly = req.query.unacknowledgedOnly === 'true';
-  res.json(backupMonitor.getAlerts(unacknowledgedOnly));
-});
-
-/**
- * @api {post} /backup/alerts/:alertId/acknowledge Acknowledge an alert
- */
-app.post('/backup/alerts/:alertId/acknowledge', (req, res) => {
-  const ok = backupMonitor.acknowledge(req.params.alertId);
-  if (!ok) return res.status(404).json({ error: 'Alert not found' });
-  res.json({ acknowledged: true });
-});
+app.use('/', createV1Router(services));
 
 // ── Admin Routes ────────────────────────────────────────────────────────────
 
@@ -316,5 +157,9 @@ adminRouter.get('/audit-logs', (req, res) => {
 app.use('/admin', adminRouter);
 
 app.listen(PORT, () => {
-  console.log(`Recommendation Engine running on port ${PORT}`);
+  console.log(`API server running on port ${PORT}`);
+  console.log(`  Versioned:  /api/v1/...  /api/v2/...`);
+  console.log(`  Legacy:     /health  /recommendations  etc. (deprecated)`);
 });
+
+export { app };
