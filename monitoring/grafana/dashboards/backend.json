@@ -1,0 +1,85 @@
+{
+  "title": "Stellar-Save Backend",
+  "uid": "stellar-save-backend",
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request Rate (req/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "sum(rate(http_requests_total{app=\"stellar-save-backend\"}[1m])) by (route)",
+        "legendFormat": "{{route}}"
+      }]
+    },
+    {
+      "id": 2,
+      "title": "Error Rate (%)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "100 * sum(rate(http_requests_total{app=\"stellar-save-backend\",status_code=~\"5..\"}[1m])) / sum(rate(http_requests_total{app=\"stellar-save-backend\"}[1m]))",
+        "legendFormat": "error %"
+      }]
+    },
+    {
+      "id": 3,
+      "title": "P95 Latency (s)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{app=\"stellar-save-backend\"}[5m])) by (le, route))",
+        "legendFormat": "p95 {{route}}"
+      }]
+    },
+    {
+      "id": 4,
+      "title": "Active Connections",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 8, "w": 6, "h": 8 },
+      "targets": [{
+        "expr": "active_connections{app=\"stellar-save-backend\"}",
+        "legendFormat": "connections"
+      }]
+    },
+    {
+      "id": 5,
+      "title": "Heap Used (MB)",
+      "type": "timeseries",
+      "gridPos": { "x": 18, "y": 8, "w": 6, "h": 8 },
+      "targets": [{
+        "expr": "nodejs_heap_size_used_bytes{app=\"stellar-save-backend\"} / 1024 / 1024",
+        "legendFormat": "heap MB"
+      }]
+    },
+    {
+      "id": 6,
+      "title": "Backup Jobs",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(backup_jobs_total{app=\"stellar-save-backend\",status=\"success\"}[5m]))",
+          "legendFormat": "success/s"
+        },
+        {
+          "expr": "sum(rate(backup_jobs_total{app=\"stellar-save-backend\",status=\"failure\"}[5m]))",
+          "legendFormat": "failure/s"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Export Jobs",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "sum(rate(export_jobs_total{app=\"stellar-save-backend\"}[5m])) by (format)",
+        "legendFormat": "{{format}}"
+      }]
+    }
+  ]
+}

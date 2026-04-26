@@ -16,12 +16,17 @@ import { BackupMonitor } from './backup_monitor';
 import { versionMiddleware } from './versioning';
 import { createV1Router } from './routes/v1';
 import { createV2Router } from './routes/v2';
+import { metricsMiddleware, metricsHandler } from './metrics';
+import { requestLogger } from './logger';
 
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(requestLogger);
+app.use(metricsMiddleware);
+app.get('/metrics', metricsHandler);
 
 // ── GraphQL ───────────────────────────────────────────────────────────────────
 const schema = makeExecutableSchema({ typeDefs, resolvers });
@@ -100,61 +105,6 @@ app.use((req, res, next) => {
   next();
 });
 app.use('/', createV1Router(services));
-
-// ── Admin Routes ────────────────────────────────────────────────────────────
-
-const adminRouter = express.Router();
-adminRouter.use(adminAuthMiddleware);
-
-/**
- * @api {get} /admin/stats Get platform statistics
- */
-adminRouter.get('/stats', (req, res) => {
-  res.json(adminService.getPlatformStats());
-});
-
-/**
- * @api {get} /admin/users List all users
- */
-adminRouter.get('/users', (req, res) => {
-  res.json(adminService.getUsers());
-});
-
-/**
- * @api {get} /admin/users/:id Get user details
- */
-adminRouter.get('/users/:id', (req, res) => {
-  const user = adminService.getUserById(req.params.id);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json(user);
-});
-
-/**
- * @api {patch} /admin/users/:id Update user details
- */
-adminRouter.patch('/users/:id', (req: AuthenticatedRequest, res) => {
-  const user = adminService.updateUser(req.params.id, req.body, req.adminId!);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json(user);
-});
-
-/**
- * @api {delete} /admin/users/:id Delete user
- */
-adminRouter.delete('/users/:id', (req: AuthenticatedRequest, res) => {
-  const success = adminService.deleteUser(req.params.id, req.adminId!);
-  if (!success) return res.status(404).json({ error: 'User not found' });
-  res.json({ message: 'User deleted' });
-});
-
-/**
- * @api {get} /admin/audit-logs Get audit logs
- */
-adminRouter.get('/audit-logs', (req, res) => {
-  res.json(adminService.getAuditLogs());
-});
-
-app.use('/admin', adminRouter);
 
 app.listen(PORT, () => {
   console.log(`API server running on port ${PORT}`);
