@@ -13,12 +13,17 @@ import { BackupMonitor } from './backup_monitor';
 import { versionMiddleware } from './versioning';
 import { createV1Router } from './routes/v1';
 import { createV2Router } from './routes/v2';
+import { metricsMiddleware, metricsHandler } from './metrics';
+import { requestLogger } from './logger';
 
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(requestLogger);
+app.use(metricsMiddleware);
+app.get('/metrics', metricsHandler);
 
 const PORT = process.env.PORT || 3001;
 
