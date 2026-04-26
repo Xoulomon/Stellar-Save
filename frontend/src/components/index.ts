@@ -25,6 +25,7 @@ export type { Group } from "./GroupList";
 export { GroupCard } from "./GroupCard";
 export { CreateGroupForm } from "./CreateGroupForm";
 export { GroupStats } from "./GroupStats";
+export { GroupMetrics } from "./GroupMetrics";
 export { GroupTimeline } from "./GroupTimeline";
 export type { TimelineEvent, TimelineEventType, GroupTimelineProps } from "./GroupTimeline";
 export { MemberList } from "./MemberList";

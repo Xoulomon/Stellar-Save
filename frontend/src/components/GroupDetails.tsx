@@ -3,6 +3,7 @@ import './GroupDetails.css';
 import { Card } from './Card';
 import { Badge } from './Badge';
 import { Avatar } from './Avatar';
+import { GroupMetrics } from './GroupMetrics';
 import { Tabs, type Tab } from './Tabs';
 import type { DetailedGroup, GroupMember, GroupContribution, GroupCycle } from '../utils/groupApi';
 
@@ -30,9 +31,8 @@ export function GroupDetails({
   const [selectedTab, setSelectedTab] = useState<string>('overview');
 
   // Calculate progress percentage
-  const progressPercentage = group.targetAmount > 0
-    ? Math.min((group.currentAmount / group.targetAmount) * 100, 100)
-    : 0;
+  const progressPercentage =
+    group.targetAmount > 0 ? Math.min((group.currentAmount / group.targetAmount) * 100, 100) : 0;
 
   // Format currency
   const formatAmount = (amount: number) => {
@@ -117,6 +117,8 @@ export function GroupDetails({
           {progressPercentage.toFixed(1)}% Complete
         </span>
       </div>
+
+      <GroupMetrics group={group} contributions={contributions} cycles={cycles} />
     </div>
   );
 
@@ -132,7 +134,9 @@ export function GroupDetails({
             </Badge>
           </div>
           <div className="group-details-cycle-dates">
-            <span>{formatDate(currentCycle.startDate)} - {formatDate(currentCycle.endDate)}</span>
+            <span>
+              {formatDate(currentCycle.startDate)} - {formatDate(currentCycle.endDate)}
+            </span>
           </div>
           <div className="group-details-cycle-progress">
             <div className="group-details-progress-bar">
@@ -187,26 +191,19 @@ export function GroupDetails({
             className={`group-details-member-item ${onMemberClick ? 'group-details-member-clickable' : ''}`}
             onClick={() => onMemberClick?.(member)}
           >
-            <Avatar
-              name={member.name || member.address}
-              size="md"
-            />
+            <Avatar name={member.name || member.address} size="md" />
             <div className="group-details-member-info">
-              <div className="group-details-member-name">
-                {member.name || 'Anonymous'}
-              </div>
+              <div className="group-details-member-name">{member.name || 'Anonymous'}</div>
               <div className="group-details-member-address">
-                {member.address.substring(0, 8)}...{member.address.substring(member.address.length - 6)}
+                {member.address.substring(0, 8)}...
+                {member.address.substring(member.address.length - 6)}
               </div>
             </div>
             <div className="group-details-member-stats">
               <div className="group-details-member-contributions">
                 {formatAmount(member.totalContributions)}
               </div>
-              <Badge
-                variant={member.isActive ? 'success' : 'secondary'}
-                size="sm"
-              >
+              <Badge variant={member.isActive ? 'success' : 'secondary'} size="sm">
                 {member.isActive ? 'Active' : 'Inactive'}
               </Badge>
             </div>
@@ -230,10 +227,7 @@ export function GroupDetails({
             onClick={() => onContributionClick?.(contribution)}
           >
             <div className="group-details-contribution-main">
-              <Avatar
-                name={contribution.memberName || contribution.memberId}
-                size="sm"
-              />
+              <Avatar name={contribution.memberName || contribution.memberId} size="sm" />
               <div className="group-details-contribution-info">
                 <div className="group-details-contribution-member">
                   {contribution.memberName || 'Anonymous'}
@@ -290,18 +284,11 @@ export function GroupDetails({
         <div className="group-details-header">
           <div className="group-details-title-section">
             <h2 className="group-details-title">{group.name}</h2>
-            <Badge variant={getStatusVariant(group.status)}>
-              {group.status}
-            </Badge>
+            <Badge variant={getStatusVariant(group.status)}>{group.status}</Badge>
           </div>
         </div>
 
-        <Tabs
-          tabs={tabs}
-          defaultTab={selectedTab}
-          onChange={setSelectedTab}
-          variant="underline"
-        />
+        <Tabs tabs={tabs} defaultTab={selectedTab} onChange={setSelectedTab} variant="underline" />
       </Card>
     </div>
   );
