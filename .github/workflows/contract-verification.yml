@@ -1,0 +1,147 @@
+name: Contract Verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Network to verify on'
+        required: true
+        type: choice
+        options: [testnet, mainnet]
+      contract_id:
+        description: 'Contract ID to verify'
+        required: true
+        type: string
+      expected_wasm_hash:
+        description: 'Expected WASM SHA-256 hash (leave empty to compute from latest build)'
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      network:
+        required: true
+        type: string
+      contract_id:
+        required: true
+        type: string
+      expected_wasm_hash:
+        required: false
+        type: string
+    secrets:
+      TESTNET_DEPLOYER_SECRET:
+        required: false
+      MAINNET_DEPLOYER_SECRET:
+        required: false
+
+env:
+  WASM_PATH: target/wasm32-unknown-unknown/release/stellar_save.wasm
+
+jobs:
+  verify:
+    name: Verify Contract — ${{ inputs.network }}
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.network == 'mainnet' && 'production' || 'testnet' }}
+      url: https://stellar.expert/explorer/${{ inputs.network }}/contract/${{ inputs.contract_id }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Build WASM to compute hash when not provided ──────────────────────
+      - name: Install Rust toolchain
+        if: inputs.expected_wasm_hash == ''
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        if: inputs.expected_wasm_hash == ''
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Build WASM
+        if: inputs.expected_wasm_hash == ''
+        run: |
+          cargo build \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            --target wasm32-unknown-unknown \
+            --release
+
+      - name: Compute WASM hash
+        id: hash
+        run: |
+          if [ -n "${{ inputs.expected_wasm_hash }}" ]; then
+            echo "wasm_hash=${{ inputs.expected_wasm_hash }}" >> "$GITHUB_OUTPUT"
+          else
+            HASH=$(sha256sum "${{ env.WASM_PATH }}" | awk '{print $1}')
+            echo "wasm_hash=${HASH}" >> "$GITHUB_OUTPUT"
+            echo "Computed WASM hash: ${HASH}"
+          fi
+
+      # ── Install Stellar CLI ───────────────────────────────────────────────
+      - name: Install Stellar CLI
+        run: |
+          curl -sSL https://github.com/stellar/stellar-cli/releases/download/v22.7.1/stellar-cli-22.7.1-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz -C /usr/local/bin stellar
+          stellar --version
+
+      # ── Run verification ──────────────────────────────────────────────────
+      - name: Run contract verification
+        id: verify
+        run: bash scripts/verify_contract.sh
+        env:
+          STELLAR_NETWORK: ${{ inputs.network }}
+          STELLAR_RPC_URL: ${{ inputs.network == 'mainnet' && 'https://soroban-rpc.mainnet.stellar.gateway.fm' || 'https://soroban-testnet.stellar.org' }}
+          CONTRACT_ID: ${{ inputs.contract_id }}
+          EXPECTED_WASM_HASH: ${{ steps.hash.outputs.wasm_hash }}
+
+      # ── Upload verification report ────────────────────────────────────────
+      - name: Save verification report
+        if: always()
+        run: |
+          mkdir -p verification-reports
+          cat > verification-reports/verification-${{ inputs.network }}-${{ github.run_id }}.json <<EOF
+          {
+            "network": "${{ inputs.network }}",
+            "contract_id": "${{ inputs.contract_id }}",
+            "wasm_hash": "${{ steps.hash.outputs.wasm_hash }}",
+            "commit": "${{ github.sha }}",
+            "verified_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "triggered_by": "${{ github.actor }}",
+            "status": "${{ steps.verify.outcome }}"
+          }
+          EOF
+
+      - name: Upload verification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-report-${{ inputs.network }}-${{ github.run_id }}
+          path: verification-reports/
+          retention-days: 90
+
+      # ── Notify on failure ─────────────────────────────────────────────────
+      - name: Notify verification failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              '## ❌ Contract Verification Failed',
+              `**Network:** ${{ inputs.network }}`,
+              `**Contract ID:** \`${{ inputs.contract_id }}\``,
+              `**Run:** [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`,
+              '',
+              'Please investigate before proceeding with any further deployments.'
+            ].join('\n');
+
+            // Post as commit status
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'failure',
+              description: 'Contract verification failed',
+              context: 'contract-verification/${{ inputs.network }}'
+            });
