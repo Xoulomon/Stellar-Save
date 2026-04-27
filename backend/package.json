@@ -13,7 +13,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@apollo/server": "^4.12.2",
+    "@apollo/server": "^5.5.0",
     "@elastic/elasticsearch": "^9.3.4",
     "@graphql-tools/schema": "^10.0.13",
     "@stellar/stellar-sdk": "^15.0.1",
