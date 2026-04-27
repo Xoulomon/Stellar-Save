@@ -13,6 +13,10 @@ const CACHE_TTL_MS = 60_000; // 1 minute
 const AUTO_REFRESH_MS = 30_000; // poll every 30 s while the hook is mounted
 const cache = new Map<string, CacheEntry>();
 
+export function clearGroupCache(): void {
+  cache.clear();
+}
+
 function getFromCache(id: string): GroupDetail | null {
   const entry = cache.get(id);
   if (!entry) return null;
@@ -132,4 +136,9 @@ export function useGroup(
   }, [groupId, load]);
 
   return { group, isLoading, error, refresh };
+}
+
+// Utilities (for tests/client cache control)
+export function clearGroupCache(): void {
+  cache.clear();
 }

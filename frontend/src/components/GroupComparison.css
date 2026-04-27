@@ -1,0 +1,130 @@
+.group-comparison {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Selector */
+.gc-selector-hint {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary, #666);
+  margin-bottom: 0.75rem;
+}
+
+.gc-selector-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.gc-selector-item {
+  padding: 0.375rem 0.875rem;
+  border: 1.5px solid var(--color-border, #ccc);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.gc-selector-item:hover:not(:disabled) {
+  border-color: var(--color-primary, #6366f1);
+}
+
+.gc-selector-item--selected {
+  background: var(--color-primary, #6366f1);
+  border-color: var(--color-primary, #6366f1);
+  color: #fff;
+}
+
+.gc-selector-item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Table */
+.gc-table-wrapper {
+  overflow-x: auto;
+}
+
+.gc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.gc-table th,
+.gc-table td {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border, #e0e0e0);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.gc-table thead th {
+  background: var(--color-surface, #f5f5f5);
+  font-weight: 600;
+  position: relative;
+}
+
+.gc-table tbody th {
+  font-weight: 500;
+  white-space: nowrap;
+  background: var(--color-surface, #f9f9f9);
+}
+
+.gc-cell--best {
+  background: #f0fdf4;
+  font-weight: 600;
+}
+
+.gc-best-badge {
+  margin-left: 0.35rem;
+  color: #16a34a;
+  font-size: 0.8rem;
+}
+
+.gc-remove-btn {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, #888);
+  line-height: 1;
+  padding: 0.1rem 0.25rem;
+  border-radius: 3px;
+}
+
+.gc-remove-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Actions */
+.gc-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+
+/* Empty */
+.gc-empty {
+  color: var(--color-text-secondary, #888);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+/* Print styles */
+@media print {
+  .gc-selector,
+  .gc-actions {
+    display: none;
+  }
+}

@@ -1,0 +1,92 @@
+name: Contract Fuzzing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/fuzzing.yml'
+  pull_request:
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/fuzzing.yml'
+  schedule:
+    # Run extended fuzz session nightly at 02:00 UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      cases:
+        description: 'Proptest cases per test (default: 1000)'
+        required: false
+        default: '1000'
+
+env:
+  PROPTEST_CASES: ${{ github.event.inputs.cases || (github.event_name == 'schedule' && '10000' || '256') }}
+
+jobs:
+  fuzz:
+    name: Property-based fuzzing
+    runs-on: ubuntu-latest
+    timeout-minutes: 30          # hard time limit for the whole job
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Run fuzz tests
+        run: |
+          cargo test \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            --lib fuzz_tests \
+            -- --nocapture 2>&1 | tee fuzz-output.txt
+        env:
+          PROPTEST_CASES: ${{ env.PROPTEST_CASES }}
+
+      - name: Generate fuzzing report
+        if: always()
+        run: bash scripts/fuzz_report.sh fuzz-output.txt
+
+      - name: Upload fuzzing report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-report-${{ github.sha }}
+          path: |
+            fuzz-output.txt
+            fuzz-report.md
+          retention-days: 30
+
+      - name: Upload proptest regression corpus
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: proptest-regressions-${{ github.sha }}
+          path: contracts/stellar-save/.proptest-regressions/
+          if-no-files-found: ignore
+          retention-days: 90
+
+      - name: Comment fuzz summary on PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = '## 🔍 Fuzzing Report\n';
+            try {
+              body += fs.readFileSync('fuzz-report.md', 'utf8');
+            } catch {
+              body += '_Report not generated._';
+            }
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });

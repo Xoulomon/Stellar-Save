@@ -7,6 +7,69 @@ on:
     branches: [main, develop]
 
 jobs:
+  # ─── Code Quality & Security Checks ─────────────────────────────────────────
+  code-quality:
+    name: Code Quality & Security
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Frontend Quality Checks ──────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Frontend - Lint check
+        run: npm run lint
+        working-directory: frontend
+
+      - name: Frontend - Format check
+        run: npx prettier --check "src/**/*.{ts,tsx,css}"
+        working-directory: frontend
+
+      - name: Frontend - Security audit
+        run: npm audit --audit-level=moderate
+        working-directory: frontend
+        continue-on-error: false
+
+      # ── Rust Quality Checks ──────────────────────────────────────────────
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Rust - Format check
+        run: cargo fmt --manifest-path contracts/stellar-save/Cargo.toml --all -- --check
+
+      - name: Rust - Clippy lint
+        run: |
+          cargo clippy \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            --all-targets \
+            --all-features \
+            -- -D warnings
+
+      - name: Rust - Security audit
+        uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rust - Dependency check
+        run: |
+          cargo tree --manifest-path contracts/stellar-save/Cargo.toml --duplicates
+          cargo tree --manifest-path contracts/stellar-save/Cargo.toml --depth 1
+
   # ─── Frontend Tests & Coverage ──────────────────────────────────────────────
   frontend:
     name: Frontend Tests
@@ -131,7 +194,7 @@ jobs:
   build:
     name: Build Verification
     runs-on: ubuntu-latest
-    needs: [frontend, contracts]
+    needs: [code-quality, frontend, contracts]
 
     steps:
       - uses: actions/checkout@v4
@@ -165,3 +228,129 @@ jobs:
             --manifest-path contracts/stellar-save/Cargo.toml \
             --target wasm32-unknown-unknown \
             --release
+
+  # ─── Performance Monitoring (Lighthouse CI) ─────────────────────────────────
+  performance:
+    name: Lighthouse CI Performance
+    needs: [build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Build frontend for perf tests
+        run: npm run build
+        working-directory: frontend
+
+      - name: Start frontend preview server
+        run: |
+          cd frontend
+          nohup npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/lhci-frontend.log 2>&1 &
+          echo $! > /tmp/lhci-server.pid
+          sleep 5
+
+      - name: Run Lighthouse CI
+        run: |
+          npx lhci autorun --config .lighthouserc.json
+
+      - name: Stop frontend preview server
+        run: |
+          PID=$(cat /tmp/lhci-server.pid)
+          kill $PID || true
+
+      - name: Upload Lighthouse report logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-report-log
+          path: /tmp/lhci-frontend.log
+
+  # ─── Automated Deployment (testnet/mainnet) ────────────────────────────────
+  deploy-testnet:
+    name: Deploy to Testnet
+    needs: [build, performance]
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools for deployment
+        run: |
+          npm --prefix frontend ci
+          curl -sL https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+
+      - name: Deploy contracts and frontend to testnet
+        run: |
+          STELLAR_NETWORK=testnet STELLAR_RPC_URL=https://soroban-testnet.stellar.org ./scripts/deploy_testnet.sh
+
+      - name: Run smoke tests after deployment
+        run: ./scripts/smoke_test.sh
+
+      - name: Notify on completion
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `✅ Testnet deployment completed for ${process.env.GITHUB_REF}`;
+            if (github.context.payload.pull_request) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: github.context.payload.pull_request.number,
+                body,
+              });
+            } else {
+              core.info(body);
+            }
+
+  deploy-mainnet:
+    name: Deploy to Mainnet
+    needs: [build, performance]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools for deployment
+        run: |
+          npm --prefix frontend ci
+          curl -sL https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+
+      - name: Deploy contracts and frontend to mainnet
+        run: |
+          AUTO_CONFIRM_MAINNET=true STELLAR_NETWORK=mainnet STELLAR_RPC_URL=https://soroban-rpc.mainnet.stellar.gateway.fm ./scripts/deploy_mainnet.sh
+
+      - name: Run smoke tests after deployment
+        run: ./scripts/smoke_test.sh
+
+      - name: Notify on completion
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `✅ Mainnet deployment completed for ${process.env.GITHUB_REF}`;
+            if (github.context.payload.pull_request) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: github.context.payload.pull_request.number,
+                body,
+              });
+            } else {
+              core.info(body);
+            }
+

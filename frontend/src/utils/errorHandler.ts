@@ -157,9 +157,8 @@ function handleStellarCode(err: Error & { code?: string; data?: any }): ParsedEr
 }
 
 function extractTechnicalDetails(err: Error): Partial<ParsedError> {
-  return {
-    code: (err as any).code || undefined
-  };
+  const code = (err as any).code;
+  return code !== undefined ? { code } : {};
 }
 
 // Common usage example

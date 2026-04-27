@@ -30,7 +30,7 @@ pub const MAX_EXTENSION_SECONDS: u64 = 7 * 24 * 60 * 60; // 604_800
 /// * `GroupNotFound`              - Group does not exist
 /// * `Unauthorized`               - Caller is not the group creator
 /// * `InvalidState`               - Group is not active
-/// * `DeadlineExtensionExceedsMax`- `extension_seconds` > 7 days
+/// * `DeadlineExtensionExceedsMax`- `extension_seconds` > 7 days (error code 7001)
 pub fn extend_deadline(
     env: &Env,
     caller: Address,

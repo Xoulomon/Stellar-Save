@@ -6,6 +6,7 @@ import TransactionTable from '../components/TransactionTables';
 import TransactionFilters from '../components/TransactionFilters';
 import { SearchBar } from '../components/SearchBar';
 import TransactionDetailModal from '../components/TransactionDetailModal';
+import { TransactionExportButton } from '../components/TransactionExportButton';
 
 const TransactionHistoryPage: React.FC = () => {
   const { transactions, isLoading } = useTransactions();
@@ -39,6 +40,7 @@ const TransactionHistoryPage: React.FC = () => {
               All your Stellar activity • {filteredTxs.length} results
             </p>
           </div>
+          <TransactionExportButton transactions={filteredTxs} />
         </div>
 
         <div className="flex flex-col lg:flex-row gap-4 mb-8">

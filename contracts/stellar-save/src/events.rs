@@ -1,4 +1,5 @@
-use soroban_sdk::{contracttype, Address, Env};
+#![allow(deprecated)]
+use soroban_sdk::{contracttype, Address, Env, String};
 
 /// Event emitted when a new savings group is created.
 #[contracttype]
@@ -77,6 +78,18 @@ pub struct GroupStatusChanged {
     pub changed_at: u64,
 }
 
+/// Event emitted when a group's metadata is updated.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GroupMetadataUpdated {
+    pub group_id: u64,
+    pub updated_by: Address,
+    pub name: String,
+    pub description: String,
+    pub image_url: String,
+    pub updated_at: u64,
+}
+
 /// Event emitted when contract is paused.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -93,6 +106,184 @@ pub struct ContractUnpaused {
     pub timestamp: u64,
 }
 
+/// Event emitted when a contribution proof is verified (#479).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContributionVerified {
+    pub group_id: u64,
+    pub contributor: Address,
+    pub cycle: u32,
+    pub verified_at: u64,
+}
+
+/// Event emitted when a contribution amount change is proposed (#480).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContributionAmountProposed {
+    pub group_id: u64,
+    pub proposed_by: Address,
+    pub old_amount: i128,
+    pub new_amount: i128,
+    pub proposed_at: u64,
+}
+
+/// Event emitted when a contribution amount change is approved and applied (#480).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContributionAmountChanged {
+    pub group_id: u64,
+    pub old_amount: i128,
+    pub new_amount: i128,
+    pub effective_cycle: u32,
+    pub changed_at: u64,
+}
+
+/// Event emitted when a specific group is paused by its creator.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GroupPaused {
+    pub group_id: u64,
+    pub paused_by: Address,
+    pub paused_at: u64,
+}
+
+/// Event emitted when a specific group is unpaused by its creator.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GroupUnpaused {
+    pub group_id: u64,
+    pub unpaused_by: Address,
+    pub unpaused_at: u64,
+}
+
+/// Event emitted when a cycle advances to the next cycle.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CycleAdvanced {
+    pub group_id: u64,
+    pub new_cycle: u32,
+    pub advanced_at: u64,
+}
+
+/// Event emitted when a member claims their completion reward.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RewardClaimed {
+    pub group_id: u64,
+    pub member: Address,
+    pub amount: i128,
+    pub claimed_at: u64,
+}
+
+/// Utility functions for emitting events.
+pub struct EventEmitter;
+
+/// Event emitted when two groups are merged into a new group.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GroupsMerged {
+    pub merged_group_id: u64,
+    pub source_group_id_1: u64,
+    pub source_group_id_2: u64,
+    pub member_count: u32,
+    pub combined_balance: i128,
+    pub merged_at: u64,
+}
+
+/// Event emitted when a member reaches a contribution streak milestone.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MilestoneReached {
+    pub group_id: u64,
+    pub member: Address,
+    /// The streak threshold crossed (e.g. 5, 10, 20).
+    pub threshold: u32,
+    /// The cycle number on which the milestone was reached.
+    pub reached_at_cycle: u32,
+}
+
+/// Event emitted when a creator invites an address to join a group.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemberInvited {
+    pub group_id: u64,
+    pub invited: Address,
+    pub invited_by: Address,
+    pub invited_at: u64,
+}
+
+/// Event emitted when a creator revokes a pending invitation.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct InvitationRevoked {
+    pub group_id: u64,
+    pub revoked: Address,
+    pub revoked_by: Address,
+    pub revoked_at: u64,
+}
+
+/// Event emitted when a completed group is archived by its creator.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GroupArchived {
+    pub group_id: u64,
+    pub archived_by: Address,
+    pub archived_at: u64,
+}
+
+/// Event emitted when an auto-contribution is executed on behalf of a member.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AutoContributionExecuted {
+    pub group_id: u64,
+    pub member: Address,
+    pub amount: i128,
+    pub cycle: u32,
+    pub executed_at: u64,
+}
+
+/// Event emitted when an auto-contribution fails due to insufficient balance.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AutoContributionFailed {
+    pub group_id: u64,
+    pub member: Address,
+    pub cycle: u32,
+    pub failed_at: u64,
+}
+
+/// Event emitted when a member rates a group after completion.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GroupRated {
+    pub group_id: u64,
+    pub member: Address,
+    pub stars: u32,
+    pub comment: String,
+    pub rated_at: u64,
+}
+
+/// Event emitted when a penalty is applied to a member for a missed contribution.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PenaltyApplied {
+    pub group_id: u64,
+    pub member: Address,
+    pub amount: i128,
+    pub cycle_id: u32,
+    pub applied_at: u64,
+}
+
+/// Event emitted when a member successfully recovers from a penalty.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PenaltyRecovered {
+    pub group_id: u64,
+    pub member: Address,
+    pub cycle_id: u32,
+    pub recovered_at: u64,
+}
+
 /// Event emitted when a group creator extends the contribution deadline for a cycle.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -104,9 +295,6 @@ pub struct CycleDeadlineExtended {
     pub extended_by: Address,
     pub extended_at: u64,
 }
-
-/// Utility functions for emitting events.
-pub struct EventEmitter;
 
 impl EventEmitter {
     pub fn emit_group_created(
@@ -159,6 +347,21 @@ impl EventEmitter {
             left_at,
         };
         env.events().publish(("member_left",), event);
+    }
+
+    /// Emits a reminder event when a contribution is due for a member.
+    pub fn emit_contribution_due(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        cycle: u32,
+        deadline: u64,
+        emitted_at: u64,
+    ) {
+        env.events().publish(
+            (soroban_sdk::Symbol::new(env, "contribution_due"), group_id),
+            (member, cycle, deadline, emitted_at),
+        );
     }
 
     pub fn emit_contribution_made(
@@ -235,6 +438,26 @@ impl EventEmitter {
         env.events().publish(("group_status_changed",), event);
     }
 
+    pub fn emit_group_metadata_updated(
+        env: &Env,
+        group_id: u64,
+        updated_by: Address,
+        name: String,
+        description: String,
+        image_url: String,
+        updated_at: u64,
+    ) {
+        let event = GroupMetadataUpdated {
+            group_id,
+            updated_by,
+            name,
+            description,
+            image_url,
+            updated_at,
+        };
+        env.events().publish(("group_metadata_updated",), event);
+    }
+
     pub fn emit_contract_paused(env: &Env, admin: Address, timestamp: u64) {
         let event = ContractPaused { admin, timestamp };
         env.events().publish(("contract_paused",), event);
@@ -243,6 +466,263 @@ impl EventEmitter {
     pub fn emit_contract_unpaused(env: &Env, admin: Address, timestamp: u64) {
         let event = ContractUnpaused { admin, timestamp };
         env.events().publish(("contract_unpaused",), event);
+    }
+
+    pub fn emit_contribution_verified(
+        env: &Env,
+        group_id: u64,
+        contributor: Address,
+        cycle: u32,
+        verified_at: u64,
+    ) {
+        let event = ContributionVerified {
+            group_id,
+            contributor,
+            cycle,
+            verified_at,
+        };
+        env.events().publish(("contribution_verified",), event);
+    }
+
+    pub fn emit_contribution_amount_proposed(
+        env: &Env,
+        group_id: u64,
+        proposed_by: Address,
+        old_amount: i128,
+        new_amount: i128,
+        proposed_at: u64,
+    ) {
+        let event = ContributionAmountProposed {
+            group_id,
+            proposed_by,
+            old_amount,
+            new_amount,
+            proposed_at,
+        };
+        env.events()
+            .publish(("contribution_amount_proposed",), event);
+    }
+
+    pub fn emit_contribution_amount_changed(
+        env: &Env,
+        group_id: u64,
+        old_amount: i128,
+        new_amount: i128,
+        effective_cycle: u32,
+        changed_at: u64,
+    ) {
+        let event = ContributionAmountChanged {
+            group_id,
+            old_amount,
+            new_amount,
+            effective_cycle,
+            changed_at,
+        };
+        env.events()
+            .publish(("contribution_amount_changed",), event);
+    }
+
+    pub fn emit_group_paused(env: &Env, group_id: u64, paused_by: Address, paused_at: u64) {
+        let event = GroupPaused {
+            group_id,
+            paused_by,
+            paused_at,
+        };
+        env.events().publish(("group_paused",), event);
+    }
+
+    pub fn emit_group_unpaused(env: &Env, group_id: u64, unpaused_by: Address, unpaused_at: u64) {
+        let event = GroupUnpaused {
+            group_id,
+            unpaused_by,
+            unpaused_at,
+        };
+        env.events().publish(("group_unpaused",), event);
+    }
+
+    pub fn emit_penalty_applied(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        amount: i128,
+        cycle_id: u32,
+    ) {
+        let event = PenaltyApplied {
+            group_id,
+            member,
+            amount,
+            cycle_id,
+            applied_at: env.ledger().timestamp(),
+        };
+        env.events().publish(("penalty_applied",), event);
+    }
+
+    pub fn emit_penalty_recovered(env: &Env, group_id: u64, member: Address, cycle_id: u32) {
+        let event = PenaltyRecovered {
+            group_id,
+            member,
+            cycle_id,
+            recovered_at: env.ledger().timestamp(),
+        };
+        env.events().publish(("penalty_recovered",), event);
+    }
+
+    pub fn emit_milestone_reached(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        threshold: u32,
+        reached_at_cycle: u32,
+    ) {
+        let event = MilestoneReached {
+            group_id,
+            member,
+            threshold,
+            reached_at_cycle,
+        };
+        env.events().publish(("milestone_reached",), event);
+    }
+
+    pub fn emit_member_invited(
+        env: &Env,
+        group_id: u64,
+        invited: Address,
+        invited_by: Address,
+        invited_at: u64,
+    ) {
+        let event = MemberInvited {
+            group_id,
+            invited,
+            invited_by,
+            invited_at,
+        };
+        env.events().publish(("member_invited",), event);
+    }
+
+    pub fn emit_invitation_revoked(
+        env: &Env,
+        group_id: u64,
+        revoked: Address,
+        revoked_by: Address,
+        revoked_at: u64,
+    ) {
+        let event = InvitationRevoked {
+            group_id,
+            revoked,
+            revoked_by,
+            revoked_at,
+        };
+        env.events().publish(("invitation_revoked",), event);
+    }
+
+    pub fn emit_groups_merged(
+        env: &Env,
+        merged_group_id: u64,
+        source_group_id_1: u64,
+        source_group_id_2: u64,
+        member_count: u32,
+        combined_balance: i128,
+        merged_at: u64,
+    ) {
+        let event = GroupsMerged {
+            merged_group_id,
+            source_group_id_1,
+            source_group_id_2,
+            member_count,
+            combined_balance,
+            merged_at,
+        };
+        env.events().publish(("groups_merged",), event);
+    }
+
+    pub fn emit_cycle_advanced(env: &Env, group_id: u64, new_cycle: u32, advanced_at: u64) {
+        let event = CycleAdvanced {
+            group_id,
+            new_cycle,
+            advanced_at,
+        };
+        env.events().publish(("cycle_advanced",), event);
+    }
+
+    pub fn emit_reward_claimed(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        amount: i128,
+        claimed_at: u64,
+    ) {
+        let event = RewardClaimed {
+            group_id,
+            member,
+            amount,
+            claimed_at,
+        };
+        env.events().publish(("reward_claimed",), event);
+    }
+
+    /// Emits an event when a completed group is archived by its creator.
+    pub fn emit_group_archived(env: &Env, group_id: u64, archived_by: Address, archived_at: u64) {
+        let event = GroupArchived {
+            group_id,
+            archived_by,
+            archived_at,
+        };
+        env.events().publish(("group_archived",), event);
+    }
+
+    /// Emits an event when an auto-contribution is successfully executed for a member.
+    pub fn emit_auto_contribution_executed(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        amount: i128,
+        cycle: u32,
+        executed_at: u64,
+    ) {
+        let event = AutoContributionExecuted {
+            group_id,
+            member,
+            amount,
+            cycle,
+            executed_at,
+        };
+        env.events().publish(("auto_contribution_executed",), event);
+    }
+
+    /// Emits an event when an auto-contribution fails due to insufficient balance.
+    pub fn emit_auto_contribution_failed(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        cycle: u32,
+        failed_at: u64,
+    ) {
+        let event = AutoContributionFailed {
+            group_id,
+            member,
+            cycle,
+            failed_at,
+        };
+        env.events().publish(("auto_contribution_failed",), event);
+    }
+
+    /// Emits an event when a member rates a group.
+    pub fn emit_group_rated(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        stars: u32,
+        comment: String,
+        rated_at: u64,
+    ) {
+        let event = GroupRated {
+            group_id,
+            member,
+            stars,
+            comment,
+            rated_at,
+        };
+        env.events().publish(("group_rated",), event);
     }
 
     pub fn emit_cycle_deadline_extended(
@@ -311,5 +791,240 @@ mod tests {
         let creator = Address::generate(&env);
 
         EventEmitter::emit_group_created(&env, 1, creator, 10_000_000, 604800, 5, 1234567890);
+    }
+
+    #[test]
+    fn test_contribution_made_event() {
+        let env = Env::default();
+        let contributor = Address::generate(&env);
+
+        let event = ContributionMade {
+            group_id: 1,
+            contributor: contributor.clone(),
+            amount: 10_000_000,
+            cycle: 1,
+            cycle_total: 50_000_000,
+            contributed_at: 1234567890,
+        };
+
+        assert_eq!(event.group_id, 1);
+        assert_eq!(event.amount, 10_000_000);
+        assert_eq!(event.cycle, 1);
+    }
+
+    #[test]
+    fn test_payout_executed_event() {
+        let env = Env::default();
+        let recipient = Address::generate(&env);
+
+        let event = PayoutExecuted {
+            group_id: 1,
+            recipient: recipient.clone(),
+            amount: 50_000_000,
+            cycle: 1,
+            executed_at: 1234567890,
+        };
+
+        assert_eq!(event.group_id, 1);
+        assert_eq!(event.amount, 50_000_000);
+        assert_eq!(event.cycle, 1);
+    }
+
+    #[test]
+    fn test_group_completed_event() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+
+        let event = GroupCompleted {
+            group_id: 1,
+            creator: creator.clone(),
+            total_cycles: 5,
+            total_distributed: 250_000_000,
+            completed_at: 1234567890,
+        };
+
+        assert_eq!(event.group_id, 1);
+        assert_eq!(event.total_cycles, 5);
+        assert_eq!(event.total_distributed, 250_000_000);
+    }
+
+    #[test]
+    fn test_group_status_changed_event() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+
+        let event = GroupStatusChanged {
+            group_id: 1,
+            old_status: 0,
+            new_status: 1,
+            changed_by: admin.clone(),
+            changed_at: 1234567890,
+        };
+
+        assert_eq!(event.group_id, 1);
+        assert_eq!(event.old_status, 0);
+        assert_eq!(event.new_status, 1);
+    }
+
+    #[test]
+    fn test_member_left_event() {
+        let env = Env::default();
+        let member = Address::generate(&env);
+
+        let event = MemberLeft {
+            group_id: 1,
+            member: member.clone(),
+            member_count: 2,
+            left_at: 1234567890,
+        };
+
+        assert_eq!(event.group_id, 1);
+        assert_eq!(event.member_count, 2);
+    }
+
+    #[test]
+    fn test_contract_paused_event() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+
+        let event = ContractPaused {
+            admin: admin.clone(),
+            timestamp: 1234567890,
+        };
+
+        assert_eq!(event.timestamp, 1234567890);
+    }
+
+    #[test]
+    fn test_contract_unpaused_event() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+
+        let event = ContractUnpaused {
+            admin: admin.clone(),
+            timestamp: 1234567890,
+        };
+
+        assert_eq!(event.timestamp, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_member_joined() {
+        let env = Env::default();
+        let member = Address::generate(&env);
+
+        EventEmitter::emit_member_joined(&env, 1, member, 3, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_contribution_made() {
+        let env = Env::default();
+        let contributor = Address::generate(&env);
+
+        EventEmitter::emit_contribution_made(
+            &env,
+            1,
+            contributor,
+            10_000_000,
+            1,
+            50_000_000,
+            1234567890,
+        );
+    }
+
+    #[test]
+    fn test_event_emitter_payout_executed() {
+        let env = Env::default();
+        let recipient = Address::generate(&env);
+
+        EventEmitter::emit_payout_executed(&env, 1, recipient, 50_000_000, 1, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_group_completed() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+
+        EventEmitter::emit_group_completed(&env, 1, creator, 5, 250_000_000, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_group_status_changed() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+
+        EventEmitter::emit_group_status_changed(&env, 1, 0, 1, admin, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_contract_paused() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+
+        EventEmitter::emit_contract_paused(&env, admin, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_contract_unpaused() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+
+        EventEmitter::emit_contract_unpaused(&env, admin, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_member_left() {
+        let env = Env::default();
+        let member = Address::generate(&env);
+
+        EventEmitter::emit_member_left(&env, 1, member, 2, 1234567890);
+    }
+
+    #[test]
+    fn test_group_paused_event() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+
+        let event = GroupPaused {
+            group_id: 1,
+            paused_by: creator.clone(),
+            paused_at: 1234567890,
+        };
+
+        assert_eq!(event.group_id, 1);
+        assert_eq!(event.paused_by, creator);
+        assert_eq!(event.paused_at, 1234567890);
+    }
+
+    #[test]
+    fn test_group_unpaused_event() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+
+        let event = GroupUnpaused {
+            group_id: 1,
+            unpaused_by: creator.clone(),
+            unpaused_at: 1234567890,
+        };
+
+        assert_eq!(event.group_id, 1);
+        assert_eq!(event.unpaused_by, creator);
+        assert_eq!(event.unpaused_at, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_group_paused() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+
+        EventEmitter::emit_group_paused(&env, 1, creator, 1234567890);
+    }
+
+    #[test]
+    fn test_event_emitter_group_unpaused() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+
+        EventEmitter::emit_group_unpaused(&env, 1, creator, 1234567890);
     }
 }

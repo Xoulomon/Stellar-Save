@@ -1,0 +1,160 @@
+groups:
+  - name: stellar-save-backend
+    interval: 30s
+    rules:
+
+      # ── Availability ────────────────────────────────────────────────────────
+      - alert: ServiceDown
+        expr: up{job="stellar-save-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend service is down"
+          description: "stellar-save-backend has been unreachable for > 1 minute."
+          runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/service-down.md"
+
+      # ── Error rate ──────────────────────────────────────────────────────────
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{app="stellar-save-backend",status_code=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{app="stellar-save-backend"}[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HTTP 5xx error rate > 5%"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+          runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/high-error-rate.md"
+
+      - alert: CriticalErrorRate
+        expr: |
+          sum(rate(http_requests_total{app="stellar-save-backend",status_code=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{app="stellar-save-backend"}[5m])) > 0.20
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP 5xx error rate > 20%"
+          description: "Error rate is {{ $value | humanizePercentage }}. Immediate action required."
+          runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/high-error-rate.md"
+
+      # ── Latency ─────────────────────────────────────────────────────────────
+      - alert: HighP95Latency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{app="stellar-save-backend"}[5m])) by (le)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 latency > 2s"
+          description: "P95 response time is {{ $value | humanizeDuration }}."
+          runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/high-latency.md"
+
+      # ── Memory ──────────────────────────────────────────────────────────────
+      - alert: HighHeapUsage
+        expr: |
+          nodejs_heap_size_used_bytes{app="stellar-save-backend"}
+          /
+          nodejs_heap_size_total_bytes{app="stellar-save-backend"} > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Node.js heap usage > 85%"
+          description: "Heap is {{ $value | humanizePercentage }} full. Risk of OOM."
+          runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/high-memory.md"
+
+      # ── Backup ──────────────────────────────────────────────────────────────
+      - alert: BackupFailure
+        expr: |
+          increase(backup_jobs_total{app="stellar-save-backend",status="failure"}[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backup job failed"
+          description: "{{ $value }} backup failure(s) in the last hour."
+          runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/backup-failure.md"
+
+      - alert: NoRecentBackup
+        expr: |
+          time() - stellar_save_last_successful_backup_timestamp > 86400
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No successful backup in 24 hours"
+          description: "Last successful backup was {{ $value | humanizeDuration }} ago."
+          runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/backup-failure.md"
+
+- name: stellar-save-costs
+  interval: 5m
+  rules:
+
+    # ── CI minutes ────────────────────────────────────────────────────────────
+    - alert: CiMinutesNearing90Pct
+      expr: |
+        sum(ci_minutes_used_total{app="stellar-save-backend"})
+        / ci_minutes_limit_total{app="stellar-save-backend"} > 0.90
+      for: 0m
+      labels:
+        severity: warning
+      annotations:
+        summary: "CI minutes > 90% of monthly limit"
+        description: "{{ $value | humanizePercentage }} of GitHub Actions minutes consumed. Overage charges imminent."
+
+    - alert: CiMinutesExceeded
+      expr: |
+        sum(ci_minutes_used_total{app="stellar-save-backend"})
+        > ci_minutes_limit_total{app="stellar-save-backend"}
+      for: 0m
+      labels:
+        severity: critical
+      annotations:
+        summary: "CI minutes limit exceeded — overage charges active"
+        description: "Monthly free tier exhausted. Each additional minute costs $0.008."
+
+    # ── Total monthly cost ────────────────────────────────────────────────────
+    - alert: MonthlyCostHigh
+      expr: sum(total_estimated_monthly_cost_usd{app="stellar-save-backend"}) > 30
+      for: 0m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Estimated monthly cost > $30"
+        description: "Current estimate: ${{ $value | humanize }}. Review cost dashboard."
+
+    - alert: MonthlyCostCritical
+      expr: sum(total_estimated_monthly_cost_usd{app="stellar-save-backend"}) > 60
+      for: 0m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Estimated monthly cost > $60"
+        description: "Current estimate: ${{ $value | humanize }}. Immediate review required."
+
+    # ── Storage ───────────────────────────────────────────────────────────────
+    - alert: StorageCostHigh
+      expr: storage_estimated_cost_usd{app="stellar-save-backend"} > 10
+      for: 0m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Storage cost > $10/month"
+        description: "Storage cost is ${{ $value | humanize }}/month. Consider pruning old backups/exports."
+
+    # ── Stellar fees ──────────────────────────────────────────────────────────
+    - alert: StellarFeeSpike
+      expr: |
+        increase(stellar_transaction_fees_xlm_total{app="stellar-save-backend",network="mainnet"}[1h]) > 10
+      for: 0m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Stellar mainnet fees > 10 XLM in 1 hour"
+        description: "{{ $value | humanize }} XLM in fees last hour. Check for runaway transactions."

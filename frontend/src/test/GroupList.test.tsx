@@ -101,24 +101,22 @@ describe('GroupList', () => {
   it('paginates groups correctly', () => {
     const manyGroups: Group[] = Array.from({ length: 25 }, (_, i) => ({
       id: `${i + 1}`,
-      name: `Group ${i + 1}`,
+      name: `Group ${String(i + 1).padStart(2, '0')}`,
       description: `Description ${i + 1}`,
       memberCount: i + 1,
     }));
     
     render(<GroupList groups={manyGroups} pageSize={10} />);
     
-    // Should show first 10 groups
-    expect(screen.getByText('Group 1')).toBeInTheDocument();
+    expect(screen.getByText('Group 01')).toBeInTheDocument();
     expect(screen.getByText('Group 10')).toBeInTheDocument();
     expect(screen.queryByText('Group 11')).not.toBeInTheDocument();
     
-    // Navigate to page 2
     const page2Button = screen.getByLabelText('Page 2');
     fireEvent.click(page2Button);
     
     expect(screen.getByText('Group 11')).toBeInTheDocument();
-    expect(screen.queryByText('Group 1')).not.toBeInTheDocument();
+    expect(screen.queryByText('Group 01')).not.toBeInTheDocument();
   });
 
   it('hides search when showSearch is false', () => {

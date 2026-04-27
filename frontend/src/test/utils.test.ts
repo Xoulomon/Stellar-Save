@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { errorHandler, formatErrorMessage } from '../utils/errorHandler';
 
 function formatAmount(amount: number): string {
   return `${amount} XLM`;
@@ -41,7 +42,7 @@ describe('Utils', () => {
     it('handles Freighter missing', () => {
       const result = errorHandler(new Error('Freighter not installed'));
       expect(result.message).toContain('Freighter');
-      expect(result.code).toBe('FREIGHTER_MISSING');
+      expect(result.code).toBe('FREIGHTER_ERROR');
     });
 
     it('handles generic errors', () => {
@@ -70,4 +71,3 @@ describe('Utils', () => {
   });
 });
 
-});

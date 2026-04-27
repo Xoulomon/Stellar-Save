@@ -7,6 +7,8 @@ import { GroupBadge } from './GroupBadge';
 interface GroupCardProps {
   groupId?: string;
   groupName: string;
+  description?: string;
+  imageUrl?: string;
   memberCount: number;
   contributionAmount: number;
   currency?: string;
@@ -20,6 +22,8 @@ interface GroupCardProps {
 export function GroupCard({
   groupId,
   groupName,
+  description,
+  imageUrl,
   memberCount,
   contributionAmount,
   currency = 'XLM',
@@ -41,10 +45,21 @@ export function GroupCard({
 
   const cardContent = (
     <>
+      {imageUrl && (
+        <div className="group-card-image">
+          <img src={imageUrl} alt={groupName} />
+        </div>
+      )}
       <div className="group-card-header">
         <h3 className="group-card-title">{groupName}</h3>
         <GroupBadge status={status} />
       </div>
+
+      {description && (
+        <div className="group-card-description">
+          <p>{description}</p>
+        </div>
+      )}
 
       <div className="group-card-body">
         <div className="group-card-stats">

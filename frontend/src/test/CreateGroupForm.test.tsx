@@ -133,6 +133,7 @@ describe('CreateGroupForm', () => {
     expect(onSubmit).toHaveBeenCalledWith({
       name: 'Test Group',
       description: 'A test description',
+      image_url: '',
       contribution_amount: 100_000_000, // 10 XLM * 10_000_000
       cycle_duration: 604800,
       max_members: 5,

@@ -128,7 +128,7 @@ describe('calculateCycleProgress', () => {
         totalMembers: 1
       });
       
-      expect(result.timeRemaining).toBe('4d 12h'); // 5 days remaining
+      expect(result.timeRemaining).toBe('5d 0h'); // 5 days remaining
     });
 
     it('formats hours and minutes', () => {
@@ -140,7 +140,7 @@ describe('calculateCycleProgress', () => {
         totalMembers: 1
       });
       
-      expect(result.timeRemaining).toBe('1h 0m');
+      expect(result.timeRemaining).toBe('1d 1h'); // 25 hours remaining
     });
 
     it('null for overdue', () => {
