@@ -61,6 +61,23 @@ pub enum StellarSaveError {
     /// Error Code: 4003
     InvalidRecipient = 4003,
 
+    // Refund-related errors (5000-5999)
+    /// The refund operation failed due to insufficient funds or transfer error.
+    /// Error Code: 5001
+    RefundFailed = 5001,
+
+    /// The refund has already been processed for this contribution.
+    /// Error Code: 5002
+    RefundAlreadyProcessed = 5002,
+
+    /// The contribution is not eligible for refund.
+    /// Error Code: 5003
+    NotEligibleForRefund = 5003,
+
+    /// The refund request was not approved by the group creator.
+    /// Error Code: 5004
+    RefundNotApproved = 5004,
+
     // System-related errors (9000-9999)
     /// An internal contract error occurred.
     /// Error Code: 9001
@@ -69,6 +86,10 @@ pub enum StellarSaveError {
     /// The contract data is corrupted or invalid.
     /// Error Code: 9002
     DataCorruption = 9002,
+
+    /// Arithmetic overflow occurred.
+    /// Error Code: 9003
+    Overflow = 9003,
 }
 
 impl StellarSaveError {
@@ -122,12 +143,29 @@ impl StellarSaveError {
                 "The specified recipient is not eligible for payout in this cycle."
             }
             
+            // Refund-related errors
+            StellarSaveError::RefundFailed => {
+                "The refund operation failed. This may be due to insufficient contract funds or transfer restrictions."
+            }
+            StellarSaveError::RefundAlreadyProcessed => {
+                "The refund has already been processed for this contribution."
+            }
+            StellarSaveError::NotEligibleForRefund => {
+                "The contribution is not eligible for refund. Check group status and cycle conditions."
+            }
+            StellarSaveError::RefundNotApproved => {
+                "The refund request was not approved by the group creator."
+            }
+            
             // System-related errors
             StellarSaveError::InternalError => {
                 "An internal contract error occurred. Please try again or contact support."
             }
             StellarSaveError::DataCorruption => {
                 "Contract data appears to be corrupted. This is a critical error."
+            }
+            StellarSaveError::Overflow => {
+                "Arithmetic overflow occurred during calculation. Please try with smaller amounts."
             }
         }
     }
@@ -147,6 +185,7 @@ impl StellarSaveError {
             2000..=2999 => ErrorCategory::Member,
             3000..=3999 => ErrorCategory::Contribution,
             4000..=4999 => ErrorCategory::Payout,
+            5000..=5999 => ErrorCategory::Refund,
             9000..=9999 => ErrorCategory::System,
             _ => ErrorCategory::Unknown,
         }
@@ -168,6 +207,9 @@ pub enum ErrorCategory {
 
     /// Errors related to payout operations.
     Payout,
+
+    /// Errors related to refund operations.
+    Refund,
 
     /// System-level errors and internal failures.
     System,
@@ -205,8 +247,14 @@ mod tests {
         assert_eq!(StellarSaveError::PayoutAlreadyProcessed.code(), 4002);
         assert_eq!(StellarSaveError::InvalidRecipient.code(), 4003);
 
+        assert_eq!(StellarSaveError::RefundFailed.code(), 5001);
+        assert_eq!(StellarSaveError::RefundAlreadyProcessed.code(), 5002);
+        assert_eq!(StellarSaveError::NotEligibleForRefund.code(), 5003);
+        assert_eq!(StellarSaveError::RefundNotApproved.code(), 5004);
+
         assert_eq!(StellarSaveError::InternalError.code(), 9001);
         assert_eq!(StellarSaveError::DataCorruption.code(), 9002);
+        assert_eq!(StellarSaveError::Overflow.code(), 9003);
     }
 
     #[test]
@@ -246,11 +294,32 @@ mod tests {
         );
 
         assert_eq!(
+            StellarSaveError::RefundFailed.category(),
+            ErrorCategory::Refund
+        );
+        assert_eq!(
+            StellarSaveError::RefundAlreadyProcessed.category(),
+            ErrorCategory::Refund
+        );
+        assert_eq!(
+            StellarSaveError::NotEligibleForRefund.category(),
+            ErrorCategory::Refund
+        );
+        assert_eq!(
+            StellarSaveError::RefundNotApproved.category(),
+            ErrorCategory::Refund
+        );
+
+        assert_eq!(
             StellarSaveError::InternalError.category(),
             ErrorCategory::System
         );
         assert_eq!(
             StellarSaveError::DataCorruption.category(),
+            ErrorCategory::System
+        );
+        assert_eq!(
+            StellarSaveError::Overflow.category(),
             ErrorCategory::System
         );
     }
@@ -271,8 +340,13 @@ mod tests {
             StellarSaveError::PayoutFailed,
             StellarSaveError::PayoutAlreadyProcessed,
             StellarSaveError::InvalidRecipient,
+            StellarSaveError::RefundFailed,
+            StellarSaveError::RefundAlreadyProcessed,
+            StellarSaveError::NotEligibleForRefund,
+            StellarSaveError::RefundNotApproved,
             StellarSaveError::InternalError,
             StellarSaveError::DataCorruption,
+            StellarSaveError::Overflow,
         ];
 
         for error in &errors {

@@ -93,6 +93,41 @@ pub struct ContractUnpaused {
     pub timestamp: u64,
 }
 
+/// Event emitted when a refund is requested.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RefundRequested {
+    pub group_id: u64,
+    pub requester: Address,
+    pub amount: i128,
+    pub cycle: u32,
+    pub requested_at: u64,
+}
+
+/// Event emitted when a refund is approved.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RefundApproved {
+    pub group_id: u64,
+    pub requester: Address,
+    pub amount: i128,
+    pub cycle: u32,
+    pub approver: Address,
+    pub approved_at: u64,
+}
+
+/// Event emitted when a contribution refund is issued.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RefundIssued {
+    pub group_id: u64,
+    pub contributor: Address,
+    pub amount: i128,
+    pub cycle: u32,
+    pub reason: u32, // 0: Error, 1: Group failed to activate, 2: Creator approved
+    pub refunded_at: u64,
+}
+
 /// Utility functions for emitting events.
 pub struct EventEmitter;
 
@@ -231,6 +266,64 @@ impl EventEmitter {
     pub fn emit_contract_unpaused(env: &Env, admin: Address, timestamp: u64) {
         let event = ContractUnpaused { admin, timestamp };
         env.events().publish(("contract_unpaused",), event);
+    }
+
+    pub fn emit_refund_requested(
+        env: &Env,
+        group_id: u64,
+        requester: Address,
+        amount: i128,
+        cycle: u32,
+        requested_at: u64,
+    ) {
+        let event = RefundRequested {
+            group_id,
+            requester,
+            amount,
+            cycle,
+            requested_at,
+        };
+        env.events().publish(("refund_requested",), event);
+    }
+
+    pub fn emit_refund_approved(
+        env: &Env,
+        group_id: u64,
+        requester: Address,
+        amount: i128,
+        cycle: u32,
+        approver: Address,
+        approved_at: u64,
+    ) {
+        let event = RefundApproved {
+            group_id,
+            requester,
+            amount,
+            cycle,
+            approver,
+            approved_at,
+        };
+        env.events().publish(("refund_approved",), event);
+    }
+
+    pub fn emit_refund_issued(
+        env: &Env,
+        group_id: u64,
+        contributor: Address,
+        amount: i128,
+        cycle: u32,
+        reason: u32,
+        refunded_at: u64,
+    ) {
+        let event = RefundIssued {
+            group_id,
+            contributor,
+            amount,
+            cycle,
+            reason,
+            refunded_at,
+        };
+        env.events().publish(("refund_issued",), event);
     }
 }
 

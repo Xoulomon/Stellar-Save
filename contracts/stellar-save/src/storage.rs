@@ -28,6 +28,9 @@ pub enum StorageKey {
     /// Keys for payout records.
     Payout(PayoutKey),
 
+    /// Keys for refund tracking.
+    Refund(RefundKey),
+
     /// Keys for various counters and metadata.
     Counter(CounterKey),
 
@@ -108,6 +111,22 @@ pub enum ContributionKey {
     /// Cycle contributor count: CONTRIB_COUNT_{group_id}_{cycle}
     /// Tracks how many members have contributed in the current cycle.
     CycleCount(u64, u32),
+}
+
+/// Storage keys for refund tracking.
+///
+/// Refunds are tracked per member, per cycle to ensure proper
+/// refund processing and prevent double refunds.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+pub enum RefundKey {
+    /// Refund request: REFUND_REQUEST_{group_id}_{cycle}_{address}
+    /// Stores the refund request details.
+    Request(u64, u32, Address),
+
+    /// Refund status: REFUND_STATUS_{group_id}_{cycle}_{address}
+    /// Tracks whether a refund has been processed.
+    Status(u64, u32, Address),
 }
 
 /// Storage keys for payout records.
@@ -254,6 +273,18 @@ impl StorageKeyBuilder {
     /// Creates a key for payout status tracking.
     pub fn payout_status(group_id: u64, cycle: u32) -> StorageKey {
         StorageKey::Payout(PayoutKey::Status(group_id, cycle))
+    }
+
+    // Refund key builders
+
+    /// Creates a key for refund request.
+    pub fn refund_request(group_id: u64, cycle: u32, address: Address) -> StorageKey {
+        StorageKey::Refund(RefundKey::Request(group_id, cycle, address))
+    }
+
+    /// Creates a key for refund status tracking.
+    pub fn refund_status(group_id: u64, cycle: u32, address: Address) -> StorageKey {
+        StorageKey::Refund(RefundKey::Status(group_id, cycle, address))
     }
 
     // Counter key builders
