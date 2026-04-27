@@ -3,6 +3,42 @@
 use soroban_sdk::{String, Env, Bytes};
 use crate::{Group, StellarSaveError, StorageKeyBuilder};
 
+/// Rounding precision for contribution amounts (0.01 XLM = 10^5 stroops).
+/// This prevents precision issues with very small amounts.
+pub const ROUNDING_PRECISION: i128 = 100_000; // 10^5 stroops = 0.01 XLM
+
+/// Rounds a contribution amount to the nearest 0.01 XLM (or token equivalent).
+///
+/// This prevents precision issues that can occur with very small amounts by
+/// rounding to the nearest 0.01 unit (100,000 stroops for XLM).
+///
+/// # Arguments
+/// * `amount` - The contribution amount in stroops (e.g., 1 XLM = 10,000,000 stroops)
+///
+/// # Returns
+/// The rounded amount in stroops
+///
+/// # Examples
+/// ```
+/// // 1,234,567 stroops -> 1,200,000 (rounded to nearest 0.01 XLM)
+/// let rounded = round_contribution_amount(1_234_567);
+/// ```
+///
+/// ```
+/// // 1,255,555 stroops -> 1,300,000 (rounded up)
+/// let rounded = round_contribution_amount(1_255_555);
+/// ```
+pub fn round_contribution_amount(amount: i128) -> i128 {
+    if amount <= 0 {
+        return amount;
+    }
+    
+    // Round to nearest ROUNDING_PRECISION
+    // For positive numbers: (amount + ROUNDING_PRECISION/2) / ROUNDING_PRECISION * ROUNDING_PRECISION
+    let half_precision = ROUNDING_PRECISION / 2;
+    ((amount + half_precision) / ROUNDING_PRECISION) * ROUNDING_PRECISION
+}
+
 /// Formats a group ID for display with a "GROUP-" prefix.
 /// 
 /// # Arguments
@@ -54,26 +90,24 @@ pub fn format_group_id(env: &Env, group_id: u64) -> String {
     String::from_bytes(env, &result)
 }
 
-/// Checks if the current cycle deadline has passed.
+/// Checks if the current cycle deadline (plus grace period) has passed.
+/// 
+/// A member is only considered late once both the cycle deadline AND the
+/// grace period have elapsed.
 /// 
 /// # Arguments
 /// * `group` - The group to check
 /// * `current_time` - Current timestamp in seconds
 /// 
 /// # Returns
-/// `true` if the deadline has passed, `false` otherwise
-/// 
-/// # Example
-/// ```
-/// let deadline_passed = is_cycle_deadline_passed(&group, env.ledger().timestamp());
-/// ```
+/// `true` if the deadline + grace period has passed, `false` otherwise
 pub fn is_cycle_deadline_passed(group: &Group, current_time: u64) -> bool {
     if !group.started {
         return false;
     }
     
     let cycle_deadline = group.started_at + (group.cycle_duration * (group.current_cycle as u64 + 1));
-    current_time > cycle_deadline
+    current_time > cycle_deadline + group.grace_period_seconds
 }
 
 /// Calculates the current cycle number for a savings group.
@@ -114,7 +148,6 @@ pub fn calculate_current_cycle(env: &Env, group_id: u64) -> Result<u32, StellarS
 
     Ok(result)
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -154,7 +187,7 @@ mod tests {
     fn test_is_cycle_deadline_passed_not_started() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        let group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000);
+        let group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000, 0);
         
         assert!(!is_cycle_deadline_passed(&group, 2000));
     }
@@ -163,7 +196,7 @@ mod tests {
     fn test_is_cycle_deadline_passed_before_deadline() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        let mut group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000);
+        let mut group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000, 0);
         group.activate(1000);
         
         // Current time before deadline (started_at + cycle_duration)
@@ -174,18 +207,33 @@ mod tests {
     fn test_is_cycle_deadline_passed_after_deadline() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        let mut group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000);
+        let mut group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000, 0);
         group.activate(1000);
         
-        // Current time after deadline
+        // Current time after deadline (no grace period)
         assert!(is_cycle_deadline_passed(&group, 1000 + 604800 + 1));
+    }
+
+    #[test]
+    fn test_is_cycle_deadline_passed_within_grace_period() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        let grace = 3600u64; // 1 hour grace
+        let mut group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000, grace);
+        group.activate(1000);
+
+        let deadline = 1000 + 604800;
+        // After deadline but within grace period — not yet missed
+        assert!(!is_cycle_deadline_passed(&group, deadline + grace));
+        // One second past grace period — now missed
+        assert!(is_cycle_deadline_passed(&group, deadline + grace + 1));
     }
 
     #[test]
     fn test_is_cycle_deadline_passed_second_cycle() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        let mut group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000);
+        let mut group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000, 0);
         group.activate(1000);
         group.advance_cycle(&env);
         
@@ -213,7 +261,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
         // Group with started = false (default)
-        let group = Group::new(1, creator, 1_000_000, 604800, 5, 2, 1000);
+        let group = Group::new(1, creator, 1_000_000, 604800, 5, 2, 1000, 0);
         store_group(&env, &group);
 
         let result = calculate_current_cycle(&env, 1);
@@ -225,7 +273,7 @@ mod tests {
         let env = Env::default();
         env.ledger().set_timestamp(1000);
         let creator = Address::generate(&env);
-        let mut group = Group::new(1, creator, 1_000_000, 604800, 5, 2, 1000);
+        let mut group = Group::new(1, creator, 1_000_000, 604800, 5, 2, 1000, 0);
         group.member_count = 2;
         group.activate(1000); // started_at = 1000
         store_group(&env, &group);
@@ -242,7 +290,7 @@ mod tests {
         let cycle_duration: u64 = 604800;
 
         let creator = Address::generate(&env);
-        let mut group = Group::new(1, creator, 1_000_000, cycle_duration, 10, 2, started_at);
+        let mut group = Group::new(1, creator, 1_000_000, cycle_duration, 10, 2, started_at, 0);
         group.member_count = 2;
         group.activate(started_at);
         store_group(&env, &group);
@@ -261,7 +309,7 @@ mod tests {
         let cycle_duration: u64 = 604800;
 
         let creator = Address::generate(&env);
-        let mut group = Group::new(1, creator, 1_000_000, cycle_duration, 10, 2, started_at);
+        let mut group = Group::new(1, creator, 1_000_000, cycle_duration, 10, 2, started_at, 0);
         group.member_count = 2;
         group.activate(started_at);
         store_group(&env, &group);
@@ -280,7 +328,7 @@ mod tests {
         let max_members: u32 = 5;
 
         let creator = Address::generate(&env);
-        let mut group = Group::new(1, creator, 1_000_000, cycle_duration, max_members, 2, started_at);
+        let mut group = Group::new(1, creator, 1_000_000, cycle_duration, max_members, 2, started_at, 0);
         group.member_count = 2;
         group.activate(started_at);
         store_group(&env, &group);
@@ -290,4 +338,58 @@ mod tests {
         let result = calculate_current_cycle(&env, 1);
         assert_eq!(result, Ok(max_members - 1));
     }
-}
+
+    // --- round_contribution_amount tests ---
+
+    #[test]
+    fn test_round_contribution_amount_exact() {
+        // Exact multiple of 0.01 XLM (100,000 stroops)
+        assert_eq!(round_contribution_amount(100_000), 100_000);
+        assert_eq!(round_contribution_amount(1_000_000), 1_000_000);
+        assert_eq!(round_contribution_amount(10_000_000), 10_000_000);
+    }
+
+    #[test]
+    fn test_round_contribution_amount_rounds_down() {
+        // Amounts that should round down (less than halfway)
+        assert_eq!(round_contribution_amount(49_999), 0);
+        assert_eq!(round_contribution_amount(149_999), 100_000);
+        assert_eq!(round_contribution_amount(1_049_999), 1_000_000);
+    }
+
+    #[test]
+    fn test_round_contribution_amount_rounds_up() {
+        // Amounts that should round up (more than halfway)
+        assert_eq!(round_contribution_amount(50_001), 100_000);
+        assert_eq!(round_contribution_amount(150_001), 200_000);
+        assert_eq!(round_contribution_amount(1_050_001), 1_100_000);
+    }
+
+    #[test]
+    fn test_round_contribution_amount_at_halfway() {
+        // Exactly at halfway point - should round up
+        assert_eq!(round_contribution_amount(50_000), 100_000);
+        assert_eq!(round_contribution_amount(150_000), 200_000);
+    }
+
+    #[test]
+    fn test_round_contribution_amount_zero() {
+        // Zero should remain zero
+        assert_eq!(round_contribution_amount(0), 0);
+    }
+
+    #[test]
+    fn test_round_contribution_amount_negative() {
+        // Negative amounts should remain unchanged
+        assert_eq!(round_contribution_amount(-100_000), -100_000);
+        assert_eq!(round_contribution_amount(-1), -1);
+    }
+
+    #[test]
+    fn test_round_contribution_amount_typical_values() {
+        // Typical contribution amounts in stroops
+        assert_eq!(round_contribution_amount(50_000_000), 50_000_000);
+        assert_eq!(round_contribution_amount(100_000_000), 100_000_000);
+        assert_eq!(round_contribution_amount(255_000_000), 255_000_000);
+        assert_eq!(round_contribution_amount(1_002_500_000), 1_002_500_000);
+    }

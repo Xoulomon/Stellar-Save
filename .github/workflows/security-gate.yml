@@ -1,0 +1,66 @@
+name: Security Gate
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  security-events: read
+  pull-requests: write
+  statuses: write
+
+jobs:
+  gate:
+    name: Security Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for Critical/High Alerts on PR
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ref = context.payload.pull_request.head.sha;
+
+            const alerts = await github.rest.codeScanning.listAlertsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref,
+              state: 'open',
+              per_page: 100,
+            }).catch(() => ({ data: [] }));
+
+            const blocking = alerts.data.filter(a => {
+              const sev = a.rule?.security_severity_level || a.rule?.severity || '';
+              return ['critical', 'high'].includes(sev);
+            });
+
+            core.setOutput('blocking_count', String(blocking.length));
+
+            if (blocking.length > 0) {
+              const list = blocking.map(a =>
+                `- **[${a.rule?.id}]** ${a.rule?.description} — \`${a.most_recent_instance?.location?.path}\``
+              ).join('\n');
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: `## ❌ Security Gate Failed\n\n${blocking.length} critical/high finding(s) must be resolved before merging:\n\n${list}\n\nReview findings in the [Security tab](https://github.com/${context.repo.owner}/${context.repo.repo}/security/code-scanning).`,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: '## ✅ Security Gate Passed\n\nNo critical or high severity findings detected.',
+              }).catch(() => {});
+            }
+
+      - name: Fail if blocking findings exist
+        if: steps.check.outputs.blocking_count != '0'
+        run: |
+          echo "Security gate blocked: ${{ steps.check.outputs.blocking_count }} critical/high finding(s)"
+          exit 1

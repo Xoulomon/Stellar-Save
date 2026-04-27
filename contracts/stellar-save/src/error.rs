@@ -22,6 +22,10 @@ pub enum StellarSaveError {
     /// Error Code: 1003
     InvalidState = 1003,
 
+    /// Invalid metadata provided (name, description, or image_url).
+    /// Error Code: 1004
+    InvalidMetadata = 1004,
+
     // Member-related errors (2000-2999)
     /// The address is already a member of this group.
     /// Error Code: 2001
@@ -48,6 +52,22 @@ pub enum StellarSaveError {
     /// Error Code: 3003
     CycleNotComplete = 3003,
 
+    /// The contribution record was not found.
+    /// Error Code: 3004
+    ContributionNotFound = 3004,
+
+    /// The contribution amount is below the configured minimum.
+    /// Error Code: 3006
+    ContributionTooLow = 3006,
+
+    /// The contribution amount exceeds the configured maximum.
+    /// Error Code: 3007
+    ContributionTooHigh = 3007,
+
+    /// The member's token balance is insufficient for auto-contribution.
+    /// Error Code: 3008
+    InsufficientBalance = 3008,
+
     // Payout-related errors (4000-4999)
     /// The payout operation failed due to insufficient funds or transfer error.
     /// Error Code: 4001
@@ -61,6 +81,24 @@ pub enum StellarSaveError {
     /// Error Code: 4003
     InvalidRecipient = 4003,
 
+    // Token-related errors (5000-5999)
+    /// The token address failed SEP-41 validation or is not on the allowlist.
+    /// Error Code: 5001
+    InvalidToken = 5001,
+
+    /// The SEP-41 transfer_from or transfer call failed during contribution or payout.
+    /// Error Code: 5002
+    TokenTransferFailed = 5002,
+
+    // Reward-related errors (6000-6999)
+    /// The member has already claimed their completion reward.
+    /// Error Code: 6001
+    RewardAlreadyClaimed = 6001,
+
+    /// The member is not eligible to claim a completion reward.
+    /// Error Code: 6002
+    RewardNotEligible = 6002,
+
     // System-related errors (9000-9999)
     /// An internal contract error occurred.
     /// Error Code: 9001
@@ -70,10 +108,34 @@ pub enum StellarSaveError {
     /// Error Code: 9002
     DataCorruption = 9002,
 
-    // Deadline-related errors (5000-5999)
-    /// The requested deadline extension exceeds the maximum allowed (7 days).
-    /// Error Code: 5001
-    DeadlineExtensionExceedsMax = 5001,
+    /// Added for ID Generation: The counter has reached its maximum limit.
+    /// Error Code: 9003
+    Overflow = 9003,
+
+    /// The cycle deadline has passed; contributions are no longer accepted.
+    /// Error Code: 3005
+    CycleDeadlineExpired = 3005,
+
+    /// The two groups are not compatible for merging (different contribution amount or cycle duration).
+    /// Error Code: 1005
+    MergeIncompatible = 1005,
+
+    /// The address has not been invited to join this invitation-only group.
+    /// Error Code: 2004
+    NotInvited = 2004,
+
+    /// A dispute is currently active for this group; payouts are blocked.
+    /// Error Code: 1006
+    DisputeActive = 1006,
+
+    /// The group cannot be archived because it is not in a terminal state (Completed or Cancelled).
+    /// Error Code: 1007
+    GroupNotArchivable = 1007,
+
+    // Deadline-related errors (7000-7999)
+    /// The requested deadline extension exceeds the maximum allowed (7 days), or is zero.
+    /// Error Code: 7001
+    DeadlineExtensionExceedsMax = 7001,
 }
 
 impl StellarSaveError {
@@ -93,7 +155,19 @@ impl StellarSaveError {
             StellarSaveError::InvalidState => {
                 "The group is not in a valid state for this operation. Check group status."
             }
-            
+            StellarSaveError::InvalidMetadata => {
+                "Invalid metadata provided. Name must be 3-50 characters, description 0-500 characters."
+            }
+            StellarSaveError::MergeIncompatible => {
+                "The two groups are not compatible for merging. Both must have the same contribution amount and cycle duration."
+            }
+            StellarSaveError::DisputeActive => {
+                "A dispute is currently active for this group. Payouts are blocked until the dispute is resolved."
+            }
+            StellarSaveError::GroupNotArchivable => {
+                "The group cannot be archived because it is not in a terminal state (Completed or Cancelled)."
+            }
+
             // Member-related errors
             StellarSaveError::AlreadyMember => {
                 "This address is already a member of the group."
@@ -104,7 +178,10 @@ impl StellarSaveError {
             StellarSaveError::Unauthorized => {
                 "You are not authorized to perform this operation. Check permissions."
             }
-            
+            StellarSaveError::NotInvited => {
+                "This address has not been invited to join the group. Only invited addresses can join invitation-only groups."
+            }
+
             // Contribution-related errors
             StellarSaveError::InvalidAmount => {
                 "The contribution amount is invalid. Must be positive and match group requirements."
@@ -115,7 +192,22 @@ impl StellarSaveError {
             StellarSaveError::CycleNotComplete => {
                 "The current cycle is not complete. All members must contribute before payout."
             }
-            
+            StellarSaveError::ContributionNotFound => {
+                "The contribution record was not found for the specified member and cycle."
+            }
+            StellarSaveError::ContributionTooLow => {
+                "The contribution amount is below the configured minimum limit."
+            }
+            StellarSaveError::ContributionTooHigh => {
+                "The contribution amount exceeds the configured maximum limit."
+            }
+            StellarSaveError::InsufficientBalance => {
+                "The member's token balance is insufficient to cover the auto-contribution amount."
+            }
+            StellarSaveError::CycleDeadlineExpired => {
+                "The cycle deadline has passed. Contributions are no longer accepted for this cycle."
+            }
+
             // Payout-related errors
             StellarSaveError::PayoutFailed => {
                 "The payout operation failed. This may be due to insufficient contract funds or transfer restrictions."
@@ -126,7 +218,23 @@ impl StellarSaveError {
             StellarSaveError::InvalidRecipient => {
                 "The specified recipient is not eligible for payout in this cycle."
             }
-            
+
+            // Token-related errors
+            StellarSaveError::InvalidToken => {
+                "The token address failed SEP-41 validation or is not on the allowed token list."
+            }
+            StellarSaveError::TokenTransferFailed => {
+                "The token transfer failed. Ensure the member has granted sufficient allowance to the contract."
+            }
+
+            // Reward-related errors
+            StellarSaveError::RewardAlreadyClaimed => {
+                "You have already claimed your completion reward for this group."
+            }
+            StellarSaveError::RewardNotEligible => {
+                "You are not eligible to claim a completion reward. Only members who completed all cycles are eligible."
+            }
+
             // System-related errors
             StellarSaveError::InternalError => {
                 "An internal contract error occurred. Please try again or contact support."
@@ -134,15 +242,16 @@ impl StellarSaveError {
             StellarSaveError::DataCorruption => {
                 "Contract data appears to be corrupted. This is a critical error."
             }
+            StellarSaveError::Overflow => {
+                "The ID counter has reached its maximum limit. No more IDs can be generated."
+            }
 
             // Deadline-related errors
             StellarSaveError::DeadlineExtensionExceedsMax => {
-                "The requested deadline extension exceeds the maximum allowed (7 days)."
+                "The requested deadline extension exceeds the maximum allowed (7 days), or is zero."
             }
         }
     }
-
-    /// Returns the numeric error code for this error type.
     ///
     /// Error codes are stable across contract versions and should be used
     /// by client applications for programmatic error handling.
@@ -157,7 +266,9 @@ impl StellarSaveError {
             2000..=2999 => ErrorCategory::Member,
             3000..=3999 => ErrorCategory::Contribution,
             4000..=4999 => ErrorCategory::Payout,
-            5000..=5999 => ErrorCategory::Deadline,
+            5000..=5999 => ErrorCategory::Token,
+            6000..=6999 => ErrorCategory::Reward,
+            7000..=7999 => ErrorCategory::Deadline,
             9000..=9999 => ErrorCategory::System,
             _ => ErrorCategory::Unknown,
         }
@@ -180,7 +291,13 @@ pub enum ErrorCategory {
     /// Errors related to payout operations.
     Payout,
 
-    /// Errors related to deadline operations.
+    /// Errors related to token validation and transfer operations.
+    Token,
+
+    /// Errors related to completion reward operations.
+    Reward,
+
+    /// Errors related to deadline extension operations.
     Deadline,
 
     /// System-level errors and internal failures.
@@ -195,6 +312,142 @@ pub enum ErrorCategory {
 /// This provides a convenient way to return either a success value
 /// or a StellarSaveError from contract functions.
 pub type ContractResult<T> = Result<T, StellarSaveError>;
+
+/// Error recovery strategies for different error types.
+///
+/// This module provides guidance on how to recover from different error conditions.
+pub struct ErrorRecoveryStrategy;
+
+impl ErrorRecoveryStrategy {
+    /// Returns recovery guidance for a given error.
+    pub fn recovery_guidance(error: &StellarSaveError) -> &'static str {
+        match error {
+            // Group errors - recovery strategies
+            StellarSaveError::GroupNotFound => {
+                "Verify the group ID is correct. Check if the group has been deleted or if you're using the correct contract instance."
+            }
+            StellarSaveError::GroupFull => {
+                "Wait for a member to leave the group or create a new group with higher max_members capacity."
+            }
+            StellarSaveError::InvalidState => {
+                "Check the group's current status. Some operations are only available in specific states (e.g., Active, Paused)."
+            }
+            StellarSaveError::InvalidMetadata => {
+                "Check that the group name is 3-50 characters and description is 0-500 characters."
+            }
+            StellarSaveError::MergeIncompatible => {
+                "Ensure both groups have the same contribution_amount and cycle_duration before merging."
+            }
+            StellarSaveError::DisputeActive => {
+                "A dispute is active for this group. Wait for the dispute to be resolved before payouts can proceed."
+            }
+            StellarSaveError::GroupNotArchivable => {
+                "Only groups in a terminal state (Completed or Cancelled) can be archived. Wait until the group finishes all cycles or is cancelled."
+            }
+
+            // Member errors - recovery strategies
+            StellarSaveError::AlreadyMember => {
+                "You are already a member of this group. Leave the group first if you want to rejoin."
+            }
+            StellarSaveError::NotMember => {
+                "Join the group first before attempting member-only operations."
+            }
+            StellarSaveError::Unauthorized => {
+                "Ensure you have the required permissions. Only group creators can pause/resume/cancel groups. Only members can contribute."
+            }
+            StellarSaveError::NotInvited => {
+                "Ask the group creator to invite your address before attempting to join."
+            }
+
+            // Contribution errors - recovery strategies
+            StellarSaveError::InvalidAmount => {
+                "Ensure the contribution amount matches the group's required amount exactly and is positive."
+            }
+            StellarSaveError::AlreadyContributed => {
+                "You have already contributed for this cycle. Wait for the next cycle to contribute again."
+            }
+            StellarSaveError::CycleNotComplete => {
+                "Not all members have contributed yet. Wait for all members to contribute before executing payout."
+            }
+            StellarSaveError::ContributionNotFound => {
+                "The contribution record doesn't exist. Verify the member and cycle number are correct."
+            }
+            StellarSaveError::ContributionTooLow => {
+                "Increase the contribution amount to meet the configured minimum."
+            }
+            StellarSaveError::ContributionTooHigh => {
+                "Decrease the contribution amount to stay within the configured maximum."
+            }
+            StellarSaveError::InsufficientBalance => {
+                "Ensure your token balance is sufficient to cover the contribution amount before the cycle starts, or disable auto-contribution."
+            }
+            StellarSaveError::CycleDeadlineExpired => {
+                "The cycle deadline has passed. Contributions are no longer accepted for this cycle."
+            }
+
+            // Payout errors - recovery strategies
+            StellarSaveError::PayoutFailed => {
+                "Ensure the contract has sufficient funds and the recipient's wallet can receive transfers. Check network conditions."
+            }
+            StellarSaveError::PayoutAlreadyProcessed => {
+                "This payout has already been executed. Move to the next cycle for the next payout."
+            }
+            StellarSaveError::InvalidRecipient => {
+                "The recipient is not eligible for payout in this cycle. Check the payout queue order."
+            }
+
+            // Token errors - recovery strategies
+            StellarSaveError::InvalidToken => {
+                "Ensure the token address refers to a valid SEP-41 token contract. If an allowlist is configured, verify the token has been added by the admin."
+            }
+            StellarSaveError::TokenTransferFailed => {
+                "Ensure you have called `approve` on the token contract granting the StellarSave contract an allowance of at least the contribution amount before calling `contribute`."
+            }
+
+            // Reward errors - recovery strategies
+            StellarSaveError::RewardAlreadyClaimed => {
+                "You have already claimed your reward for this group. Each member can only claim once."
+            }
+            StellarSaveError::RewardNotEligible => {
+                "Only members who contributed in every cycle are eligible. Verify your contribution history."
+            }
+
+            // System errors - recovery strategies
+            StellarSaveError::InternalError => {
+                "This is an internal contract error. Try the operation again. If it persists, contact support."
+            }
+            StellarSaveError::DataCorruption => {
+                "Critical data corruption detected. This requires immediate investigation and potential contract upgrade."
+            }
+            StellarSaveError::Overflow => {
+                "The ID counter has reached its maximum. This is extremely rare and requires contract upgrade."
+            }
+
+            // Deadline errors - recovery strategies
+            StellarSaveError::DeadlineExtensionExceedsMax => {
+                "Provide an extension between 1 and 604800 seconds (7 days). Split larger extensions across multiple calls."
+            }
+        }
+    }
+
+    /// Determines if an error is retryable.
+    pub fn is_retryable(error: &StellarSaveError) -> bool {
+        matches!(
+            error,
+            StellarSaveError::PayoutFailed
+                | StellarSaveError::InternalError
+                | StellarSaveError::CycleNotComplete
+        )
+    }
+
+    /// Determines if an error is a user input error (vs system error).
+    pub fn is_user_error(error: &StellarSaveError) -> bool {
+        matches!(
+            error.category(),
+            ErrorCategory::Member | ErrorCategory::Contribution | ErrorCategory::Payout
+        )
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -321,5 +574,133 @@ mod tests {
             Err(StellarSaveError::GroupNotFound) => {} // Expected
             _ => panic!("Unexpected result"),
         }
+    }
+
+    #[test]
+    fn test_error_recovery_guidance() {
+        // Test that all errors have recovery guidance
+        let errors = [
+            StellarSaveError::GroupNotFound,
+            StellarSaveError::GroupFull,
+            StellarSaveError::InvalidState,
+            StellarSaveError::AlreadyMember,
+            StellarSaveError::NotMember,
+            StellarSaveError::Unauthorized,
+            StellarSaveError::InvalidAmount,
+            StellarSaveError::AlreadyContributed,
+            StellarSaveError::CycleNotComplete,
+            StellarSaveError::PayoutFailed,
+            StellarSaveError::PayoutAlreadyProcessed,
+            StellarSaveError::InvalidRecipient,
+            StellarSaveError::InternalError,
+            StellarSaveError::DataCorruption,
+        ];
+
+        for error in &errors {
+            let guidance = ErrorRecoveryStrategy::recovery_guidance(error);
+            assert!(
+                !guidance.is_empty(),
+                "Error {:?} has no recovery guidance",
+                error
+            );
+            assert!(
+                guidance.len() > 20,
+                "Error {:?} has insufficient recovery guidance",
+                error
+            );
+        }
+    }
+
+    #[test]
+    fn test_retryable_errors() {
+        // Test that retryable errors are correctly identified
+        assert!(ErrorRecoveryStrategy::is_retryable(
+            &StellarSaveError::PayoutFailed
+        ));
+        assert!(ErrorRecoveryStrategy::is_retryable(
+            &StellarSaveError::InternalError
+        ));
+        assert!(ErrorRecoveryStrategy::is_retryable(
+            &StellarSaveError::CycleNotComplete
+        ));
+
+        // Non-retryable errors
+        assert!(!ErrorRecoveryStrategy::is_retryable(
+            &StellarSaveError::GroupNotFound
+        ));
+        assert!(!ErrorRecoveryStrategy::is_retryable(
+            &StellarSaveError::AlreadyMember
+        ));
+    }
+
+    #[test]
+    fn test_user_error_classification() {
+        // Test that user errors are correctly identified
+        assert!(ErrorRecoveryStrategy::is_user_error(
+            &StellarSaveError::AlreadyMember
+        ));
+        assert!(ErrorRecoveryStrategy::is_user_error(
+            &StellarSaveError::InvalidAmount
+        ));
+        assert!(ErrorRecoveryStrategy::is_user_error(
+            &StellarSaveError::PayoutFailed
+        ));
+
+        // System errors
+        assert!(!ErrorRecoveryStrategy::is_user_error(
+            &StellarSaveError::DataCorruption
+        ));
+        assert!(!ErrorRecoveryStrategy::is_user_error(
+            &StellarSaveError::Overflow
+        ));
+    }
+
+    // Task 1.1: Unit tests for new token error variants (Requirements 4.4, 4.5)
+
+    #[test]
+    fn test_token_error_codes() {
+        // Verify InvalidToken = 5001 (Requirement 4.4)
+        assert_eq!(StellarSaveError::InvalidToken.code(), 5001);
+        // Verify TokenTransferFailed = 5002 (Requirement 4.5)
+        assert_eq!(StellarSaveError::TokenTransferFailed.code(), 5002);
+    }
+
+    #[test]
+    fn test_token_error_categories() {
+        // Both token errors should map to ErrorCategory::Token
+        assert_eq!(
+            StellarSaveError::InvalidToken.category(),
+            ErrorCategory::Token
+        );
+        assert_eq!(
+            StellarSaveError::TokenTransferFailed.category(),
+            ErrorCategory::Token
+        );
+    }
+
+    #[test]
+    fn test_token_error_messages() {
+        // Both variants must have non-empty messages
+        let msg_invalid = StellarSaveError::InvalidToken.message();
+        assert!(!msg_invalid.is_empty());
+        assert!(msg_invalid.len() > 10);
+
+        let msg_transfer = StellarSaveError::TokenTransferFailed.message();
+        assert!(!msg_transfer.is_empty());
+        assert!(msg_transfer.len() > 10);
+    }
+
+    #[test]
+    fn test_token_error_recovery_guidance() {
+        // Both variants must have non-empty recovery guidance
+        let guidance_invalid =
+            ErrorRecoveryStrategy::recovery_guidance(&StellarSaveError::InvalidToken);
+        assert!(!guidance_invalid.is_empty());
+        assert!(guidance_invalid.len() > 20);
+
+        let guidance_transfer =
+            ErrorRecoveryStrategy::recovery_guidance(&StellarSaveError::TokenTransferFailed);
+        assert!(!guidance_transfer.is_empty());
+        assert!(guidance_transfer.len() > 20);
     }
 }

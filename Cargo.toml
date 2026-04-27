@@ -5,6 +5,7 @@ members = [
     "contracts/fungible-allowlist",
     "contracts/nft-enumerable",
     "contracts/stellar-save",
+    "client",
 ]
 
 [workspace.package]

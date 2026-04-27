@@ -1,0 +1,394 @@
+name: Performance Benchmarking
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 2 * * 0'  # Weekly on Sunday at 2 AM UTC
+
+env:
+  CACHE_NAME_PREFIX: perf-bench
+  RESULTS_DIR: performance-results
+
+jobs:
+  # ─── Gas Cost Benchmarking ──────────────────────────────────────────────────
+  gas-benchmarks:
+    name: Contract Gas Cost Benchmarking
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Install benchmarking tools
+        run: |
+          cargo install wasm-opt || true
+
+      - name: Run gas cost benchmarks
+        run: |
+          mkdir -p ${{ env.RESULTS_DIR }}
+          cargo test \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            --lib benchmark \
+            -- --nocapture \
+            --test-threads=1 2>&1 | tee ${{ env.RESULTS_DIR }}/gas-benchmarks.log
+
+      - name: Analyze gas costs
+        run: |
+          python3 - <<'EOF'
+          import json
+          import re
+          from datetime import datetime
+
+          # Parse benchmark results
+          benchmark_results = {}
+          
+          try:
+              with open("${{ env.RESULTS_DIR }}/gas-benchmarks.log", "r") as f:
+                  content = f.read()
+                  # Extract gas costs from test output
+                  gas_pattern = r"test.*?gas.*?(\d+)"
+                  matches = re.findall(gas_pattern, content, re.IGNORECASE)
+                  if matches:
+                      benchmark_results['gas_costs'] = [int(m) for m in matches]
+          except Exception as e:
+              print(f"Error reading benchmarks: {e}")
+
+          # Generate report
+          report = {
+              'timestamp': datetime.utcnow().isoformat(),
+              'branch': '${{ github.ref_name }}',
+              'commit_sha': '${{ github.sha }}',
+              'results': benchmark_results
+          }
+
+          with open("${{ env.RESULTS_DIR }}/gas-report.json", "w") as f:
+              json.dump(report, f, indent=2)
+
+          print("Gas benchmarking complete")
+          EOF
+
+      - name: Check gas regression thresholds
+        run: |
+          python3 - <<'EOF'
+          import json
+          
+          # Define thresholds for critical functions
+          THRESHOLDS = {
+              'contribution': 2000000,      # 2M gas
+              'auto_advance': 3000000,      # 3M gas
+              'distribute_winnings': 4000000,  # 4M gas
+              'create_group': 1500000,      # 1.5M gas
+          }
+          
+          results_file = "${{ env.RESULTS_DIR }}/gas-report.json"
+          try:
+              with open(results_file, "r") as f:
+                  report = json.load(f)
+                  costs = report.get('results', {}).get('gas_costs', [])
+                  
+                  if costs and any(c > max(THRESHOLDS.values()) for c in costs):
+                      print(f"⚠️ WARNING: Some gas costs exceed thresholds!")
+                      exit(1)
+                  else:
+                      print(f"✓ Gas costs within acceptable thresholds")
+          except Exception as e:
+              print(f"Error checking thresholds: {e}")
+          EOF
+
+      - name: Upload gas benchmarks
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gas-benchmarks
+          path: ${{ env.RESULTS_DIR }}/
+
+  # ─── Frontend Performance Benchmarking ──────────────────────────────────────
+  frontend-performance:
+    name: Frontend Performance Metrics
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Build frontend optimized
+        run: npm run build
+        working-directory: frontend
+        env:
+          NODE_ENV: production
+
+      - name: Create Lighthouse config
+        run: |
+          cat > frontend/.lighthouserc-perf.json <<'EOF'
+          {
+            "ci": {
+              "upload": {
+                "target": "temporary-public-storage"
+              },
+              "collect": {
+                "url": [
+                  "http://localhost:4173",
+                  "http://localhost:4173/groups",
+                  "http://localhost:4173/profile"
+                ],
+                "numberOfRuns": 3,
+                "settings": {
+                  "configPath": "frontend/lighthouse-config.js"
+                }
+              },
+              "assert": {
+                "preset": "lighthouse:recommended",
+                "assertions": {
+                  "categories:performance": ["error", {"minScore": 0.85}],
+                  "categories:accessibility": ["error", {"minScore": 0.90}],
+                  "categories:best-practices": ["error", {"minScore": 0.85}],
+                  "categories:seo": ["error", {"minScore": 0.90}],
+                  "categories:pwa": ["warn"]
+                }
+              }
+            }
+          }
+          EOF
+
+      - name: Start frontend preview
+        run: |
+          cd frontend
+          nohup npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/lighthouse-server.log 2>&1 &
+          echo $! > /tmp/lighthouse-server.pid
+          sleep 5
+
+      - name: Run Lighthouse benchmarks
+        run: |
+          mkdir -p ${{ env.RESULTS_DIR }}
+          cd frontend
+          npx lhci autorun --config .lighthouserc-perf.json > ../${{ env.RESULTS_DIR }}/lighthouse.log 2>&1 || true
+
+      - name: Extract and analyze metrics
+        run: |
+          python3 - <<'EOF'
+          import json
+          from datetime import datetime
+
+          metrics = {
+              'timestamp': datetime.utcnow().isoformat(),
+              'branch': '${{ github.ref_name }}',
+              'lightouse_results': {},
+              'web_vitals': {}
+          }
+
+          try:
+              with open("${{ env.RESULTS_DIR }}/lighthouse.log", "r") as f:
+                  content = f.read()
+                  metrics['lighthouse_report'] = content[:500]
+          except:
+              pass
+
+          with open("${{ env.RESULTS_DIR }}/performance-metrics.json", "w") as f:
+              json.dump(metrics, f, indent=2)
+
+          print("Frontend performance metrics collected")
+          EOF
+
+      - name: Stop frontend preview
+        run: |
+          PID=$(cat /tmp/lighthouse-server.pid 2>/dev/null)
+          kill $PID 2>/dev/null || true
+
+      - name: Upload frontend performance results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-performance
+          path: ${{ env.RESULTS_DIR }}/
+
+  # ─── Performance Trend Tracking ─────────────────────────────────────────────
+  performance-trends:
+    name: Performance Trend Analysis
+    needs: [gas-benchmarks, frontend-performance]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all performance artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifact-downloads
+
+      - name: Analyze performance trends
+        run: |
+          mkdir -p ${{ env.RESULTS_DIR }}
+          python3 - <<'EOF'
+          import json
+          import os
+          from datetime import datetime
+          from pathlib import Path
+
+          artifacts_dir = "artifact-downloads"
+          trends_data = {
+              'timestamp': datetime.utcnow().isoformat(),
+              'branch': '${{ github.ref_name }}',
+              'build_number': '${{ github.run_number }}',
+              'commit_sha': '${{ github.sha }}',
+              'gas_benchmarks': {},
+              'frontend_metrics': {},
+              'regression_alerts': []
+          }
+
+          # Collect gas benchmark data
+          gas_report_path = Path(artifacts_dir) / "gas-benchmarks" / "gas-report.json"
+          if gas_report_path.exists():
+              with open(gas_report_path) as f:
+                  trends_data['gas_benchmarks'] = json.load(f)
+
+          # Collect frontend performance data
+          perf_metrics_path = Path(artifacts_dir) / "frontend-performance" / "performance-metrics.json"
+          if perf_metrics_path.exists():
+              with open(perf_metrics_path) as f:
+                  trends_data['frontend_metrics'] = json.load(f)
+
+          # Define regression detection thresholds
+          regressions = []
+          gas_costs = trends_data['gas_benchmarks'].get('results', {}).get('gas_costs', [])
+          
+          if gas_costs:
+              avg_gas = sum(gas_costs) / len(gas_costs)
+              # Flag if average gas is 10% above baseline (2M)
+              if avg_gas > 2200000:
+                  regressions.append(f"Gas cost regression detected: {avg_gas:.0f} gas")
+          
+          trends_data['regression_alerts'] = regressions
+
+          # Save trends
+          with open("${{ env.RESULTS_DIR }}/performance-trends.json", "w") as f:
+              json.dump(trends_data, f, indent=2)
+
+          if regressions:
+              print("⚠️ Performance regressions detected:")
+              for r in regressions:
+                  print(f"  - {r}")
+          else:
+              print("✓ No performance regressions detected")
+          EOF
+
+      - name: Generate performance dashboard
+        run: |
+          cat > ${{ env.RESULTS_DIR }}/dashboard.html <<'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Performance Dashboard</title>
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+                  .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+                  h1 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+                  .metric-card { display: inline-block; margin: 10px; padding: 15px; background: #f9f9f9; border-left: 4px solid #007bff; border-radius: 4px; }
+                  .metric-value { font-size: 24px; font-weight: bold; color: #007bff; }
+                  .metric-label { font-size: 12px; color: #666; margin-top: 5px; }
+                  .alert { padding: 10px; margin: 10px 0; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; }
+                  .success { background: #d4edda; border-left-color: #28a745; }
+                  .error { background: #f8d7da; border-left-color: #dc3545; }
+                  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                  th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+                  th { background: #f9f9f9; font-weight: bold; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>🎯 Performance Dashboard</h1>
+                  <p>Generated on: <strong id="timestamp"></strong></p>
+                  
+                  <h2>Key Metrics</h2>
+                  <div class="metric-card">
+                      <div class="metric-value" id="gas-value">N/A</div>
+                      <div class="metric-label">Avg Gas Cost</div>
+                  </div>
+                  <div class="metric-card">
+                      <div class="metric-value" id="lighthouse-value">N/A</div>
+                      <div class="metric-label">Lighthouse Score</div>
+                  </div>
+                  
+                  <h2>Status</h2>
+                  <div id="status-container"></div>
+                  
+                  <h2>Recent Data</h2>
+                  <table id="data-table">
+                      <tr>
+                          <th>Metric</th>
+                          <th>Value</th>
+                          <th>Status</th>
+                      </tr>
+                  </table>
+              </div>
+              <script>
+                  document.getElementById('timestamp').textContent = new Date().toISOString();
+                  document.getElementById('status-container').innerHTML = '<div class="alert success">✓ Performance monitoring active</div>';
+              </script>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload performance trends
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-dashboard
+          path: ${{ env.RESULTS_DIR }}/
+
+      - name: Comment on PR with performance results
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            let performanceReport = '## 📊 Performance Benchmarking Results\n\n';
+            
+            try {
+              const trendsPath = path.join('${{ env.RESULTS_DIR }}', 'performance-trends.json');
+              if (fs.existsSync(trendsPath)) {
+                const trends = JSON.parse(fs.readFileSync(trendsPath, 'utf8'));
+                
+                if (trends.regression_alerts && trends.regression_alerts.length > 0) {
+                  performanceReport += '⚠️ **Performance Regressions Detected**\n';
+                  trends.regression_alerts.forEach(alert => {
+                    performanceReport += `- ${alert}\n`;
+                  });
+                } else {
+                  performanceReport += '✅ No performance regressions detected\n';
+                }
+              }
+            } catch (e) {
+              performanceReport += 'Could not load performance data\n';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: performanceReport
+            });

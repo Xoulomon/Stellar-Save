@@ -116,7 +116,7 @@ export function CycleProgress({
         </div>
       </div>
 
-      {cycleProgress.isComplete && (
+      {contributionProgress === 100 && (
         <div className="cycle-progress-complete">✓ Cycle complete</div>
       )}
     </div>

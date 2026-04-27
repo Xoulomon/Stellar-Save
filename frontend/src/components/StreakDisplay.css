@@ -1,0 +1,128 @@
+.streak-display {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e5e5e5);
+  border-radius: 12px;
+}
+
+.streak-display--at-risk {
+  border-color: var(--color-warning, #f59e0b);
+}
+
+.streak-warning {
+  background: var(--color-warning-bg, #fffbeb);
+  border: 1px solid var(--color-warning, #f59e0b);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  color: var(--color-warning-text, #92400e);
+  font-weight: 500;
+}
+
+.streak-stats {
+  display: flex;
+  gap: 2rem;
+}
+
+.streak-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.streak-stat-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--color-primary, #6366f1);
+  line-height: 1;
+}
+
+.streak-stat-label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.streak-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.streak-progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary, #555);
+}
+
+.streak-progress-pct {
+  font-weight: 600;
+}
+
+.streak-progress-bar {
+  height: 10px;
+  background: var(--color-border, #e5e5e5);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.streak-progress-fill {
+  height: 100%;
+  background: var(--color-primary, #6366f1);
+  border-radius: 5px;
+  transition: width 0.4s ease;
+}
+
+.streak-progress-sub {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #888);
+}
+
+.streak-badges-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+  color: var(--color-text, #1a1a1a);
+}
+
+.streak-badges-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.streak-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--color-surface-alt, #f5f5ff);
+  border: 1px solid var(--color-primary-light, #c7d2fe);
+  border-radius: 20px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.streak-badge-icon {
+  font-size: 1rem;
+}
+
+.streak-badge-label {
+  font-weight: 600;
+  color: var(--color-primary, #6366f1);
+}
+
+.streak-no-badges {
+  font-size: 0.9rem;
+  color: var(--color-text-muted, #888);
+  font-style: italic;
+  margin: 0;
+}

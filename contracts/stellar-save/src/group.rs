@@ -1,5 +1,19 @@
+#![allow(deprecated)]
 use core::fmt;
 use soroban_sdk::{contracttype, Address};
+
+/// Configuration for the token used by a savings group.
+///
+/// Stored separately from `Group` under `GroupKey::TokenConfig(group_id)` to
+/// preserve backward compatibility with existing serialized groups.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TokenConfig {
+    /// The SEP-41 token contract address for this group.
+    pub token_address: Address,
+    /// Decimal precision of the token, cached from `decimals()` at group creation.
+    pub token_decimals: u32,
+}
 
 /// Represents the lifecycle states of a savings group.
 ///
@@ -85,6 +99,29 @@ impl GroupStatus {
     pub fn is_terminal(&self) -> bool {
         matches!(self, GroupStatus::Completed | GroupStatus::Cancelled)
     }
+
+    /// Converts GroupStatus to u32 representation.
+    pub fn as_u32(&self) -> u32 {
+        match self {
+            GroupStatus::Pending => 0,
+            GroupStatus::Active => 1,
+            GroupStatus::Paused => 2,
+            GroupStatus::Completed => 3,
+            GroupStatus::Cancelled => 4,
+        }
+    }
+
+    /// Converts u32 to GroupStatus.
+    pub fn from_u32(value: u32) -> Option<Self> {
+        match value {
+            0 => Some(GroupStatus::Pending),
+            1 => Some(GroupStatus::Active),
+            2 => Some(GroupStatus::Paused),
+            3 => Some(GroupStatus::Completed),
+            4 => Some(GroupStatus::Cancelled),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for GroupStatus {
@@ -132,6 +169,15 @@ pub struct Group {
     /// Determines total number of cycles (one payout per member).
     pub max_members: u32,
 
+    /// Minimum number of members required to activate the group.
+    /// The group cannot start until this many members have joined.
+    /// Must be at least 2 and not greater than max_members.
+    pub min_members: u32,
+
+    /// Current number of members in the group.
+    /// Tracks how many members have joined.
+    pub member_count: u32,
+
     /// Current cycle number (0-indexed).
     /// Increments after each successful payout.
     /// When current_cycle reaches max_members, the group is complete.
@@ -144,11 +190,70 @@ pub struct Group {
     /// - Group encounters an error state
     pub is_active: bool,
 
+    /// Status of the group (Active or Completed).
+    /// Replaces is_active for more explicit state management.
+    pub status: GroupStatus,
+
     /// Timestamp when the group was created (Unix timestamp in seconds).
     /// Used for tracking group age and calculating cycle deadlines.
     pub created_at: u64,
-}
 
+    /// Whether the group has been started (first cycle activated).
+    pub started: bool,
+
+    /// Timestamp when the group was activated (Unix timestamp in seconds).
+    /// Used for tracking when the first cycle started.
+    /// Only set when started is true.
+    pub started_at: u64,
+
+    /// Whether members must provide a signed proof when contributing.
+    /// If true, contributions require an additional signature verification step.
+    pub require_contribution_proof: bool,
+
+    /// Whether the group allows the contribution amount to be changed between cycles.
+    /// If true, the creator can propose a new amount and members can vote on it.
+    pub allow_dynamic_contributions: bool,
+
+    /// Grace period in seconds after the cycle deadline before a member is
+    /// considered to have missed their contribution.
+    /// Maximum allowed value is 604800 (7 days). Defaults to 0 (no grace period).
+    pub grace_period_seconds: u64,
+
+    /// When true, only addresses explicitly invited by the creator may join.
+    pub invitation_only: bool,
+    /// Accumulated reward pool from contribution fees (1% of each contribution).
+    /// Distributed equally among members who complete all cycles.
+    pub reward_pool: i128,
+
+    /// Whether the group is temporarily paused by the creator.
+    pub paused: bool,
+
+    /// Whether penalty deductions are enabled for this group.
+    pub penalty_enabled: bool,
+
+    /// Fixed penalty amount per missed cycle in stroops (0 = use percentage-based).
+    pub penalty_amount: i128,
+
+    /// Whether a dispute is currently active for this group.
+    pub dispute_active: bool,
+
+    /// Optional display name for the group (up to 50 chars).
+    pub name: Option<soroban_sdk::String>,
+
+    /// Optional description for the group (up to 500 chars).
+    pub description: Option<soroban_sdk::String>,
+
+    /// Optional image URL for the group.
+    pub image_url: Option<soroban_sdk::String>,
+
+    /// Whether this group has been archived by its creator.
+    ///
+    /// Archiving is only allowed after the group reaches a terminal state
+    /// (Completed or Cancelled). Archived groups are excluded from the default
+    /// `list_groups()` results and are only visible via `list_archived_groups()`.
+    /// This reduces active storage scan costs and improves query performance.
+    pub archived: bool,
+}
 impl Group {
     /// Creates a new Group with validation.
     ///
@@ -158,20 +263,54 @@ impl Group {
     /// * `contribution_amount` - Amount each member contributes per cycle (in stroops)
     /// * `cycle_duration` - Duration of each cycle in seconds
     /// * `max_members` - Maximum number of members allowed
+    /// * `min_members` - Minimum number of members required to activate the group
     /// * `created_at` - Creation timestamp
+    /// * `grace_period_seconds` - Grace period after deadline before marking a miss (max 604800)
     ///
     /// # Panics
     /// Panics if validation constraints are violated:
     /// - contribution_amount must be > 0
     /// - cycle_duration must be > 0
     /// - max_members must be >= 2
+    /// - min_members must be >= 2
+    /// - min_members must be <= max_members
+    /// - grace_period_seconds must be <= 604800 (7 days)
     pub fn new(
         id: u64,
         creator: Address,
         contribution_amount: i128,
         cycle_duration: u64,
         max_members: u32,
+        min_members: u32,
         created_at: u64,
+        grace_period_seconds: u64,
+    ) -> Self {
+        Self::new_with_penalty(
+            id,
+            creator,
+            contribution_amount,
+            cycle_duration,
+            max_members,
+            min_members,
+            created_at,
+            grace_period_seconds,
+            false,
+            0,
+        )
+    }
+
+    /// Creates a new Group with penalty configuration.
+    pub fn new_with_penalty(
+        id: u64,
+        creator: Address,
+        contribution_amount: i128,
+        cycle_duration: u64,
+        max_members: u32,
+        min_members: u32,
+        created_at: u64,
+        grace_period_seconds: u64,
+        penalty_enabled: bool,
+        penalty_amount: i128,
     ) -> Self {
         // Validate contribution amount
         assert!(
@@ -185,36 +324,108 @@ impl Group {
         // Validate max members (minimum 2 for a meaningful ROSCA)
         assert!(max_members >= 2, "max_members must be at least 2");
 
+        // Validate min members (minimum 2 for a meaningful ROSCA)
+        assert!(min_members >= 2, "min_members must be at least 2");
+
+        // Validate min_members <= max_members
+        assert!(
+            min_members <= max_members,
+            "min_members must be less than or equal to max_members"
+        );
+
+        // Validate grace period (max 7 days)
+        assert!(
+            grace_period_seconds <= 604800,
+            "grace_period_seconds must not exceed 604800 (7 days)"
+        );
+
         Self {
             id,
             creator,
             contribution_amount,
             cycle_duration,
             max_members,
+            min_members,
+            member_count: 0,
             current_cycle: 0,
             is_active: true,
+            status: GroupStatus::Active,
             created_at,
+            started: false,
+            started_at: 0,
+            require_contribution_proof: false,
+            allow_dynamic_contributions: false,
+            grace_period_seconds,
+            invitation_only: false,
+            reward_pool: 0,
+            paused: false,
+            penalty_enabled,
+            penalty_amount,
+            dispute_active: false,
+            name: None,
+            description: None,
+            image_url: None,
+            archived: false,
         }
     }
-
     /// Checks if the group has completed all cycles.
-    /// A group is complete when current_cycle equals max_members.
+    /// A group is complete when current_cycle equals max_members
+    /// or when status is Completed.
     pub fn is_complete(&self) -> bool {
-        self.current_cycle >= self.max_members
+        self.current_cycle >= self.max_members || self.status == GroupStatus::Completed
+    }
+
+    /// Marks the group as completed.
+    /// This should be called after verifying all payouts have been made.
+    /// Emits a GroupEvent::Completed event.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment for event emission
+    ///
+    /// # Panics
+    /// Panics if the group is already complete.
+    pub fn complete(&mut self, env: &soroban_sdk::Env) {
+        assert!(!self.is_complete(), "group is already complete");
+        self.status = GroupStatus::Completed;
+        self.is_active = false;
+
+        // Emit completion event
+        Self::emit_completed_event(env, self.id);
+    }
+
+    /// Emits a GroupEvent::Completed event.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - The ID of the completed group
+    fn emit_completed_event(env: &soroban_sdk::Env, group_id: u64) {
+        env.events().publish(
+            (soroban_sdk::Symbol::new(env, "group_completed"),),
+            group_id,
+        );
     }
 
     /// Advances to the next cycle.
     /// Should be called after a successful payout.
+    /// Emits a GroupEvent::Completed event when the group becomes complete.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment for event emission
     ///
     /// # Panics
     /// Panics if the group is already complete.
-    pub fn advance_cycle(&mut self) {
+    pub fn advance_cycle(&mut self, env: &soroban_sdk::Env) {
         assert!(!self.is_complete(), "group is already complete");
         self.current_cycle += 1;
 
+        // Mark as complete if we've reached the final cycle
         // Deactivate if we've reached the final cycle
         if self.is_complete() {
+            self.status = GroupStatus::Completed;
             self.is_active = false;
+
+            // Emit completion event
+            Self::emit_completed_event(env, self.id);
         }
     }
 
@@ -230,6 +441,37 @@ impl Group {
     pub fn reactivate(&mut self) {
         assert!(!self.is_complete(), "cannot reactivate a completed group");
         self.is_active = true;
+        self.status = GroupStatus::Active;
+    }
+
+    /// Activates the group (starts the first cycle) once minimum members have joined.
+    ///
+    /// # Arguments
+    /// * `timestamp` - Current timestamp when activation occurs
+    ///
+    /// # Panics
+    /// Panics if:
+    /// - Group has already been started
+    /// - Minimum member count has not been reached
+    pub fn activate(&mut self, timestamp: u64) {
+        // Check if already started
+        assert!(!self.started, "group has already been started");
+
+        // Check if minimum members have joined
+        assert!(
+            self.member_count >= self.min_members,
+            "minimum members ({}) required to activate, currently have {}",
+            self.min_members,
+            self.member_count
+        );
+
+        self.started = true;
+        self.started_at = timestamp;
+    }
+
+    /// Checks if the group has met the minimum member requirement for activation.
+    pub fn can_activate(&self) -> bool {
+        !self.started && self.member_count >= self.min_members
     }
 
     /// Calculates the total pool amount for a cycle.
@@ -244,7 +486,15 @@ impl Group {
         self.contribution_amount > 0
             && self.cycle_duration > 0
             && self.max_members >= 2
+            && self.min_members >= 2
+            && self.min_members <= self.max_members
             && self.current_cycle <= self.max_members
+    }
+
+    /// Adds a member to the group.
+    /// Increments the member_count.
+    pub fn add_member(&mut self) {
+        self.member_count += 1;
     }
 }
 
@@ -252,6 +502,20 @@ impl Group {
 mod tests {
     use super::*;
     use soroban_sdk::{testutils::Address as _, Address, Env};
+
+    fn make_group(env: &Env, max_members: u32, grace_period_seconds: u64) -> Group {
+        let creator = Address::generate(env);
+        Group::new(
+            1,
+            creator,
+            10_000_000,
+            604800,
+            max_members,
+            2,
+            1234567890,
+            grace_period_seconds,
+        )
+    }
 
     #[test]
     fn test_group_creation() {
@@ -264,7 +528,9 @@ mod tests {
             10_000_000, // 1 XLM
             604800,     // 1 week
             5,          // 5 members
+            2,          // 2 min members
             1234567890,
+            0, // no grace period
         );
 
         assert_eq!(group.id, 1);
@@ -272,9 +538,44 @@ mod tests {
         assert_eq!(group.contribution_amount, 10_000_000);
         assert_eq!(group.cycle_duration, 604800);
         assert_eq!(group.max_members, 5);
+        assert_eq!(group.min_members, 2);
+        assert_eq!(group.member_count, 0);
         assert_eq!(group.current_cycle, 0);
         assert_eq!(group.is_active, true);
+        assert_eq!(group.status, GroupStatus::Active);
         assert_eq!(group.created_at, 1234567890);
+        assert_eq!(group.grace_period_seconds, 0);
+    }
+
+    #[test]
+    fn test_group_creation_with_grace_period() {
+        let env = Env::default();
+        let group = make_group(&env, 5, 3600);
+        assert_eq!(group.grace_period_seconds, 3600);
+    }
+
+    #[test]
+    #[should_panic(expected = "grace_period_seconds must not exceed 604800 (7 days)")]
+    fn test_invalid_grace_period() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        Group::new(1, creator, 10_000_000, 604800, 5, 2, 1234567890, 604801);
+    }
+
+    #[test]
+    #[should_panic(expected = "min_members must be at least 2")]
+    fn test_invalid_min_members() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        Group::new(1, creator, 10_000_000, 604800, 5, 1, 1234567890, 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "min_members must be less than or equal to max_members")]
+    fn test_min_members_greater_than_max() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        Group::new(1, creator, 10_000_000, 604800, 3, 5, 1234567890, 0);
     }
 
     #[test]
@@ -283,7 +584,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
 
-        Group::new(1, creator, 0, 604800, 5, 1234567890);
+        Group::new(1, creator, 0, 604800, 5, 2, 1234567890);
     }
 
     #[test]
@@ -292,7 +593,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
 
-        Group::new(1, creator, 10_000_000, 0, 5, 1234567890);
+        Group::new(1, creator, 10_000_000, 0, 5, 2, 1234567890);
     }
 
     #[test]
@@ -301,7 +602,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
 
-        Group::new(1, creator, 10_000_000, 604800, 1, 1234567890);
+        Group::new(1, creator, 10_000_000, 604800, 1, 2, 1234567890);
     }
 
     #[test]
@@ -309,13 +610,11 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
 
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 1234567890);
+        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 2, 1234567890);
 
         assert!(!group.is_complete());
-
         group.current_cycle = 2;
         assert!(!group.is_complete());
-
         group.current_cycle = 3;
         assert!(group.is_complete());
     }
@@ -323,107 +622,140 @@ mod tests {
     #[test]
     fn test_advance_cycle() {
         let env = Env::default();
-        let creator = Address::generate(&env);
-
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 1234567890);
+        let mut group = make_group(&env, 3, 0);
 
         assert_eq!(group.current_cycle, 0);
         assert!(group.is_active);
+        assert_eq!(group.status, GroupStatus::Active);
 
-        group.advance_cycle();
+        group.advance_cycle(&env);
         assert_eq!(group.current_cycle, 1);
         assert!(group.is_active);
 
-        group.advance_cycle();
+        group.advance_cycle(&env);
         assert_eq!(group.current_cycle, 2);
         assert!(group.is_active);
 
-        group.advance_cycle();
+        group.advance_cycle(&env);
         assert_eq!(group.current_cycle, 3);
-        assert!(!group.is_active); // Auto-deactivated when complete
+        assert!(!group.is_active);
+        assert_eq!(group.status, GroupStatus::Completed);
     }
 
     #[test]
     #[should_panic(expected = "group is already complete")]
     fn test_advance_cycle_when_complete() {
         let env = Env::default();
-        let creator = Address::generate(&env);
-
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 2, 1234567890);
+        let mut group = make_group(&env, 2, 0);
         group.current_cycle = 2;
 
-        group.advance_cycle(); // Should panic
+        group.advance_cycle(&env); // Should panic
     }
 
     #[test]
     fn test_deactivate_reactivate() {
         let env = Env::default();
-        let creator = Address::generate(&env);
-
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 1234567890);
+        let mut group = make_group(&env, 3, 0);
 
         assert!(group.is_active);
-
         group.deactivate();
         assert!(!group.is_active);
+        assert_eq!(group.status, GroupStatus::Active); // Status remains Active when just deactivated
 
         group.reactivate();
         assert!(group.is_active);
+        assert_eq!(group.status, GroupStatus::Active);
+    }
+
+    #[test]
+    fn test_complete_group() {
+        let env = Env::default();
+        let mut group = make_group(&env, 3, 0);
+
+        assert_eq!(group.status, GroupStatus::Active);
+        assert!(!group.is_complete());
+
+        group.complete(&env);
+
+        assert_eq!(group.status, GroupStatus::Completed);
+        assert!(!group.is_active);
+        assert!(group.is_complete());
+    }
+
+    #[test]
+    #[should_panic(expected = "group is already complete")]
+    fn test_complete_already_complete_group() {
+        let env = Env::default();
+        let mut group = make_group(&env, 2, 0);
+        group.current_cycle = 2;
+        group.complete(&env);
+    }
+
+    #[test]
+    fn test_is_complete_with_status() {
+        let env = Env::default();
+        let mut group = make_group(&env, 3, 0);
+
+        assert!(!group.is_complete());
+        group.status = GroupStatus::Completed;
+        assert!(group.is_complete());
+    }
+
+    #[test]
+    fn test_complete_after_all_cycles() {
+        let env = Env::default();
+        let mut group = make_group(&env, 3, 0);
+
+        group.advance_cycle(&env);
+        group.advance_cycle(&env);
+        group.advance_cycle(&env);
+
+        assert!(group.is_complete());
+        assert_eq!(group.status, GroupStatus::Completed);
+        assert!(!group.is_active);
     }
 
     #[test]
     #[should_panic(expected = "cannot reactivate a completed group")]
     fn test_reactivate_completed_group() {
         let env = Env::default();
-        let creator = Address::generate(&env);
-
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 2, 1234567890);
+        let mut group = make_group(&env, 2, 0);
         group.current_cycle = 2;
-
-        group.reactivate(); // Should panic
+        group.reactivate();
     }
 
     #[test]
     fn test_total_pool_amount() {
         let env = Env::default();
-        let creator = Address::generate(&env);
-
-        let group = Group::new(1, creator, 10_000_000, 604800, 5, 1234567890);
-
-        assert_eq!(group.total_pool_amount(), 50_000_000); // 5 XLM total
+        let group = make_group(&env, 5, 0);
+        assert_eq!(group.total_pool_amount(), 50_000_000);
     }
 
     #[test]
     fn test_validate() {
         let env = Env::default();
-        let creator = Address::generate(&env);
-
-        let group = Group::new(1, creator, 10_000_000, 604800, 5, 1234567890);
+        let group = make_group(&env, 5, 0);
         assert!(group.validate());
     }
 
     // GroupStatus tests
     #[test]
     fn test_group_status_transitions() {
-        // Test valid transitions from Pending
         assert!(GroupStatus::Pending.can_transition_to(&GroupStatus::Active));
         assert!(GroupStatus::Pending.can_transition_to(&GroupStatus::Cancelled));
         assert!(!GroupStatus::Pending.can_transition_to(&GroupStatus::Paused));
         assert!(!GroupStatus::Pending.can_transition_to(&GroupStatus::Completed));
 
-        // Test valid transitions from Active
         assert!(GroupStatus::Active.can_transition_to(&GroupStatus::Paused));
         assert!(GroupStatus::Active.can_transition_to(&GroupStatus::Completed));
         assert!(GroupStatus::Active.can_transition_to(&GroupStatus::Cancelled));
         assert!(!GroupStatus::Active.can_transition_to(&GroupStatus::Pending));
 
-        // Test valid transitions from Paused
         assert!(GroupStatus::Paused.can_transition_to(&GroupStatus::Active));
         assert!(GroupStatus::Paused.can_transition_to(&GroupStatus::Cancelled));
         assert!(!GroupStatus::Paused.can_transition_to(&GroupStatus::Pending));
         assert!(!GroupStatus::Paused.can_transition_to(&GroupStatus::Completed));
 
-        // Test terminal states cannot transition
         assert!(!GroupStatus::Completed.can_transition_to(&GroupStatus::Active));
         assert!(!GroupStatus::Completed.can_transition_to(&GroupStatus::Pending));
         assert!(!GroupStatus::Completed.can_transition_to(&GroupStatus::Paused));
@@ -434,7 +766,6 @@ mod tests {
         assert!(!GroupStatus::Cancelled.can_transition_to(&GroupStatus::Paused));
         assert!(!GroupStatus::Cancelled.can_transition_to(&GroupStatus::Completed));
 
-        // Test same state transitions are always valid
         assert!(GroupStatus::Pending.can_transition_to(&GroupStatus::Pending));
         assert!(GroupStatus::Active.can_transition_to(&GroupStatus::Active));
         assert!(GroupStatus::Paused.can_transition_to(&GroupStatus::Paused));

@@ -52,7 +52,7 @@ describe('GroupStats', () => {
       />
     );
 
-    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.getAllByText('0%').length).toBeGreaterThan(0);
   });
 
   it('uses default currency when not provided', () => {

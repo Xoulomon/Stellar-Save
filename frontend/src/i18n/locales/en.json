@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "groups": "Groups",
+    "profile": "Profile",
+    "settings": "Settings",
+    "leaderboard": "Leaderboard"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Configure your preferences",
+    "appearance": "Appearance",
+    "appearanceDesc": "Choose how Stellar Save looks to you.",
+    "language": "Language",
+    "languageDesc": "Choose your preferred language.",
+    "theme": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    }
+  },
+  "scheduler": {
+    "title": "Schedule a Contribution",
+    "amount": "Amount (XLM)",
+    "dateTime": "Scheduled Date & Time",
+    "note": "Note (optional)",
+    "schedule": "Schedule",
+    "scheduled": "Scheduled",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "balanceWarning": "Your balance ({{balance}} XLM) may be insufficient to cover all scheduled contributions ({{total}} XLM total).",
+    "validation": {
+      "positiveAmount": "Amount must be a positive number.",
+      "selectDate": "Please select a date and time.",
+      "futureDate": "Scheduled date must be in the future."
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirm": "Confirm"
+  }
+}

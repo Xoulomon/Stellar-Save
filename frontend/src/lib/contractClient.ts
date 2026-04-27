@@ -40,11 +40,9 @@ export const server = new SorobanRpc.Server(RPC_URL, { allowHttp: false });
 
 /**
  * Maps Soroban contract error codes to human-readable messages.
- * Mirrors the StellarSaveError enum in error.rs.
+* Mirrors the StellarSaveError enum in error.rs.
  */
-const CONTRACT_ERROR_MESSAGES: Record<number, string> = {
-  1001: 'Group not found.',
-  1002: 'Group is full.',
+export const CONTRACT_ERROR_MESSAGES: Record<number, string> = {  1002: 'Group is full.',
   1003: 'Invalid group state for this operation.',
   2001: 'Address is already a member of this group.',
   2002: 'Address is not a member of this group.',

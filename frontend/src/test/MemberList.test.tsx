@@ -50,9 +50,11 @@ describe('MemberList', () => {
     render(<MemberList members={mockMembers} />);
     
     const sortButton = screen.getByLabelText('Sort by address');
+    // initial state: sortField=address, sortOrder=asc → shows ↑
+    // clicking toggles to desc → ↓
     await user.click(sortButton);
     
-    expect(sortButton).toHaveTextContent('↑');
+    expect(sortButton).toHaveTextContent('↓');
   });
 
   it('toggles sort order on repeated clicks', async () => {
@@ -60,11 +62,13 @@ describe('MemberList', () => {
     render(<MemberList members={mockMembers} />);
     
     const sortButton = screen.getByLabelText('Sort by address');
-    await user.click(sortButton);
-    expect(sortButton).toHaveTextContent('↑');
-    
+    // initial: asc (↑), click → desc (↓)
     await user.click(sortButton);
     expect(sortButton).toHaveTextContent('↓');
+    
+    // click again → asc (↑)
+    await user.click(sortButton);
+    expect(sortButton).toHaveTextContent('↑');
   });
 
   it('sorts by contribution status', async () => {

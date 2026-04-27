@@ -1,6 +1,6 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useGroups } from '../hooks/useGroups';
+import { useGroups, clearGroupsCache } from '../hooks/useGroups';
 import * as groupApi from '../utils/groupApi';
 import type { PublicGroup } from '../types/group';
 
@@ -14,6 +14,7 @@ const mockGroups: PublicGroup[] = [
     currency: 'XLM',
     status: 'active',
     createdAt: new Date('2024-01-01'),
+    cycleDuration: 7,
   },
   {
     id: '2',
@@ -24,6 +25,7 @@ const mockGroups: PublicGroup[] = [
     currency: 'XLM',
     status: 'pending',
     createdAt: new Date('2024-02-01'),
+    cycleDuration: 14,
   },
   {
     id: '3',
@@ -33,10 +35,12 @@ const mockGroups: PublicGroup[] = [
     currency: 'XLM',
     status: 'completed',
     createdAt: new Date('2024-03-01'),
+    cycleDuration: 30,
   },
 ];
 
 beforeEach(() => {
+  clearGroupsCache();
   vi.spyOn(groupApi, 'fetchGroups').mockResolvedValue(mockGroups);
 });
 
@@ -190,5 +194,33 @@ describe('useGroups', () => {
     act(() => result.current.refresh());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('filters by minCycleDuration', async () => {
+    const { result } = renderHook(() => useGroups());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => result.current.setFilters({ minCycleDuration: '14' }));
+    expect(
+      result.current.groups.every((g) => g.cycleDuration !== undefined && g.cycleDuration >= 14)
+    ).toBe(true);
+  });
+
+  it('filters by maxCycleDuration', async () => {
+    const { result } = renderHook(() => useGroups());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => result.current.setFilters({ maxCycleDuration: '14' }));
+    expect(
+      result.current.groups.every((g) => g.cycleDuration !== undefined && g.cycleDuration <= 14)
+    ).toBe(true);
+  });
+
+  it('hasActiveFilters is true when cycleDuration filter is set', async () => {
+    const { result } = renderHook(() => useGroups());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => result.current.setFilters({ minCycleDuration: '7' }));
+    expect(result.current.hasActiveFilters).toBe(true);
   });
 });

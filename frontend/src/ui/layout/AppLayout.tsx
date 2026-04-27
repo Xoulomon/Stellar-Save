@@ -13,6 +13,7 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
+import { WalletStatusIndicator } from "../../components/WalletStatusIndicator";
 
 export interface LayoutNavItem {
   key: string;
@@ -104,6 +105,8 @@ export function AppLayout({
               </ListItemButton>
             ))}
           </Stack>
+
+          <WalletStatusIndicator />
         </Toolbar>
       </AppBar>
 

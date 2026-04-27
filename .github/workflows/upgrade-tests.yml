@@ -1,0 +1,78 @@
+name: Upgrade Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/upgrade-tests.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/upgrade-tests.yml'
+
+jobs:
+  upgrade-tests:
+    name: Contract Upgrade Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      # ── Data migration tests ─────────────────────────────────────────────
+      - name: Run data migration tests
+        run: |
+          cargo test \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            upgrade_tests::upgrade_tests::test_migration \
+            -- --test-threads=1 --nocapture
+        env:
+          RUST_BACKTRACE: 1
+
+      # ── API compatibility tests ──────────────────────────────────────────
+      - name: Run API compatibility tests
+        run: |
+          cargo test \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            upgrade_tests::upgrade_tests::test_api \
+            -- --test-threads=1 --nocapture
+        env:
+          RUST_BACKTRACE: 1
+
+      # ── Performance regression tests ─────────────────────────────────────
+      - name: Run performance regression tests
+        run: |
+          cargo test \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            upgrade_tests::upgrade_tests::test_perf \
+            -- --test-threads=1 --nocapture
+        env:
+          RUST_BACKTRACE: 1
+
+      # ── Full upgrade test suite ──────────────────────────────────────────
+      - name: Run full upgrade test suite
+        run: |
+          cargo test \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            upgrade_tests \
+            -- --test-threads=1
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: Verify contract still builds after upgrade tests
+        run: |
+          cargo build \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            --target wasm32-unknown-unknown \
+            --release
+        env:
+          RUST_BACKTRACE: 1

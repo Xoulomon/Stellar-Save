@@ -18,6 +18,27 @@ Stellar-Save is a rotating savings and credit association (ROSCA) common in Nige
 - ✅ Accessible (anyone with a Stellar wallet can join)
 - ✅ Programmable (automated payouts, no manual coordination)
 
+## 🏗️ Architecture
+
+The Stellar-Save system consists of four main layers that work together to provide a decentralized ROSCA experience:
+
+![Stellar-Save Architecture](docs/architecture-diagram.svg)
+
+### Architecture Components
+
+- **User Layer**: Users interact with the system through Stellar wallets (Freighter, Lobstr, Albedo)
+- **Frontend Layer**: React + TypeScript SPA with Vite, Material-UI components, and React Query for state management
+- **Blockchain Layer**: Stellar network with Soroban smart contracts managing groups, contributions, and payouts
+- **Data Layer**: On-chain storage, Stellar Horizon API for transaction history, and Soroban events for real-time updates
+
+### Key Data Flows
+
+1. **Group Creation**: User → Frontend → Contract → On-chain Storage → Events → UI Update
+2. **Contribution**: User → Frontend → Contract → Escrow → Storage → Events → UI Update
+3. **Payout**: User → Frontend → Contract → Escrow → Recipient → Storage → Events → UI Update
+
+For detailed architecture documentation, see [docs/architecture.md](docs/architecture.md).
+
 ## 🚀 Features
 
 - **Create Groups**: Set contribution amount, cycle duration, and max members
@@ -96,6 +117,7 @@ Follow the step-by-step guide in [demo/demo-script.md](demo/demo-script.md)
 - [Storage Layout](docs/storage-layout.md)
 - [Threat Model & Security](docs/threat-model.md)
 - [Roadmap](docs/roadmap.md)
+- [Frequently Asked Questions (FAQ)](docs/faq.md)
 
 ## 🎓 Smart Contract API
 
@@ -114,7 +136,7 @@ is_member(group_id, address) -> bool
 
 ### Contributions
 ```rust
-contribute(group_id)
+contribute(group_id, member, amount)
 get_contribution_status(group_id, cycle_number) -> Vec<(Address, bool)>
 ```
 
@@ -122,6 +144,12 @@ get_contribution_status(group_id, cycle_number) -> Vec<(Address, bool)>
 ```rust
 execute_payout(group_id)
 is_complete(group_id) -> bool
+```
+
+### Emergency Pause
+```rust
+pause_group(group_id, caller)    // Creator-only: halt contributions & payouts
+unpause_group(group_id, caller)  // Creator-only: resume contributions & payouts
 ```
 
 ## 🧪 Testing
@@ -132,6 +160,7 @@ Comprehensive test suite covering:
 - ✅ Contribution flow and tracking
 - ✅ Payout rotation and distribution
 - ✅ Group completion lifecycle
+- ✅ Emergency pause/unpause scenarios
 - ✅ Error handling and edge cases
 
 Run tests:

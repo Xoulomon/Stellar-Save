@@ -1,0 +1,31 @@
+{
+  "name": "Stellar Save",
+  "short_name": "StellarSave",
+  "description": "Decentralized rotational savings on Stellar",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance"],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "description": "View your savings overview"
+    },
+    {
+      "name": "Browse Groups",
+      "url": "/groups/browse",
+      "description": "Discover savings groups"
+    }
+  ]
+}

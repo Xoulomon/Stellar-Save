@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { isConnected, getPublicKey, requestAccess } from '@stellar/freighter-api';
 import { ROUTES } from '../routing/constants';
+import { ThemeToggle } from './ThemeToggle';
 import './Header.css';
 
 export default function Header() {
@@ -39,15 +40,18 @@ export default function Header() {
           ☰
         </button>
 
-        <nav className={`header-nav ${isMenuOpen ? 'open' : ''}`}>
+        <nav className={`header-nav ${isMenuOpen ? 'open' : ''}`} aria-label="Main navigation">
           <Link to={ROUTES.GROUPS}>Groups</Link>
           <Link to={ROUTES.DASHBOARD}>Dashboard</Link>
           <Link to={ROUTES.PROFILE}>Profile</Link>
         </nav>
 
+        <ThemeToggle />
+
         <button 
           className="wallet-button"
           onClick={connectWallet}
+          aria-label={walletAddress ? `Wallet connected: ${walletAddress}` : 'Connect Wallet'}
         >
           {walletAddress ? formatAddress(walletAddress) : 'Connect Wallet'}
         </button>

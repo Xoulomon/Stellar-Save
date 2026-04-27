@@ -1,12 +1,13 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import BrowseGroupsPage from '../pages/BrowseGroupsPage';
 import { routeConfig } from '../routing/routes';
 import { ROUTES } from '../routing/constants';
 import { fetchGroups } from '../utils/groupApi';
 import type { PublicGroup } from '../utils/groupApi';
+import { clearGroupsCache } from '../hooks/useGroups';
 
 vi.mock('../ui', () => ({
   AppLayout: ({ children, title, subtitle }: any) => (
@@ -49,13 +50,21 @@ function renderPage() {
 describe('BrowseGroupsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearGroupsCache();
     mockFetchGroups.mockResolvedValue(mockGroups);
   });
 
-  it("renders with title 'Browse Groups' and subtitle 'Discover and join public savings groups'", async () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    if (typeof vi.unstubAllGlobals === 'function') {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("renders with title 'Browse Groups' and subtitle 'Discover recommended groups based on your preferences and activity'", async () => {
     renderPage();
     expect(screen.getByText('Browse Groups')).toBeInTheDocument();
-    expect(screen.getByText('Discover and join public savings groups')).toBeInTheDocument();
+    expect(screen.getByText('Discover recommended groups based on your preferences and activity')).toBeInTheDocument();
   });
 
   it('calls fetchGroups once on mount', async () => {
@@ -111,6 +120,14 @@ describe('BrowseGroupsPage', () => {
     });
   });
 
+  it('refresh button reloads recommendations', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(mockFetchGroups).toHaveBeenCalledTimes(1));
+    await user.click(screen.getByRole('button', { name: /refresh/i }));
+    await waitFor(() => expect(mockFetchGroups).toHaveBeenCalledTimes(2));
+  });
+
   it('SearchBar renders with correct placeholder', async () => {
     renderPage();
     await waitFor(() => {
@@ -125,11 +142,11 @@ describe('BrowseGroupsPage', () => {
     });
   });
 
-  it("shows 'No groups available' empty state when fetch returns empty array and no filters active", async () => {
+  it("shows 'No recommendations yet' empty state when fetch returns empty array and no filters active", async () => {
     mockFetchGroups.mockResolvedValue([]);
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText('No groups available')).toBeInTheDocument();
+      expect(screen.getByText('No recommendations yet')).toBeInTheDocument();
     });
   });
 
@@ -143,6 +160,42 @@ describe('BrowseGroupsPage', () => {
     await user.type(searchInput, 'zzznomatch');
     await waitFor(() => {
       expect(screen.getByText('No groups found')).toBeInTheDocument();
+    });
+  });
+
+  it('loads more recommendations when the sentinel intersects', async () => {
+    const observers: IntersectionObserverCallback[] = [];
+    vi.stubGlobal('IntersectionObserver', vi.fn((callback) => {
+      observers.push(callback);
+      return {
+        observe: () => undefined,
+        disconnect: () => undefined,
+      } as unknown as IntersectionObserver;
+    }));
+
+    const manyGroups: PublicGroup[] = Array.from({ length: 12 }, (_, index) => ({
+      id: `${index + 1}`,
+      name: `Group ${index + 1}`,
+      description: `Description ${index + 1}`,
+      memberCount: index + 1,
+      contributionAmount: 100 + index * 10,
+      currency: 'XLM',
+      status: 'active',
+      createdAt: new Date('2024-01-01'),
+    }));
+
+    mockFetchGroups.mockResolvedValue(manyGroups);
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('Group 1')).toBeInTheDocument());
+    expect(observers).toHaveLength(1);
+
+    act(() => {
+      observers[0]([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Group 12')).toBeInTheDocument();
     });
   });
 

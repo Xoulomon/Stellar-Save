@@ -1,99 +1,143 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Stack, Typography } from '@mui/material';
+import { Stack, Typography, Alert, Box } from '@mui/material';
 import { AppCard, AppLayout } from '../ui';
 import { CreateGroupForm } from '../components/CreateGroupForm';
-import { createGroup } from '../utils/groupApi';
+import { ToastProvider } from '../components/Toast/ToastProvider';
+import { useToast } from '../components/Toast/useToast';
+import { useWallet } from '../hooks/useWallet';
+import { createGroup, parseContractError } from '../lib/contractClient';
 import type { GroupData } from '../utils/groupApi';
 import { ROUTES, buildRoute } from '../routing/constants';
 
 type SubmitStatus = 'idle' | 'loading' | 'success' | 'error';
 
-interface PageState {
-  status: SubmitStatus;
-  groupId: string | null;
-  errorMessage: string | null;
-  groupName: string | null;
-}
-
-export default function CreateGroupPage() {
+function CreateGroupContent() {
   const navigate = useNavigate();
-  const [pageState, setPageState] = useState<PageState>({
-    status: 'idle',
-    groupId: null,
-    errorMessage: null,
-    groupName: null,
-  });
+  const { addToast } = useToast();
+  const { status: walletStatus, activeAddress, connect } = useWallet();
 
-  // Task 10: redirect after success
+  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [createdGroupId, setCreatedGroupId] = useState<string | null>(null);
+
+  // Redirect to group detail after successful creation
   useEffect(() => {
-    if (pageState.status !== 'success') return;
-    const timer = setTimeout(() => {
-      if (pageState.groupId) {
-        navigate(buildRoute.groupDetail(pageState.groupId));
-      } else {
-        navigate(ROUTES.GROUPS);
-      }
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [pageState.status, pageState.groupId, navigate]);
-
-  const handleCancel = () => {
-    navigate(ROUTES.GROUPS);
-  };
+    if (submitStatus !== 'success') return;
+    const t = setTimeout(() => {
+      navigate(createdGroupId ? buildRoute.groupDetail(createdGroupId) : ROUTES.GROUPS);
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [submitStatus, createdGroupId, navigate]);
 
   const handleSubmit = async (data: GroupData) => {
-    setPageState(prev => ({ ...prev, status: 'loading', errorMessage: null }));
+    // Wallet must be connected
+    if (walletStatus !== 'connected' || !activeAddress) {
+      setErrorMessage('Please connect your Freighter wallet before creating a group.');
+      return;
+    }
+
+    setSubmitStatus('loading');
+    setErrorMessage(null);
+
     try {
-      const groupId = await createGroup(data);
-      setPageState({
-        status: 'success',
-        groupId,
-        errorMessage: null,
-        groupName: data.name,
+      const groupId = await createGroup({
+        creator: activeAddress,
+        contributionAmount: BigInt(data.contribution_amount), // already in stroops
+        cycleDuration: BigInt(data.cycle_duration),
+        maxMembers: data.max_members,
+      });
+
+      const groupIdStr = groupId.toString();
+      setCreatedGroupId(groupIdStr);
+      setSubmitStatus('success');
+
+      addToast({
+        message: `Group "${data.name}" created! Group ID: ${groupIdStr}`,
+        type: 'success',
+        duration: 6000,
       });
     } catch (err) {
-      const errorMessage =
-        err instanceof Error && err.message
-          ? err.message
-          : 'Failed to create group. Please try again.';
-      setPageState(prev => ({ ...prev, status: 'error', errorMessage }));
+      const contractErr = parseContractError(err);
+
+      // Map known rejection/funds errors to friendly messages
+      let msg = contractErr.message;
+      if (msg.toLowerCase().includes('user declined') || msg.toLowerCase().includes('rejected')) {
+        msg = 'Transaction rejected. You cancelled the signing request in Freighter.';
+      } else if (msg.toLowerCase().includes('insufficient')) {
+        msg = 'Insufficient funds. Please ensure your wallet has enough XLM to cover the transaction fee.';
+      }
+
+      setErrorMessage(msg);
+      setSubmitStatus('error');
+      addToast({ message: msg, type: 'error', duration: 6000 });
     }
   };
 
-  return (
-    <AppLayout
-      title="Create Group"
-      subtitle="Set up your savings circle"
-      footerText="Stellar Save - Built for transparent, on-chain savings"
-    >
-      <AppCard>
-        <Stack spacing={2}>
-          {/* aria-live region for status announcements */}
-          <div aria-live="polite" aria-atomic="true">
-            {pageState.status === 'success' && (
-              <Typography color="success.main">
-                Group created successfully! Redirecting...
-              </Typography>
-            )}
-            {pageState.status === 'error' && pageState.errorMessage && (
-              <Typography color="error.main">{pageState.errorMessage}</Typography>
-            )}
-          </div>
+  const isWalletConnected = walletStatus === 'connected' && Boolean(activeAddress);
 
-          {pageState.status === 'success' ? (
-            <Typography variant="h6">
-              "{pageState.groupName}" has been created! You will be redirected shortly.
+  return (
+    <AppCard>
+      <Stack spacing={3}>
+        {/* Wallet connection warning */}
+        {!isWalletConnected && (
+          <Alert
+            severity="warning"
+            action={
+              <Box
+                component="button"
+                onClick={connect}
+                sx={{ cursor: 'pointer', fontWeight: 'bold', background: 'none', border: 'none', color: 'warning.dark', fontSize: '0.85rem' }}
+              >
+                Connect Wallet
+              </Box>
+            }
+          >
+            Connect your Freighter wallet to deploy a group on-chain.
+          </Alert>
+        )}
+
+        {/* Success state */}
+        {submitStatus === 'success' ? (
+          <Stack spacing={1} alignItems="center" sx={{ py: 4 }}>
+            <Typography variant="h5" fontWeight="bold" color="success.main">
+              Group Created!
             </Typography>
-          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Redirecting to your group...
+            </Typography>
+          </Stack>
+        ) : (
+          <>
+            {/* Inline error (also shown as toast) */}
+            {submitStatus === 'error' && errorMessage && (
+              <Alert severity="error" onClose={() => setErrorMessage(null)}>
+                {errorMessage}
+              </Alert>
+            )}
+
             <CreateGroupForm
               onSubmit={handleSubmit}
-              onCancel={handleCancel}
-              isSubmitting={pageState.status === 'loading'}
+              onCancel={() => navigate(ROUTES.GROUPS)}
+              isSubmitting={submitStatus === 'loading'}
             />
-          )}
-        </Stack>
-      </AppCard>
-    </AppLayout>
+          </>
+        )}
+      </Stack>
+    </AppCard>
+  );
+}
+
+export default function CreateGroupPage() {
+  return (
+    <ToastProvider>
+      <AppLayout
+        title="Create Group"
+        subtitle="Deploy a new savings circle on Stellar"
+        footerText="Stellar Save - Built for transparent, on-chain savings"
+      >
+        <CreateGroupContent />
+      </AppLayout>
+    </ToastProvider>
   );
 }

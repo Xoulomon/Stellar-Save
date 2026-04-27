@@ -1,4 +1,14 @@
-use soroban_sdk::{contracttype, Address};
+use soroban_sdk::{contracttype, Address, Vec};
+
+/// Paginated result for contribution history queries.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContributionPage {
+    /// The contributions in this page.
+    pub items: Vec<ContributionRecord>,
+    /// True if there are more contributions beyond this page.
+    pub has_more: bool,
+}
 
 /// Contribution Record structure for tracking individual member contributions.
 ///
