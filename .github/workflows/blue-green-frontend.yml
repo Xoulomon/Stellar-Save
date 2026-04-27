@@ -1,0 +1,250 @@
+name: Blue-Green Frontend Deployment
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/blue-green-frontend.yml'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options: [deploy, switch, rollback]
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options: [staging, production]
+
+concurrency:
+  group: blue-green-frontend-${{ github.event.inputs.environment || 'production' }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  # ─── Build frontend ─────────────────────────────────────────────────────────
+  build:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.inputs.action == 'deploy'
+    outputs:
+      build_hash: ${{ steps.meta.outputs.build_hash }}
+      target_slot: ${{ steps.meta.outputs.target_slot }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --run
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_STELLAR_NETWORK: ${{ vars.VITE_STELLAR_NETWORK || 'testnet' }}
+          VITE_STELLAR_RPC_URL: ${{ vars.VITE_STELLAR_RPC_URL || 'https://soroban-testnet.stellar.org' }}
+
+      - name: Compute build metadata
+        id: meta
+        run: |
+          BUILD_HASH=$(find dist -type f | sort | xargs sha256sum | sha256sum | awk '{print $1}' | head -c 12)
+          echo "build_hash=${BUILD_HASH}" >> "$GITHUB_OUTPUT"
+          # Determine inactive slot (the one we deploy to)
+          REGISTRY="../deployment-records/frontend-active.json"
+          if [ -f "$REGISTRY" ]; then
+            LIVE=$(python3 -c "import json; d=json.load(open('$REGISTRY')); print(d.get('live_slot','blue'))")
+            TARGET=$( [ "$LIVE" = "blue" ] && echo "green" || echo "blue" )
+          else
+            TARGET="blue"
+          fi
+          echo "target_slot=${TARGET}" >> "$GITHUB_OUTPUT"
+          echo "Build hash: ${BUILD_HASH}, deploying to slot: ${TARGET}"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-${{ steps.meta.outputs.target_slot }}-${{ github.sha }}
+          path: frontend/dist/
+          retention-days: 30
+
+  # ─── Deploy to inactive slot ────────────────────────────────────────────────
+  deploy:
+    name: Deploy to ${{ needs.build.outputs.target_slot }} slot
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+    outputs:
+      target_slot: ${{ needs.build.outputs.target_slot }}
+      build_hash: ${{ needs.build.outputs.build_hash }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-${{ needs.build.outputs.target_slot }}-${{ github.sha }}
+          path: dist/
+
+      - name: Deploy to inactive slot
+        run: bash scripts/bg_deploy.sh
+        env:
+          TARGET_SLOT: ${{ needs.build.outputs.target_slot }}
+          BUILD_HASH: ${{ needs.build.outputs.build_hash }}
+          COMMIT_SHA: ${{ github.sha }}
+          DEPLOY_ENV: ${{ github.event.inputs.environment || 'production' }}
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+
+      - name: Health check on inactive slot
+        run: bash scripts/bg_health_check.sh
+        env:
+          CHECK_SLOT: ${{ needs.build.outputs.target_slot }}
+          DEPLOY_ENV: ${{ github.event.inputs.environment || 'production' }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+
+      - name: Switch traffic to new slot
+        run: bash scripts/bg_switch.sh
+        env:
+          TARGET_SLOT: ${{ needs.build.outputs.target_slot }}
+          BUILD_HASH: ${{ needs.build.outputs.build_hash }}
+          COMMIT_SHA: ${{ github.sha }}
+          DEPLOY_ENV: ${{ github.event.inputs.environment || 'production' }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+
+      - name: Post-switch health check
+        run: bash scripts/bg_health_check.sh
+        env:
+          CHECK_SLOT: live
+          DEPLOY_ENV: ${{ github.event.inputs.environment || 'production' }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+
+      - name: Auto-rollback on failure
+        if: failure()
+        run: bash scripts/bg_rollback.sh
+        env:
+          ROLLBACK_REASON: post_switch_health_check_failed
+          DEPLOY_ENV: ${{ github.event.inputs.environment || 'production' }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+
+      - name: Save deployment record
+        if: success()
+        run: |
+          mkdir -p deployment-records
+          python3 - <<'EOF'
+          import json, os, datetime
+          registry = "deployment-records/frontend-active.json"
+          try:
+              with open(registry) as f:
+                  data = json.load(f)
+          except (FileNotFoundError, json.JSONDecodeError):
+              data = {}
+          prev_slot = data.get("live_slot", "blue")
+          data.update({
+              "live_slot": os.environ["TARGET_SLOT"],
+              "previous_slot": prev_slot,
+              "build_hash": os.environ["BUILD_HASH"],
+              "commit": os.environ["COMMIT_SHA"],
+              "deployed_at": datetime.datetime.utcnow().isoformat() + "Z",
+              "deployed_by": os.environ.get("GITHUB_ACTOR", "ci"),
+              "environment": os.environ["DEPLOY_ENV"],
+          })
+          with open(registry, "w") as f:
+              json.dump(data, f, indent=2)
+          print(json.dumps(data, indent=2))
+          EOF
+        env:
+          TARGET_SLOT: ${{ needs.build.outputs.target_slot }}
+          BUILD_HASH: ${{ needs.build.outputs.build_hash }}
+          COMMIT_SHA: ${{ github.sha }}
+          DEPLOY_ENV: ${{ github.event.inputs.environment || 'production' }}
+
+      - name: Upload deployment record
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-deploy-record-${{ github.sha }}
+          path: deployment-records/
+          retention-days: 90
+
+  # ─── Manual switch (without redeploy) ───────────────────────────────────────
+  switch:
+    name: Switch traffic slot
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'switch'
+    environment:
+      name: ${{ github.event.inputs.environment }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download latest deployment record
+        uses: actions/download-artifact@v4
+        with:
+          pattern: frontend-deploy-record-*
+          merge-multiple: true
+          path: deployment-records/
+
+      - name: Switch slot
+        run: bash scripts/bg_switch.sh
+        env:
+          DEPLOY_ENV: ${{ github.event.inputs.environment }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+
+      - name: Health check after switch
+        run: bash scripts/bg_health_check.sh
+        env:
+          CHECK_SLOT: live
+          DEPLOY_ENV: ${{ github.event.inputs.environment }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+
+  # ─── Manual rollback ────────────────────────────────────────────────────────
+  rollback:
+    name: Rollback to previous slot
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'rollback'
+    environment:
+      name: ${{ github.event.inputs.environment }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download latest deployment record
+        uses: actions/download-artifact@v4
+        with:
+          pattern: frontend-deploy-record-*
+          merge-multiple: true
+          path: deployment-records/
+
+      - name: Rollback
+        run: bash scripts/bg_rollback.sh
+        env:
+          ROLLBACK_REASON: manual_rollback
+          DEPLOY_ENV: ${{ github.event.inputs.environment }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+
+      - name: Health check after rollback
+        run: bash scripts/bg_health_check.sh
+        env:
+          CHECK_SLOT: live
+          DEPLOY_ENV: ${{ github.event.inputs.environment }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
