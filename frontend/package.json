@@ -16,7 +16,10 @@
     "test:e2e": "vitest run src/test/integration",
     "test:e2e:testnet": "tsx src/test/e2e-testnet/testnet.e2e.ts",
     "test:mutation": "stryker run stryker.config.mjs",
-    "test:mutation:ci": "stryker run stryker.config.mjs --reporters json,clear-text --concurrency 2"
+    "test:mutation:ci": "stryker run stryker.config.mjs --reporters json,clear-text --concurrency 2",
+    "test:a11y": "vitest run src/test/a11y.test.tsx",
+    "test:a11y:pa11y": "pa11y-ci --config .pa11yrc.json",
+    "test:a11y:ci": "vitest run src/test/a11y.test.tsx --reporter=verbose"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -67,6 +70,7 @@
     "vitest": "^2.1.8",
     "vitest-axe": "^0.1.0",
     "@stryker-mutator/core": "^8.7.1",
-    "@stryker-mutator/vitest-runner": "^8.7.1"
+    "@stryker-mutator/vitest-runner": "^8.7.1",
+    "pa11y-ci": "^3.1.0"
   }
 }
