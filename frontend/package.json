@@ -19,7 +19,9 @@
     "test:mutation:ci": "stryker run stryker.config.mjs --reporters json,clear-text --concurrency 2",
     "test:a11y": "vitest run src/test/a11y.test.tsx",
     "test:a11y:pa11y": "pa11y-ci --config .pa11yrc.json",
-    "test:a11y:ci": "vitest run src/test/a11y.test.tsx --reporter=verbose"
+    "test:a11y:ci": "vitest run src/test/a11y.test.tsx --reporter=verbose",
+    "test:visual": "percy exec -- playwright test --config=playwright.visual.config.ts",
+    "test:visual:ci": "percy exec -- playwright test --config=playwright.visual.config.ts --reporter=github"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
