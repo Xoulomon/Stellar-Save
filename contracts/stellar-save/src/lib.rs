@@ -20,6 +20,7 @@
 //! - `status`: Group lifecycle status enum with state transitions
 //! - `events`: Event definitions for contract actions
 
+pub mod clone;
 pub mod contribution;
 pub mod cycle_advancement;
 pub mod deadline;

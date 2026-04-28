@@ -296,6 +296,16 @@ pub struct CycleDeadlineExtended {
     pub extended_at: u64,
 }
 
+/// Event emitted when a group is cloned from an existing group.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GroupCloned {
+    pub original_group_id: u64,
+    pub new_group_id: u64,
+    pub creator: Address,
+    pub cloned_at: u64,
+}
+
 impl EventEmitter {
     pub fn emit_group_created(
         env: &Env,
@@ -743,6 +753,22 @@ impl EventEmitter {
             extended_at,
         };
         env.events().publish(("cycle_deadline_extended",), event);
+    }
+
+    pub fn emit_group_cloned(
+        env: &Env,
+        original_group_id: u64,
+        new_group_id: u64,
+        creator: Address,
+        cloned_at: u64,
+    ) {
+        let event = GroupCloned {
+            original_group_id,
+            new_group_id,
+            creator,
+            cloned_at,
+        };
+        env.events().publish(("group_cloned",), event);
     }
 }
 
