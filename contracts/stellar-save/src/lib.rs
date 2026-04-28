@@ -22,6 +22,7 @@
 
 pub mod contribution;
 pub mod cycle_advancement;
+pub mod deadline;
 pub mod error;
 pub mod events;
 pub mod group;

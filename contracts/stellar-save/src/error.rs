@@ -131,6 +131,11 @@ pub enum StellarSaveError {
     /// The group cannot be archived because it is not in a terminal state (Completed or Cancelled).
     /// Error Code: 1007
     GroupNotArchivable = 1007,
+
+    // Deadline-related errors (7000-7999)
+    /// The requested deadline extension exceeds the maximum allowed (7 days), or is zero.
+    /// Error Code: 7001
+    DeadlineExtensionExceedsMax = 7001,
 }
 
 impl StellarSaveError {
@@ -240,6 +245,11 @@ impl StellarSaveError {
             StellarSaveError::Overflow => {
                 "The ID counter has reached its maximum limit. No more IDs can be generated."
             }
+
+            // Deadline-related errors
+            StellarSaveError::DeadlineExtensionExceedsMax => {
+                "The requested deadline extension exceeds the maximum allowed (7 days), or is zero."
+            }
         }
     }
     ///
@@ -258,6 +268,7 @@ impl StellarSaveError {
             4000..=4999 => ErrorCategory::Payout,
             5000..=5999 => ErrorCategory::Token,
             6000..=6999 => ErrorCategory::Reward,
+            7000..=7999 => ErrorCategory::Deadline,
             9000..=9999 => ErrorCategory::System,
             _ => ErrorCategory::Unknown,
         }
@@ -285,6 +296,9 @@ pub enum ErrorCategory {
 
     /// Errors related to completion reward operations.
     Reward,
+
+    /// Errors related to deadline extension operations.
+    Deadline,
 
     /// System-level errors and internal failures.
     System,
@@ -407,6 +421,11 @@ impl ErrorRecoveryStrategy {
             }
             StellarSaveError::Overflow => {
                 "The ID counter has reached its maximum. This is extremely rare and requires contract upgrade."
+            }
+
+            // Deadline errors - recovery strategies
+            StellarSaveError::DeadlineExtensionExceedsMax => {
+                "Provide an extension between 1 and 604800 seconds (7 days). Split larger extensions across multiple calls."
             }
         }
     }

@@ -250,6 +250,10 @@ pub enum CounterKey {
     /// Allowed tokens list: COUNTER_ALLOWED_TOKENS
     /// Stores the optional admin-managed allowlist of permitted token addresses.
     AllowedTokens,
+
+    /// Deadline extension for a specific group cycle: DEADLINE_EXTENSION_{group_id}_{cycle}
+    /// Stores the total extension in seconds applied to a cycle's contribution deadline.
+    DeadlineExtension(u64, u32),
 }
 
 /// Utility functions for creating storage keys with consistent formatting.
@@ -476,6 +480,11 @@ impl StorageKeyBuilder {
     /// Creates a key for the global emergency pause flag.
     pub fn emergency_pause() -> StorageKey {
         StorageKey::Counter(CounterKey::EmergencyPause)
+    }
+
+    /// Creates a key for the deadline extension of a specific group cycle.
+    pub fn deadline_extension(group_id: u64, cycle: u32) -> StorageKey {
+        StorageKey::Counter(CounterKey::DeadlineExtension(group_id, cycle))
     }
 
     /// Creates a key for the token configuration of a specific group.
