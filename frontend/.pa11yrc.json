@@ -1,0 +1,58 @@
+{
+  "standard": "WCAG2AA",
+  "level": "error",
+  "timeout": 30000,
+  "wait": 1000,
+  "chromeLaunchConfig": {
+    "args": ["--no-sandbox", "--disable-setuid-sandbox"]
+  },
+  "ignore": [],
+  "hideElements": "",
+  "rootElement": null,
+  "runners": ["axe", "htmlcs"],
+  "includeNotices": false,
+  "includeWarnings": true,
+  "screenCapture": "pa11y-screenshots",
+  "urls": [
+    {
+      "url": "http://localhost:4173/",
+      "screenCapture": "pa11y-screenshots/landing.png"
+    },
+    {
+      "url": "http://localhost:4173/dashboard",
+      "screenCapture": "pa11y-screenshots/dashboard.png"
+    },
+    {
+      "url": "http://localhost:4173/groups",
+      "screenCapture": "pa11y-screenshots/browse-groups.png"
+    },
+    {
+      "url": "http://localhost:4173/groups/create",
+      "screenCapture": "pa11y-screenshots/create-group.png"
+    },
+    {
+      "url": "http://localhost:4173/leaderboard",
+      "screenCapture": "pa11y-screenshots/leaderboard.png"
+    },
+    {
+      "url": "http://localhost:4173/settings",
+      "screenCapture": "pa11y-screenshots/settings.png"
+    },
+    {
+      "url": "http://localhost:4173/profile",
+      "screenCapture": "pa11y-screenshots/profile.png"
+    },
+    {
+      "url": "http://localhost:4173/transactions",
+      "screenCapture": "pa11y-screenshots/transactions.png"
+    },
+    {
+      "url": "http://localhost:4173/about",
+      "screenCapture": "pa11y-screenshots/about.png"
+    },
+    {
+      "url": "http://localhost:4173/404-test-route",
+      "screenCapture": "pa11y-screenshots/not-found.png"
+    }
+  ]
+}
