@@ -1,14 +1,14 @@
 import { Router } from 'express';
-import { RecommendationEngine } from './recommendation';
-import { ABTestingFramework } from './ab_testing';
-import { EmailService } from './email_service';
-import { ExportService } from './export_service';
-import { BackupService, S3HttpClient } from './backup_service';
-import { BackupScheduler } from './backup_scheduler';
-import { RecoveryService } from './recovery_service';
-import { BackupMonitor } from './backup_monitor';
-import { ContractEventIndexer } from './contract_event_indexer';
-import { Group, UserInteraction, UserPreference } from './models';
+import { RecommendationEngine } from '../recommendation';
+import { ABTestingFramework } from '../ab_testing';
+import { EmailService } from '../email_service';
+import { ExportService } from '../export_service';
+import { BackupService, S3HttpClient } from '../backup_service';
+import { BackupScheduler } from '../backup_scheduler';
+import { RecoveryService } from '../recovery_service';
+import { BackupMonitor } from '../backup_monitor';
+import { ContractEventIndexer } from '../contract_event_indexer';
+import { Group, UserInteraction, UserPreference } from '../models';
 
 // ── Shared service instances (passed in from app) ────────────────────────────
 export interface V1Services {
@@ -31,12 +31,8 @@ export function createV1Router(services: V1Services): Router {
     const { q } = req.query;
     if (!q) return res.status(400).json({ error: 'Query parameter q is required' });
     try {
-      const { SearchService } = await import('./search');
-      const searchService = new SearchService(
-        (engine as any).groups ?? [],
-        (engine as any).interactions ?? [],
-        []
-      );
+      const { SearchService } = await import('../search');
+      const searchService = new SearchService();
       res.json(await searchService.globalSearch(q as string));
     } catch {
       res.status(500).json({ error: 'Search failed' });
@@ -47,12 +43,8 @@ export function createV1Router(services: V1Services): Router {
     const { q } = req.query;
     if (!q) return res.status(400).json({ error: 'Query parameter q is required' });
     try {
-      const { SearchService } = await import('./search');
-      const searchService = new SearchService(
-        (engine as any).groups ?? [],
-        (engine as any).interactions ?? [],
-        []
-      );
+      const { SearchService } = await import('../search');
+      const searchService = new SearchService();
       res.json(await searchService.autocomplete(q as string));
     } catch {
       res.status(500).json({ error: 'Autocomplete failed' });

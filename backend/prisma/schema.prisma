@@ -29,3 +29,81 @@ model ContractEvent {
   @@index([ledgerSeq])
   @@index([timestamp])
 }
+
+// ========== NOTIFICATION MODELS (Issue #557) ==========
+
+model NotificationPreference {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  emailNotifications     Boolean  @default(true)
+  pushNotifications      Boolean  @default(true)
+  contributionReminders  Boolean  @default(true)
+  groupUpdates           Boolean  @default(true)
+  payoutNotifications    Boolean  @default(true)
+  emailFrequency         String   @default("immediate") // immediate, daily, weekly, never
+  unsubscribeToken       String   @unique @default(cuid())
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([userId])
+  @@index([unsubscribeToken])
+}
+
+model NotificationTemplate {
+  id                 String   @id @default(cuid())
+  templateKey        String   @unique
+  templateName       String
+  templateType       String   // "email" or "push"
+  subject            String?  // For email templates
+  htmlContent        String
+  textContent        String
+  placeholders       String[] // e.g., ["userName", "groupName", "amount"]
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([templateType])
+  @@index([active])
+}
+
+model Notification {
+  id                 String   @id @default(cuid())
+  userId             String
+  templateId         String
+  notificationType   String   // "email" or "push"
+  recipient          String   // email or device token
+  subject            String?  // For email notifications
+  renderedContent    String
+  metadata           Json?    // Additional data: {groupId, amount, etc}
+  status             String   @default("pending") // pending, sent, failed, bounced
+  externalId         String?  // SendGrid message ID, Firebase message ID, etc
+  failureReason      String?
+  sentAt             DateTime?
+  retryCount         Int      @default(0)
+  maxRetries         Int      @default(3)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([notificationType])
+  @@index([createdAt])
+  @@index([sentAt])
+}
+
+model NotificationQueue {
+  id                 String   @id @default(cuid())
+  userId             String
+  templateKey        String
+  recipient          String
+  templateData       Json     // Contains placeholder values
+  notificationType   String   // "email" or "push"
+  priority           Int      @default(0)
+  scheduledFor       DateTime @default(now())
+  processedAt        DateTime?
+  status             String   @default("pending") // pending, processing, completed, failed
+  createdAt          DateTime @default(now())
+
+  @@index([status])
+  @@index([scheduledFor])
+  @@index([userId])

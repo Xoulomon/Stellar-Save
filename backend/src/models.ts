@@ -96,3 +96,89 @@ export interface AuditLog {
   timestamp: number;
   metadata?: any;
 }
+
+// ========== NOTIFICATION MODELS (Issue #557) ==========
+
+export type NotificationType = 'email' | 'push';
+export type NotificationStatus = 'pending' | 'sent' | 'failed' | 'bounced';
+export type EmailFrequency = 'immediate' | 'daily' | 'weekly' | 'never';
+
+export interface NotificationPreference {
+  id: string;
+  userId: string;
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  contributionReminders: boolean;
+  groupUpdates: boolean;
+  payoutNotifications: boolean;
+  emailFrequency: EmailFrequency;
+  unsubscribeToken: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface NotificationTemplate {
+  id: string;
+  templateKey: string;
+  templateName: string;
+  templateType: NotificationType;
+  subject?: string;
+  htmlContent: string;
+  textContent: string;
+  placeholders: string[];
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  templateId: string;
+  notificationType: NotificationType;
+  recipient: string;
+  subject?: string;
+  renderedContent: string;
+  metadata?: Record<string, any>;
+  status: NotificationStatus;
+  externalId?: string;
+  failureReason?: string;
+  sentAt?: Date;
+  retryCount: number;
+  maxRetries: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface NotificationQueue {
+  id: string;
+  userId: string;
+  templateKey: string;
+  recipient: string;
+  templateData: Record<string, any>;
+  notificationType: NotificationType;
+  priority: number;
+  scheduledFor: Date;
+  processedAt?: Date;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  createdAt: Date;
+}
+
+export interface NotificationEvent {
+  eventType: string;
+  userId: string;
+  groupId?: string;
+  data: Record<string, any>;
+  timestamp: number;
+}
+
+export interface DeviceToken {
+  id: string;
+  userId: string;
+  deviceToken: string;
+  platform: 'iOS' | 'Android' | 'web';
+  active: boolean;
+  lastUsedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
