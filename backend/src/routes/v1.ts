@@ -7,6 +7,7 @@ import { BackupService, S3HttpClient } from './backup_service';
 import { BackupScheduler } from './backup_scheduler';
 import { RecoveryService } from './recovery_service';
 import { BackupMonitor } from './backup_monitor';
+import { ContractEventIndexer } from './contract_event_indexer';
 import { Group, UserInteraction, UserPreference } from './models';
 
 // ── Shared service instances (passed in from app) ────────────────────────────
@@ -18,11 +19,12 @@ export interface V1Services {
   backupScheduler: BackupScheduler;
   recoveryService: RecoveryService;
   backupMonitor: BackupMonitor;
+  eventIndexer: ContractEventIndexer;
 }
 
 export function createV1Router(services: V1Services): Router {
   const router = Router();
-  const { engine, abTest, exportService, backupService, backupScheduler, recoveryService, backupMonitor } = services;
+  const { engine, abTest, exportService, backupService, backupScheduler, recoveryService, backupMonitor, eventIndexer } = services;
 
   // Search
   router.get('/search', async (req, res) => {
@@ -139,6 +141,65 @@ export function createV1Router(services: V1Services): Router {
       res.json(result);
     } catch (err: unknown) {
       res.status(400).json({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // Contract Event Indexer Endpoints
+  router.get('/events', async (req, res) => {
+    try {
+      const {
+        contractId,
+        eventType,
+        startLedger,
+        endLedger,
+        startTime,
+        endTime,
+        limit,
+        offset
+      } = req.query;
+
+      const options: any = {};
+      if (contractId) options.contractId = contractId as string;
+      if (eventType) options.eventType = eventType as string;
+      if (startLedger) options.startLedger = parseInt(startLedger as string);
+      if (endLedger) options.endLedger = parseInt(endLedger as string);
+      if (startTime) options.startTime = new Date(startTime as string);
+      if (endTime) options.endTime = new Date(endTime as string);
+      if (limit) options.limit = parseInt(limit as string);
+      if (offset) options.offset = parseInt(offset as string);
+
+      const result = await eventIndexer.getEvents(options);
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      res.status(500).json({ error: 'Failed to fetch events' });
+    }
+  });
+
+  router.get('/events/stats', async (req, res) => {
+    try {
+      const { contractId } = req.query;
+      // Get basic stats about events
+      const totalEvents = await (eventIndexer as any).prisma.contractEvent.count({
+        where: contractId ? { contractId: contractId as string } : {}
+      });
+
+      const eventTypes = await (eventIndexer as any).prisma.contractEvent.groupBy({
+        by: ['eventType'],
+        where: contractId ? { contractId: contractId as string } : {},
+        _count: { eventType: true }
+      });
+
+      res.json({
+        totalEvents,
+        eventTypeBreakdown: eventTypes.map((type: any) => ({
+          type: type.eventType,
+          count: type._count.eventType
+        }))
+      });
+    } catch (error) {
+      console.error('Error fetching event stats:', error);
+      res.status(500).json({ error: 'Failed to fetch event stats' });
     }
   });
 

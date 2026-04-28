@@ -13,6 +13,7 @@ import { BackupService, S3HttpClient } from './backup_service';
 import { BackupScheduler } from './backup_scheduler';
 import { RecoveryService } from './recovery_service';
 import { BackupMonitor } from './backup_monitor';
+import { ContractEventIndexer } from './contract_event_indexer';
 import { versionMiddleware } from './versioning';
 import { createV1Router } from './routes/v1';
 import { createV2Router } from './routes/v2';
@@ -124,12 +125,23 @@ const backupMonitor = new BackupMonitor(backupService, {
 
 const adminService = new AdminService();
 
+const eventIndexer = new ContractEventIndexer(
+  process.env.HORIZON_URL || 'https://horizon-testnet.stellar.org',
+  process.env.CONTRACT_ID || 'CA...', // Placeholder contract ID
+  process.env.DATABASE_URL || 'postgresql://user:pass@localhost:5432/stellar_save'
+);
+
 if (process.env.BACKUP_ENABLED === 'true') {
   backupScheduler.start();
   backupMonitor.start();
 }
 
-const services = { engine, abTest, exportService, backupService, backupScheduler, recoveryService, backupMonitor };
+// Start the contract event indexer
+if (process.env.INDEXER_ENABLED === 'true') {
+  eventIndexer.start().catch(console.error);
+}
+
+const services = { engine, abTest, exportService, backupService, backupScheduler, recoveryService, backupMonitor, eventIndexer };
 
 // ── Versioned API routes ──────────────────────────────────────────────────────
 app.use('/api', versionMiddleware);
