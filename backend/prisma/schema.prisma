@@ -107,3 +107,130 @@ model NotificationQueue {
   @@index([status])
   @@index([scheduledFor])
   @@index([userId])
+}
+
+// ========== ANALYTICS MODELS (Issue #558) ==========
+
+model PlatformMetrics {
+  id                    String   @id @default(cuid())
+  date                  DateTime @unique
+  totalUsers            Int      @default(0)
+  activeUsers           Int      @default(0)
+  totalGroups           Int      @default(0)
+  activeGroups          Int      @default(0)
+  totalContributions    Int      @default(0)
+  totalContributionAmount Decimal @default(0) @db.Decimal(18, 8)
+  totalPayouts          Int      @default(0)
+  totalPayoutAmount     Decimal  @default(0) @db.Decimal(18, 8)
+  averageGroupSize      Decimal  @default(0) @db.Decimal(10, 2)
+  successRate           Decimal  @default(0) @db.Decimal(5, 2) // percentage: 0-100
+  totalTransactions     Int      @default(0)
+  uniqueWallets         Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([date])
+  @@index([createdAt])
+}
+
+model UserMetrics {
+  id                    String   @id @default(cuid())
+  userId                String
+  date                  DateTime
+  groupsJoined          Int      @default(0)
+  groupsCreated         Int      @default(0)
+  groupsCompleted       Int      @default(0)
+  totalContributions    Int      @default(0)
+  totalContributionAmount Decimal @default(0) @db.Decimal(18, 8)
+  totalPayoutsReceived  Decimal  @default(0) @db.Decimal(18, 8)
+  sessionsCount         Int      @default(0)
+  sessionDurationMinutes Int     @default(0)
+  pageViews             Int      @default(0)
+  interactionCount      Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@index([createdAt])
+}
+
+model GroupMetrics {
+  id                    String   @id @default(cuid())
+  groupId               String
+  date                  DateTime
+  memberCount           Int      @default(0)
+  totalContributions    Int      @default(0)
+  totalContributionAmount Decimal @default(0) @db.Decimal(18, 8)
+  totalPayoutsDistributed Decimal @default(0) @db.Decimal(18, 8)
+  successRate           Decimal  @default(0) @db.Decimal(5, 2) // percentage: 0-100
+  averageContributionSize Decimal @default(0) @db.Decimal(18, 8)
+  newMembersCount       Int      @default(0)
+  churnCount            Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([groupId, date])
+  @@index([groupId])
+  @@index([date])
+  @@index([createdAt])
+}
+
+model AnalyticsEvent {
+  id                    String   @id @default(cuid())
+  userId                String?
+  groupId               String?
+  eventType             String   // view, click, contribute, create_group, join_group, etc
+  eventName             String
+  eventData             Json?    // Additional event-specific data
+  userAgent             String?
+  ipAddress             String?
+  referrer              String?
+  sessionId             String?
+  createdAt             DateTime @default(now())
+
+  @@index([userId])
+  @@index([groupId])
+  @@index([eventType])
+  @@index([eventName])
+  @@index([createdAt])
+  @@index([sessionId])
+}
+
+model AnalyticsReport {
+  id                    String   @id @default(cuid())
+  reportType            String   // "daily", "weekly", "monthly", "custom"
+  reportName            String
+  startDate             DateTime
+  endDate               DateTime
+  data                  Json     // Aggregated report data
+  generatedBy           String?  // userId who generated the report
+  isPublic              Boolean  @default(false)
+  status                String   @default("completed") // pending, processing, completed, failed
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([reportType])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([createdAt])
+}
+
+// ========== WEBHOOK MODELS (Issue #559) ==========
+
+model Webhook {
+  id          String   @id @default(cuid())
+  userId      String
+  url         String
+  events      String[] // e.g. ["contribution.created", "group.updated"]
+  secret      String   // HMAC secret for signature verification
+  isActive    Boolean  @default(true)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isActive])
+  @@index([createdAt])
+}

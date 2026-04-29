@@ -8,6 +8,8 @@ import { BackupScheduler } from '../backup_scheduler';
 import { RecoveryService } from '../recovery_service';
 import { BackupMonitor } from '../backup_monitor';
 import { ContractEventIndexer } from '../contract_event_indexer';
+import { AnalyticsService } from '../analytics_service';
+import { createAnalyticsMiddlewareStack } from '../analytics_middleware';
 import { Group, UserInteraction, UserPreference } from '../models';
 
 // ── Shared service instances (passed in from app) ────────────────────────────
@@ -20,11 +22,15 @@ export interface V1Services {
   recoveryService: RecoveryService;
   backupMonitor: BackupMonitor;
   eventIndexer: ContractEventIndexer;
+  analyticsService: AnalyticsService;
 }
 
 export function createV1Router(services: V1Services): Router {
   const router = Router();
-  const { engine, abTest, exportService, backupService, backupScheduler, recoveryService, backupMonitor, eventIndexer } = services;
+  const { engine, abTest, exportService, backupService, backupScheduler, recoveryService, backupMonitor, eventIndexer, analyticsService } = services;
+
+  // Setup analytics middleware
+  const analyticsMiddleware = createAnalyticsMiddlewareStack();
 
   // Search
   router.get('/search', async (req, res) => {
@@ -194,6 +200,262 @@ export function createV1Router(services: V1Services): Router {
       res.status(500).json({ error: 'Failed to fetch event stats' });
     }
   });
+
+  // ── Analytics Endpoints (Issue #558) ────────────────────────────
+  
+  // Get platform statistics for a specific date
+  router.get(
+    '/analytics/platform',
+    analyticsMiddleware.readRateLimit,
+    analyticsMiddleware.cache,
+    async (req, res) => {
+      try {
+        const { date } = req.query;
+        const targetDate = date ? new Date(date as string) : new Date();
+        const stats = await analyticsService.getPlatformStats(targetDate);
+        
+        if (!stats) {
+          return res.status(404).json({ error: 'No analytics data available for this date' });
+        }
+        
+        res.json(stats);
+      } catch (error) {
+        console.error('Error fetching platform stats:', error);
+        res.status(500).json({ error: 'Failed to fetch platform statistics' });
+      }
+    }
+  );
+
+  // Get platform trends over a date range
+  router.get(
+    '/analytics/platform/trends',
+    analyticsMiddleware.readRateLimit,
+    analyticsMiddleware.cache,
+    async (req, res) => {
+      try {
+        const { startDate, endDate, limit, offset } = req.query;
+        
+        if (!startDate || !endDate) {
+          return res.status(400).json({ error: 'startDate and endDate are required' });
+        }
+
+        const trends = await analyticsService.getPlatformTrends(
+          new Date(startDate as string),
+          new Date(endDate as string),
+          {
+            limit: limit ? parseInt(limit as string) : 30,
+            offset: offset ? parseInt(offset as string) : 0,
+          }
+        );
+
+        res.json({
+          startDate,
+          endDate,
+          dataPoints: trends.length,
+          trends,
+        });
+      } catch (error) {
+        console.error('Error fetching platform trends:', error);
+        res.status(500).json({ error: 'Failed to fetch platform trends' });
+      }
+    }
+  );
+
+  // Get user-specific analytics
+  router.get(
+    '/analytics/users/:userId',
+    analyticsMiddleware.readRateLimit,
+    analyticsMiddleware.cache,
+    async (req, res) => {
+      try {
+        const { userId } = req.params;
+        const { date } = req.query;
+        const targetDate = date ? new Date(date as string) : new Date();
+
+        const stats = await analyticsService.getUserStats(userId, targetDate);
+
+        if (!stats) {
+          return res.status(404).json({ error: 'No analytics data available for this user' });
+        }
+
+        res.json(stats);
+      } catch (error) {
+        console.error('Error fetching user stats:', error);
+        res.status(500).json({ error: 'Failed to fetch user statistics' });
+      }
+    }
+  );
+
+  // Get group-specific analytics
+  router.get(
+    '/analytics/groups/:groupId',
+    analyticsMiddleware.readRateLimit,
+    analyticsMiddleware.cache,
+    async (req, res) => {
+      try {
+        const { groupId } = req.params;
+        const { date } = req.query;
+        const targetDate = date ? new Date(date as string) : new Date();
+
+        const stats = await analyticsService.getGroupStats(groupId, targetDate);
+
+        if (!stats) {
+          return res.status(404).json({ error: 'No analytics data available for this group' });
+        }
+
+        res.json(stats);
+      } catch (error) {
+        console.error('Error fetching group stats:', error);
+        res.status(500).json({ error: 'Failed to fetch group statistics' });
+      }
+    }
+  );
+
+  // Get analytics events statistics
+  router.get(
+    '/analytics/events',
+    analyticsMiddleware.readRateLimit,
+    analyticsMiddleware.cache,
+    async (req, res) => {
+      try {
+        const { startDate, endDate, limit, offset } = req.query;
+
+        const eventStats = await analyticsService.getEventStats({
+          startDate: startDate ? new Date(startDate as string) : undefined,
+          endDate: endDate ? new Date(endDate as string) : undefined,
+          limit: limit ? parseInt(limit as string) : 20,
+          offset: offset ? parseInt(offset as string) : 0,
+        });
+
+        res.json({
+          count: eventStats.length,
+          events: eventStats,
+        });
+      } catch (error) {
+        console.error('Error fetching event stats:', error);
+        res.status(500).json({ error: 'Failed to fetch event statistics' });
+      }
+    }
+  );
+
+  // Record an analytics event
+  router.post(
+    '/analytics/events',
+    analyticsMiddleware.writeRateLimit,
+    async (req, res) => {
+      try {
+        const { eventType, eventName, userId, groupId, eventData, sessionId } = req.body;
+
+        if (!eventType || !eventName) {
+          return res.status(400).json({
+            error: 'eventType and eventName are required',
+          });
+        }
+
+        await analyticsService.recordEvent(
+          eventType,
+          eventName,
+          userId,
+          groupId,
+          eventData,
+          sessionId
+        );
+
+        res.status(201).json({ message: 'Event recorded successfully' });
+      } catch (error) {
+        console.error('Error recording event:', error);
+        res.status(500).json({ error: 'Failed to record event' });
+      }
+    }
+  );
+
+  // Generate an analytics report
+  router.post(
+    '/analytics/reports',
+    analyticsMiddleware.writeRateLimit,
+    async (req, res) => {
+      try {
+        const { reportType, reportName, startDate, endDate, generatedBy } = req.body;
+
+        if (!reportType || !reportName || !startDate || !endDate) {
+          return res.status(400).json({
+            error: 'reportType, reportName, startDate, and endDate are required',
+          });
+        }
+
+        const report = await analyticsService.generateReport(
+          reportType,
+          reportName,
+          new Date(startDate),
+          new Date(endDate),
+          generatedBy
+        );
+
+        res.status(201).json(report);
+      } catch (error) {
+        console.error('Error generating report:', error);
+        res.status(500).json({ error: 'Failed to generate report' });
+      }
+    }
+  );
+
+  // Get analytics reports
+  router.get(
+    '/analytics/reports',
+    analyticsMiddleware.readRateLimit,
+    analyticsMiddleware.cache,
+    async (req, res) => {
+      try {
+        const { reportType, limit, offset } = req.query;
+
+        const reports = await analyticsService.getReports(reportType as string, {
+          limit: limit ? parseInt(limit as string) : 20,
+          offset: offset ? parseInt(offset as string) : 0,
+        });
+
+        res.json({
+          count: reports.length,
+          reports,
+        });
+      } catch (error) {
+        console.error('Error fetching reports:', error);
+        res.status(500).json({ error: 'Failed to fetch reports' });
+      }
+    }
+  );
+
+  // Get cache statistics
+  router.get(
+    '/analytics/cache/stats',
+    analyticsMiddleware.readRateLimit,
+    async (req, res) => {
+      try {
+        const stats = await analyticsService.getCacheStats();
+        res.json(stats);
+      } catch (error) {
+        console.error('Error fetching cache stats:', error);
+        res.status(500).json({ error: 'Failed to fetch cache statistics' });
+      }
+    }
+  );
+
+  // Clear analytics cache
+  router.post(
+    '/analytics/cache/clear',
+    analyticsMiddleware.writeRateLimit,
+    async (req, res) => {
+      try {
+        const { pattern } = req.body;
+        const cachePattern = pattern || '*';
+
+        await analyticsService.clearCache(cachePattern);
+        res.json({ message: 'Cache cleared successfully' });
+      } catch (error) {
+        console.error('Error clearing cache:', error);
+        res.status(500).json({ error: 'Failed to clear cache' });
+      }
+    }
+  );
 
   return router;
 }
