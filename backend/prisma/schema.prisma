@@ -216,3 +216,21 @@ model AnalyticsReport {
   @@index([endDate])
   @@index([createdAt])
 }
+
+// ========== WEBHOOK MODELS (Issue #559) ==========
+
+model Webhook {
+  id          String   @id @default(cuid())
+  userId      String
+  url         String
+  events      String[] // e.g. ["contribution.created", "group.updated"]
+  secret      String   // HMAC secret for signature verification
+  isActive    Boolean  @default(true)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isActive])
+  @@index([createdAt])
+}
