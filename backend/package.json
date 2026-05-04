@@ -13,7 +13,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@apollo/server": "^4.12.2",
+    "@apollo/server": "^5.5.0",
     "@elastic/elasticsearch": "^9.3.4",
     "@graphql-tools/schema": "^10.0.13",
     "@nestjs/bullmq": "^11.0.4",
