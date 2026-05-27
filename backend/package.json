@@ -37,7 +37,8 @@
     "pg": "^8.20.0",
     "prisma": "^6.19.3",
     "stellar-sdk": "^13.3.0",
-    "uuid": "^14.0.0"
+    "uuid": "^14.0.0",
+    "@aws-sdk/client-s3": "^3.600.0"
   },
   "devDependencies": {
     "@types/graphql-depth-limit": "^1.1.5",

@@ -217,6 +217,26 @@ model AnalyticsReport {
   @@index([createdAt])
 }
 
+// ========== HORIZON INDEXER MODELS ==========
+
+model IndexedTransaction {
+  id             String   @id @default(cuid())
+  txHash         String   @unique
+  ledgerSeq      Int
+  sourceAccount  String
+  feePaid        Int      @default(0)
+  operationCount Int      @default(0)
+  envelopeXdr    String?
+  resultXdr      String?
+  pagingToken    String
+  createdAt      DateTime
+  indexedAt      DateTime @default(now())
+
+  @@index([ledgerSeq])
+  @@index([sourceAccount])
+  @@index([createdAt])
+}
+
 // ========== WEBHOOK MODELS (Issue #559) ==========
 
 model Webhook {
