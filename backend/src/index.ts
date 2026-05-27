@@ -19,7 +19,7 @@ import { createV1Router } from './routes/v1';
 import { createV2Router } from './routes/v2';
 import { metricsMiddleware, metricsHandler } from './metrics';
 import { requestLogger } from './logger';
-import { createRateLimiterMiddleware } from './rate_limiter';
+import { createRateLimiterMiddleware, createAuthRateLimiterMiddleware } from './rate_limiter';
 
 dotenv.config();
 
@@ -30,6 +30,11 @@ app.use(requestLogger);
 app.use(metricsMiddleware);
 app.get('/metrics', metricsHandler);
 app.use(createRateLimiterMiddleware());
+
+// Stricter rate limiting on auth/admin endpoints: 10 req / 15 min per IP
+const authRateLimiter = createAuthRateLimiterMiddleware();
+app.use('/api/admin', authRateLimiter);
+app.use('/graphql', authRateLimiter);
 
 // ========== CACHE ROUTES (Issue #563) ==========
 
