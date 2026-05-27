@@ -441,6 +441,11 @@ impl StellarSaveContract {
         // 1. Authorization: Only the creator can initiate this transaction
         creator.require_auth();
 
+        // 1b. Protocol-level cap: max_members must not exceed MAX_MEMBERS (issue #755)
+        if max_members > crate::group::MAX_MEMBERS {
+            return Err(StellarSaveError::MaxMembersExceeded);
+        }
+
         // 2. Round contribution amount to nearest 0.01 XLM (100,000 stroops)
         // This prevents precision issues with very small amounts
         let rounded_amount = crate::helpers::round_contribution_amount(contribution_amount);
@@ -1728,6 +1733,23 @@ impl StellarSaveContract {
     /// - `InvalidRecipient` - Recipient not eligible for payout
     pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
         payout_executor::execute_payout(env, group_id)
+    }
+
+    /// Returns the address of the next scheduled payout recipient without executing the payout.
+    ///
+    /// This is a read-only view function. The recipient is derived from the group's
+    /// `current_cycle` and the payout position reverse-index (O(1) lookup).
+    ///
+    /// # Arguments
+    /// * `env`      - Soroban environment
+    /// * `group_id` - ID of the group to query
+    ///
+    /// # Returns
+    /// * `Ok(Address)` - Address of the member scheduled to receive the next payout
+    /// * `Err(StellarSaveError::GroupNotFound)` - Group does not exist
+    /// * `Err(StellarSaveError::InvalidState)` - Group is not Active or no recipient mapped
+    pub fn get_next_recipient(env: Env, group_id: u64) -> Result<Address, StellarSaveError> {
+        payout::get_next_recipient(&env, group_id)
     }
 
     // ============================================================================
@@ -5067,6 +5089,65 @@ mod tests {
         assert_eq!(position, 2);
     }
 
+    // Issue #756: get_next_recipient tests
+    #[test]
+    fn test_get_next_recipient_correct_cycle() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        let member0 = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let group_id = 1;
+
+        // Create an active group at cycle 1
+        let mut group = Group::new(group_id, creator.clone(), 100, 3600, 5, 2, 12345, 0);
+        group.status = GroupStatus::Active;
+        group.current_cycle = 1;
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_data(group_id), &group);
+
+        // Store reverse-index: position 0 → member0, position 1 → member1
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_payout_position_index(group_id, 0),
+            &member0,
+        );
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_payout_position_index(group_id, 1),
+            &member1,
+        );
+
+        // At cycle 1, next recipient should be member1
+        let recipient = client.get_next_recipient(&group_id);
+        assert_eq!(recipient, member1);
+    }
+
+    #[test]
+    fn test_get_next_recipient_cycle_zero() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        let member0 = Address::generate(&env);
+        let group_id = 1;
+
+        let mut group = Group::new(group_id, creator.clone(), 100, 3600, 5, 2, 12345, 0);
+        group.status = GroupStatus::Active;
+        group.current_cycle = 0;
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_data(group_id), &group);
+
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_payout_position_index(group_id, 0),
+            &member0,
+        );
+
+        let recipient = client.get_next_recipient(&group_id);
+        assert_eq!(recipient, member0);
+    }
+
     #[test]
     fn test_get_payout_position_first_member() {
         let env = Env::default();
@@ -5304,6 +5385,37 @@ mod tests {
 
         let count = client.get_total_groups_created();
         assert_eq!(count, 2);
+    }
+
+    // Issue #755: MAX_MEMBERS boundary condition tests
+    #[test]
+    fn test_create_group_max_members_boundary_valid() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        env.mock_all_auths();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
+        // Exactly MAX_MEMBERS (20) should succeed
+        let result = client.try_create_group(&creator, &100, &3600, &20, &token_address);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_create_group_max_members_exceeded() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        env.mock_all_auths();
+        let token_address = env
+            .register_stellar_asset_contract_v2(Address::generate(&env))
+            .address();
+        // 21 exceeds MAX_MEMBERS — must return MaxMembersExceeded
+        let result = client.try_create_group(&creator, &100, &3600, &21, &token_address);
+        assert!(result.is_err());
     }
 
     #[test]

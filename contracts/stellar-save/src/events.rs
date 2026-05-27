@@ -45,6 +45,19 @@ pub struct ContributionMade {
     pub contributed_at: u64,
 }
 
+/// Structured on-chain contribution receipt event for backend indexers.
+/// Emitted on every contribution and payout so the indexer can reconstruct
+/// full contribution history without querying state directly (issue #754).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContributionEvent {
+    pub group_id: u64,
+    pub member: Address,
+    pub amount: i128,
+    pub cycle: u32,
+    pub timestamp: u64,
+}
+
 /// Event emitted when a payout is executed.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -374,13 +387,23 @@ impl EventEmitter {
     ) {
         let event = ContributionMade {
             group_id,
-            contributor,
+            contributor: contributor.clone(),
             amount,
             cycle,
             cycle_total,
             contributed_at,
         };
         env.events().publish(("contribution_made",), event);
+
+        // Issue #754: emit structured receipt for indexer
+        let receipt = ContributionEvent {
+            group_id,
+            member: contributor,
+            amount,
+            cycle,
+            timestamp: contributed_at,
+        };
+        env.events().publish(("contribution_receipt",), receipt);
     }
 
     pub fn emit_payout_executed(

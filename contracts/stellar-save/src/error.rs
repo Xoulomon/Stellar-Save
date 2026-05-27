@@ -18,6 +18,10 @@ pub enum StellarSaveError {
     /// Error Code: 1002
     GroupFull = 1002,
 
+    /// The requested max_members exceeds the protocol-level MAX_MEMBERS cap (20).
+    /// Error Code: 1005
+    MaxMembersExceeded = 1005,
+
     /// The group is not in a valid state for the requested operation.
     /// Error Code: 1003
     InvalidState = 1003,

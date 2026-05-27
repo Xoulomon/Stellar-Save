@@ -2,6 +2,10 @@
 use core::fmt;
 use soroban_sdk::{contracttype, Address};
 
+/// Protocol-level maximum number of members per group.
+/// Prevents unbounded storage growth and gas exhaustion.
+pub const MAX_MEMBERS: u32 = 20;
+
 /// Configuration for the token used by a savings group.
 ///
 /// Stored separately from `Group` under `GroupKey::TokenConfig(group_id)` to

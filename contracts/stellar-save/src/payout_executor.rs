@@ -485,7 +485,19 @@ fn emit_payout_event(
     // If the event system fails internally, Soroban will handle it gracefully
     // without causing the transaction to revert.
 
-    EventEmitter::emit_payout_executed(env, group_id, recipient, amount, cycle, timestamp);
+    EventEmitter::emit_payout_executed(env, group_id, recipient.clone(), amount, cycle, timestamp);
+
+    // Issue #754: emit structured contribution receipt for indexer
+    env.events().publish(
+        ("contribution_receipt",),
+        crate::events::ContributionEvent {
+            group_id,
+            member: recipient,
+            amount,
+            cycle,
+            timestamp,
+        },
+    );
 
     // Event emission completed (or failed gracefully)
     // The payout flow continues regardless of event emission status
