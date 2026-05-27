@@ -3524,6 +3524,97 @@ impl StellarSaveContract {
         Ok(())
     }
 
+    /// Removes a member from a group before the first cycle begins.
+    /// Only the group creator can call this function.
+    /// The creator cannot remove themselves.
+    pub fn remove_member(
+        env: Env,
+        group_id: u64,
+        member: Address,
+    ) -> Result<(), StellarSaveError> {
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let mut group: Group = env
+            .storage()
+            .persistent()
+            .get(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // Require creator auth
+        group.creator.require_auth();
+
+        // Only allowed before cycle 1 begins (group must still be Pending)
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        let status: GroupStatus = env
+            .storage()
+            .persistent()
+            .get(&status_key)
+            .unwrap_or(GroupStatus::Pending);
+
+        if status != GroupStatus::Pending {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        // Creator cannot remove themselves
+        if member == group.creator {
+            return Err(StellarSaveError::Unauthorized);
+        }
+
+        // Verify the target is actually a member
+        let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
+        let profile: MemberProfile = env
+            .storage()
+            .persistent()
+            .get(&member_key)
+            .ok_or(StellarSaveError::NotMember)?;
+
+        // Remove member profile
+        env.storage().persistent().remove(&member_key);
+
+        // Remove payout eligibility entry
+        let payout_key =
+            StorageKeyBuilder::member_payout_eligibility(group_id, member.clone());
+        env.storage().persistent().remove(&payout_key);
+
+        // Remove payout position reverse index
+        let pos_idx_key = StorageKeyBuilder::group_payout_position_index(
+            group_id,
+            profile.payout_position,
+        );
+        env.storage().persistent().remove(&pos_idx_key);
+
+        // Remove from member list
+        let members_key = StorageKeyBuilder::group_members(group_id);
+        let mut members: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&members_key)
+            .unwrap_or(Vec::new(&env));
+        let mut new_members = Vec::new(&env);
+        for m in members.iter() {
+            if m != member {
+                new_members.push_back(m);
+            }
+        }
+        members = new_members;
+        env.storage().persistent().set(&members_key, &members);
+
+        // Update group member count
+        group.member_count -= 1;
+        env.storage().persistent().set(&group_key, &group);
+
+        let timestamp = env.ledger().timestamp();
+        EventEmitter::emit_member_removed(
+            &env,
+            group_id,
+            member,
+            group.creator.clone(),
+            group.member_count,
+            timestamp,
+        );
+
+        Ok(())
+    }
+
     /// Allows members to withdraw their share in emergency situations.
     ///
     /// Emergency conditions:
@@ -12773,4 +12864,151 @@ mod tests {
         env.mock_all_auths();
         let token_address = Address::generate(&env);
         client.create_group(&creator, &10000, &3600, &5, &token_address);
+    }
+
+    // ── remove_member tests ──────────────────────────────────────────────────
+
+    fn setup_pending_group_with_member(
+        env: &Env,
+        group_id: u64,
+        creator: &Address,
+        member: &Address,
+    ) {
+        let mut group = Group::new(group_id, creator.clone(), 100, 3600, 5, 2, 12345, 0);
+        group.member_count = 2;
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_data(group_id), &group);
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
+
+        let mut members = Vec::new(env);
+        members.push_back(creator.clone());
+        members.push_back(member.clone());
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_members(group_id), &members);
+
+        let profile = MemberProfile {
+            address: member.clone(),
+            group_id,
+            payout_position: 1,
+            joined_at: 12345,
+            auto_contribute_enabled: false,
+        };
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::member_profile(group_id, member.clone()), &profile);
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::member_payout_eligibility(group_id, member.clone()), &1u32);
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_payout_position_index(group_id, 1), member);
+    }
+
+    #[test]
+    fn test_remove_member_success() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+        let group_id = 1u64;
+
+        setup_pending_group_with_member(&env, group_id, &creator, &member);
+
+        client.remove_member(&group_id, &member);
+
+        // Member profile removed
+        assert!(!env.storage().persistent().has(
+            &StorageKeyBuilder::member_profile(group_id, member.clone())
+        ));
+        // Member list updated
+        let members: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&StorageKeyBuilder::group_members(group_id))
+            .unwrap();
+        assert_eq!(members.len(), 1);
+        assert_eq!(members.get(0).unwrap(), creator);
+        // Member count decremented
+        let group: Group = env
+            .storage()
+            .persistent()
+            .get(&StorageKeyBuilder::group_data(group_id))
+            .unwrap();
+        assert_eq!(group.member_count, 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1001))")]
+    fn test_remove_member_group_not_found() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+        let member = Address::generate(&env);
+
+        client.remove_member(&999u64, &member);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(2002))")]
+    fn test_remove_member_not_a_member() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+        let stranger = Address::generate(&env);
+        let group_id = 1u64;
+
+        setup_pending_group_with_member(&env, group_id, &creator, &member);
+
+        client.remove_member(&group_id, &stranger);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(2003))")]
+    fn test_remove_member_cannot_remove_creator() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+        let group_id = 1u64;
+
+        setup_pending_group_with_member(&env, group_id, &creator, &member);
+
+        client.remove_member(&group_id, &creator);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status(ContractError(1003))")]
+    fn test_remove_member_group_already_active() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+        let group_id = 1u64;
+
+        setup_pending_group_with_member(&env, group_id, &creator, &member);
+
+        // Transition group to Active
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Active);
+
+        client.remove_member(&group_id, &member);
     }
