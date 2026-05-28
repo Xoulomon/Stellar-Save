@@ -33,6 +33,17 @@ pub struct MemberLeft {
     pub left_at: u64,
 }
 
+/// Event emitted when the group creator removes a member before cycle 1 begins.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemberRemoved {
+    pub group_id: u64,
+    pub member: Address,
+    pub removed_by: Address,
+    pub member_count: u32,
+    pub removed_at: u64,
+}
+
 /// Event emitted when a member makes a contribution.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -382,6 +393,24 @@ impl EventEmitter {
             left_at,
         };
         env.events().publish(("member_left",), event);
+    }
+
+    pub fn emit_member_removed(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        removed_by: Address,
+        member_count: u32,
+        removed_at: u64,
+    ) {
+        let event = MemberRemoved {
+            group_id,
+            member,
+            removed_by,
+            member_count,
+            removed_at,
+        };
+        env.events().publish(("member_removed",), event);
     }
 
     /// Emits a reminder event when a contribution is due for a member.
