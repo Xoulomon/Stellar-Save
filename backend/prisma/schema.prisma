@@ -221,7 +221,20 @@ model AnalyticsReport {
   @@index([createdAt])
 }
 
-// ========== WEBHOOK MODELS (Issue #559 / #798) ==========
+// ========== WEB PUSH SUBSCRIPTION MODELS ==========
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ========== WEBHOOK MODELS (Issue #559) ==========
 
 model Webhook {
   id          String   @id @default(cuid())

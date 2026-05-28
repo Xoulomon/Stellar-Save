@@ -1,26 +1,51 @@
 import { Horizon } from '@stellar/stellar-sdk';
 import { PrismaClient } from './generated/prisma/client';
-import { deliverWebhookEvent } from './routes/webhooks';
-import { recordContribution } from './reputation_service';
+import { WebPushService } from './web_push_service';
 
-export type DependencyHealth = {
-  up: boolean;
-  latencyMs?: number;
-  error?: string;
-};
+// Event types emitted by the Stellar savings contract
+const PAYOUT_EVENT_TYPES = ['payout', 'payout_received', 'payoutreceived', 'payout_processed'];
+const MISSED_CONTRIBUTION_TYPES = ['missed_contribution', 'missedcontribution', 'contribution_missed', 'missed'];
+
+function isPayout(eventType: string): boolean {
+  return PAYOUT_EVENT_TYPES.includes(eventType.toLowerCase().replace(/-/g, '_'));
+}
+
+function isMissedContribution(eventType: string): boolean {
+  return MISSED_CONTRIBUTION_TYPES.includes(eventType.toLowerCase().replace(/-/g, '_'));
+}
+
+// Extract member addresses from Stellar contract event topics/data
+function extractMemberAddresses(event: any): string[] {
+  const addresses: string[] = [];
+
+  const topicsArr: unknown[] = Array.isArray(event.topic) ? event.topic : [];
+  for (const t of topicsArr) {
+    if (typeof t === 'string' && t.startsWith('G')) addresses.push(t);
+    else if (typeof t === 'object' && t !== null && 'address' in t) addresses.push((t as any).address);
+  }
+
+  const data = event.data ?? {};
+  for (const key of ['member', 'recipient', 'address', 'sender']) {
+    if (typeof data[key] === 'string') addresses.push(data[key]);
+  }
+
+  return [...new Set(addresses)];
+}
 
 export class ContractEventIndexer {
   private server: Horizon.Server;
   private prisma: PrismaClient;
   private contractId: string;
   private isRunning = false;
+  private webPush?: WebPushService;
 
-  constructor(horizonUrl: string, contractId: string, databaseUrl: string) {
+  constructor(horizonUrl: string, contractId: string, databaseUrl: string, webPush?: WebPushService) {
     this.server = new Horizon.Server(horizonUrl);
     this.contractId = contractId;
     // Set the database URL in environment for Prisma
     process.env.DATABASE_URL = databaseUrl;
     this.prisma = new (PrismaClient as any)();
+    this.webPush = webPush;
   }
 
   async start(lastLedger?: number) {
@@ -75,6 +100,7 @@ export class ContractEventIndexer {
 
         for (const event of data._embedded.records) {
           await this.storeEventFromHorizon(event);
+          await this.notifyOnEvent(event);
         }
 
         // Update cursor to the last processed event
@@ -129,21 +155,41 @@ export class ContractEventIndexer {
     }
   }
 
-  private mapToWebhookEvent(eventType: string): string | null {
-    const map: Record<string, string> = {
-      'contribution': 'contribution.created',
-      'contribution_created': 'contribution.created',
-      'payout': 'payout.executed',
-      'payout_executed': 'payout.executed',
-      'member_joined': 'member.joined',
-      'join': 'member.joined',
-    };
-    return map[eventType.toLowerCase()] || null;
-  }
+  private async notifyOnEvent(event: any): Promise<void> {
+    if (!this.webPush) return;
 
-  private extractGroupId(data: any): string | undefined {
-    if (!data || typeof data !== 'object') return undefined;
-    return (data as any).group_id || (data as any).groupId || undefined;
+    const eventType: string = event.type || event.eventType || '';
+    const data = event.data ?? {};
+    const members = extractMemberAddresses(event);
+
+    if (isPayout(eventType)) {
+      const amount = data.amount ?? data.value ?? '';
+      const groupId = data.groupId ?? data.group_id ?? data.group ?? '';
+      const payload = {
+        title: 'Payout Received!',
+        body: amount
+          ? `You received a payout of ${amount}${groupId ? ` from group ${groupId}` : ''}.`
+          : `Your savings group payout has been processed.`,
+        data: { eventType, txHash: event.transactionHash ?? event.txHash, groupId, amount },
+      };
+      await this.webPush.sendToMembers(members, payload);
+      console.log(`Push notification sent for payout event (ledger ${event.ledger ?? event.ledgerSeq})`);
+      return;
+    }
+
+    if (isMissedContribution(eventType)) {
+      const amount = data.amount ?? data.value ?? '';
+      const groupId = data.groupId ?? data.group_id ?? data.group ?? '';
+      const payload = {
+        title: 'Missed Contribution',
+        body: amount
+          ? `A contribution of ${amount} was missed${groupId ? ` in group ${groupId}` : ''}.`
+          : `A contribution was missed in your savings group.`,
+        data: { eventType, txHash: event.transactionHash ?? event.txHash, groupId, amount },
+      };
+      await this.webPush.sendToMembers(members, payload);
+      console.log(`Push notification sent for missed-contribution event (ledger ${event.ledger ?? event.ledgerSeq})`);
+    }
   }
 
   async stop() {
