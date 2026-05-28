@@ -33,6 +33,17 @@ pub struct MemberLeft {
     pub left_at: u64,
 }
 
+/// Event emitted when the group creator removes a member before cycle 1 begins.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemberRemoved {
+    pub group_id: u64,
+    pub member: Address,
+    pub removed_by: Address,
+    pub member_count: u32,
+    pub removed_at: u64,
+}
+
 /// Event emitted when a member makes a contribution.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -43,6 +54,19 @@ pub struct ContributionMade {
     pub cycle: u32,
     pub cycle_total: i128,
     pub contributed_at: u64,
+}
+
+/// Structured on-chain contribution receipt event for backend indexers.
+/// Emitted on every contribution and payout so the indexer can reconstruct
+/// full contribution history without querying state directly (issue #754).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContributionEvent {
+    pub group_id: u64,
+    pub member: Address,
+    pub amount: i128,
+    pub cycle: u32,
+    pub timestamp: u64,
 }
 
 /// Event emitted when a payout is executed.
@@ -76,6 +100,19 @@ pub struct GroupStatusChanged {
     pub new_status: u32,
     pub changed_by: Address,
     pub changed_at: u64,
+}
+
+/// Event emitted when a contribution is accepted within the grace period
+/// (after the hard deadline but before grace_period_seconds elapses).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GracePeriodContribution {
+    pub group_id: u64,
+    pub contributor: Address,
+    pub amount: i128,
+    pub cycle: u32,
+    pub seconds_late: u64,
+    pub contributed_at: u64,
 }
 
 /// Event emitted when a group's metadata is updated.
@@ -295,6 +332,15 @@ pub struct RefundIssued {
     pub refunded_at: u64,
 }
 
+/// Event emitted when a group is dissolved by unanimous member vote.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GroupDissolved {
+    pub group_id: u64,
+    pub dissolved_at: u64,
+    pub total_refunded: i128,
+}
+
 impl EventEmitter {
     pub fn emit_group_created(
         env: &Env,
@@ -348,6 +394,24 @@ impl EventEmitter {
         env.events().publish(("member_left",), event);
     }
 
+    pub fn emit_member_removed(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        removed_by: Address,
+        member_count: u32,
+        removed_at: u64,
+    ) {
+        let event = MemberRemoved {
+            group_id,
+            member,
+            removed_by,
+            member_count,
+            removed_at,
+        };
+        env.events().publish(("member_removed",), event);
+    }
+
     /// Emits a reminder event when a contribution is due for a member.
     pub fn emit_contribution_due(
         env: &Env,
@@ -374,13 +438,23 @@ impl EventEmitter {
     ) {
         let event = ContributionMade {
             group_id,
-            contributor,
+            contributor: contributor.clone(),
             amount,
             cycle,
             cycle_total,
             contributed_at,
         };
         env.events().publish(("contribution_made",), event);
+
+        // Issue #754: emit structured receipt for indexer
+        let receipt = ContributionEvent {
+            group_id,
+            member: contributor,
+            amount,
+            cycle,
+            timestamp: contributed_at,
+        };
+        env.events().publish(("contribution_receipt",), receipt);
     }
 
     pub fn emit_payout_executed(
@@ -435,6 +509,20 @@ impl EventEmitter {
             refunded_at,
         };
         env.events().publish(("refund_issued",), event);
+    }
+
+    pub fn emit_group_dissolved(
+        env: &Env,
+        group_id: u64,
+        dissolved_at: u64,
+        total_refunded: i128,
+    ) {
+        let event = GroupDissolved {
+            group_id,
+            dissolved_at,
+            total_refunded,
+        };
+        env.events().publish(("group_dissolved",), event);
     }
 
     pub fn emit_group_status_changed(
@@ -555,6 +643,26 @@ impl EventEmitter {
             unpaused_at,
         };
         env.events().publish(("group_unpaused",), event);
+    }
+
+    pub fn emit_grace_period_contribution(
+        env: &Env,
+        group_id: u64,
+        contributor: Address,
+        amount: i128,
+        cycle: u32,
+        seconds_late: u64,
+        contributed_at: u64,
+    ) {
+        let event = GracePeriodContribution {
+            group_id,
+            contributor,
+            amount,
+            cycle,
+            seconds_late,
+            contributed_at,
+        };
+        env.events().publish(("grace_period_contribution",), event);
     }
 
     pub fn emit_penalty_applied(

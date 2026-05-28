@@ -14,12 +14,18 @@ import { BackupScheduler } from './backup_scheduler';
 import { RecoveryService } from './recovery_service';
 import { BackupMonitor } from './backup_monitor';
 import { ContractEventIndexer } from './contract_event_indexer';
+import { WebPushService } from './web_push_service';
 import { versionMiddleware } from './versioning';
 import { createV1Router } from './routes/v1';
 import { createV2Router } from './routes/v2';
 import { metricsMiddleware, metricsHandler } from './metrics';
 import { requestLogger } from './logger';
 import { createRateLimiterMiddleware } from './rate_limiter';
+import { createWebhookRouter } from './routes/webhooks';
+import { getMemberReputation } from './reputation_service';
+import { createAuthRouter } from './routes/auth';
+import { createUserRouter } from './routes/user';
+import { createRateLimiterMiddleware, createAuthRateLimiterMiddleware } from './rate_limiter';
 
 dotenv.config();
 
@@ -30,6 +36,11 @@ app.use(requestLogger);
 app.use(metricsMiddleware);
 app.get('/metrics', metricsHandler);
 app.use(createRateLimiterMiddleware());
+
+// Stricter rate limiting on auth/admin endpoints: 10 req / 15 min per IP
+const authRateLimiter = createAuthRateLimiterMiddleware();
+app.use('/api/admin', authRateLimiter);
+app.use('/graphql', authRateLimiter);
 
 // ========== CACHE ROUTES (Issue #563) ==========
 
@@ -125,10 +136,13 @@ const backupMonitor = new BackupMonitor(backupService, {
 
 const adminService = new AdminService();
 
+const webPushService = new WebPushService();
+
 const eventIndexer = new ContractEventIndexer(
   process.env.HORIZON_URL || 'https://horizon-testnet.stellar.org',
   process.env.CONTRACT_ID || 'CA...', // Placeholder contract ID
-  process.env.DATABASE_URL || 'postgresql://user:pass@localhost:5432/stellar_save'
+  process.env.DATABASE_URL || 'postgresql://user:pass@localhost:5432/stellar_save',
+  webPushService
 );
 
 if (process.env.BACKUP_ENABLED === 'true') {
@@ -143,10 +157,31 @@ if (process.env.INDEXER_ENABLED === 'true') {
 
 const services = { engine, abTest, exportService, backupService, backupScheduler, recoveryService, backupMonitor, eventIndexer };
 
+// ── Auth routes (public — no JWT required) ───────────────────────────────────
+app.use('/api/auth', createAuthRouter());
+
+// ── User routes (JWT protected) ───────────────────────────────────────────────
+app.use('/api/user', createUserRouter());
+
 // ── Versioned API routes ──────────────────────────────────────────────────────
 app.use('/api', versionMiddleware);
 app.use('/api/v1', createV1Router(services));
 app.use('/api/v2', createV2Router(services));
+app.use('/api/webhooks', createWebhookRouter());
+
+// ── Member reputation endpoint (Issue #800) ───────────────────────────────────
+app.get('/api/members/:address/reputation', async (req, res) => {
+  const { address } = req.params;
+  if (!address || address.trim().length === 0) {
+    return res.status(400).json({ error: 'address is required' });
+  }
+  try {
+    const reputation = await getMemberReputation(address.trim());
+    return res.json(reputation);
+  } catch {
+    return res.status(500).json({ error: 'Failed to fetch reputation' });
+  }
+});
 
 // ── Legacy unversioned routes (redirect to v1 for backward compatibility) ────
 app.use((req, res, next) => {

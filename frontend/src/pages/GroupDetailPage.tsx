@@ -10,6 +10,7 @@ import {
   Chip,
   Divider,
   Alert,
+  Tooltip,
 } from '@mui/material';
 import { AppCard, AppLayout } from '../ui';
 import { GroupDetails } from '../components/GroupDetails';
@@ -18,6 +19,8 @@ import { ContributionFlow } from '../components/ContributionFlow';
 import { PayoutQueue } from '../components/PayoutQueue';
 import { useNavigation } from '../routing/useNavigation';
 import { useWallet } from '../hooks/useWallet';
+import { usePushNotifications } from '../hooks/usePushNotifications';
+import { ActivityFeed } from '../components/ActivityFeed/ActivityFeed';
 import type { DetailedGroup, GroupMember } from '../utils/groupApi';
 import type { PayoutQueueData } from '../types/contribution';
 
@@ -129,6 +132,14 @@ import { useContract } from '../hooks/useContract';
  * contribute button, member management options, and responsive design.
  */
 export default function GroupDetailPage() {
+  return (
+    <ErrorBoundary>
+      <GroupDetailContent />
+    </ErrorBoundary>
+  );
+}
+
+function GroupDetailContent() {
   const { params } = useNavigation();
   const { activeAddress } = useWallet();
   const groupId = params.groupId ?? 'demo-group';
@@ -142,6 +153,8 @@ export default function GroupDetailPage() {
   const [memberDialogOpen, setMemberDialogOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [allContributed, setAllContributed] = useState(false);
+
+  const { copy, copied } = useClipboard();
 
   const loadGroup = () => {
     setLoading(true);
@@ -265,7 +278,18 @@ export default function GroupDetailPage() {
               )}
             </Box>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <Button variant="secondary" size="medium">Share Group</Button>
+              <Tooltip title={copied ? 'Link copied!' : 'Copy invite link'} arrow>
+                <span>
+                  <Button
+                    variant="secondary"
+                    size="medium"
+                    onClick={() => copy(generateInviteLink(groupId))}
+                    aria-label={copied ? 'Invite link copied' : 'Copy invite link'}
+                  >
+                    {copied ? '✓ Copied!' : 'Copy Invite Link'}
+                  </Button>
+                </span>
+              </Tooltip>
               <Button variant="outline" size="medium">Export Data</Button>
             </Box>
           </Box>
@@ -287,6 +311,14 @@ export default function GroupDetailPage() {
           <Typography variant="h3" sx={{ mb: 2 }}>Payout Schedule</Typography>
           <PayoutQueue data={payoutQueue} maxHeight={400} />
         </AppCard>
+
+        {/* Activity Feed — chronological on-chain events for this group */}
+        <ActivityFeed
+          groupId={BigInt(groupId)}
+          showFilters
+          showRefresh
+          maxHeight="500px"
+        />
       </Stack>
 
       {/* Member Management Dialog */}

@@ -20,7 +20,7 @@
 use crate::error::StellarSaveError;
 use crate::events::EventEmitter;
 use crate::group::{Group, GroupStatus};
-use crate::payout::PayoutRecord;
+use crate::payout::{PayoutOrder, PayoutRecord};
 use crate::pool::PoolCalculator;
 use crate::storage::StorageKeyBuilder;
 use crate::MemberProfile;
@@ -86,6 +86,24 @@ fn identify_recipient(
     group_id: u64,
     current_cycle: u32,
     member_count: u32,
+    payout_order: &PayoutOrder,
+) -> Result<Address, StellarSaveError> {
+    match payout_order {
+        PayoutOrder::Random => identify_recipient_random(env, group_id, current_cycle),
+        PayoutOrder::Bid => identify_recipient_bid(env, group_id, current_cycle),
+        PayoutOrder::Sequential => {
+            identify_recipient_sequential(env, group_id, current_cycle, member_count)
+        }
+    }
+}
+
+/// Selects the recipient for `Sequential` order: the member whose payout_position
+/// equals `current_cycle` (O(1) via reverse index, O(n) fallback for legacy groups).
+fn identify_recipient_sequential(
+    env: &Env,
+    group_id: u64,
+    current_cycle: u32,
+    member_count: u32,
 ) -> Result<Address, StellarSaveError> {
     // Gas opt: O(1) reverse-index lookup instead of O(n) member-list scan.
     // The index is written at join_group / assign_payout_positions time.
@@ -130,6 +148,87 @@ fn identify_recipient(
         1 => Ok(recipient.unwrap()),
         _ => Err(StellarSaveError::InvalidState),
     }
+}
+
+/// Selects the recipient for `Random` order: picks a random member who has not
+/// yet received a payout, using ledger sequence as entropy.
+fn identify_recipient_random(
+    env: &Env,
+    group_id: u64,
+    current_cycle: u32,
+) -> Result<Address, StellarSaveError> {
+    let members_key = StorageKeyBuilder::group_members(group_id);
+    let members: soroban_sdk::Vec<Address> = env
+        .storage()
+        .persistent()
+        .get(&members_key)
+        .ok_or(StellarSaveError::GroupNotFound)?;
+
+    // Collect members who have not yet received a payout.
+    let mut eligible: soroban_sdk::Vec<Address> = soroban_sdk::Vec::new(env);
+    for member in members.iter() {
+        // A member is eligible if they have no payout record for any prior cycle.
+        // We check the member_payout_eligibility flag: if it equals current_cycle
+        // the member has already been paid this cycle; otherwise they are eligible.
+        let paid_key = StorageKeyBuilder::member_payout_eligibility(group_id, member.clone());
+        let paid_cycle: Option<u32> = env.storage().persistent().get(&paid_key);
+        // paid_cycle stores the cycle at which the member received their payout.
+        // If it is None or points to a future cycle, the member hasn't been paid yet.
+        let already_paid = paid_cycle.map(|c| c < current_cycle).unwrap_or(false);
+        if !already_paid {
+            eligible.push_back(member);
+        }
+    }
+
+    if eligible.is_empty() {
+        return Err(StellarSaveError::InvalidState);
+    }
+
+    // Use Soroban PRNG + ledger timestamp as entropy source.
+    let prng_val = env.prng().u64_in_range(0..u64::MAX);
+    let ledger_salt = env.ledger().timestamp();
+    let idx = ((prng_val.wrapping_add(ledger_salt).wrapping_add(group_id as u64))
+        % eligible.len() as u64) as u32;
+
+    Ok(eligible.get(idx).unwrap())
+}
+
+/// Selects the recipient for `Bid` order: the member with the highest bid for
+/// `current_cycle`. Ties are broken by member list order (first highest bidder wins).
+fn identify_recipient_bid(
+    env: &Env,
+    group_id: u64,
+    current_cycle: u32,
+) -> Result<Address, StellarSaveError> {
+    let members_key = StorageKeyBuilder::group_members(group_id);
+    let members: soroban_sdk::Vec<Address> = env
+        .storage()
+        .persistent()
+        .get(&members_key)
+        .ok_or(StellarSaveError::GroupNotFound)?;
+
+    let mut best_bidder: Option<Address> = None;
+    let mut best_bid: i128 = -1;
+
+    for member in members.iter() {
+        // Skip members who have already received a payout in a prior cycle.
+        let paid_key = StorageKeyBuilder::member_payout_eligibility(group_id, member.clone());
+        let paid_cycle: Option<u32> = env.storage().persistent().get(&paid_key);
+        let already_paid = paid_cycle.map(|c| c < current_cycle).unwrap_or(false);
+        if already_paid {
+            continue;
+        }
+
+        let bid_key =
+            StorageKeyBuilder::group_bid_amount(group_id, current_cycle, member.clone());
+        let bid: i128 = env.storage().persistent().get(&bid_key).unwrap_or(0);
+        if bid > best_bid {
+            best_bid = bid;
+            best_bidder = Some(member);
+        }
+    }
+
+    best_bidder.ok_or(StellarSaveError::InvalidState)
 }
 
 /// Verifies that the identified recipient is eligible to receive the payout.
@@ -485,7 +584,19 @@ fn emit_payout_event(
     // If the event system fails internally, Soroban will handle it gracefully
     // without causing the transaction to revert.
 
-    EventEmitter::emit_payout_executed(env, group_id, recipient, amount, cycle, timestamp);
+    EventEmitter::emit_payout_executed(env, group_id, recipient.clone(), amount, cycle, timestamp);
+
+    // Issue #754: emit structured contribution receipt for indexer
+    env.events().publish(
+        ("contribution_receipt",),
+        crate::events::ContributionEvent {
+            group_id,
+            member: recipient,
+            amount,
+            cycle,
+            timestamp,
+        },
+    );
 
     // Event emission completed (or failed gracefully)
     // The payout flow continues regardless of event emission status
@@ -698,7 +809,7 @@ pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
     }
 
     // Step 5: Identify the recipient for this cycle based on payout position
-    let recipient = identify_recipient(&env, group_id, current_cycle, group.member_count)?;
+    let recipient = identify_recipient(&env, group_id, current_cycle, group.member_count, &group.payout_order)?;
 
     // Step 6: Verify the recipient is eligible to receive the payout
     verify_recipient_eligibility(&env, group_id, &recipient, current_cycle)?;

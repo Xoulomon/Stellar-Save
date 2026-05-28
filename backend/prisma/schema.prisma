@@ -12,6 +12,10 @@ datasource db {
   provider = "postgresql"
 }
 
+
+
+
+
 model ContractEvent {
   id          String   @id @default(cuid())
   contractId  String
@@ -217,20 +221,86 @@ model AnalyticsReport {
   @@index([createdAt])
 }
 
+// ========== HORIZON INDEXER MODELS ==========
+
+model IndexedTransaction {
+  id             String   @id @default(cuid())
+  txHash         String   @unique
+  ledgerSeq      Int
+  sourceAccount  String
+  feePaid        Int      @default(0)
+  operationCount Int      @default(0)
+  envelopeXdr    String?
+  resultXdr      String?
+  pagingToken    String
+  createdAt      DateTime
+  indexedAt      DateTime @default(now())
+
+  @@index([ledgerSeq])
+  @@index([sourceAccount])
+  @@index([createdAt])
+// ========== WEB PUSH SUBSCRIPTION MODELS ==========
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
 // ========== WEBHOOK MODELS (Issue #559) ==========
 
 model Webhook {
   id          String   @id @default(cuid())
   userId      String
+  groupId     String?  // Optional: scope webhook to a specific group
   url         String
-  events      String[] // e.g. ["contribution.created", "group.updated"]
-  secret      String   // HMAC secret for signature verification
+  events      String[] // e.g. ["contribution.created", "payout.executed", "member.joined"]
+  secret      String   // HMAC-SHA256 secret for signature verification
   isActive    Boolean  @default(true)
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([userId])
+  @@index([groupId])
   @@index([isActive])
   @@index([createdAt])
+}
+
+// ========== AUDIT LOG MODELS (Issue #799) ==========
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  walletAddress String?
+  method       String
+  path         String
+  statusCode   Int
+  durationMs   Int
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  @@index([walletAddress])
+  @@index([path])
+  @@index([createdAt])
+}
+
+// ========== REPUTATION MODELS (Issue #800) ==========
+
+model MemberReputation {
+  id                   String   @id @default(cuid())
+  address              String   @unique
+  totalContributions   Int      @default(0)
+  onTimeContributions  Int      @default(0)
+  score                Float    @default(0) // 0.0 - 1.0
+  updatedAt            DateTime @updatedAt
+  createdAt            DateTime @default(now())
+
+  @@index([address])
+  @@index([score])
 }

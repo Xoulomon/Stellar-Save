@@ -7,7 +7,7 @@ const BASE_URL = typeof window !== 'undefined' ? window.location.origin : '';
 
 /** Generate a shareable invitation URL for a group */
 export function generateInviteLink(groupId: string): string {
-  return `${BASE_URL}/groups/join/${groupId}`;
+  return `${BASE_URL}/join?groupId=${encodeURIComponent(groupId)}`;
 }
 
 /** Track invitation usage in localStorage */

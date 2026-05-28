@@ -7,8 +7,9 @@ import TransactionFilters from '../components/TransactionFilters';
 import { SearchBar } from '../components/SearchBar';
 import TransactionDetailModal from '../components/TransactionDetailModal';
 import { TransactionExportButton } from '../components/TransactionExportButton';
+import { ErrorBoundary } from '../components/ErrorBoundary/ErrorBoundary';
 
-const TransactionHistoryPage: React.FC = () => {
+const TransactionHistoryContent: React.FC = () => {
   const { transactions, isLoading } = useTransactions();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,4 +69,10 @@ const TransactionHistoryPage: React.FC = () => {
   );
 };
 
-export default TransactionHistoryPage;
+export default function TransactionHistoryPage() {
+  return (
+    <ErrorBoundary>
+      <TransactionHistoryContent />
+    </ErrorBoundary>
+  );
+}

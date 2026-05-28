@@ -2,6 +2,10 @@
 use core::fmt;
 use soroban_sdk::{contracttype, Address};
 
+/// Protocol-level maximum number of members per group.
+/// Prevents unbounded storage growth and gas exhaustion.
+pub const MAX_MEMBERS: u32 = 20;
+
 /// Configuration for the token used by a savings group.
 ///
 /// Stored separately from `Group` under `GroupKey::TokenConfig(group_id)` to
@@ -253,6 +257,10 @@ pub struct Group {
     /// `list_groups()` results and are only visible via `list_archived_groups()`.
     /// This reduces active storage scan costs and improves query performance.
     pub archived: bool,
+
+    /// How the payout recipient is selected each cycle.
+    /// Defaults to Sequential (join-order rotation).
+    pub payout_order: crate::payout::PayoutOrder,
 }
 impl Group {
     /// Creates a new Group with validation.
@@ -366,6 +374,7 @@ impl Group {
             description: None,
             image_url: None,
             archived: false,
+            payout_order: crate::payout::PayoutOrder::Sequential,
         }
     }
     /// Checks if the group has completed all cycles.

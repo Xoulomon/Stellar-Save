@@ -1,0 +1,18 @@
+{
+  "settings": {
+    "title": "Paramètres",
+    "subtitle": "Configurez vos préférences",
+    "footerText": "Stellar Save - Construit pour une épargne transparente on-chain",
+    "appearance": "Apparence",
+    "appearanceDesc": "Choisissez l'apparence de Stellar Save.",
+    "language": "Langue",
+    "languageDesc": "Choisissez votre langue préférée."
+  },
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler"
+  },
+  "scheduler": {
+    "balanceWarning": "Votre solde est de {{balance}} sur {{total}}"
+  }
+}
