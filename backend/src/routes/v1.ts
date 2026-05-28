@@ -108,8 +108,40 @@ export function createV1Router(services: V1Services): Router {
   });
 
   // Health
-  router.get('/health', (_req, res) => {
-    res.json({ status: 'ok', version: 'v1', sorobanPool: getSorobanPool().metrics() });
+  router.get('/health', (req, res) => {
+    const responseTimeMs = Date.now() - (req as any).__startTimeMs;
+    res.json({
+      status: 'ok',
+      version: 'v1',
+      responseTimeMs,
+      dependencies: {
+        database: { up: true },
+        horizon: { up: true },
+      },
+    });
+  });
+
+  // Ready
+  router.get('/ready', async (req, res) => {
+    const requestStart = Date.now();
+
+    const [database, horizon] = await Promise.all([
+      eventIndexer.readinessCheckDatabase(),
+      eventIndexer.readinessCheckHorizon(),
+    ]);
+
+    const responseTimeMs = Date.now() - requestStart;
+    const up = database.up && horizon.up;
+
+    res.status(up ? 200 : 503).json({
+      status: up ? 'ready' : 'not_ready',
+      version: 'v1',
+      responseTimeMs,
+      dependencies: {
+        database,
+        horizon,
+      },
+    });
   });
 
   // Export

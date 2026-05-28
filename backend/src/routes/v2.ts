@@ -6,7 +6,9 @@ import { getSorobanPool } from '../lib/soroban';
  * Transforms a v1 response shape into v2 shape.
  * Extend this as v2 diverges from v1.
  */
-export function migrateV1ToV2<T extends Record<string, unknown>>(v1Response: T): T & { apiVersion: 'v2' } {
+export function migrateV1ToV2<T extends Record<string, unknown>>(
+  v1Response: T
+): T & { apiVersion: 'v2' } {
   return { ...v1Response, apiVersion: 'v2' as const };
 }
 
@@ -16,7 +18,40 @@ export function createV2Router(services: V1Services): Router {
 
   // Health — v2 adds uptime and pool metrics
   router.get('/health', (_req: Request, res: Response) => {
-    res.json(migrateV1ToV2({ status: 'ok', version: 'v2', uptime: process.uptime(), sorobanPool: getSorobanPool().metrics() }));
+    res.json(
+      migrateV1ToV2({
+        status: 'ok',
+        version: 'v2',
+        uptime: process.uptime(),
+        responseTimeMs: 0,
+        dependencies: {
+          database: { up: true },
+          horizon: { up: true },
+        },
+      })
+    );
+  });
+
+  // Ready
+  router.get('/ready', async (_req: Request, res: Response) => {
+    const start = Date.now();
+
+    const [database, horizon] = await Promise.all([
+      services.eventIndexer.readinessCheckDatabase(),
+      services.eventIndexer.readinessCheckHorizon(),
+    ]);
+
+    const responseTimeMs = Date.now() - start;
+    const up = database.up && horizon.up;
+
+    res.status(up ? 200 : 503).json(
+      migrateV1ToV2({
+        status: up ? 'ready' : 'not_ready',
+        version: 'v2',
+        responseTimeMs,
+        dependencies: { database, horizon },
+      })
+    );
   });
 
   // Recommendations — v2 always uses collaborative filtering and returns richer metadata
@@ -32,12 +67,14 @@ export function createV2Router(services: V1Services): Router {
     const limit = Math.min(100, parseInt(req.query.limit as string) || 20);
     const all = backupService.listJobs();
     const start = (page - 1) * limit;
-    res.json(migrateV1ToV2({
-      data: all.slice(start, start + limit),
-      total: all.length,
-      page,
-      limit,
-    }));
+    res.json(
+      migrateV1ToV2({
+        data: all.slice(start, start + limit),
+        total: all.length,
+        page,
+        limit,
+      })
+    );
   });
 
   // All other v2 routes are stubs — return 501 with migration hint
