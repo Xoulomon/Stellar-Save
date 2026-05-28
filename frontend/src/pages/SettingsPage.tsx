@@ -4,6 +4,7 @@ import { AppCard, AppLayout } from '../ui';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { LanguageSelector } from '../components/LanguageSelector';
 import { useTheme } from '../hooks/useTheme';
+import { useI18n } from '../hooks/useI18n';
 import { ROUTES } from '../routing/constants';
 
 /**
@@ -11,24 +12,25 @@ import { ROUTES } from '../routing/constants';
  */
 export default function SettingsPage() {
   const { mode, setMode } = useTheme();
+  const { t } = useI18n();
 
   return (
     <AppLayout
-      title="Settings"
-      subtitle="Configure your preferences"
-      footerText="Stellar Save - Built for transparent, on-chain savings"
+      title={t('settings.title')}
+      subtitle={t('settings.subtitle')}
+      footerText={t('settings.footerText')}
     >
       <AppCard>
         <Stack spacing={3}>
-          <Typography variant="h2">Settings</Typography>
+          <Typography variant="h2">{t('settings.title')}</Typography>
 
           {/* ── Appearance ─────────────────────────────────────── */}
           <Stack spacing={1}>
             <Typography variant="subtitle1" fontWeight={600}>
-              Appearance
+              {t('settings.appearance')}
             </Typography>
             <Typography color="text.secondary" variant="body2">
-              Choose how Stellar Save looks to you.
+              {t('settings.appearanceDesc')}
             </Typography>
 
             <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
@@ -63,10 +65,10 @@ export default function SettingsPage() {
           {/* ── Language ───────────────────────────────────────── */}
           <Stack spacing={1}>
             <Typography variant="subtitle1" fontWeight={600}>
-              Language
+              {t('settings.language')}
             </Typography>
             <Typography color="text.secondary" variant="body2">
-              Choose your preferred language.
+              {t('settings.languageDesc')}
             </Typography>
             <LanguageSelector />
           </Stack>
