@@ -1,28 +1,22 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { isConnected, getPublicKey, requestAccess } from '@stellar/freighter-api';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../routing/constants';
 import { ThemeToggle } from './ThemeToggle';
+import { useWallet } from '../hooks/useWallet';
+import { WalletIntegration } from './WalletIntegration';
 import './Header.css';
 
 export default function Header() {
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const { status, activeAddress } = useWallet();
 
-  const connectWallet = async () => {
-    try {
-      if (await isConnected()) {
-        await requestAccess();
-        const publicKey = await getPublicKey();
-        setWalletAddress(publicKey);
-      }
-    } catch (error) {
-      console.error('Wallet connection failed:', error);
+  // Redirect to dashboard on successful wallet connection
+  useEffect(() => {
+    if (status === 'connected' && activeAddress) {
+      navigate(ROUTES.DASHBOARD);
     }
-  };
-
-  const formatAddress = (address: string) => 
-    `${address.slice(0, 4)}...${address.slice(-4)}`;
+  }, [status, activeAddress, navigate]);
 
   return (
     <header className="header">
@@ -48,13 +42,9 @@ export default function Header() {
 
         <ThemeToggle />
 
-        <button 
-          className="wallet-button"
-          onClick={connectWallet}
-          aria-label={walletAddress ? `Wallet connected: ${walletAddress}` : 'Connect Wallet'}
-        >
-          {walletAddress ? formatAddress(walletAddress) : 'Connect Wallet'}
-        </button>
+        <div className="wallet-integration-wrapper">
+          <WalletIntegration />
+        </div>
       </div>
     </header>
   );

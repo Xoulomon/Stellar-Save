@@ -1,27 +1,21 @@
 export interface ContributionDataPoint {
-  month: string; // e.g. "Jan 2025"
-  contributed: number; // XLM
-  received: number; // XLM
+  cycle: string; // e.g. "Jan 2025" or "Cycle 1"
+  contributionRate: number; // percentage
 }
 
 export interface MemberComparisonItem {
   address: string;
   label: string; // shortened address or "You"
   onTimePercent: number;
-  totalContributed: number;
 }
 
-export interface AnalyticsStats {
-  totalContributed: number;
-  totalReceived: number;
-  roi: number; // percentage
-  onTimePercent: number;
-  activeGroups: number;
-  completedGroups: number;
+export interface GroupAnalyticsStats {
+  onTimePaymentRate: number; // overall on-time payment percentage for the group
+  projectedCompletionDate: string; // ISO string date
 }
 
 export interface AnalyticsData {
-  stats: AnalyticsStats;
+  stats: GroupAnalyticsStats;
   history: ContributionDataPoint[];
   memberComparison: MemberComparisonItem[];
   isLoading: boolean;

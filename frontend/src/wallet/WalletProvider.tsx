@@ -1,190 +1,78 @@
-import {
-  createContext,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
-import { freighterAdapter } from "./freighterAdapter";
-import type {
-  WalletAdapter,
-  WalletConnectionStatus,
-  WalletContextValue,
-  WalletDescriptor,
-} from "./types";
+// frontend/src/wallet/WalletProvider.tsx
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { getAddress } from '@stellar/freighter-api';
 
-const adapters: WalletAdapter[] = [freighterAdapter];
-
-export const WalletContext = createContext<WalletContextValue | undefined>(
-  undefined,
-);
-
-function mergeAddress(addresses: string[], nextAddress: string): string[] {
-  if (addresses.includes(nextAddress)) {
-    return addresses;
-  }
-  return [...addresses, nextAddress];
+interface WalletContextType {
+  publicKey: string | null;
+  isConnected: boolean;
+  loading: boolean;
+  connect: () => Promise<void>;
+  disconnect: () => void;
 }
 
-export function WalletProvider({ children }: { children: ReactNode }) {
-  const [wallets, setWallets] = useState<WalletDescriptor[]>(
-    adapters.map((adapter) => ({
-      id: adapter.id,
-      name: adapter.name,
-      installed: false,
-    })),
-  );
-  const [selectedWalletId, setSelectedWalletId] = useState<string>(
-    adapters[0]?.id ?? "",
-  );
-  const [status, setStatus] = useState<WalletConnectionStatus>("idle");
-  const [activeAddress, setActiveAddress] = useState<string | null>(null);
-  const [network, setNetwork] = useState<string | null>(null);
-  const [connectedAccounts, setConnectedAccounts] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const unsubscribeRef = useRef<(() => void) | null>(null);
+const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
-  const selectedAdapter = useMemo(
-    () => adapters.find((adapter) => adapter.id === selectedWalletId) ?? null,
-    [selectedWalletId],
-  );
+export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [publicKey, setPublicKey] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const clearWatcher = useCallback(() => {
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-      unsubscribeRef.current = null;
-    }
-  }, []);
-
-  const refreshWallets = useCallback(async () => {
-    const availability = await Promise.all(
-      adapters.map(async (adapter) => ({
-        id: adapter.id,
-        installed: await adapter.isInstalled(),
-      })),
-    );
-
-    setWallets((current) =>
-      current.map((wallet) => {
-        const next = availability.find((entry) => entry.id === wallet.id);
-        return next ? { ...wallet, installed: next.installed } : wallet;
-      }),
-    );
-  }, []);
-
-  const refreshConnection = useCallback(async () => {
-    if (!selectedAdapter) {
-      return;
-    }
-
+  const connect = async () => {
     try {
-      const [address, connectedNetwork] = await Promise.all([
-        selectedAdapter.getAddress(),
-        selectedAdapter.getNetwork(),
-      ]);
+      setLoading(true);
 
-      setActiveAddress(address);
-      setNetwork(connectedNetwork);
-      setConnectedAccounts((previous) => mergeAddress(previous, address));
-      setStatus("connected");
-      setError(null);
-    } catch (connectionError) {
-      setStatus("idle");
-      setActiveAddress(null);
-      setNetwork(null);
-      setError(
-        connectionError instanceof Error
-          ? connectionError.message
-          : "Failed to refresh wallet state.",
-      );
+      const addressObj = await getAddress();
+      
+      if (addressObj.error) {
+        throw new Error(addressObj.error);
+      }
+
+      const key = addressObj.address;
+      
+      setPublicKey(key);
+      setIsConnected(true);
+      localStorage.setItem('stellarPublicKey', key);
+    } catch (error: any) {
+      console.error('Failed to connect wallet:', error);
+      
+      const errorMsg = error?.message || String(error);
+      
+      if (errorMsg.includes("Freighter") || errorMsg.includes("not found") || errorMsg.includes("extension")) {
+        alert("❌ Freighter wallet extension not detected.\n\nPlease install Freighter from the Chrome Web Store and refresh this page.");
+      } else {
+        alert("Failed to connect wallet. Please try again.");
+      }
+    } finally {
+      setLoading(false);
     }
-  }, [selectedAdapter]);
-
-  const connect = useCallback(async () => {
-    if (!selectedAdapter) {
-      setError("No wallet adapter selected.");
-      return;
-    }
-
-    setStatus("connecting");
-    setError(null);
-    clearWatcher();
-
-    try {
-      const connection = await selectedAdapter.connect();
-      setStatus("connected");
-      setActiveAddress(connection.address);
-      setNetwork(connection.network);
-      setConnectedAccounts((previous) =>
-        mergeAddress(previous, connection.address),
-      );
-      unsubscribeRef.current = selectedAdapter.watch(() => {
-        void refreshConnection();
-      });
-    } catch (connectionError) {
-      setStatus("error");
-      setError(
-        connectionError instanceof Error
-          ? connectionError.message
-          : "Wallet connection failed.",
-      );
-    }
-  }, [clearWatcher, refreshConnection, selectedAdapter]);
-
-  const disconnect = useCallback(() => {
-    clearWatcher();
-    setStatus("idle");
-    setActiveAddress(null);
-    setNetwork(null);
-    setError(null);
-  }, [clearWatcher]);
-
-  const switchWallet = useCallback(
-    async (walletId: string) => {
-      setSelectedWalletId(walletId);
-      setStatus("idle");
-      setActiveAddress(null);
-      setNetwork(null);
-      setError(null);
-      clearWatcher();
-      await refreshWallets();
-    },
-    [clearWatcher, refreshWallets],
-  );
-
-  const switchAccount = useCallback((address: string) => {
-    setActiveAddress(address);
-  }, []);
-
-  useEffect(() => {
-    void refreshWallets();
-  }, [refreshWallets]);
-
-  useEffect(
-    () => () => {
-      clearWatcher();
-    },
-    [clearWatcher],
-  );
-
-  const value: WalletContextValue = {
-    wallets,
-    selectedWalletId,
-    status,
-    activeAddress,
-    network,
-    connectedAccounts,
-    error,
-    refreshWallets,
-    connect,
-    disconnect,
-    switchWallet,
-    switchAccount,
   };
 
+  const disconnect = () => {
+    setPublicKey(null);
+    setIsConnected(false);
+    localStorage.removeItem('stellarPublicKey');
+  };
+
+  // Auto-reconnect on page refresh
+  useEffect(() => {
+    const savedKey = localStorage.getItem('stellarPublicKey');
+    if (savedKey) {
+      setPublicKey(savedKey);
+      setIsConnected(true);
+    }
+  }, []);
+
   return (
-    <WalletContext.Provider value={value}>{children}</WalletContext.Provider>
+    <WalletContext.Provider value={{ publicKey, isConnected, loading, connect, disconnect }}>
+      {children}
+    </WalletContext.Provider>
   );
-}
+};
+
+export const useWallet = () => {
+  const context = useContext(WalletContext);
+  if (context === undefined) {
+    throw new Error('useWallet must be used within a WalletProvider');
+  }
+  return context;
+};

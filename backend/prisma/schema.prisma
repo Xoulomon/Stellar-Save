@@ -1,0 +1,306 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+
+
+
+model ContractEvent {
+  id          String   @id @default(cuid())
+  contractId  String
+  eventType   String
+  topics      Json     // Array of topics
+  data        Json     // Event data
+  txHash      String
+  ledgerSeq   Int
+  timestamp   DateTime
+  blockTime   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([contractId])
+  @@index([eventType])
+  @@index([ledgerSeq])
+  @@index([timestamp])
+}
+
+// ========== NOTIFICATION MODELS (Issue #557) ==========
+
+model NotificationPreference {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  emailNotifications     Boolean  @default(true)
+  pushNotifications      Boolean  @default(true)
+  contributionReminders  Boolean  @default(true)
+  groupUpdates           Boolean  @default(true)
+  payoutNotifications    Boolean  @default(true)
+  emailFrequency         String   @default("immediate") // immediate, daily, weekly, never
+  unsubscribeToken       String   @unique @default(cuid())
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([userId])
+  @@index([unsubscribeToken])
+}
+
+model NotificationTemplate {
+  id                 String   @id @default(cuid())
+  templateKey        String   @unique
+  templateName       String
+  templateType       String   // "email" or "push"
+  subject            String?  // For email templates
+  htmlContent        String
+  textContent        String
+  placeholders       String[] // e.g., ["userName", "groupName", "amount"]
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([templateType])
+  @@index([active])
+}
+
+model Notification {
+  id                 String   @id @default(cuid())
+  userId             String
+  templateId         String
+  notificationType   String   // "email" or "push"
+  recipient          String   // email or device token
+  subject            String?  // For email notifications
+  renderedContent    String
+  metadata           Json?    // Additional data: {groupId, amount, etc}
+  status             String   @default("pending") // pending, sent, failed, bounced
+  externalId         String?  // SendGrid message ID, Firebase message ID, etc
+  failureReason      String?
+  sentAt             DateTime?
+  retryCount         Int      @default(0)
+  maxRetries         Int      @default(3)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([notificationType])
+  @@index([createdAt])
+  @@index([sentAt])
+}
+
+model NotificationQueue {
+  id                 String   @id @default(cuid())
+  userId             String
+  templateKey        String
+  recipient          String
+  templateData       Json     // Contains placeholder values
+  notificationType   String   // "email" or "push"
+  priority           Int      @default(0)
+  scheduledFor       DateTime @default(now())
+  processedAt        DateTime?
+  status             String   @default("pending") // pending, processing, completed, failed
+  createdAt          DateTime @default(now())
+
+  @@index([status])
+  @@index([scheduledFor])
+  @@index([userId])
+}
+
+// ========== ANALYTICS MODELS (Issue #558) ==========
+
+model PlatformMetrics {
+  id                    String   @id @default(cuid())
+  date                  DateTime @unique
+  totalUsers            Int      @default(0)
+  activeUsers           Int      @default(0)
+  totalGroups           Int      @default(0)
+  activeGroups          Int      @default(0)
+  totalContributions    Int      @default(0)
+  totalContributionAmount Decimal @default(0) @db.Decimal(18, 8)
+  totalPayouts          Int      @default(0)
+  totalPayoutAmount     Decimal  @default(0) @db.Decimal(18, 8)
+  averageGroupSize      Decimal  @default(0) @db.Decimal(10, 2)
+  successRate           Decimal  @default(0) @db.Decimal(5, 2) // percentage: 0-100
+  totalTransactions     Int      @default(0)
+  uniqueWallets         Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([date])
+  @@index([createdAt])
+}
+
+model UserMetrics {
+  id                    String   @id @default(cuid())
+  userId                String
+  date                  DateTime
+  groupsJoined          Int      @default(0)
+  groupsCreated         Int      @default(0)
+  groupsCompleted       Int      @default(0)
+  totalContributions    Int      @default(0)
+  totalContributionAmount Decimal @default(0) @db.Decimal(18, 8)
+  totalPayoutsReceived  Decimal  @default(0) @db.Decimal(18, 8)
+  sessionsCount         Int      @default(0)
+  sessionDurationMinutes Int     @default(0)
+  pageViews             Int      @default(0)
+  interactionCount      Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@index([createdAt])
+}
+
+model GroupMetrics {
+  id                    String   @id @default(cuid())
+  groupId               String
+  date                  DateTime
+  memberCount           Int      @default(0)
+  totalContributions    Int      @default(0)
+  totalContributionAmount Decimal @default(0) @db.Decimal(18, 8)
+  totalPayoutsDistributed Decimal @default(0) @db.Decimal(18, 8)
+  successRate           Decimal  @default(0) @db.Decimal(5, 2) // percentage: 0-100
+  averageContributionSize Decimal @default(0) @db.Decimal(18, 8)
+  newMembersCount       Int      @default(0)
+  churnCount            Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([groupId, date])
+  @@index([groupId])
+  @@index([date])
+  @@index([createdAt])
+}
+
+model AnalyticsEvent {
+  id                    String   @id @default(cuid())
+  userId                String?
+  groupId               String?
+  eventType             String   // view, click, contribute, create_group, join_group, etc
+  eventName             String
+  eventData             Json?    // Additional event-specific data
+  userAgent             String?
+  ipAddress             String?
+  referrer              String?
+  sessionId             String?
+  createdAt             DateTime @default(now())
+
+  @@index([userId])
+  @@index([groupId])
+  @@index([eventType])
+  @@index([eventName])
+  @@index([createdAt])
+  @@index([sessionId])
+}
+
+model AnalyticsReport {
+  id                    String   @id @default(cuid())
+  reportType            String   // "daily", "weekly", "monthly", "custom"
+  reportName            String
+  startDate             DateTime
+  endDate               DateTime
+  data                  Json     // Aggregated report data
+  generatedBy           String?  // userId who generated the report
+  isPublic              Boolean  @default(false)
+  status                String   @default("completed") // pending, processing, completed, failed
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([reportType])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([createdAt])
+}
+
+// ========== HORIZON INDEXER MODELS ==========
+
+model IndexedTransaction {
+  id             String   @id @default(cuid())
+  txHash         String   @unique
+  ledgerSeq      Int
+  sourceAccount  String
+  feePaid        Int      @default(0)
+  operationCount Int      @default(0)
+  envelopeXdr    String?
+  resultXdr      String?
+  pagingToken    String
+  createdAt      DateTime
+  indexedAt      DateTime @default(now())
+
+  @@index([ledgerSeq])
+  @@index([sourceAccount])
+  @@index([createdAt])
+// ========== WEB PUSH SUBSCRIPTION MODELS ==========
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ========== WEBHOOK MODELS (Issue #559) ==========
+
+model Webhook {
+  id          String   @id @default(cuid())
+  userId      String
+  groupId     String?  // Optional: scope webhook to a specific group
+  url         String
+  events      String[] // e.g. ["contribution.created", "payout.executed", "member.joined"]
+  secret      String   // HMAC-SHA256 secret for signature verification
+  isActive    Boolean  @default(true)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([groupId])
+  @@index([isActive])
+  @@index([createdAt])
+}
+
+// ========== AUDIT LOG MODELS (Issue #799) ==========
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  walletAddress String?
+  method       String
+  path         String
+  statusCode   Int
+  durationMs   Int
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  @@index([walletAddress])
+  @@index([path])
+  @@index([createdAt])
+}
+
+// ========== REPUTATION MODELS (Issue #800) ==========
+
+model MemberReputation {
+  id                   String   @id @default(cuid())
+  address              String   @unique
+  totalContributions   Int      @default(0)
+  onTimeContributions  Int      @default(0)
+  score                Float    @default(0) // 0.0 - 1.0
+  updatedAt            DateTime @updatedAt
+  createdAt            DateTime @default(now())
+
+  @@index([address])
+  @@index([score])
+}

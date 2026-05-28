@@ -19,6 +19,7 @@ import type {
   GroupCreatedEvent,
   ContributionMadeEvent,
   PayoutExecutedEvent,
+  GroupPausedEvent, // Import GroupPausedEvent
 } from '../types/events';
 
 export const PAGE_SIZE = 20;
@@ -89,6 +90,14 @@ function parseRawEvent(raw: SorobanRpc.Api.RawEventResponse): AppEvent | null {
           amount: BigInt(String(data['amount'] ?? 0)),
           cycle: Number(data['cycle'] ?? 0),
           executedAt: BigInt(String(data['executed_at'] ?? 0)),
+        };
+        return e;
+      }
+      case 'GroupPaused': {
+        const e: GroupPausedEvent = {
+          type: 'GroupPaused',
+          groupId: BigInt(String(data['group_id'] ?? 0)),
+          pausedAt: BigInt(String(data['paused_at'] ?? 0)),
         };
         return e;
       }

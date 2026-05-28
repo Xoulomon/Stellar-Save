@@ -1,0 +1,91 @@
+name: Deploy to Testnet
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy contracts to Stellar testnet
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.81.0"
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Stellar CLI
+        run: |
+          cargo install stellar-cli --locked 2>/dev/null || true
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Configure deployer identity
+        env:
+          STELLAR_SECRET_KEY: ${{ secrets.STELLAR_DEPLOYER_SECRET_KEY }}
+        run: |
+          stellar keys add default --secret-key "$STELLAR_SECRET_KEY"
+
+      - name: Deploy contracts
+        id: deploy
+        env:
+          STELLAR_NETWORK: testnet
+          STELLAR_RPC_URL: https://soroban-testnet.stellar.org
+        run: |
+          OUTPUT=$(./scripts/deploy_testnet.sh 2>&1)
+          echo "$OUTPUT"
+
+          # Collect each "contract_name → contract_id" line
+          SUMMARY=""
+          while IFS= read -r line; do
+            if [[ "$line" =~ ^Deploying\ (.+)\.\.\. ]]; then
+              CURRENT="${BASH_REMATCH[1]}"
+            elif [[ "$line" =~ ^C[A-Z0-9]{55}$ ]]; then
+              SUMMARY="${SUMMARY}- \`${CURRENT}\`: \`${line}\`\n"
+            fi
+          done <<< "$OUTPUT"
+
+          # Fallback: surface the raw output if no IDs were parsed
+          if [ -z "$SUMMARY" ]; then
+            SUMMARY="\`\`\`\n${OUTPUT}\n\`\`\`"
+          fi
+
+          # Write multi-line value to GITHUB_OUTPUT
+          {
+            echo "summary<<EOF"
+            printf "%b" "$SUMMARY"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post contract IDs as commit comment
+        uses: actions/github-script@v7
+        env:
+          DEPLOY_SUMMARY: ${{ steps.deploy.outputs.summary }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const summary = process.env.DEPLOY_SUMMARY || '_No contract IDs captured._';
+            const body = [
+              '## ✅ Testnet deployment complete',
+              '',
+              `**Commit:** \`${context.sha.slice(0, 7)}\``,
+              `**Network:** Stellar testnet`,
+              '',
+              '### Deployed contract IDs',
+              summary,
+            ].join('\n');
+
+            await github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body,
+            });

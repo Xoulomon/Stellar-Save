@@ -38,11 +38,18 @@ export interface PayoutExecutedEvent {
   executedAt: bigint;
 }
 
+export interface GroupPausedEvent {
+  type: 'GroupPaused';
+  groupId: bigint;
+  pausedAt: bigint;
+}
+
 export type AppEvent =
   | GroupCreatedEvent
   | MemberJoinedEvent
   | ContributionMadeEvent
-  | PayoutExecutedEvent;
+  | PayoutExecutedEvent
+  | GroupPausedEvent;
 
 export type EventType = AppEvent['type'];
 
