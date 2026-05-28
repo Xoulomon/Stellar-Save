@@ -12,6 +12,10 @@ datasource db {
   provider = "postgresql"
 }
 
+
+
+
+
 model ContractEvent {
   id          String   @id @default(cuid())
   contractId  String
@@ -234,3 +238,38 @@ model Webhook {
   @@index([isActive])
   @@index([createdAt])
 }
+
+// ========== GROUP INVITATIONS (email invite links) ==========
+
+model GroupInvitation {
+  id              String   @id @default(cuid())
+  groupId         String
+  creatorUserId   String?
+  recipientEmail  String
+  joinToken       String   @unique
+
+  status          String   @default("sent") // sent, opened, joined
+
+  sentAt          DateTime @default(now())
+  openedAt        DateTime?
+  joinedAt        DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([groupId])
+  @@index([recipientEmail])
+  @@index([status])
+}
+
+model GroupInvitationEvent {
+  id            String   @id @default(cuid())
+  invitationId String
+  eventType     String   // opened, joined
+  createdAt     DateTime @default(now())
+  metadata      Json?
+
+  @@index([invitationId])
+  @@index([eventType])
+}
+

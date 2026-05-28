@@ -10,6 +10,7 @@ import {
   Chip,
   Divider,
   Alert,
+  Tooltip,
 } from '@mui/material';
 import { AppCard, AppLayout } from '../ui';
 import { GroupDetails } from '../components/GroupDetails';
@@ -18,6 +19,8 @@ import { ContributionFlow } from '../components/ContributionFlow';
 import { PayoutQueue } from '../components/PayoutQueue';
 import { useNavigation } from '../routing/useNavigation';
 import { useWallet } from '../hooks/useWallet';
+import { useClipboard } from '../hooks/useClipboard';
+import { generateInviteLink } from '../utils/invitation';
 import type { DetailedGroup, GroupMember } from '../utils/groupApi';
 import type { PayoutQueueData } from '../types/contribution';
 
@@ -118,8 +121,6 @@ function MemberManagementDialog({ open, member, onClose, onRemove }: MemberManag
 }
 
 // ── Main Page ────────────────────────────────────────────────────────────────
-import { usePushNotifications } from '../hooks/usePushNotifications';
-import type { DetailedGroup } from '../utils/groupApi';
 
 /**
  * Group Detail Page — Issue #441
@@ -127,6 +128,14 @@ import type { DetailedGroup } from '../utils/groupApi';
  * contribute button, member management options, and responsive design.
  */
 export default function GroupDetailPage() {
+  return (
+    <ErrorBoundary>
+      <GroupDetailContent />
+    </ErrorBoundary>
+  );
+}
+
+function GroupDetailContent() {
   const { params } = useNavigation();
   const { activeAddress } = useWallet();
   const groupId = params.groupId ?? 'demo-group';
@@ -137,6 +146,8 @@ export default function GroupDetailPage() {
   const [managedMember, setManagedMember] = useState<GroupMember | null>(null);
   const [memberDialogOpen, setMemberDialogOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const { copy, copied } = useClipboard();
 
   const loadGroup = () => {
     setLoading(true);
@@ -244,7 +255,18 @@ export default function GroupDetailPage() {
               )}
             </Box>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <Button variant="secondary" size="medium">Share Group</Button>
+              <Tooltip title={copied ? 'Link copied!' : 'Copy invite link'} arrow>
+                <span>
+                  <Button
+                    variant="secondary"
+                    size="medium"
+                    onClick={() => copy(generateInviteLink(groupId))}
+                    aria-label={copied ? 'Invite link copied' : 'Copy invite link'}
+                  >
+                    {copied ? '✓ Copied!' : 'Copy Invite Link'}
+                  </Button>
+                </span>
+              </Tooltip>
               <Button variant="outline" size="medium">Export Data</Button>
             </Box>
           </Box>

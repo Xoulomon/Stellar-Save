@@ -87,16 +87,19 @@ function applyRateLimitHeaders(res: Response, result: RateLimitResult): void {
     res.setHeader('X-RateLimit-Reset', String(Math.ceil(result.resetAtMs / 1000)));
 }
 
+// 15-minute window constants
+const WINDOW_15_MIN = 15 * 60 * 1000;
+
 /**
  * Sliding-window rate limiter.
- * - Unauthenticated traffic: per-IP limits.
+ * - Unauthenticated traffic: per-IP limits (default: 100 req / 15 min).
  * - Authenticated traffic with user id: per-user limits (bypasses IP bucket).
  * - Authenticated traffic without user id: bypassed.
  */
 export function createRateLimiterMiddleware(options: RateLimiterOptions = {}) {
     const now = options.now ?? (() => Date.now());
-    const ipPolicy: RateLimitPolicy = options.ipPolicy ?? { windowMs: 60_000, max: 100 };
-    const userPolicy: RateLimitPolicy = options.userPolicy ?? { windowMs: 60_000, max: 200 };
+    const ipPolicy: RateLimitPolicy = options.ipPolicy ?? { windowMs: WINDOW_15_MIN, max: 100 };
+    const userPolicy: RateLimitPolicy = options.userPolicy ?? { windowMs: WINDOW_15_MIN, max: 200 };
     const store = new SlidingWindowStore();
 
     return (req: AuthenticatedRateLimitRequest, res: Response, next: NextFunction): void => {
@@ -118,6 +121,33 @@ export function createRateLimiterMiddleware(options: RateLimiterOptions = {}) {
         if (!result.allowed) {
             res.setHeader('Retry-After', String(result.retryAfterSeconds));
             res.status(429).json({ error: 'Too many requests' });
+            return;
+        }
+
+        next();
+    };
+}
+
+/**
+ * Stricter rate limiter for authentication/admin endpoints.
+ * Applies per-IP: 10 requests per 15 minutes regardless of auth state.
+ * Use on any endpoint that validates credentials (login, admin auth, etc.).
+ */
+export function createAuthRateLimiterMiddleware(options: Pick<RateLimiterOptions, 'now'> = {}) {
+    const now = options.now ?? (() => Date.now());
+    const policy: RateLimitPolicy = { windowMs: WINDOW_15_MIN, max: 10 };
+    const store = new SlidingWindowStore();
+
+    return (req: Request, res: Response, next: NextFunction): void => {
+        const nowMs = now();
+        const ip = extractIp(req);
+        const result = store.take(`auth:ip:${ip}`, policy, nowMs);
+
+        applyRateLimitHeaders(res, result);
+
+        if (!result.allowed) {
+            res.setHeader('Retry-After', String(result.retryAfterSeconds));
+            res.status(429).json({ error: 'Too many requests', retryAfter: result.retryAfterSeconds });
             return;
         }
 

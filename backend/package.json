@@ -13,6 +13,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "fast-csv": "^5.0.0",
     "@apollo/server": "^4.12.2",
     "@elastic/elasticsearch": "^9.3.4",
     "@graphql-tools/schema": "^10.0.13",
