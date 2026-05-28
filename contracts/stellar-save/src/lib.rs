@@ -507,7 +507,7 @@ impl StellarSaveContract {
             max_members,
             min_members,
             current_time,
-            0, // grace_period_seconds - using default of 0
+            grace_period_seconds,
         );
         new_group.payout_order = payout_order;
 
@@ -4418,6 +4418,22 @@ impl StellarSaveContract {
             return Err(StellarSaveError::InvalidState);
         }
 
+        // ── Step 2b: Deadline + grace period check ─────────────────────────────
+        // Reject contributions past deadline + grace_period_seconds.
+        // Emit GracePeriodContribution for late-but-valid contributions.
+        let now = env.ledger().timestamp();
+        let is_grace_period = if group.started {
+            let cycle_deadline = group
+                .started_at
+                .saturating_add(group.cycle_duration.saturating_mul(group.current_cycle as u64 + 1));
+            if now > cycle_deadline.saturating_add(group.grace_period_seconds) {
+                return Err(StellarSaveError::CycleDeadlineExpired);
+            }
+            (now > cycle_deadline, now.saturating_sub(cycle_deadline))
+        } else {
+            (false, 0u64)
+        };
+
         // ── Step 3: Validate member is part of the group (1 SLOAD) ────────────
         let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
         if !env.storage().persistent().has(&member_key) {
@@ -4489,12 +4505,25 @@ impl StellarSaveContract {
         EventEmitter::emit_contribution_made(
             &env,
             group_id,
-            member,
+            member.clone(),
             amount,
             current_cycle,
             cycle_total,
             timestamp,
         );
+
+        // Emit grace period event if contribution landed after the hard deadline
+        if is_grace_period.0 {
+            EventEmitter::emit_grace_period_contribution(
+                &env,
+                group_id,
+                member,
+                amount,
+                current_cycle,
+                is_grace_period.1,
+                timestamp,
+            );
+        }
 
         Ok(())
     }

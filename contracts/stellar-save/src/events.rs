@@ -102,27 +102,17 @@ pub struct GroupStatusChanged {
     pub changed_at: u64,
 }
 
-/// Event emitted when a member raises a dispute against a group.
+/// Event emitted when a contribution is accepted within the grace period
+/// (after the hard deadline but before grace_period_seconds elapses).
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct DisputeRaised {
+pub struct GracePeriodContribution {
     pub group_id: u64,
-    pub raised_by: Address,
-    pub reason: String,
-    pub vote_count: u32,
-    pub threshold: u32,
-    pub auto_paused: bool,
-    pub raised_at: u64,
-}
-
-/// Event emitted when a dispute is resolved by the group creator.
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct DisputeResolved {
-    pub group_id: u64,
-    pub resolved_by: Address,
-    pub resolution: String,
-    pub resolved_at: u64,
+    pub contributor: Address,
+    pub amount: i128,
+    pub cycle: u32,
+    pub seconds_late: u64,
+    pub contributed_at: u64,
 }
 
 /// Event emitted when a group's metadata is updated.
@@ -655,42 +645,24 @@ impl EventEmitter {
         env.events().publish(("group_unpaused",), event);
     }
 
-    pub fn emit_dispute_raised(
+    pub fn emit_grace_period_contribution(
         env: &Env,
         group_id: u64,
-        raised_by: Address,
-        reason: String,
-        vote_count: u32,
-        threshold: u32,
-        auto_paused: bool,
-        raised_at: u64,
+        contributor: Address,
+        amount: i128,
+        cycle: u32,
+        seconds_late: u64,
+        contributed_at: u64,
     ) {
-        let event = DisputeRaised {
+        let event = GracePeriodContribution {
             group_id,
-            raised_by,
-            reason,
-            vote_count,
-            threshold,
-            auto_paused,
-            raised_at,
+            contributor,
+            amount,
+            cycle,
+            seconds_late,
+            contributed_at,
         };
-        env.events().publish(("dispute_raised",), event);
-    }
-
-    pub fn emit_dispute_resolved(
-        env: &Env,
-        group_id: u64,
-        resolved_by: Address,
-        resolution: String,
-        resolved_at: u64,
-    ) {
-        let event = DisputeResolved {
-            group_id,
-            resolved_by,
-            resolution,
-            resolved_at,
-        };
-        env.events().publish(("dispute_resolved",), event);
+        env.events().publish(("grace_period_contribution",), event);
     }
 
     pub fn emit_penalty_applied(
