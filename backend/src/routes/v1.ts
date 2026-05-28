@@ -11,7 +11,7 @@ import { RecoveryService } from '../recovery_service';
 import { BackupMonitor } from '../backup_monitor';
 import { ContractEventIndexer } from '../contract_event_indexer';
 import { AnalyticsService } from '../analytics_service';
-import { createAnalyticsMiddlewareStack } from '../analytics_middleware';
+import { createAnalyticsMiddlewareStack, createAnalyticsCacheMiddleware } from '../analytics_middleware';
 import { Group, UserInteraction, UserPreference } from '../models';
 import { getSorobanPool } from '../lib/soroban';
 
@@ -44,6 +44,26 @@ export function createV1Router(services: V1Services): Router {
 
   // Setup analytics middleware
   const analyticsMiddleware = createAnalyticsMiddlewareStack();
+  // 5-minute cache specifically for the landing page stats endpoint
+  const statsGroupsCache = createAnalyticsCacheMiddleware(300);
+
+  // ── Landing Page Stats ────────────────────────────────────────────────────
+  // GET /stats/groups — platform-wide group statistics for the landing page.
+  // Aggregates from the indexed ContractEvent database; cached 5 min in Redis.
+  router.get(
+    '/stats/groups',
+    analyticsMiddleware.readRateLimit,
+    statsGroupsCache,
+    async (_req, res) => {
+      try {
+        const stats = await analyticsService.getGroupsOverviewStats();
+        res.json(stats);
+      } catch (error) {
+        console.error('Error fetching groups overview stats:', error);
+        res.status(500).json({ error: 'Failed to fetch group statistics' });
+      }
+    }
+  );
 
   // Search
   router.get('/search', async (req, res) => {
