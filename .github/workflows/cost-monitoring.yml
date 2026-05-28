@@ -1,0 +1,100 @@
+name: Cost Monitoring
+
+on:
+  schedule:
+    # Run daily at 08:00 UTC
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  cost-report:
+    name: Generate Cost Report
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch GitHub Actions usage
+        id: usage
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Billing API — available on paid plans; returns 0 on free plans
+          RESPONSE=$(gh api /repos/${{ github.repository }}/actions/billing/usage 2>/dev/null || echo '{}')
+          MINUTES_USED=$(echo "$RESPONSE" | jq -r '.total_minutes_used // 0')
+          MINUTES_LIMIT=$(echo "$RESPONSE" | jq -r '.included_minutes // 2000')
+          PAID_MINUTES=$(echo "$RESPONSE" | jq -r '.total_paid_minutes_used // 0')
+
+          echo "minutes_used=$MINUTES_USED"   >> "$GITHUB_OUTPUT"
+          echo "minutes_limit=$MINUTES_LIMIT" >> "$GITHUB_OUTPUT"
+          echo "paid_minutes=$PAID_MINUTES"   >> "$GITHUB_OUTPUT"
+
+      - name: Calculate costs
+        id: costs
+        run: |
+          MINUTES_USED=${{ steps.usage.outputs.minutes_used }}
+          MINUTES_LIMIT=${{ steps.usage.outputs.minutes_limit }}
+          PAID_MINUTES=${{ steps.usage.outputs.paid_minutes }}
+
+          # CI cost: $0.008/min for Linux overage
+          CI_COST=$(python3 -c "print(round($PAID_MINUTES * 0.008, 2))")
+
+          # Usage percentage
+          if [ "$MINUTES_LIMIT" -gt 0 ]; then
+            PCT=$(python3 -c "print(round($MINUTES_USED / $MINUTES_LIMIT * 100, 1))")
+          else
+            PCT=0
+          fi
+
+          echo "ci_cost=$CI_COST"   >> "$GITHUB_OUTPUT"
+          echo "usage_pct=$PCT"     >> "$GITHUB_OUTPUT"
+
+      - name: Run cost optimization check
+        run: |
+          chmod +x scripts/cost_optimization.sh
+          scripts/cost_optimization.sh
+
+      - name: Post cost summary as issue comment (weekly)
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DAY=$(date +%u)   # 1=Mon … 7=Sun
+          [ "$DAY" != "1" ] && exit 0   # only post on Mondays
+
+          MINUTES_USED=${{ steps.usage.outputs.minutes_used }}
+          MINUTES_LIMIT=${{ steps.usage.outputs.minutes_limit }}
+          CI_COST=${{ steps.costs.outputs.ci_cost }}
+          PCT=${{ steps.costs.outputs.usage_pct }}
+
+          BODY="## 📊 Weekly Cost Report — $(date +%Y-%m-%d)
+
+          | Metric | Value |
+          |--------|-------|
+          | CI minutes used | ${MINUTES_USED} / ${MINUTES_LIMIT} (${PCT}%) |
+          | CI overage cost | \$${CI_COST} |
+
+          > Full details: [Cost Monitoring dashboard](http://localhost:3000/d/stellar-save-costs)
+          > Optimization tips: run \`scripts/cost_optimization.sh\`"
+
+          gh issue create \
+            --title "Weekly Cost Report $(date +%Y-%m-%d)" \
+            --body "$BODY" \
+            --label "cost-monitoring" \
+            || true   # don't fail if label doesn't exist
+
+      - name: Fail if CI minutes > 90% of limit
+        run: |
+          PCT=${{ steps.costs.outputs.usage_pct }}
+          python3 -c "
+          pct = float('$PCT')
+          if pct >= 90:
+              print(f'::warning::CI minutes at {pct}% of monthly limit — overage charges imminent')
+          if pct >= 100:
+              print(f'::error::CI minutes limit exceeded — overage charges active')
+              exit(1)
+          print(f'CI minutes usage: {pct}% — OK')
+          "

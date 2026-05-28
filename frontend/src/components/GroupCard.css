@@ -168,3 +168,26 @@
     background-color: #f0f0f0;
   }
 }
+
+/* Error state */
+.group-card--error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  cursor: default;
+}
+
+.group-card-error-msg {
+  margin: 0;
+  color: #ff6b6b;
+  font-size: 0.9em;
+  text-align: center;
+  padding: 1em;
+}
+
+/* Date stat value — smaller font so dates fit */
+.group-card-stat-value--date {
+  font-size: 1em;
+  font-weight: 600;
+}

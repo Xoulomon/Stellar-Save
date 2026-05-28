@@ -1,4 +1,20 @@
-use soroban_sdk::{contracttype, Address};
+use crate::error::StellarSaveError;
+use crate::group::{Group, GroupStatus};
+use crate::storage::StorageKeyBuilder;
+use soroban_sdk::{contracttype, Address, Env};
+
+/// Determines how the payout recipient is selected each cycle.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum PayoutOrder {
+    /// Members receive payouts in the fixed order assigned at group start (default).
+    Sequential,
+    /// Recipient is chosen randomly each cycle using ledger entropy.
+    Random,
+    /// Each cycle, the member who submits the highest bid wins the payout.
+    /// Bids are denominated in stroops and must be ≥ 0.
+    Bid,
+}
 
 /// Payout Record structure for tracking payout events in rotational savings groups.
 ///
@@ -98,6 +114,40 @@ impl PayoutRecord {
     pub fn amount_in_xlm(&self) -> i128 {
         self.amount / 10_000_000
     }
+}
+
+/// Returns the address of the next scheduled payout recipient without executing the payout.
+///
+/// The recipient is derived from the group's `current_cycle` and the payout position
+/// reverse-index stored at join/assign time. This is an O(1) read-only view function.
+///
+/// # Arguments
+/// * `env`      - Soroban environment
+/// * `group_id` - ID of the group to query
+///
+/// # Returns
+/// * `Ok(Address)` - Address of the member scheduled to receive the next payout
+/// * `Err(StellarSaveError::GroupNotFound)` - Group does not exist
+/// * `Err(StellarSaveError::InvalidState)` - Group is not Active or no recipient found
+pub fn get_next_recipient(env: &Env, group_id: u64) -> Result<Address, StellarSaveError> {
+    let group_key = StorageKeyBuilder::group_data(group_id);
+    let group: Group = env
+        .storage()
+        .persistent()
+        .get(&group_key)
+        .ok_or(StellarSaveError::GroupNotFound)?;
+
+    if group.status != GroupStatus::Active {
+        return Err(StellarSaveError::InvalidState);
+    }
+
+    // O(1) lookup: position → Address via the reverse index written at join/assign time
+    let pos_idx_key =
+        StorageKeyBuilder::group_payout_position_index(group_id, group.current_cycle);
+    env.storage()
+        .persistent()
+        .get::<_, Address>(&pos_idx_key)
+        .ok_or(StellarSaveError::InvalidState)
 }
 
 #[cfg(test)]

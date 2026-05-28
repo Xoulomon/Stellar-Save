@@ -14,6 +14,7 @@ import {
   Chip,
 } from '@mui/material';
 import { Button } from './Button';
+import { ContributionSuccessModal } from './ContributionSuccessModal';
 import type { TransactionStatus } from '../types/contribution';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -156,6 +157,7 @@ export function ContributionFlow({
   const [status, setStatus] = useState<TransactionStatus>('idle');
   const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const isProcessing = ['confirming', 'pending', 'submitting'].includes(status);
   const parsedAmount = parseFloat(amountInput);
@@ -180,6 +182,7 @@ export function ContributionFlow({
       await new Promise((r) => setTimeout(r, 500));
       setTxHash(hash);
       setStatus('success');
+      setShowSuccess(true);
       onSuccess?.(hash, parsedAmount);
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Transaction failed');
@@ -201,6 +204,7 @@ export function ContributionFlow({
     setFieldError(null);
     setErrorMessage(null);
     setTxHash(null);
+    setShowSuccess(false);
   };
 
   const statusSeverity = STATUS_SEVERITY[status];
@@ -317,6 +321,15 @@ export function ContributionFlow({
         cycleId={cycleId}
         onConfirm={() => void handleConfirm()}
         onCancel={() => setConfirmOpen(false)}
+      />
+
+      {/* Success animation modal */}
+      <ContributionSuccessModal
+        open={showSuccess}
+        amount={parsedAmount || 0}
+        cycleId={cycleId}
+        txHash={txHash ?? undefined}
+        onClose={handleReset}
       />
     </Box>
   );

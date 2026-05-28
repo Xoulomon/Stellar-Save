@@ -12,7 +12,7 @@ use soroban_sdk::{contracttype, Address, Env, String};
 use crate::{
     error::StellarSaveError,
     events::EventEmitter,
-    group::{Group, GroupStatus},
+    group::Group,
     storage::StorageKeyBuilder,
 };
 
@@ -105,7 +105,7 @@ pub fn rate_group(
     }
 
     // 4. Validate stars range
-    if stars < 1 || stars > 5 {
+    if !(1..=5).contains(&stars) {
         return Err(StellarSaveError::InvalidAmount);
     }
 
@@ -132,14 +132,14 @@ pub fn rate_group(
 
     // 8. Update aggregate
     let agg_key = StorageKeyBuilder::group_rating_aggregate(group_id);
-    let mut agg: RatingAggregate = env
-        .storage()
-        .persistent()
-        .get(&agg_key)
-        .unwrap_or(RatingAggregate {
-            total_stars: 0,
-            rating_count: 0,
-        });
+    let mut agg: RatingAggregate =
+        env.storage()
+            .persistent()
+            .get(&agg_key)
+            .unwrap_or(RatingAggregate {
+                total_stars: 0,
+                rating_count: 0,
+            });
 
     agg.total_stars = agg
         .total_stars
@@ -167,14 +167,14 @@ pub fn get_group_rating(env: &Env, group_id: u64) -> Result<GroupRating, Stellar
     }
 
     let agg_key = StorageKeyBuilder::group_rating_aggregate(group_id);
-    let agg: RatingAggregate = env
-        .storage()
-        .persistent()
-        .get(&agg_key)
-        .unwrap_or(RatingAggregate {
-            total_stars: 0,
-            rating_count: 0,
-        });
+    let agg: RatingAggregate =
+        env.storage()
+            .persistent()
+            .get(&agg_key)
+            .unwrap_or(RatingAggregate {
+                total_stars: 0,
+                rating_count: 0,
+            });
 
     Ok(GroupRating {
         group_id,
@@ -229,9 +229,10 @@ mod tests {
             joined_at: 1000,
             auto_contribute_enabled: false,
         };
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::member_profile(group_id, member.clone()), &profile);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::member_profile(group_id, member.clone()),
+            &profile,
+        );
     }
 
     fn str(env: &Env, s: &str) -> String {
@@ -339,9 +340,10 @@ mod tests {
             joined_at: 1000,
             auto_contribute_enabled: false,
         };
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::member_profile(1, member.clone()), &profile);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::member_profile(1, member.clone()),
+            &profile,
+        );
 
         let result = rate_group(&env, member, 1, 5, str(&env, ""));
         assert_eq!(result, Err(StellarSaveError::InvalidState));
@@ -422,27 +424,39 @@ mod tests {
 
     #[test]
     fn test_average_scaled_no_ratings() {
-        let agg = RatingAggregate { total_stars: 0, rating_count: 0 };
+        let agg = RatingAggregate {
+            total_stars: 0,
+            rating_count: 0,
+        };
         assert_eq!(agg.average_scaled(), 0);
     }
 
     #[test]
     fn test_average_scaled_single() {
-        let agg = RatingAggregate { total_stars: 3, rating_count: 1 };
+        let agg = RatingAggregate {
+            total_stars: 3,
+            rating_count: 1,
+        };
         assert_eq!(agg.average_scaled(), 300);
     }
 
     #[test]
     fn test_average_scaled_mixed() {
         // (1+2+3+4+5) / 5 = 3.00
-        let agg = RatingAggregate { total_stars: 15, rating_count: 5 };
+        let agg = RatingAggregate {
+            total_stars: 15,
+            rating_count: 5,
+        };
         assert_eq!(agg.average_scaled(), 300);
     }
 
     #[test]
     fn test_average_scaled_fractional() {
         // (4+5) / 2 = 4.50
-        let agg = RatingAggregate { total_stars: 9, rating_count: 2 };
+        let agg = RatingAggregate {
+            total_stars: 9,
+            rating_count: 2,
+        };
         assert_eq!(agg.average_scaled(), 450);
     }
 }

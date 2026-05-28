@@ -5,6 +5,10 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'design/**'
   schedule:
     - cron: '0 7 * * 1'  # Weekly Monday 7am UTC
 

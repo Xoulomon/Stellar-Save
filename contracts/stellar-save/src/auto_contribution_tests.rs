@@ -69,18 +69,20 @@ fn setup_active_group(env: &Env) -> (u64, Address, Address, Address) {
     env.storage()
         .persistent()
         .set(&StorageKeyBuilder::group_data(group_id), &active_group);
-    env.storage()
-        .persistent()
-        .set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Active);
+    env.storage().persistent().set(
+        &StorageKeyBuilder::group_status(group_id),
+        &GroupStatus::Active,
+    );
 
     // Store token config
     let token_config = TokenConfig {
         token_address: token.clone(),
         token_decimals: 7,
     };
-    env.storage()
-        .persistent()
-        .set(&StorageKeyBuilder::group_token_config(group_id), &token_config);
+    env.storage().persistent().set(
+        &StorageKeyBuilder::group_token_config(group_id),
+        &token_config,
+    );
 
     // Store member profiles
     let creator_profile = MemberProfile {
@@ -143,18 +145,18 @@ fn test_enable_auto_contribute_success() {
     let (group_id, _token, _creator, member) = setup_active_group(&env);
 
     // Initially disabled
-    let enabled = StellarSaveContract::is_auto_contribute_enabled(
-        env.clone(), group_id, member.clone()
-    ).unwrap();
+    let enabled =
+        StellarSaveContract::is_auto_contribute_enabled(env.clone(), group_id, member.clone())
+            .unwrap();
     assert!(!enabled);
 
     // Enable
     StellarSaveContract::enable_auto_contribute(env.clone(), group_id, member.clone()).unwrap();
 
     // Now enabled
-    let enabled = StellarSaveContract::is_auto_contribute_enabled(
-        env.clone(), group_id, member.clone()
-    ).unwrap();
+    let enabled =
+        StellarSaveContract::is_auto_contribute_enabled(env.clone(), group_id, member.clone())
+            .unwrap();
     assert!(enabled);
 }
 
@@ -168,9 +170,9 @@ fn test_enable_auto_contribute_idempotent() {
     StellarSaveContract::enable_auto_contribute(env.clone(), group_id, member.clone()).unwrap();
     StellarSaveContract::enable_auto_contribute(env.clone(), group_id, member.clone()).unwrap();
 
-    let enabled = StellarSaveContract::is_auto_contribute_enabled(
-        env.clone(), group_id, member.clone()
-    ).unwrap();
+    let enabled =
+        StellarSaveContract::is_auto_contribute_enabled(env.clone(), group_id, member.clone())
+            .unwrap();
     assert!(enabled);
 }
 
@@ -195,28 +197,43 @@ fn test_enable_auto_contribute_group_not_active() {
 
     // Create group in Pending state
     let group = Group::new(
-        group_id, creator.clone(), CONTRIBUTION_AMOUNT, CYCLE_DURATION,
-        MAX_MEMBERS, 2, env.ledger().timestamp(), GRACE_PERIOD,
+        group_id,
+        creator.clone(),
+        CONTRIBUTION_AMOUNT,
+        CYCLE_DURATION,
+        MAX_MEMBERS,
+        2,
+        env.ledger().timestamp(),
+        GRACE_PERIOD,
     );
     env.storage()
         .persistent()
         .set(&StorageKeyBuilder::group_data(group_id), &group);
-    env.storage()
-        .persistent()
-        .set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
-    let token_config = TokenConfig { token_address: token, token_decimals: 7 };
-    env.storage()
-        .persistent()
-        .set(&StorageKeyBuilder::group_token_config(group_id), &token_config);
+    env.storage().persistent().set(
+        &StorageKeyBuilder::group_status(group_id),
+        &GroupStatus::Pending,
+    );
+    let token_config = TokenConfig {
+        token_address: token,
+        token_decimals: 7,
+    };
+    env.storage().persistent().set(
+        &StorageKeyBuilder::group_token_config(group_id),
+        &token_config,
+    );
 
     // Store member profile
     let profile = MemberProfile {
-        address: member.clone(), group_id, payout_position: 0,
-        joined_at: 0, auto_contribute_enabled: false,
+        address: member.clone(),
+        group_id,
+        payout_position: 0,
+        joined_at: 0,
+        auto_contribute_enabled: false,
     };
-    env.storage()
-        .persistent()
-        .set(&StorageKeyBuilder::member_profile(group_id, member.clone()), &profile);
+    env.storage().persistent().set(
+        &StorageKeyBuilder::member_profile(group_id, member.clone()),
+        &profile,
+    );
 
     // Should fail: group is Pending, not Active
     let result = StellarSaveContract::enable_auto_contribute(env.clone(), group_id, member.clone());
@@ -245,15 +262,15 @@ fn test_disable_auto_contribute_success() {
     let (group_id, _token, _creator, member) = setup_active_group(&env);
 
     StellarSaveContract::enable_auto_contribute(env.clone(), group_id, member.clone()).unwrap();
-    let enabled = StellarSaveContract::is_auto_contribute_enabled(
-        env.clone(), group_id, member.clone()
-    ).unwrap();
+    let enabled =
+        StellarSaveContract::is_auto_contribute_enabled(env.clone(), group_id, member.clone())
+            .unwrap();
     assert!(enabled);
 
     StellarSaveContract::disable_auto_contribute(env.clone(), group_id, member.clone()).unwrap();
-    let enabled = StellarSaveContract::is_auto_contribute_enabled(
-        env.clone(), group_id, member.clone()
-    ).unwrap();
+    let enabled =
+        StellarSaveContract::is_auto_contribute_enabled(env.clone(), group_id, member.clone())
+            .unwrap();
     assert!(!enabled);
 }
 
@@ -267,9 +284,9 @@ fn test_disable_auto_contribute_idempotent() {
     StellarSaveContract::disable_auto_contribute(env.clone(), group_id, member.clone()).unwrap();
     StellarSaveContract::disable_auto_contribute(env.clone(), group_id, member.clone()).unwrap();
 
-    let enabled = StellarSaveContract::is_auto_contribute_enabled(
-        env.clone(), group_id, member.clone()
-    ).unwrap();
+    let enabled =
+        StellarSaveContract::is_auto_contribute_enabled(env.clone(), group_id, member.clone())
+            .unwrap();
     assert!(!enabled);
 }
 
@@ -346,8 +363,10 @@ fn test_execute_auto_contributions_multiple_members() {
     assert_eq!(count, 2);
 
     // Both contributions recorded
-    let contrib_key_creator = StorageKeyBuilder::contribution_individual(group_id, 0, creator.clone());
-    let contrib_key_member = StorageKeyBuilder::contribution_individual(group_id, 0, member.clone());
+    let contrib_key_creator =
+        StorageKeyBuilder::contribution_individual(group_id, 0, creator.clone());
+    let contrib_key_member =
+        StorageKeyBuilder::contribution_individual(group_id, 0, member.clone());
     assert!(env.storage().persistent().has(&contrib_key_creator));
     assert!(env.storage().persistent().has(&contrib_key_member));
 }
@@ -367,7 +386,8 @@ fn test_execute_auto_contributions_skips_non_opted_in() {
     assert_eq!(count, 1);
 
     // Creator's contribution NOT recorded
-    let contrib_key_creator = StorageKeyBuilder::contribution_individual(group_id, 0, creator.clone());
+    let contrib_key_creator =
+        StorageKeyBuilder::contribution_individual(group_id, 0, creator.clone());
     assert!(!env.storage().persistent().has(&contrib_key_creator));
 }
 
@@ -384,7 +404,8 @@ fn test_execute_auto_contributions_skips_already_contributed() {
 
     // Manually record a contribution for cycle 0 (simulating prior manual contribution)
     let contrib_key = StorageKeyBuilder::contribution_individual(group_id, 0, member.clone());
-    let record = crate::ContributionRecord::new(member.clone(), group_id, 0, CONTRIBUTION_AMOUNT, 0);
+    let record =
+        crate::ContributionRecord::new(member.clone(), group_id, 0, CONTRIBUTION_AMOUNT, 0);
     env.storage().persistent().set(&contrib_key, &record);
 
     // execute_auto_contributions should skip member (already contributed)
@@ -471,11 +492,13 @@ fn test_execute_auto_contributions_partial_success() {
     assert_eq!(count, 1);
 
     // Creator's contribution recorded
-    let contrib_key_creator = StorageKeyBuilder::contribution_individual(group_id, 0, creator.clone());
+    let contrib_key_creator =
+        StorageKeyBuilder::contribution_individual(group_id, 0, creator.clone());
     assert!(env.storage().persistent().has(&contrib_key_creator));
 
     // Member's contribution NOT recorded
-    let contrib_key_member = StorageKeyBuilder::contribution_individual(group_id, 0, member.clone());
+    let contrib_key_member =
+        StorageKeyBuilder::contribution_individual(group_id, 0, member.clone());
     assert!(!env.storage().persistent().has(&contrib_key_member));
 }
 
@@ -502,19 +525,30 @@ fn test_execute_auto_contributions_group_not_active() {
 
     // Create group in Pending state
     let group = Group::new(
-        group_id, creator.clone(), CONTRIBUTION_AMOUNT, CYCLE_DURATION,
-        MAX_MEMBERS, 2, env.ledger().timestamp(), GRACE_PERIOD,
+        group_id,
+        creator.clone(),
+        CONTRIBUTION_AMOUNT,
+        CYCLE_DURATION,
+        MAX_MEMBERS,
+        2,
+        env.ledger().timestamp(),
+        GRACE_PERIOD,
     );
     env.storage()
         .persistent()
         .set(&StorageKeyBuilder::group_data(group_id), &group);
-    env.storage()
-        .persistent()
-        .set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
-    let token_config = TokenConfig { token_address: token, token_decimals: 7 };
-    env.storage()
-        .persistent()
-        .set(&StorageKeyBuilder::group_token_config(group_id), &token_config);
+    env.storage().persistent().set(
+        &StorageKeyBuilder::group_status(group_id),
+        &GroupStatus::Pending,
+    );
+    let token_config = TokenConfig {
+        token_address: token,
+        token_decimals: 7,
+    };
+    env.storage().persistent().set(
+        &StorageKeyBuilder::group_token_config(group_id),
+        &token_config,
+    );
 
     let result = StellarSaveContract::execute_auto_contributions(env.clone(), group_id);
     assert_eq!(result, Err(StellarSaveError::InvalidState));
@@ -533,15 +567,26 @@ fn test_enable_disable_reenable_cycle() {
 
     // Enable
     StellarSaveContract::enable_auto_contribute(env.clone(), group_id, member.clone()).unwrap();
-    assert!(StellarSaveContract::is_auto_contribute_enabled(env.clone(), group_id, member.clone()).unwrap());
+    assert!(
+        StellarSaveContract::is_auto_contribute_enabled(env.clone(), group_id, member.clone())
+            .unwrap()
+    );
 
     // Disable
     StellarSaveContract::disable_auto_contribute(env.clone(), group_id, member.clone()).unwrap();
-    assert!(!StellarSaveContract::is_auto_contribute_enabled(env.clone(), group_id, member.clone()).unwrap());
+    assert!(!StellarSaveContract::is_auto_contribute_enabled(
+        env.clone(),
+        group_id,
+        member.clone()
+    )
+    .unwrap());
 
     // Re-enable
     StellarSaveContract::enable_auto_contribute(env.clone(), group_id, member.clone()).unwrap();
-    assert!(StellarSaveContract::is_auto_contribute_enabled(env.clone(), group_id, member.clone()).unwrap());
+    assert!(
+        StellarSaveContract::is_auto_contribute_enabled(env.clone(), group_id, member.clone())
+            .unwrap()
+    );
 
     // Approve and execute — should work after re-enable
     approve(&env, &token, &member, &contract_id, CONTRIBUTION_AMOUNT);

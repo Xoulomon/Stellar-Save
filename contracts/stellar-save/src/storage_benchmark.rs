@@ -4,7 +4,6 @@
 /// from the optimization strategies applied to the Stellar-Save contract.
 ///
 /// All types use `no_std`-compatible primitives (no `String`, no `f64`).
-
 use crate::storage_optimization::StorageCostAnalyzer;
 
 /// Benchmark scenario for storage analysis.
@@ -105,10 +104,10 @@ impl StorageBenchmark {
     /// Standard benchmark scenarios covering small to enterprise-scale groups.
     pub fn standard_scenarios() -> [BenchmarkScenario; 5] {
         [
-            BenchmarkScenario::new("Small Group",      10,   5,   "10 members, 5 cycles"),
-            BenchmarkScenario::new("Medium Group",     100,  10,  "100 members, 10 cycles"),
-            BenchmarkScenario::new("Large Group",      500,  25,  "500 members, 25 cycles"),
-            BenchmarkScenario::new("Very Large Group", 1000, 50,  "1000 members, 50 cycles"),
+            BenchmarkScenario::new("Small Group", 10, 5, "10 members, 5 cycles"),
+            BenchmarkScenario::new("Medium Group", 100, 10, "100 members, 10 cycles"),
+            BenchmarkScenario::new("Large Group", 500, 25, "500 members, 25 cycles"),
+            BenchmarkScenario::new("Very Large Group", 1000, 50, "1000 members, 50 cycles"),
             BenchmarkScenario::new("Enterprise Group", 5000, 100, "5000 members, 100 cycles"),
         ]
     }
@@ -205,10 +204,14 @@ mod tests {
     fn test_run_scenario_shows_improvement() {
         let scenario = BenchmarkScenario::new("Test", 100, 10, "Test");
         let result = StorageBenchmark::run_scenario(&scenario, 1, 52560);
-        assert!(result.traditional_entries > result.optimized_entries,
-            "Optimized should use fewer storage entries");
-        assert!(result.savings_percentage > 0,
-            "Should show positive savings percentage");
+        assert!(
+            result.traditional_entries > result.optimized_entries,
+            "Optimized should use fewer storage entries"
+        );
+        assert!(
+            result.savings_percentage > 0,
+            "Should show positive savings percentage"
+        );
     }
 
     #[test]
