@@ -1,6 +1,12 @@
 import { Horizon } from '@stellar/stellar-sdk';
 import { PrismaClient } from './generated/prisma/client';
 
+export type DependencyHealth = {
+  up: boolean;
+  latencyMs?: number;
+  error?: string;
+};
+
 export class ContractEventIndexer {
   private server: Horizon.Server;
   private prisma: PrismaClient;
@@ -71,7 +77,6 @@ export class ContractEventIndexer {
 
         // Update cursor to the last processed event
         cursor = data._embedded.records[data._embedded.records.length - 1].paging_token;
-
       } catch (error) {
         console.error('Error streaming events:', error);
         await this.delay(10000); // Wait 10 seconds on error
@@ -105,8 +110,39 @@ export class ContractEventIndexer {
     console.log('Indexer stopped');
   }
 
+  async readinessCheckDatabase(): Promise<DependencyHealth> {
+    const start = Date.now();
+    try {
+      // Lightweight connectivity test
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      await this.prisma.$queryRaw`SELECT 1`;
+      return { up: true, latencyMs: Date.now() - start };
+    } catch (err) {
+      return {
+        up: false,
+        latencyMs: Date.now() - start,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
+  async readinessCheckHorizon(): Promise<DependencyHealth> {
+    const start = Date.now();
+    try {
+      // Use Horizon SDK as a reachability check (latest ledger is cheap enough)
+      await this.server.ledgers().order('desc').limit(1).call();
+      return { up: true, latencyMs: Date.now() - start };
+    } catch (err) {
+      return {
+        up: false,
+        latencyMs: Date.now() - start,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   // Method to get events with pagination and filtering

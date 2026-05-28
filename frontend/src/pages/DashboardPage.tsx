@@ -1,6 +1,7 @@
 import { Box, Typography } from '@mui/material';
 import { AppLayout } from '../ui';
 import { ToastProvider } from '../components/Toast/ToastProvider';
+import { ErrorBoundary } from '../components/ErrorBoundary/ErrorBoundary';
 import { DashboardOverview } from '../components/dashboard/DashboardOverview';
 import { DashboardGroupCard } from '../components/dashboard/DashboardGroupCard';
 import { PayoutSchedule } from '../components/dashboard/PayoutSchedule';
@@ -53,10 +54,12 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <ToastProvider>
-      <AppLayout title="Dashboard" subtitle="Your savings overview" footerText="Stellar Save — Built for transparent, on-chain savings">
-        <DashboardContent />
-      </AppLayout>
-    </ToastProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <AppLayout title="Dashboard" subtitle="Your savings overview" footerText="Stellar Save — Built for transparent, on-chain savings">
+          <DashboardContent />
+        </AppLayout>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }

@@ -107,6 +107,10 @@ pub enum GroupKey {
     /// Rating aggregate: GROUP_RATING_AGG_{id}
     /// Stores the running RatingAggregate (total_stars + rating_count) for a group.
     RatingAggregate(u64),
+
+    /// Bid amount for a member in a cycle: GROUP_BID_{id}_{cycle}_{member}
+    /// Stores the i128 bid submitted by a member for a specific payout cycle.
+    BidAmount(u64, u32, Address),
 }
 
 /// Storage keys for member-related data.
@@ -324,6 +328,14 @@ impl StorageKeyBuilder {
     /// Archived groups are hidden from `list_groups()` by default.
     pub fn group_archived(group_id: u64) -> StorageKey {
         StorageKey::Group(GroupKey::Archived(group_id))
+    }
+
+    /// Creates a key for a member's bid amount in a specific cycle.
+    ///
+    /// Used by the `Bid` payout order: stores the i128 bid submitted by
+    /// `member` for `cycle` in `group_id`.
+    pub fn group_bid_amount(group_id: u64, cycle: u32, member: Address) -> StorageKey {
+        StorageKey::Group(GroupKey::BidAmount(group_id, cycle, member))
     }
 
     /// Creates a key for a member's individual rating of a group.

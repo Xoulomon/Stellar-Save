@@ -49,6 +49,17 @@ export interface GroupStats {
   churnCount: number;
 }
 
+/**
+ * Platform-wide group statistics for the landing page.
+ * Aggregated from the ContractEvent indexed events database.
+ */
+export interface GroupsOverviewStats {
+  totalGroups: number;
+  totalContributed: number;
+  activeMembers: number;
+  cachedAt: string;
+}
+
 export interface EventStats {
   eventType: string;
   eventName: string;
@@ -454,6 +465,78 @@ export class AnalyticsService {
       }));
     } catch (error) {
       console.error('Error fetching reports:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get platform-wide group statistics for the landing page.
+   * Aggregates from the ContractEvent indexed events database.
+   * Results are cached in Redis with a 5-minute TTL.
+   *
+   * Event type conventions (emitted by the Stellar contract):
+   *   - "group_created"      → each event = one new group
+   *   - "contribution_made"  → event.data.amount = XLM contributed
+   *   - "member_joined"      → unique member addresses = active members
+   */
+  async getGroupsOverviewStats(): Promise<GroupsOverviewStats> {
+    const CACHE_KEY = 'stats:groups:overview';
+    const CACHE_TTL = 300; // 5 minutes
+
+    // Return cached value if available
+    const cached = await this.cacheClient.get(CACHE_KEY);
+    if (cached) return cached as GroupsOverviewStats;
+
+    try {
+      // 1. Total groups — count distinct group_created events
+      const totalGroups = await this.prisma.contractEvent.count({
+        where: { eventType: 'group_created' },
+      });
+
+      // 2. Total contributed — sum the `amount` field from contribution_made events.
+      //    Prisma doesn't support JSON field aggregation natively, so we pull the
+      //    raw count and rely on the stored numeric data field via a raw query fallback.
+      //    We use a safe aggregation: fetch all contribution amounts and sum in JS.
+      //    For large datasets this should be replaced with a raw SQL SUM on the JSON field.
+      const contributionEvents = await this.prisma.contractEvent.findMany({
+        where: { eventType: 'contribution_made' },
+        select: { data: true },
+      });
+
+      const totalContributed = contributionEvents.reduce((sum: number, event: any) => {
+        const amount = Number((event.data as any)?.amount ?? 0);
+        return sum + (isNaN(amount) ? 0 : amount);
+      }, 0);
+
+      // 3. Active members — count unique member addresses from member_joined events.
+      //    We group by the `data->>'memberAddress'` field. Since Prisma doesn't support
+      //    JSON groupBy, we fetch distinct addresses via a raw query approach:
+      //    pull all member_joined events and deduplicate in JS.
+      const memberEvents = await this.prisma.contractEvent.findMany({
+        where: { eventType: 'member_joined' },
+        select: { data: true },
+      });
+
+      const uniqueAddresses = new Set<string>();
+      for (const event of memberEvents) {
+        const address = (event.data as any)?.memberAddress;
+        if (address && typeof address === 'string') {
+          uniqueAddresses.add(address);
+        }
+      }
+      const activeMembers = uniqueAddresses.size;
+
+      const stats: GroupsOverviewStats = {
+        totalGroups,
+        totalContributed,
+        activeMembers,
+        cachedAt: new Date().toISOString(),
+      };
+
+      await this.cacheClient.set(CACHE_KEY, stats, CACHE_TTL);
+      return stats;
+    } catch (error) {
+      console.error('Error fetching groups overview stats:', error);
       throw error;
     }
   }
