@@ -485,8 +485,16 @@ impl Group {
 
     /// Calculates the total pool amount for a cycle.
     /// This is the amount distributed to the recipient each cycle.
+    /// Returns None on overflow.
     pub fn total_pool_amount(&self) -> i128 {
-        self.contribution_amount * (self.max_members as i128)
+        self.contribution_amount
+            .checked_mul(self.max_members as i128)
+            .expect("pool amount overflow")
+    }
+
+    /// Checked variant — returns None instead of panicking on overflow.
+    pub fn checked_total_pool_amount(&self) -> Option<i128> {
+        self.contribution_amount.checked_mul(self.max_members as i128)
     }
 
     /// Validates that the group configuration is sound.

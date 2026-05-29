@@ -180,6 +180,10 @@ pub enum ContributionKey {
     /// Tracks whether a member's contribution proof has been verified for a cycle.
     ProofVerified(u64, u32, Address),
 
+    /// Reminder emitted flag: CONTRIB_REMINDER_{group_id}_{cycle}_{address}
+    /// Tracks whether a contribution-due reminder has been emitted for a member.
+    ReminderEmitted(u64, u32, Address),
+
     /// Pending amount change: CONTRIB_PENDING_AMOUNT_{group_id}
     /// Stores a proposed new contribution amount awaiting approval.
     PendingAmountChange(u64),
@@ -444,7 +448,7 @@ impl StorageKeyBuilder {
         cycle: u32,
         address: Address,
     ) -> StorageKey {
-        StorageKey::Contribution(ContributionKey::ProofVerified(group_id, cycle, address))
+        StorageKey::Contribution(ContributionKey::ReminderEmitted(group_id, cycle, address))
     }
 
     /// Creates a key for a pending contribution amount change proposal.

@@ -1701,11 +1701,12 @@ impl StellarSaveContract {
     /// * `Err(StellarSaveError)` - If validation fails or transfer encounters an error
     ///
     /// # Security Features
+    /// - Caller must be the contract itself (internal-only)
     /// - Recipient address validation
     /// - Reentrancy protection using storage flags
     /// - Comprehensive error handling
     /// - Atomic operations with proper rollback
-    pub fn transfer_payout(
+    fn transfer_payout(
         env: Env,
         group_id: u64,
         recipient: Address,
@@ -3629,9 +3630,10 @@ impl StellarSaveContract {
             .checked_add(1)
             .ok_or(StellarSaveError::Overflow)?;
 
-        let next_cycle_end_time = cycle_multiplier
-            .checked_mul(group.cycle_duration as u32)
-            .map(|duration| duration as u64)
+        // Use u64 arithmetic throughout to avoid u32 overflow when
+        // cycle_multiplier * cycle_duration exceeds u32::MAX.
+        let next_cycle_end_time = (cycle_multiplier as u64)
+            .checked_mul(group.cycle_duration)
             .and_then(|duration| group.started_at.checked_add(duration))
             .ok_or(StellarSaveError::Overflow)?;
 
@@ -4108,12 +4110,34 @@ impl StellarSaveContract {
         let withdrawal_amount = if has_received { 0 } else { total_contributed };
 
         if withdrawal_amount > 0 {
+            // Load token config and execute the actual transfer
+            let token_config_key = StorageKeyBuilder::group_token_config(group_id);
+            let token_config: crate::group::TokenConfig = env
+                .storage()
+                .persistent()
+                .get(&token_config_key)
+                .ok_or(StellarSaveError::GroupNotFound)?;
+
+            let token_client =
+                soroban_sdk::token::TokenClient::new(&env, &token_config.token_address);
+            token_client.transfer(&env.current_contract_address(), &member, &withdrawal_amount);
+
+            // Update the group balance counter
+            let balance_key = StorageKeyBuilder::group_balance(group_id);
+            let current_balance: i128 =
+                env.storage().persistent().get(&balance_key).unwrap_or(0);
+            let new_balance = current_balance
+                .checked_sub(withdrawal_amount)
+                .ok_or(StellarSaveError::Overflow)?;
+            env.storage().persistent().set(&balance_key, &new_balance);
+
             env.events().publish(
                 (Symbol::new(&env, "emergency_withdrawal"),),
                 (group_id, member.clone(), withdrawal_amount),
             );
         }
 
+        // Remove member profile after transfer succeeds (checks-effects-interactions)
         let withdrawal_key = StorageKeyBuilder::member_profile(group_id, member.clone());
         env.storage().persistent().remove(&withdrawal_key);
 
@@ -4337,46 +4361,51 @@ impl StellarSaveContract {
     /// * `env` - Soroban environment
     /// * `group_id` - ID of the group to activate
     /// * `creator` - The creator's address (must match the group's creator)
-    /// * `member_count` - Current number of members in the group
     ///
-    /// # Panics
-    /// Panics if:
-    /// - The caller is not the group creator
-    /// - The group has already been started
-    /// - Minimum member count has not been reached
-    pub fn activate_group(env: Env, group_id: u64, creator: Address, member_count: u32) {
-        // Get the group - in a real implementation, this would come from storage
-        // For now, we'll create a mock group to demonstrate the logic
-        // In production, you'd load from: let mut group = GroupStorage::get(&env, group_id);
+    /// # Errors
+    /// - `GroupNotFound` - Group does not exist
+    /// - `Unauthorized` - Caller is not the group creator
+    /// - `InvalidState` - Group already started or minimum members not met
+    pub fn activate_group(env: Env, group_id: u64, creator: Address) -> Result<(), StellarSaveError> {
+        // Require authorization from the caller
+        creator.require_auth();
 
-        // Verify caller is creator
-        assert!(creator == creator, "caller must be the group creator");
+        // Load the actual group from storage
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let mut group: Group = env
+            .storage()
+            .persistent()
+            .get(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // Verify caller is the actual group creator
+        if group.creator != creator {
+            return Err(StellarSaveError::Unauthorized);
+        }
 
         // Get current timestamp
         let timestamp = env.ledger().timestamp();
 
-        // Create a temporary group for validation (in production, load from storage)
-        let mut group = Group::new(
-            group_id, creator, 10_000_000, // Default contribution amount
-            604800,     // Default cycle duration
-            5,          // Default max members
-            2,          // Default min members
-            timestamp, 0, // No grace period
-        );
-
-        // Simulate adding members (in production, this would be tracked in storage)
-        for _ in 0..member_count {
-            group.add_member();
-        }
-
-        // Check minimum members met (using the activate method)
+        // Activate the group (validates min_members and started state internally)
         group.activate(timestamp);
 
+        // Update status to Active
+        group.status = GroupStatus::Active;
+        group.is_active = true;
+
+        // Persist the updated group
+        env.storage().persistent().set(&group_key, &group);
+
+        // Update the status key
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Active);
+
         // Emit the activation event
-        env.events().publish(
-            (Symbol::new(&env, "group_activated"), group_id),
-            member_count,
-        );
+        emit_group_activated(&env, group_id, timestamp, group.member_count);
+
+        Ok(())
     }
 
     /// Records a payout execution in storage and updates related tracking data.
@@ -4548,9 +4577,6 @@ impl StellarSaveContract {
         let timestamp = env.ledger().timestamp();
         let current_cycle = group.current_cycle;
 
-        // Release reentrancy guard before storage ops (safe from re-entrancy now)
-        env.storage().persistent().set(&reentrancy_key, &0u64);
-
         // Gas opt: record_contribution now returns the new cycle_total so we
         // can pass it directly to the event emitter without an extra SLOAD.
         let cycle_total = Self::record_contribution(
@@ -4561,6 +4587,9 @@ impl StellarSaveContract {
             amount,
             timestamp,
         )?;
+
+        // Release reentrancy guard AFTER all state changes are complete
+        env.storage().persistent().set(&reentrancy_key, &0u64);
 
         // ── Step 9: Emit event using the cycle_total returned above ───────────
         // Gas opt: no extra SLOAD needed — cycle_total came back from
@@ -5369,7 +5398,12 @@ impl StellarSaveContract {
         }
 
         // Total distributed = cycles completed * pool amount per cycle
-        let total_distributed: i128 = (group.current_cycle as i128) * group.total_pool_amount();
+        let pool_per_cycle = group
+            .checked_total_pool_amount()
+            .ok_or(StellarSaveError::Overflow)?;
+        let total_distributed: i128 = (group.current_cycle as i128)
+            .checked_mul(pool_per_cycle)
+            .ok_or(StellarSaveError::Overflow)?;
 
         // TVL = contributions received but not yet paid out
         let tvl = total_contributions.saturating_sub(total_distributed);
