@@ -8,11 +8,25 @@ export const ROUTES = {
   GROUPS: "/groups",
   GROUP_DETAIL: "/groups/:groupId",
   PROFILE: "/profile",
+  PROFILE_DETAIL: "/profile/:address",
   SETTINGS: "/settings",
   NOT_FOUND: "/404",
   ERROR: "/500",
   GROUP_CREATE: "/groups/create",
   GROUPS_BROWSE: "/groups/browse",
+
+  GROUP_CALENDAR: "/groups/:groupId/calendar",
+  GROUP_ANALYTICS: "/groups/:groupId/analytics",
+
+  GROUPS_COMPARE: "/groups/compare",
+
+  GROUP_MEMBERS: "/groups/:groupId/members",
+
+  LEADERBOARD: "/leaderboard",
+  TEMPLATES: "/templates",
+  ANALYTICS: "/analytics",
+  MEMBER_PROFILE: "/members/:address",
+  GROUP_JOIN: "/join",
 } as const;
 
 /**
@@ -25,4 +39,9 @@ export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];
  */
 export const buildRoute = {
   groupDetail: (groupId: string) => `/groups/${groupId}`,
+  groupCalendar: (groupId: string) => `/groups/${groupId}/calendar`,
+  groupAnalytics: (groupId: string) => `/groups/${groupId}/analytics`,
+  groupMembers: (groupId: string) => `/groups/${groupId}/members`,
+  memberProfile: (address: string) => `/members/${address}`,
+  groupJoin: (groupId: string) => `/join?groupId=${encodeURIComponent(groupId)}`,
 } as const;

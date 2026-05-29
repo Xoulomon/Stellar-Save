@@ -1,0 +1,43 @@
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0.4rem;
+  font-size: 1rem;
+  font-family: inherit;
+  line-height: 1;
+  transition: background-color 0.2s, border-color 0.2s;
+  color: inherit;
+}
+
+.theme-toggle:hover {
+  background-color: rgba(128, 128, 128, 0.15);
+  border-color: rgba(128, 128, 128, 0.25);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.theme-toggle__icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+/* Labelled variant */
+.theme-toggle--labelled {
+  padding: 0.5rem 0.875rem;
+  border-color: rgba(128, 128, 128, 0.3);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.theme-toggle__label {
+  /* Inherits color from parent — meets WCAG AA in both themes */
+  white-space: nowrap;
+}

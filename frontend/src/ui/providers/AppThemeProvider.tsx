@@ -1,12 +1,6 @@
-import { CssBaseline, ThemeProvider } from "@mui/material";
-import type { ReactNode } from "react";
-import { appTheme } from "../theme/theme";
-
-export function AppThemeProvider({ children }: { children: ReactNode }) {
-  return (
-    <ThemeProvider theme={appTheme}>
-      <CssBaseline />
-      {children}
-    </ThemeProvider>
-  );
-}
+/**
+ * Re-exports AppThemeProvider from ThemeContext so existing imports
+ * (`import { AppThemeProvider } from './ui/providers/AppThemeProvider'`)
+ * continue to work without changes.
+ */
+export { AppThemeProvider } from '../../context/ThemeContext';

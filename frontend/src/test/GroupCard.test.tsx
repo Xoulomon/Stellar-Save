@@ -1,20 +1,25 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GroupCard } from '../components/GroupCard';
 
-const defaultProps = {
-  groupName: 'Alpha Savers',
-  memberCount: 8,
-  contributionAmount: 100,
-};
+function wrapper({ children }: { children: React.ReactNode }) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return (
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
+}
 
 function renderCard(props = {}) {
-  return render(
-    <MemoryRouter>
-      <GroupCard {...defaultProps} {...props} />
-    </MemoryRouter>,
-  );
+  const defaultProps = {
+    groupName: 'Alpha Savers',
+    memberCount: 8,
+    contributionAmount: 100,
+  };
+  return render(<GroupCard {...defaultProps} {...props} />, { wrapper });
 }
 
 describe('GroupCard', () => {
@@ -38,7 +43,7 @@ describe('GroupCard', () => {
     expect(screen.getByText('100 USDC')).toBeInTheDocument();
   });
 
-  it('renders as a Link when groupId is provided', () => {
+  it('renders as a Link when groupId is provided (static mode)', () => {
     renderCard({ groupId: 'group-1' });
     expect(screen.getByRole('link')).toBeInTheDocument();
   });
@@ -84,5 +89,31 @@ describe('GroupCard', () => {
     renderCard({ onClick, onJoin: vi.fn() });
     fireEvent.click(screen.getByRole('button', { name: 'Join Group' }));
     expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('shows current cycle', () => {
+    renderCard({ currentCycle: 3 });
+    expect(screen.getByText('3')).toBeInTheDocument();
+  });
+
+  it('shows next payout date when provided', () => {
+    const date = new Date('2026-08-01');
+    renderCard({ nextPayoutDate: date });
+    expect(screen.getByText('Aug 1, 2026')).toBeInTheDocument();
+  });
+
+  it('shows — when nextPayoutDate is not provided', () => {
+    renderCard();
+    expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
+  it('shows active status badge by default', () => {
+    renderCard();
+    expect(screen.getByText('active')).toBeInTheDocument();
+  });
+
+  it('shows completed status badge', () => {
+    renderCard({ status: 'completed' });
+    expect(screen.getByText('completed')).toBeInTheDocument();
   });
 });

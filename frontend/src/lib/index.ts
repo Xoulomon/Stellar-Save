@@ -6,6 +6,7 @@ export { ContractError, parseContractError, CONTRACT_ERROR_MESSAGES } from './co
 
 export type {
   GroupCreatedEvent,
+  MemberJoinedEvent,
   ContributionMadeEvent,
   PayoutExecutedEvent,
   AppEvent,

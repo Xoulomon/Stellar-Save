@@ -5,7 +5,15 @@ import { Button } from './Button';
 import './GroupFilters.css';
 
 export type GroupStatus = 'all' | 'active' | 'completed' | 'pending';
-export type SortOption = 'name-asc' | 'name-desc' | 'amount-asc' | 'amount-desc' | 'members-asc' | 'members-desc' | 'date-asc' | 'date-desc';
+export type SortOption =
+  | 'name-asc'
+  | 'name-desc'
+  | 'amount-asc'
+  | 'amount-desc'
+  | 'members-asc'
+  | 'members-desc'
+  | 'date-asc'
+  | 'date-desc';
 
 export interface FilterState {
   status: GroupStatus;
@@ -17,26 +25,32 @@ export interface FilterState {
 }
 
 interface GroupFiltersProps {
-  onFilterChange: (filters: FilterState) => void;
-  initialFilters?: Partial<FilterState>;
+  onFilterChange: (
+    filters: FilterState & { minCycleDuration: string; maxCycleDuration: string }
+  ) => void;
+  initialFilters?: Partial<FilterState & { minCycleDuration: string; maxCycleDuration: string }>;
 }
 
-const defaultFilters: FilterState = {
-  status: 'all',
+const defaultFilters = {
+  status: 'all' as GroupStatus,
   minAmount: '',
   maxAmount: '',
   minMembers: '',
   maxMembers: '',
-  sort: 'date-desc',
+  minCycleDuration: '',
+  maxCycleDuration: '',
+  sort: 'date-desc' as SortOption,
 };
 
+type AllFilters = typeof defaultFilters;
+
 export function GroupFilters({ onFilterChange, initialFilters }: GroupFiltersProps) {
-  const [filters, setFilters] = useState<FilterState>({
+  const [filters, setFilters] = useState<AllFilters>({
     ...defaultFilters,
     ...initialFilters,
   });
 
-  const updateFilter = (key: keyof FilterState, value: string) => {
+  const updateFilter = (key: keyof AllFilters, value: string) => {
     const updated = { ...filters, [key]: value };
     setFilters(updated);
     onFilterChange(updated);
@@ -57,16 +71,33 @@ export function GroupFilters({ onFilterChange, initialFilters }: GroupFiltersPro
   const sortItems = [
     { id: 'name-asc', label: 'Name (A-Z)', onClick: () => updateFilter('sort', 'name-asc') },
     { id: 'name-desc', label: 'Name (Z-A)', onClick: () => updateFilter('sort', 'name-desc') },
-    { id: 'amount-asc', label: 'Amount (Low-High)', onClick: () => updateFilter('sort', 'amount-asc') },
-    { id: 'amount-desc', label: 'Amount (High-Low)', onClick: () => updateFilter('sort', 'amount-desc') },
-    { id: 'members-asc', label: 'Members (Low-High)', onClick: () => updateFilter('sort', 'members-asc') },
-    { id: 'members-desc', label: 'Members (High-Low)', onClick: () => updateFilter('sort', 'members-desc') },
+    {
+      id: 'amount-asc',
+      label: 'Amount (Low-High)',
+      onClick: () => updateFilter('sort', 'amount-asc'),
+    },
+    {
+      id: 'amount-desc',
+      label: 'Amount (High-Low)',
+      onClick: () => updateFilter('sort', 'amount-desc'),
+    },
+    {
+      id: 'members-asc',
+      label: 'Members (Low-High)',
+      onClick: () => updateFilter('sort', 'members-asc'),
+    },
+    {
+      id: 'members-desc',
+      label: 'Members (High-Low)',
+      onClick: () => updateFilter('sort', 'members-desc'),
+    },
     { id: 'date-asc', label: 'Date (Oldest)', onClick: () => updateFilter('sort', 'date-asc') },
     { id: 'date-desc', label: 'Date (Newest)', onClick: () => updateFilter('sort', 'date-desc') },
   ];
 
-  const getStatusLabel = () => statusItems.find(i => i.id === filters.status)?.label || 'All Groups';
-  const getSortLabel = () => sortItems.find(i => i.id === filters.sort)?.label || 'Date (Newest)';
+  const getStatusLabel = () =>
+    statusItems.find((i) => i.id === filters.status)?.label || 'All Groups';
+  const getSortLabel = () => sortItems.find((i) => i.id === filters.sort)?.label || 'Date (Newest)';
 
   return (
     <div className="group-filters">
@@ -76,7 +107,7 @@ export function GroupFilters({ onFilterChange, initialFilters }: GroupFiltersPro
           items={statusItems}
           position="bottom-start"
         />
-        
+
         <Dropdown
           trigger={<button className="filter-button">Sort: {getSortLabel()}</button>}
           items={sortItems}
@@ -123,6 +154,25 @@ export function GroupFilters({ onFilterChange, initialFilters }: GroupFiltersPro
               placeholder="Max"
               value={filters.maxMembers}
               onChange={(e) => updateFilter('maxMembers', e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="filter-range">
+          <label>Cycle Duration (days)</label>
+          <div className="filter-inputs">
+            <Input
+              type="number"
+              placeholder="Min"
+              value={filters.minCycleDuration}
+              onChange={(e) => updateFilter('minCycleDuration', e.target.value)}
+            />
+            <span>-</span>
+            <Input
+              type="number"
+              placeholder="Max"
+              value={filters.maxCycleDuration}
+              onChange={(e) => updateFilter('maxCycleDuration', e.target.value)}
             />
           </div>
         </div>

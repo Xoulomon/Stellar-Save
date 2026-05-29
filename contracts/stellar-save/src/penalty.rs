@@ -12,11 +12,7 @@
 
 use soroban_sdk::{contracttype, Address, Env};
 
-use crate::{
-    error::StellarSaveError,
-    events::EventEmitter,
-    storage::StorageKeyBuilder,
-};
+use crate::{error::StellarSaveError, events::EventEmitter, storage::StorageKeyBuilder};
 
 // ─── Type Aliases ─────────────────────────────────────────────────────────────
 
@@ -55,6 +51,7 @@ pub struct PenaltyConfig {
 
 impl PenaltyConfig {
     /// Returns the default penalty configuration.
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         PenaltyConfig {
             base_penalty_bps: BASE_PENALTY_BPS,
@@ -176,11 +173,7 @@ pub fn apply_penalty(
     // 7. Deduct from group balance (safe: saturating to avoid underflow)
     if penalty_amount > 0 {
         let balance_key = StorageKeyBuilder::group_balance(group_id);
-        let current_balance: i128 = env
-            .storage()
-            .persistent()
-            .get(&balance_key)
-            .unwrap_or(0);
+        let current_balance: i128 = env.storage().persistent().get(&balance_key).unwrap_or(0);
         let new_balance = current_balance.saturating_sub(penalty_amount);
         env.storage().persistent().set(&balance_key, &new_balance);
 
@@ -309,11 +302,7 @@ pub fn get_penalty_history(
 }
 
 /// Returns the current penalty state for a member.
-pub fn get_penalty_state(
-    env: &Env,
-    group_id: u64,
-    member: Address,
-) -> MemberPenaltyState {
+pub fn get_penalty_state(env: &Env, group_id: u64, member: Address) -> MemberPenaltyState {
     load_penalty_state(env, group_id, member)
 }
 

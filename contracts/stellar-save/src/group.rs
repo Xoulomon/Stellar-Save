@@ -1,5 +1,10 @@
+#![allow(deprecated)]
 use core::fmt;
 use soroban_sdk::{contracttype, Address, Env, Map};
+
+/// Protocol-level maximum number of members per group.
+/// Prevents unbounded storage growth and gas exhaustion.
+pub const MAX_MEMBERS: u32 = 20;
 
 /// Configuration for the token used by a savings group.
 ///
@@ -205,7 +210,6 @@ pub struct Group {
     /// Only set when started is true.
     pub started_at: u64,
 
-
     /// Whether members must provide a signed proof when contributing.
     /// If true, contributions require an additional signature verification step.
     pub require_contribution_proof: bool,
@@ -219,21 +223,45 @@ pub struct Group {
     /// Maximum allowed value is 604800 (7 days). Defaults to 0 (no grace period).
     pub grace_period_seconds: u64,
 
-    /// Optional token contract address for custom tokens (USDC, EURC, etc.).
-    /// If None, the group uses native XLM. If Some, contributions must be made
-    /// in the specified Stellar token contract.
-    pub token_address: Option<Address>,
+    /// When true, only addresses explicitly invited by the creator may join.
+    pub invitation_only: bool,
+    /// Accumulated reward pool from contribution fees (1% of each contribution).
+    /// Distributed equally among members who complete all cycles.
+    pub reward_pool: i128,
 
-    /// Penalty rate as a percentage (0-100) applied to future payouts for missed contributions.
-    /// For example, penalty_rate of 5 means 5% penalty per missed contribution.
-    pub penalty_rate: u32,
+    /// Whether the group is temporarily paused by the creator.
+    pub paused: bool,
 
-    /// Map tracking the number of missed contributions per member.
-    /// Key: member address, Value: number of missed contributions
-    pub missed_contributions: Map<Address, u32>,
+    /// Whether penalty deductions are enabled for this group.
+    pub penalty_enabled: bool,
 
+    /// Fixed penalty amount per missed cycle in stroops (0 = use percentage-based).
+    pub penalty_amount: i128,
+
+    /// Whether a dispute is currently active for this group.
+    pub dispute_active: bool,
+
+    /// Optional display name for the group (up to 50 chars).
+    pub name: Option<soroban_sdk::String>,
+
+    /// Optional description for the group (up to 500 chars).
+    pub description: Option<soroban_sdk::String>,
+
+    /// Optional image URL for the group.
+    pub image_url: Option<soroban_sdk::String>,
+
+    /// Whether this group has been archived by its creator.
+    ///
+    /// Archiving is only allowed after the group reaches a terminal state
+    /// (Completed or Cancelled). Archived groups are excluded from the default
+    /// `list_groups()` results and are only visible via `list_archived_groups()`.
+    /// This reduces active storage scan costs and improves query performance.
+    pub archived: bool,
+
+    /// How the payout recipient is selected each cycle.
+    /// Defaults to Sequential (join-order rotation).
+    pub payout_order: crate::payout::PayoutOrder,
 }
-
 impl Group {
     /// Creates a new Group with validation.
     ///
@@ -276,6 +304,7 @@ impl Group {
             max_members,
             min_members,
             created_at,
+            grace_period_seconds,
             false,
             0,
         )
@@ -291,6 +320,7 @@ impl Group {
         max_members: u32,
         min_members: u32,
         created_at: u64,
+        grace_period_seconds: u64,
         penalty_enabled: bool,
         penalty_amount: i128,
     ) -> Self {
@@ -338,12 +368,19 @@ impl Group {
             require_contribution_proof: false,
             allow_dynamic_contributions: false,
             grace_period_seconds,
-            token_address: None,
-            penalty_rate: 0,
-            missed_contributions: Map::new(&env),
+            invitation_only: false,
+            reward_pool: 0,
+            paused: false,
+            penalty_enabled,
+            penalty_amount,
+            dispute_active: false,
+            name: None,
+            description: None,
+            image_url: None,
+            archived: false,
+            payout_order: crate::payout::PayoutOrder::Sequential,
         }
     }
-
     /// Checks if the group has completed all cycles.
     /// A group is complete when current_cycle equals max_members
     /// or when status is Completed.
@@ -472,6 +509,14 @@ impl Group {
     pub fn add_member(&mut self) {
         self.member_count += 1;
     }
+
+    /// Returns true if the group is currently paused.
+    ///
+    /// A group is considered paused when either the `paused` flag is set
+    /// or the `status` is `GroupStatus::Paused`.
+    pub fn is_paused(&self) -> bool {
+        self.paused || self.status == GroupStatus::Paused
+    }
 }
 
 #[cfg(test)]
@@ -481,7 +526,16 @@ mod tests {
 
     fn make_group(env: &Env, max_members: u32, grace_period_seconds: u64) -> Group {
         let creator = Address::generate(env);
-        Group::new(1, creator, 10_000_000, 604800, max_members, 2, 1234567890, grace_period_seconds)
+        Group::new(
+            1,
+            creator,
+            10_000_000,
+            604800,
+            max_members,
+            2,
+            1234567890,
+            grace_period_seconds,
+        )
     }
 
     #[test]
@@ -497,7 +551,7 @@ mod tests {
             5,          // 5 members
             2,          // 2 min members
             1234567890,
-            0,          // no grace period
+            0, // no grace period
         );
 
         assert_eq!(group.id, 1);
@@ -765,5 +819,30 @@ mod tests {
         assert!(!GroupStatus::Paused.is_terminal());
         assert!(GroupStatus::Completed.is_terminal());
         assert!(GroupStatus::Cancelled.is_terminal());
+    }
+
+    // is_paused tests
+    #[test]
+    fn test_is_paused_false_on_active_group() {
+        let env = Env::default();
+        let group = make_group(&env, 3, 0);
+        // Newly created group: paused=false, status=Active
+        assert!(!group.is_paused());
+    }
+
+    #[test]
+    fn test_is_paused_true_when_paused_flag_set() {
+        let env = Env::default();
+        let mut group = make_group(&env, 3, 0);
+        group.paused = true;
+        assert!(group.is_paused());
+    }
+
+    #[test]
+    fn test_is_paused_true_when_status_paused() {
+        let env = Env::default();
+        let mut group = make_group(&env, 3, 0);
+        group.status = GroupStatus::Paused;
+        assert!(group.is_paused());
     }
 }

@@ -1,0 +1,112 @@
+{
+  "version": "0.1.0",
+  "performance_benchmarks": {
+    "gas_costs": {
+      "create_group": {
+        "threshold_gas": 2000000,
+        "critical": false,
+        "description": "Creating a new savings group"
+      },
+      "contribution": {
+        "threshold_gas": 1500000,
+        "critical": false,
+        "description": "Member contribution to group"
+      },
+      "auto_advance_cycle": {
+        "threshold_gas": 3000000,
+        "critical": true,
+        "description": "Automatic cycle advancement"
+      },
+      "distribute_winnings": {
+        "threshold_gas": 4000000,
+        "critical": true,
+        "description": "Distributing winnings to winner"
+      },
+      "apply_penalty": {
+        "threshold_gas": 800000,
+        "critical": false,
+        "description": "Applying penalty to member"
+      },
+      "query_group_status": {
+        "threshold_gas": 500000,
+        "critical": false,
+        "description": "Retrieving group status"
+      }
+    },
+    "frontend_metrics": {
+      "lighthouse": {
+        "performance": {
+          "min_score": 0.85,
+          "warning_threshold": 0.90
+        },
+        "accessibility": {
+          "min_score": 0.90,
+          "warning_threshold": 0.95
+        },
+        "best_practices": {
+          "min_score": 0.85,
+          "warning_threshold": 0.90
+        },
+        "seo": {
+          "min_score": 0.90,
+          "warning_threshold": 0.95
+        }
+      },
+      "web_vitals": {
+        "first_contentful_paint": {
+          "target_ms": 1800,
+          "warning_ms": 2500
+        },
+        "largest_contentful_paint": {
+          "target_ms": 2500,
+          "warning_ms": 4000
+        },
+        "cumulative_layout_shift": {
+          "target": 0.1,
+          "warning": 0.25
+        },
+        "first_input_delay": {
+          "target_ms": 100,
+          "warning_ms": 300
+        },
+        "interaction_to_next_paint": {
+          "target_ms": 200,
+          "warning_ms": 500
+        }
+      }
+    },
+    "regression_detection": {
+      "gas_increase_threshold_percent": 10,
+      "performance_score_decrease_threshold": 5,
+      "enable_email_alerts": true,
+      "slack_webhook_enabled": false
+    }
+  },
+  "benchmark_schedules": {
+    "continuous": {
+      "enabled": true,
+      "on_events": ["push", "pull_request"],
+      "branches": ["main", "develop"]
+    },
+    "nightly": {
+      "enabled": true,
+      "time": "02:00 UTC",
+      "branches": ["develop"]
+    },
+    "weekly": {
+      "enabled": true,
+      "day": "Sunday",
+      "time": "02:00 UTC",
+      "branches": ["main"]
+    }
+  },
+  "reports": {
+    "retention_days": 90,
+    "generate_html_dashboard": true,
+    "generate_json_export": true,
+    "slack_notification": {
+      "enabled": false,
+      "webhook_url": "${SLACK_WEBHOOK_URL}"
+    }
+  }
+}
