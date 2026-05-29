@@ -4590,6 +4590,118 @@ impl StellarSaveContract {
         Ok(())
     }
 
+    /// Pre-pays contributions for multiple upcoming cycles in a single transaction.
+    ///
+    /// Allows a member to reduce transaction overhead by paying for several future
+    /// cycles at once. Each cycle is validated and recorded independently, and a
+    /// `ContributionEvent` is emitted for each cycle paid.
+    ///
+    /// # Arguments
+    /// * `group_id` - The group to contribute to
+    /// * `member`   - The member making the contributions (must authorize)
+    /// * `cycles`   - List of cycle numbers to pre-pay (must be unique, unpaid, ≥ current cycle)
+    ///
+    /// # Errors
+    /// * `StellarSaveError::GroupNotFound`      - Group does not exist
+    /// * `StellarSaveError::InvalidState`       - Group is not Active
+    /// * `StellarSaveError::NotMember`          - Caller is not a member
+    /// * `StellarSaveError::InvalidAmount`      - `cycles` list is empty
+    /// * `StellarSaveError::AlreadyContributed` - A cycle in the list is already paid
+    /// * `StellarSaveError::CycleDeadlineExpired` - A cycle is in the past
+    /// * `StellarSaveError::TokenTransferFailed`  - Token transfer failed
+    pub fn contribute_batch(
+        env: Env,
+        group_id: u64,
+        member: Address,
+        cycles: Vec<u32>,
+    ) -> Result<(), StellarSaveError> {
+        member.require_auth();
+
+        // Reject empty input early
+        if cycles.is_empty() {
+            return Err(StellarSaveError::InvalidAmount);
+        }
+
+        // Load group once
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group: Group = env
+            .storage()
+            .persistent()
+            .get(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        if group.status != GroupStatus::Active {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        // Verify member
+        let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
+        if !env.storage().persistent().has(&member_key) {
+            return Err(StellarSaveError::NotMember);
+        }
+
+        // Validate all cycles before touching token or storage:
+        // - must be >= current_cycle (no paying for the past)
+        // - must not already be paid
+        // - must be unique within the batch (detect duplicates via a second pass)
+        for i in 0..cycles.len() {
+            let cycle = cycles.get(i).unwrap();
+            if cycle < group.current_cycle {
+                return Err(StellarSaveError::CycleDeadlineExpired);
+            }
+            let contrib_key =
+                StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
+            if env.storage().persistent().has(&contrib_key) {
+                return Err(StellarSaveError::AlreadyContributed);
+            }
+            // Duplicate detection: check if this cycle appears earlier in the list
+            for j in 0..i {
+                if cycles.get(j).unwrap() == cycle {
+                    return Err(StellarSaveError::AlreadyContributed);
+                }
+            }
+        }
+
+        // Load token config once
+        let token_config_key = StorageKeyBuilder::group_token_config(group_id);
+        let token_config: crate::group::TokenConfig = env
+            .storage()
+            .persistent()
+            .get(&token_config_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        let token_client =
+            soroban_sdk::token::TokenClient::new(&env, &token_config.token_address);
+        let contract_address = env.current_contract_address();
+        let amount = group.contribution_amount;
+        let timestamp = env.ledger().timestamp();
+
+        // Transfer total amount in one call to minimise token round-trips
+        let total = amount
+            .checked_mul(cycles.len() as i128)
+            .ok_or(StellarSaveError::Overflow)?;
+        token_client.transfer_from(&contract_address, &member, &contract_address, &total);
+
+        // Record each cycle and emit individual ContributionEvents
+        for i in 0..cycles.len() {
+            let cycle = cycles.get(i).unwrap();
+            let cycle_total =
+                Self::record_contribution(&env, group_id, cycle, member.clone(), amount, timestamp)?;
+
+            EventEmitter::emit_contribution_made(
+                &env,
+                group_id,
+                member.clone(),
+                amount,
+                cycle,
+                cycle_total,
+                timestamp,
+            );
+        }
+
+        Ok(())
+    }
+
     // =========================================================================
     // AUTO-CONTRIBUTION FEATURE
     // =========================================================================
@@ -13873,5 +13985,167 @@ mod tests {
 
         // Non-existent group_id returns false gracefully
         assert!(!client.is_paused(&9999u64));
+    }
+
+    // =========================================================================
+    // Tests for contribute_batch
+    // =========================================================================
+
+    /// Helper: set up an Active group with a real SAC token and one funded member.
+    /// Writes directly to storage to avoid `create_group` signature coupling.
+    fn setup_batch_group(
+        env: &Env,
+        contract_id: &Address,
+        contribution_amount: i128,
+        num_cycles: u32,
+    ) -> (u64, Address, Address) {
+        use soroban_sdk::token::{StellarAssetClient, TokenClient};
+
+        let creator = Address::generate(env);
+        let member = Address::generate(env);
+        let group_id: u64 = 1;
+
+        // Deploy SAC token, mint enough for all cycles, approve contract
+        let token = env
+            .register_stellar_asset_contract_v2(Address::generate(env))
+            .address();
+        let total = contribution_amount * num_cycles as i128;
+        StellarAssetClient::new(env, &token).mint(&member, &total);
+        let expiry = env.ledger().sequence() + 10_000;
+        TokenClient::new(env, &token).approve(&member, contract_id, &total, &expiry);
+
+        // Write Group
+        let mut group = Group::new(group_id, creator.clone(), contribution_amount, 3600, 5, 2, 0, 0);
+        group.status = GroupStatus::Active;
+        env.storage().persistent().set(&StorageKeyBuilder::group_data(group_id), &group);
+
+        // Write TokenConfig
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_token_config(group_id),
+            &crate::group::TokenConfig { token_address: token, token_decimals: 7 },
+        );
+
+        // Write MemberProfile
+        env.storage().persistent().set(
+            &StorageKeyBuilder::member_profile(group_id, member.clone()),
+            &MemberProfile {
+                address: member.clone(),
+                group_id,
+                payout_position: 0,
+                joined_at: env.ledger().timestamp(),
+                auto_contribute_enabled: false,
+            },
+        );
+
+        (group_id, creator, member)
+    }
+
+    #[test]
+    fn test_contribute_batch_success() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let (group_id, _creator, member) =
+            setup_batch_group(&env, &contract_id, 100, 3);
+
+        let cycles = soroban_sdk::vec![&env, 0u32, 1u32, 2u32];
+        client.contribute_batch(&group_id, &member, &cycles);
+
+        // All three cycles should be recorded
+        for cycle in [0u32, 1u32, 2u32] {
+            let key = StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
+            assert!(env.storage().persistent().has(&key));
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #3001)")] // InvalidAmount — empty list
+    fn test_contribute_batch_empty_cycles() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let (group_id, _creator, member) =
+            setup_batch_group(&env, &contract_id, 100, 1);
+
+        let empty: soroban_sdk::Vec<u32> = soroban_sdk::vec![&env];
+        client.contribute_batch(&group_id, &member, &empty);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #3002)")] // AlreadyContributed — duplicate cycle
+    fn test_contribute_batch_duplicate_cycles() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let (group_id, _creator, member) =
+            setup_batch_group(&env, &contract_id, 100, 2);
+
+        let cycles = soroban_sdk::vec![&env, 0u32, 0u32]; // duplicate
+        client.contribute_batch(&group_id, &member, &cycles);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #3002)")] // AlreadyContributed — cycle already paid
+    fn test_contribute_batch_already_paid_cycle() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let (group_id, _creator, member) =
+            setup_batch_group(&env, &contract_id, 100, 2);
+
+        // Pay cycle 0 individually first
+        client.contribute_batch(&group_id, &member, &soroban_sdk::vec![&env, 0u32]);
+
+        // Now try to include cycle 0 again in a batch
+        client.contribute_batch(&group_id, &member, &soroban_sdk::vec![&env, 0u32, 1u32]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #2002)")] // NotMember
+    fn test_contribute_batch_non_member() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let (group_id, _creator, _member) =
+            setup_batch_group(&env, &contract_id, 100, 1);
+
+        let outsider = Address::generate(&env);
+        let cycles = soroban_sdk::vec![&env, 0u32];
+        client.contribute_batch(&group_id, &outsider, &cycles);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #3005)")] // CycleDeadlineExpired — past cycle
+    fn test_contribute_batch_past_cycle() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let (group_id, _creator, member) =
+            setup_batch_group(&env, &contract_id, 100, 1);
+
+        // Advance group to cycle 2
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let mut group = env
+            .storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .unwrap();
+        group.current_cycle = 2;
+        env.storage().persistent().set(&group_key, &group);
+
+        // Cycle 0 is now in the past
+        client.contribute_batch(&group_id, &member, &soroban_sdk::vec![&env, 0u32]);
     }
 }
