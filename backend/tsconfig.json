@@ -15,7 +15,8 @@
     "strictPropertyInitialization": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "types": ["jest", "node"]
+    "types": ["jest", "node"],
+    "outDir": "dist"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
