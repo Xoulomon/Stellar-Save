@@ -14,6 +14,7 @@ import { BackupScheduler } from './backup_scheduler';
 import { RecoveryService } from './recovery_service';
 import { BackupMonitor } from './backup_monitor';
 import { ContractEventIndexer } from './contract_event_indexer';
+import { startAnalyticsResyncJob } from './jobs/analytics_resync_job';
 import { versionMiddleware } from './versioning';
 import { createV1Router } from './routes/v1';
 import { createV2Router } from './routes/v2';
@@ -139,6 +140,11 @@ if (process.env.BACKUP_ENABLED === 'true') {
 // Start the contract event indexer
 if (process.env.INDEXER_ENABLED === 'true') {
   eventIndexer.start().catch(console.error);
+}
+
+// Start analytics resync job if enabled
+if (process.env.ANALYTICS_RESYNC_ENABLED === 'true') {
+  startAnalyticsResyncJob(process.env.ANALYTICS_RESYNC_SCHEDULE || '0 * * * *'); // default: top of every hour
 }
 
 const services = { engine, abTest, exportService, backupService, backupScheduler, recoveryService, backupMonitor, eventIndexer };
