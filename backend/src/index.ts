@@ -29,11 +29,32 @@ import { createRateLimiterMiddleware, createAuthRateLimiterMiddleware } from './
 
 dotenv.config();
 
+const CSP_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' https://cdn.jsdelivr.net/npm/stellar-sdk",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "connect-src 'self' https://horizon-testnet.stellar.org https://soroban-testnet.stellar.org https://horizon.stellar.org",
+  "font-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "report-uri /api/csp-report",
+].join('; ');
+
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(requestLogger);
 app.use(metricsMiddleware);
+
+// CSP middleware — applied to all responses
+app.use((_req, res, next) => {
+  res.setHeader('Content-Security-Policy', CSP_POLICY);
+  next();
+});
+
 app.get('/metrics', metricsHandler);
 app.use(createRateLimiterMiddleware());
 
@@ -41,6 +62,13 @@ app.use(createRateLimiterMiddleware());
 const authRateLimiter = createAuthRateLimiterMiddleware();
 app.use('/api/admin', authRateLimiter);
 app.use('/graphql', authRateLimiter);
+
+// ── CSP violation reporting ───────────────────────────────────────────────────
+app.post('/api/csp-report', express.json({ type: ['application/json', 'application/csp-report'] }), (req, res) => {
+  const report = req.body?.['csp-report'] ?? req.body;
+  console.warn('[CSP Violation]', JSON.stringify(report));
+  res.status(204).end();
+});
 
 // ========== CACHE ROUTES (Issue #563) ==========
 
