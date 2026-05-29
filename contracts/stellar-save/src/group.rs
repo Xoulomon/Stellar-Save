@@ -1,6 +1,6 @@
 #![allow(deprecated)]
 use core::fmt;
-use soroban_sdk::{contracttype, Address};
+use soroban_sdk::{contracttype, Address, Env, Map};
 
 /// Protocol-level maximum number of members per group.
 /// Prevents unbounded storage growth and gas exhaustion.
@@ -266,6 +266,7 @@ impl Group {
     /// Creates a new Group with validation.
     ///
     /// # Arguments
+    /// * `env` - Soroban environment
     /// * `id` - Unique group identifier
     /// * `creator` - Address of the group creator
     /// * `contribution_amount` - Amount each member contributes per cycle (in stroops)
@@ -284,6 +285,7 @@ impl Group {
     /// - min_members must be <= max_members
     /// - grace_period_seconds must be <= 604800 (7 days)
     pub fn new(
+        env: &Env,
         id: u64,
         creator: Address,
         contribution_amount: i128,
@@ -294,6 +296,7 @@ impl Group {
         grace_period_seconds: u64,
     ) -> Self {
         Self::new_with_penalty(
+            env,
             id,
             creator,
             contribution_amount,
@@ -309,6 +312,7 @@ impl Group {
 
     /// Creates a new Group with penalty configuration.
     pub fn new_with_penalty(
+        env: &Env,
         id: u64,
         creator: Address,
         contribution_amount: i128,

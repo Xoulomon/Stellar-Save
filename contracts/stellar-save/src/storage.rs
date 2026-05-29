@@ -575,6 +575,11 @@ impl StorageKeyBuilder {
     pub fn user_last_join(user: Address) -> StorageKey {
         StorageKey::User(UserKey::LastGroupJoin(user))
     }
+
+    /// Creates a key for storing the contract admin address.
+    pub fn admin() -> StorageKey {
+        StorageKey::Counter(CounterKey::Admin)
+    }
 }
 
 /// Constants for storage key prefixes used in string representations.

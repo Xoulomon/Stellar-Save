@@ -69,7 +69,7 @@ pub use refund::RefundRecord;
 pub use search::{SearchParams, SearchResult};
 #[cfg(test)]
 use soroban_sdk::testutils::{Events, Ledger};
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String, Symbol, Vec};
+use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String, Symbol, Vec, Map, BytesN};
 pub use status::StatusError;
 pub use storage::{StorageKey, StorageKeyBuilder};
 
@@ -495,7 +495,6 @@ impl StellarSaveContract {
             if !allowed_tokens.contains(&token_address) {
                 return Err(StellarSaveError::InvalidToken);
             }
-        }
 
         // 5. Validate token via SEP-41 decimals() call
         let token_decimals = crate::token::validate_token(&env, &token_address)?;
@@ -514,7 +513,7 @@ impl StellarSaveContract {
             max_members,
             min_members,
             current_time,
-            grace_period_seconds,
+            grace_period,
         );
         new_group.payout_order = payout_order;
 
@@ -563,7 +562,7 @@ impl StellarSaveContract {
 
         // 11. Emit GroupCreated Event (include token_address as second data field)
         env.events()
-            .publish((Symbol::new(&env, "GroupCreated"), creator), (group_id, token_address));
+            .publish((Symbol::new(&env, "GroupCreated"), creator), (group_id, token_address.clone()));
 
         // 12. Return Group ID
         Ok(group_id)
