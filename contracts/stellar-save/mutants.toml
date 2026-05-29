@@ -1,0 +1,38 @@
+# cargo-mutants configuration for the stellar-save contract
+# https://mutants.rs/configuration.html
+
+# ─── Timeout ──────────────────────────────────────────────────────────────────
+# Each mutant test run is capped at 120 s (Soroban tests are CPU-heavy).
+timeout_multiplier = 3.0
+minimum_test_timeout = 120
+
+# ─── Parallelism ──────────────────────────────────────────────────────────────
+# Use all available cores in CI; locally this can be overridden with -j.
+# jobs = 4   # uncomment to pin locally
+
+# ─── Scope ────────────────────────────────────────────────────────────────────
+# Only mutate production logic — exclude test helpers, benchmarks, and
+# generated/boilerplate files that are not meaningful mutation targets.
+exclude_globs = [
+    # Test-only modules
+    "src/*_tests.rs",
+    "src/fuzz_tests.rs",
+    # Benchmarks and storage-size helpers
+    "src/gas_benchmark*.rs",
+    "src/storage_benchmark.rs",
+    "src/storage_optimization.rs",
+    # Migration scaffolding (mostly data-shape, not logic)
+    "src/migration*.rs",
+    "src/migrations/**",
+    # Backup of old lib
+    "src/lib.rs.bak",
+]
+
+# ─── Mutation operators ───────────────────────────────────────────────────────
+# All operators are enabled by default; list here for documentation.
+# Operators: arithmetic, bitwise, comparison, literal, return, unary
+# (cargo-mutants enables all by default — no explicit list needed)
+
+# ─── Output ───────────────────────────────────────────────────────────────────
+# Write results to a JSON file so CI can parse the mutation score.
+# (passed via --json-output flag in the workflow)

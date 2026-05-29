@@ -1,0 +1,106 @@
+name: Security Report
+
+on:
+  workflow_run:
+    workflows: [SAST, Dependency Scanning, Secret Scanning]
+    types: [completed]
+  schedule:
+    - cron: '0 8 * * 1'  # Weekly Monday 8am UTC
+
+permissions:
+  contents: read
+  security-events: read
+  issues: write
+
+jobs:
+  report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch Code Scanning Alerts
+        id: alerts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const alerts = await github.rest.codeScanning.listAlertsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+
+            const bySeverity = { critical: [], high: [], medium: [], low: [] };
+            for (const a of alerts.data) {
+              const sev = a.rule?.security_severity_level || a.rule?.severity || 'low';
+              (bySeverity[sev] || bySeverity.low).push(a);
+            }
+
+            const lines = [
+              '## 🔒 Weekly Security Report',
+              `**Generated**: ${new Date().toISOString().split('T')[0]}`,
+              '',
+              '| Severity | Count |',
+              '|----------|-------|',
+              `| 🔴 Critical | ${bySeverity.critical.length} |`,
+              `| 🟠 High     | ${bySeverity.high.length} |`,
+              `| 🟡 Medium   | ${bySeverity.medium.length} |`,
+              `| 🟢 Low      | ${bySeverity.low.length} |`,
+              '',
+            ];
+
+            if (bySeverity.critical.length || bySeverity.high.length) {
+              lines.push('### ⚠️ Critical / High Findings');
+              for (const a of [...bySeverity.critical, ...bySeverity.high]) {
+                lines.push(`- [${a.rule?.id}] **${a.rule?.description}** — \`${a.most_recent_instance?.location?.path}\` ([view](${a.html_url}))`);
+              }
+            } else {
+              lines.push('✅ No critical or high severity findings.');
+            }
+
+            const body = lines.join('\n');
+            core.setOutput('report', body);
+            core.setOutput('has_critical', String(bySeverity.critical.length > 0));
+            core.setOutput('has_high', String(bySeverity.high.length > 0));
+
+      - name: Create or Update Security Report Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const report = `${{ steps.alerts.outputs.report }}`;
+            const label = 'security-report';
+
+            // Ensure label exists
+            try {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: label,
+                color: 'e11d48',
+              });
+            } catch {}
+
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: label,
+              state: 'open',
+            });
+
+            if (issues.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues.data[0].number,
+                body: report,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '🔒 Security Report Dashboard',
+                body: report,
+                labels: [label],
+              });
+            }

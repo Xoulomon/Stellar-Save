@@ -32,6 +32,7 @@ export interface WalletContextValue {
   disconnect: () => void;
   switchWallet: (walletId: string) => Promise<void>;
   switchAccount: (address: string) => void;
+  signTransaction: (xdr: string, opts?: { networkPassphrase?: string; address?: string }) => Promise<string>;
 }
 
 export interface WalletDescriptor {

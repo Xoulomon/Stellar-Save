@@ -6,11 +6,14 @@ export interface PublicGroup {
   id: string;
   name: string;
   description?: string;
+  imageUrl?: string;
   memberCount: number;
   contributionAmount: number; // in XLM
   currency: string;
   status: GroupStatus;
   createdAt: Date;
+  /** Cycle duration in days */
+  cycleDuration?: number;
 }
 
 // ─── Pagination ───────────────────────────────────────────────────────────────
@@ -35,6 +38,8 @@ export type { FilterState, SortOption };
 
 export interface GroupFilters extends FilterState {
   search: string;
+  minCycleDuration: string;
+  maxCycleDuration: string;
 }
 
 export const DEFAULT_GROUP_FILTERS: GroupFilters = {
@@ -44,6 +49,8 @@ export const DEFAULT_GROUP_FILTERS: GroupFilters = {
   maxAmount: '',
   minMembers: '',
   maxMembers: '',
+  minCycleDuration: '',
+  maxCycleDuration: '',
   sort: 'date-desc',
 };
 

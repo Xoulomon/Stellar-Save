@@ -1,0 +1,101 @@
+{
+  "title": "Stellar-Save Cost Monitoring",
+  "uid": "stellar-save-costs",
+  "schemaVersion": 38,
+  "refresh": "5m",
+  "time": { "from": "now-30d", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Total Estimated Monthly Cost (USD)",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 20 }, { "color": "red", "value": 50 }] } } },
+      "targets": [{
+        "expr": "sum(total_estimated_monthly_cost_usd{app=\"stellar-save-backend\"})",
+        "legendFormat": "Total"
+      }]
+    },
+    {
+      "id": 2,
+      "title": "CI Cost (USD/month)",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 10 }, { "color": "red", "value": 30 }] } } },
+      "targets": [{
+        "expr": "total_estimated_monthly_cost_usd{app=\"stellar-save-backend\",component=\"ci\"}",
+        "legendFormat": "CI"
+      }]
+    },
+    {
+      "id": 3,
+      "title": "Storage Cost (USD/month)",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 5 }, { "color": "red", "value": 15 }] } } },
+      "targets": [{
+        "expr": "total_estimated_monthly_cost_usd{app=\"stellar-save-backend\",component=\"storage\"}",
+        "legendFormat": "Storage"
+      }]
+    },
+    {
+      "id": 4,
+      "title": "CI Minutes Used vs Limit",
+      "type": "bargauge",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "none", "min": 0, "thresholds": { "mode": "percentage", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 70 }, { "color": "red", "value": 90 }] } } },
+      "targets": [
+        { "expr": "sum(ci_minutes_used_total{app=\"stellar-save-backend\"})", "legendFormat": "Used" },
+        { "expr": "ci_minutes_limit_total{app=\"stellar-save-backend\"}", "legendFormat": "Limit" }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "CI Minutes by Workflow",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "none" } },
+      "targets": [{
+        "expr": "ci_minutes_used_total{app=\"stellar-save-backend\"}",
+        "legendFormat": "{{workflow}}"
+      }]
+    },
+    {
+      "id": 6,
+      "title": "Stellar Transaction Fees (XLM)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "none" } },
+      "targets": [{
+        "expr": "increase(stellar_transaction_fees_xlm_total{app=\"stellar-save-backend\"}[1d])",
+        "legendFormat": "{{network}} / {{operation}}"
+      }]
+    },
+    {
+      "id": 7,
+      "title": "Storage Usage (GB)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "decgbytes" } },
+      "targets": [{
+        "expr": "storage_bytes_used{app=\"stellar-save-backend\"} / 1073741824",
+        "legendFormat": "{{type}}"
+      }]
+    },
+    {
+      "id": 8,
+      "title": "Cost Breakdown Over Time (USD)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "targets": [{
+        "expr": "total_estimated_monthly_cost_usd{app=\"stellar-save-backend\"}",
+        "legendFormat": "{{component}}"
+      }]
+    }
+  ]
+}

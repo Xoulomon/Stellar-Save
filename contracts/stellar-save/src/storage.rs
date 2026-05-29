@@ -1,13 +1,13 @@
 use soroban_sdk::{contracttype, Address};
 
-/// Storage key structure for efficient data access in the Stellar-Save contract.
-///
-/// This module defines a consistent key naming convention for all contract data,
-/// enabling efficient storage and retrieval operations. Keys are designed to:
-/// - Provide fast lookups for specific data types
-/// - Support range queries where needed
-/// - Maintain clear separation between different data categories
-/// - Enable efficient iteration over related records
+// Storage key structure for efficient data access in the Stellar-Save contract.
+//
+// This module defines a consistent key naming convention for all contract data,
+// enabling efficient storage and retrieval operations. Keys are designed to:
+// - Provide fast lookups for specific data types
+// - Support range queries where needed
+// - Maintain clear separation between different data categories
+// - Enable efficient iteration over related records
 
 /// Main storage key enum that encompasses all data types stored in the contract.
 ///
@@ -27,6 +27,9 @@ pub enum StorageKey {
 
     /// Keys for payout records.
     Payout(PayoutKey),
+
+    /// Keys for refund records.
+    Refund(RefundKey),
 
     /// Keys for various counters and metadata.
     Counter(CounterKey),
@@ -64,9 +67,53 @@ pub enum GroupKey {
     /// Stores the list of member addresses for efficient member enumeration.
     Members(u64),
 
+    /// Group payout sequence: GROUP_PAYOUT_SEQUENCE_{id}
+    /// Stores the randomized payout order as a vector of addresses.
+    PayoutSequence(u64),
+
     /// Group status: GROUP_STATUS_{id}
     /// Stores the current GroupStatus for quick status checks.
     Status(u64),
+
+    /// Token configuration: GROUP_TOKEN_CONFIG_{id}
+    /// Stores the TokenConfig (token address + decimals) for a specific group.
+    TokenConfig(u64),
+    /// Dispute reason string: GROUP_DISPUTE_REASON_{id}
+    DisputeReason(u64),
+
+    /// Merged-from source group IDs: GROUP_MERGED_FROM_{id}
+    /// Stores the two source group IDs that were merged to create this group.
+    MergedFrom(u64),
+
+    /// Invitation list: GROUP_INVITATIONS_{id}
+    /// Stores the Vec<Address> of addresses invited to join this group.
+    Invitations(u64),
+
+    /// Payout position reverse index: GROUP_PAYOUT_POS_IDX_{id}_{position}
+    ///
+    /// Gas opt: stores the Address of the member assigned to a given payout
+    /// position. Written once at join/assign time; read once per payout cycle.
+    /// Replaces the O(n) member-list scan in `identify_recipient` with a single
+    /// O(1) SLOAD: `position → Address`.
+    PayoutPositionIndex(u64, u32),
+
+    /// Archived flag: GROUP_ARCHIVED_{id}
+    /// Stores a bool indicating whether the group has been archived by its creator.
+    /// Archived groups are excluded from `list_groups()` by default and are only
+    /// visible via `list_archived_groups()`.
+    Archived(u64),
+
+    /// Per-member rating: GROUP_RATING_{id}_{member}
+    /// Stores the RatingEntry submitted by a specific member for this group.
+    Rating(u64, Address),
+
+    /// Rating aggregate: GROUP_RATING_AGG_{id}
+    /// Stores the running RatingAggregate (total_stars + rating_count) for a group.
+    RatingAggregate(u64),
+
+    /// Per-member dispute vote: GROUP_DISPUTE_VOTE_{id}_{member}
+    /// Stores a bool indicating whether this member has raised a dispute.
+    DisputeVote(u64, Address),
 }
 
 /// Storage keys for member-related data.
@@ -91,6 +138,26 @@ pub enum MemberKey {
     /// Member total contributions: MEMBER_TOTAL_CONTRIB_{group_id}_{address}
     /// Tracks total amount contributed by member across all cycles.
     TotalContributions(u64, Address),
+
+    /// Member reward claimed flag: MEMBER_REWARD_CLAIMED_{group_id}_{address}
+    /// Tracks whether a member has claimed their completion reward.
+    RewardClaimed(u64, Address),
+
+    /// Member total penalties: MEMBER_PENALTY_{group_id}_{address}
+    /// Tracks cumulative penalty amount charged to a member for missed contributions.
+    PenaltyTotal(u64, Address),
+
+    /// Member contribution streak: MEMBER_STREAK_{group_id}_{address}
+    /// Tracks the current and best consecutive-contribution streak for a member.
+    Streak(u64, Address),
+
+    /// Auto-contribution enabled flag: MEMBER_AUTO_CONTRIBUTE_{group_id}_{address}
+    /// Tracks whether a member has opted in to automatic contributions at cycle start.
+    AutoContribute(u64, Address),
+
+    /// Referral mapping: MEMBER_REFERRAL_{group_id}_{invitee}
+    /// Stores the referrer Address for a given invitee within a group.
+    Referral(u64, Address),
 }
 
 /// Storage keys for contribution tracking.
@@ -111,10 +178,42 @@ pub enum ContributionKey {
     /// Cycle contributor count: CONTRIB_COUNT_{group_id}_{cycle}
     /// Tracks how many members have contributed in the current cycle.
     CycleCount(u64, u32),
+
+    /// Proof verified flag: CONTRIB_PROOF_{group_id}_{cycle}_{address}
+    /// Tracks whether a member's contribution proof has been verified for a cycle.
+    ProofVerified(u64, u32, Address),
+
+    /// Pending amount change: CONTRIB_PENDING_AMOUNT_{group_id}
+    /// Stores a proposed new contribution amount awaiting approval.
+    PendingAmountChange(u64),
+
+    /// Amount change vote count: CONTRIB_VOTE_COUNT_{group_id}
+    /// Tracks how many members have voted to approve the pending amount change.
+    AmountChangeVoteCount(u64),
+
+    /// Member vote record: CONTRIB_VOTE_{group_id}_{address}
+    /// Tracks whether a specific member has voted on the pending amount change.
+    MemberVote(u64, Address),
+
+    /// Dissolution vote count: CONTRIB_DISSOLVE_COUNT_{group_id}
+    /// Tracks how many members have voted to dissolve the group.
+    DissolveVoteCount(u64),
+
+    /// Member dissolution vote: CONTRIB_DISSOLVE_VOTE_{group_id}_{address}
+    /// Tracks whether a specific member has voted to dissolve the group.
+    DissolveVote(u64, Address),
 }
 
 /// Storage keys for payout records.
 ///
+/// Storage keys for refund records.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+pub enum RefundKey {
+    /// Refund record: REFUND_{group_id}_{cycle}_{address}
+    Record(u64, u32, Address),
+}
+
 /// Payouts are tracked per group per cycle to maintain transparency
 /// and enable payout history queries.
 #[contracttype]
@@ -177,6 +276,18 @@ pub enum CounterKey {
     /// Emergency pause flag: COUNTER_EMERGENCY_PAUSE
     /// Tracks if the contract is paused by admin.
     EmergencyPause,
+
+    /// Allowed tokens list: COUNTER_ALLOWED_TOKENS
+    /// Stores the optional admin-managed allowlist of permitted token addresses.
+    AllowedTokens,
+
+    /// Deadline extension for a specific group cycle: DEADLINE_EXTENSION_{group_id}_{cycle}
+    /// Stores the total extension in seconds applied to a cycle's contribution deadline.
+    DeadlineExtension(u64, u32),
+
+    /// Dispute vote count for a group: COUNTER_DISPUTE_COUNT_{group_id}
+    /// Tracks the number of members who have raised a dispute, avoiding O(n) member scans.
+    DisputeCount(u64),
 }
 
 /// Utility functions for creating storage keys with consistent formatting.
@@ -198,9 +309,67 @@ impl StorageKeyBuilder {
         StorageKey::Group(GroupKey::Members(group_id))
     }
 
+    /// Creates a key for storing the randomized payout order sequence.
+    pub fn payout_sequence(group_id: u64) -> StorageKey {
+        StorageKey::Group(GroupKey::PayoutSequence(group_id))
+    }
+
     /// Creates a key for storing group status.
     pub fn group_status(group_id: u64) -> StorageKey {
         StorageKey::Group(GroupKey::Status(group_id))
+    }
+
+    pub fn group_dispute_reason(group_id: u64) -> StorageKey {
+        StorageKey::Group(GroupKey::DisputeReason(group_id))
+    }
+
+    /// Creates a key for storing the source group IDs of a merged group.
+    pub fn group_merged_from(group_id: u64) -> StorageKey {
+        StorageKey::Group(GroupKey::MergedFrom(group_id))
+    }
+
+    /// Creates a key for the invitation list of a group.
+    pub fn group_invitations(group_id: u64) -> StorageKey {
+        StorageKey::Group(GroupKey::Invitations(group_id))
+    }
+
+    /// Creates a key for the payout-position reverse index.
+    ///
+    /// Gas opt: maps `(group_id, position) → Address` so `identify_recipient`
+    /// can do a single O(1) SLOAD instead of iterating all members.
+    pub fn group_payout_position_index(group_id: u64, position: u32) -> StorageKey {
+        StorageKey::Group(GroupKey::PayoutPositionIndex(group_id, position))
+    }
+
+    /// Creates a key for the archived flag of a group.
+    ///
+    /// Stores a `bool` indicating whether the group has been archived.
+    /// Archived groups are hidden from `list_groups()` by default.
+    pub fn group_archived(group_id: u64) -> StorageKey {
+        StorageKey::Group(GroupKey::Archived(group_id))
+    }
+
+    /// Creates a key for a member's bid amount in a specific cycle.
+    ///
+    /// Used by the `Bid` payout order: stores the i128 bid submitted by
+    /// `member` for `cycle` in `group_id`.
+    pub fn group_bid_amount(group_id: u64, cycle: u32, member: Address) -> StorageKey {
+        StorageKey::Group(GroupKey::BidAmount(group_id, cycle, member))
+    }
+
+    /// Creates a key for a member's individual rating of a group.
+    pub fn group_rating(group_id: u64, member: Address) -> StorageKey {
+        StorageKey::Group(GroupKey::Rating(group_id, member))
+    }
+
+    /// Creates a key for the rating aggregate of a group.
+    pub fn group_rating_aggregate(group_id: u64) -> StorageKey {
+        StorageKey::Group(GroupKey::RatingAggregate(group_id))
+    }
+
+    /// Creates a key for a member's dispute vote.
+    pub fn group_dispute_vote(group_id: u64, member: Address) -> StorageKey {
+        StorageKey::Group(GroupKey::DisputeVote(group_id, member))
     }
 
     // Member key builders
@@ -225,6 +394,31 @@ impl StorageKeyBuilder {
         StorageKey::Member(MemberKey::TotalContributions(group_id, address))
     }
 
+    /// Creates a key for tracking whether a member has claimed their completion reward.
+    pub fn member_reward_claimed(group_id: u64, address: Address) -> StorageKey {
+        StorageKey::Member(MemberKey::RewardClaimed(group_id, address))
+    }
+
+    /// Creates a key for member cumulative penalty total.
+    pub fn member_penalty_total(group_id: u64, address: Address) -> StorageKey {
+        StorageKey::Member(MemberKey::PenaltyTotal(group_id, address))
+    }
+
+    /// Creates a key for member contribution streak.
+    pub fn member_streak(group_id: u64, address: Address) -> StorageKey {
+        StorageKey::Member(MemberKey::Streak(group_id, address))
+    }
+
+    /// Creates a key for member auto-contribution enabled flag.
+    pub fn member_auto_contribute(group_id: u64, address: Address) -> StorageKey {
+        StorageKey::Member(MemberKey::AutoContribute(group_id, address))
+    }
+
+    /// Creates a key for storing the referrer of a member within a group.
+    pub fn member_referral(group_id: u64, invitee: Address) -> StorageKey {
+        StorageKey::Member(MemberKey::Referral(group_id, invitee))
+    }
+
     // Contribution key builders
 
     /// Creates a key for individual contribution records.
@@ -242,7 +436,51 @@ impl StorageKeyBuilder {
         StorageKey::Contribution(ContributionKey::CycleCount(group_id, cycle))
     }
 
+    /// Creates a key for tracking whether a member's proof was verified for a cycle.
+    pub fn contribution_proof_verified(group_id: u64, cycle: u32, address: Address) -> StorageKey {
+        StorageKey::Contribution(ContributionKey::ProofVerified(group_id, cycle, address))
+    }
+
+    /// Creates a key for tracking whether a contribution reminder was emitted for a member.
+    pub fn contribution_reminder_emitted(
+        group_id: u64,
+        cycle: u32,
+        address: Address,
+    ) -> StorageKey {
+        StorageKey::Contribution(ContributionKey::ProofVerified(group_id, cycle, address))
+    }
+
+    /// Creates a key for a pending contribution amount change proposal.
+    pub fn contribution_pending_amount(group_id: u64) -> StorageKey {
+        StorageKey::Contribution(ContributionKey::PendingAmountChange(group_id))
+    }
+
+    /// Creates a key for the vote count on a pending amount change.
+    pub fn contribution_amount_vote_count(group_id: u64) -> StorageKey {
+        StorageKey::Contribution(ContributionKey::AmountChangeVoteCount(group_id))
+    }
+
+    /// Creates a key for tracking whether a member has voted on the pending amount change.
+    pub fn contribution_member_vote(group_id: u64, address: Address) -> StorageKey {
+        StorageKey::Contribution(ContributionKey::MemberVote(group_id, address))
+    }
+
+    /// Creates a key for the dissolution vote count of a group.
+    pub fn dissolve_vote_count(group_id: u64) -> StorageKey {
+        StorageKey::Contribution(ContributionKey::DissolveVoteCount(group_id))
+    }
+
+    /// Creates a key for tracking whether a member has voted to dissolve the group.
+    pub fn dissolve_vote(group_id: u64, address: Address) -> StorageKey {
+        StorageKey::Contribution(ContributionKey::DissolveVote(group_id, address))
+    }
+
     // Payout key builders
+
+    /// Creates a key for refund records.
+    pub fn refund_record(group_id: u64, cycle: u32, address: Address) -> StorageKey {
+        StorageKey::Refund(RefundKey::Record(group_id, cycle, address))
+    }
 
     /// Creates a key for payout records.
     pub fn payout_record(group_id: u64, cycle: u32) -> StorageKey {
@@ -309,6 +547,26 @@ impl StorageKeyBuilder {
     /// Creates a key for the global emergency pause flag.
     pub fn emergency_pause() -> StorageKey {
         StorageKey::Counter(CounterKey::EmergencyPause)
+    }
+
+    /// Creates a key for the deadline extension of a specific group cycle.
+    pub fn deadline_extension(group_id: u64, cycle: u32) -> StorageKey {
+        StorageKey::Counter(CounterKey::DeadlineExtension(group_id, cycle))
+    }
+
+    /// Creates a key for the dispute vote count of a group.
+    pub fn dispute_count(group_id: u64) -> StorageKey {
+        StorageKey::Counter(CounterKey::DisputeCount(group_id))
+    }
+
+    /// Creates a key for the token configuration of a specific group.
+    pub fn group_token_config(group_id: u64) -> StorageKey {
+        StorageKey::Group(GroupKey::TokenConfig(group_id))
+    }
+
+    /// Creates a key for the admin-managed allowed tokens list.
+    pub fn allowed_tokens() -> StorageKey {
+        StorageKey::Counter(CounterKey::AllowedTokens)
     }
 
     /// Creates a key storing the timestamp of a user's last group creation.
@@ -382,6 +640,11 @@ pub mod key_prefixes {
 /// - `GROUP_{id}`: Complete group data (configuration, state)
 /// - `GROUP_MEMBERS_{id}`: List of member addresses
 /// - `GROUP_STATUS_{id}`: Current group status
+/// - `GROUP_ARCHIVED_{id}`: Boolean flag indicating whether the group has been archived
+///
+/// Archived groups are excluded from `list_groups()` by default and are only
+/// visible via `list_archived_groups()`. Archiving is a one-way, creator-only
+/// operation available after a group reaches a terminal state (Completed or Cancelled).
 ///
 /// ## Member Storage (MemberKey)
 /// - `MEMBER_{group_id}_{address}`: Member profile (join date, status)
@@ -434,7 +697,7 @@ impl StorageLayout {
 
     /// Returns the estimated storage overhead per group.
     pub fn estimated_overhead_per_group() -> &'static str {
-        "Approximately 5-10 storage entries per group (group data, members list, status, balance, paid_out)"
+        "Approximately 6-11 storage entries per group (group data, members list, status, balance, paid_out, archived flag)"
     }
 
     /// Returns the estimated storage overhead per member.

@@ -116,7 +116,11 @@ Follow the step-by-step guide in [demo/demo-script.md](demo/demo-script.md)
 - [Architecture Overview](docs/architecture.md)
 - [Storage Layout](docs/storage-layout.md)
 - [Threat Model & Security](docs/threat-model.md)
+- [Performance Optimization Guide](docs/performance-optimization.md)
 - [Roadmap](docs/roadmap.md)
+- [Frequently Asked Questions (FAQ)](docs/faq.md)
+- [Mobile App User Guide](docs/mobile-app-guide.md)
+- [Troubleshooting Guide](docs/troubleshooting.md)
 
 ## 🎓 Smart Contract API
 
@@ -135,7 +139,7 @@ is_member(group_id, address) -> bool
 
 ### Contributions
 ```rust
-contribute(group_id)
+contribute(group_id, member, amount)
 get_contribution_status(group_id, cycle_number) -> Vec<(Address, bool)>
 ```
 
@@ -143,6 +147,12 @@ get_contribution_status(group_id, cycle_number) -> Vec<(Address, bool)>
 ```rust
 execute_payout(group_id)
 is_complete(group_id) -> bool
+```
+
+### Emergency Pause
+```rust
+pause_group(group_id, caller)    // Creator-only: halt contributions & payouts
+unpause_group(group_id, caller)  // Creator-only: resume contributions & payouts
 ```
 
 ## 🧪 Testing
@@ -153,6 +163,7 @@ Comprehensive test suite covering:
 - ✅ Contribution flow and tracking
 - ✅ Payout rotation and distribution
 - ✅ Group completion lifecycle
+- ✅ Emergency pause/unpause scenarios
 - ✅ Error handling and edge cases
 
 Run tests:

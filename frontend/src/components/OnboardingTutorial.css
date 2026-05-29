@@ -1,0 +1,135 @@
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.onboarding-modal {
+  background: var(--color-surface, #fff);
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.onboarding-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.onboarding-step-count {
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #666);
+}
+
+.onboarding-skip {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted, #666);
+  font-size: 0.9rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.onboarding-skip:hover {
+  color: var(--color-text, #333);
+  background: var(--color-surface-hover, #f5f5f5);
+}
+
+.onboarding-body {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.onboarding-icon {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.onboarding-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-text, #1a1a1a);
+}
+
+.onboarding-description {
+  font-size: 1rem;
+  color: var(--color-text-secondary, #555);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.onboarding-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.onboarding-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-border, #ddd);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s;
+}
+
+.onboarding-dot--active {
+  background: var(--color-primary, #6366f1);
+}
+
+.onboarding-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.onboarding-btn {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s;
+}
+
+.onboarding-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.onboarding-btn--primary {
+  background: var(--color-primary, #6366f1);
+  color: #fff;
+}
+
+.onboarding-btn--primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.onboarding-btn--secondary {
+  background: var(--color-surface-hover, #f0f0f0);
+  color: var(--color-text, #333);
+}
+
+.onboarding-btn--secondary:hover:not(:disabled) {
+  background: var(--color-border, #e0e0e0);
+}

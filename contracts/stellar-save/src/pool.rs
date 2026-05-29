@@ -112,6 +112,9 @@ impl PoolCalculator {
 
     /// Retrieves the member count for a group from storage.
     ///
+    /// Reads directly from the Group struct (single SLOAD) rather than loading
+    /// the full members Vec, which avoids deserializing the entire address list.
+    ///
     /// # Arguments
     /// * `env` - Soroban environment
     /// * `group_id` - ID of the group
@@ -120,23 +123,14 @@ impl PoolCalculator {
     /// * `Ok(member_count)` - The number of members in the group
     /// * `Err(StellarSaveError)` - If group not found or storage error
     pub fn get_member_count(env: &Env, group_id: u64) -> Result<u32, StellarSaveError> {
-        let members_key = StorageKeyBuilder::group_members(group_id);
-
-        let members: soroban_sdk::Vec<soroban_sdk::Address> = env
-            .storage()
-            .persistent()
-            .get(&members_key)
-            .ok_or(StellarSaveError::GroupNotFound)?;
-
-        Ok(members.len())
+        // Gas opt: read member_count from Group struct (1 SLOAD) instead of
+        // deserializing the full Vec<Address> members list.
         let group_key = StorageKeyBuilder::group_data(group_id);
-
         let group: crate::group::Group = env
             .storage()
             .persistent()
             .get(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
-
         Ok(group.member_count)
     }
 
@@ -205,8 +199,9 @@ impl PoolCalculator {
 
     /// Builds complete pool information for a group and cycle.
     ///
-    /// This is the primary function for getting comprehensive pool data.
-    /// It aggregates member count, contribution amount, and current cycle status.
+    /// Gas opt: single SLOAD for the Group struct to get both member_count and
+    /// contribution_amount, then two more SLOADs for cycle totals.
+    /// Previously this made 3 separate group/members reads.
     ///
     /// # Arguments
     /// * `env` - Soroban environment
@@ -221,12 +216,7 @@ impl PoolCalculator {
         group_id: u64,
         cycle: u32,
     ) -> Result<PoolInfo, StellarSaveError> {
-        // Get member count
-        let member_count = Self::get_member_count(env, group_id)?;
-
-        // Get contribution amount
-        let contribution_amount = Self::get_contribution_amount(env, group_id)?;
-        // Get membership info from single group load
+        // Gas opt: single SLOAD for group data (member_count + contribution_amount)
         let group_key = StorageKeyBuilder::group_data(group_id);
         let group: crate::group::Group = env
             .storage()
