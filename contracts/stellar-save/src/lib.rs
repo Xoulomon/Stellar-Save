@@ -14275,4 +14275,162 @@ mod tests {
         // Cycle 0 is now in the past
         client.contribute_batch(&group_id, &member, &soroban_sdk::vec![&env, 0u32]);
     }
+
+    // =========================================================================
+    // Issue #878: Emergency pause/unpause scenario tests
+    // =========================================================================
+
+    /// Helper: create an active group with one member and return (group_id, creator, member).
+    fn setup_active_group(env: &Env, contract_id: &Address) -> (u64, Address, Address) {
+        let client = StellarSaveContractClient::new(env, contract_id);
+        let creator = Address::generate(env);
+        let member = Address::generate(env);
+
+        let group_id = client.create_group(&creator, &100, &3600, &2);
+
+        // Manually set status to Active so contribute/execute_payout are reachable
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        env.storage()
+            .persistent()
+            .set(&status_key, &GroupStatus::Active);
+
+        // Also update the Group struct's status field
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let mut group: Group = env.storage().persistent().get(&group_key).unwrap();
+        group.status = GroupStatus::Active;
+        group.started = true;
+        group.started_at = env.ledger().timestamp();
+        env.storage().persistent().set(&group_key, &group);
+
+        // Add member to the group
+        let member_profile = MemberProfile {
+            address: member.clone(),
+            group_id,
+            payout_position: 0,
+            joined_at: env.ledger().timestamp(),
+            auto_contribute_enabled: false,
+        };
+        env.storage().persistent().set(
+            &StorageKeyBuilder::member_profile(group_id, member.clone()),
+            &member_profile,
+        );
+        let mut members: soroban_sdk::Vec<Address> = soroban_sdk::Vec::new(env);
+        members.push_back(member.clone());
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_members(group_id), &members);
+
+        (group_id, creator, member)
+    }
+
+    // ── Test 1: contribute() fails with InvalidState when group is paused ────
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #1003)")] // InvalidState
+    fn test_contribute_fails_when_group_paused() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let (group_id, creator, _member) = setup_active_group(&env, &contract_id);
+
+        // Pause the group
+        client.pause_group(&group_id, &creator);
+
+        // Verify the group is now paused
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        let status: GroupStatus = env.storage().persistent().get(&status_key).unwrap();
+        assert_eq!(status, GroupStatus::Paused);
+
+        // contribute() must fail with InvalidState (1003) because group is Paused
+        let contributor = Address::generate(&env);
+        client.contribute(&group_id, &contributor, &100);
+    }
+
+    // ── Test 2: execute_payout() fails when group is paused ──────────────────
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #1003)")] // InvalidState
+    fn test_execute_payout_fails_when_group_paused() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let (group_id, creator, _member) = setup_active_group(&env, &contract_id);
+
+        // Pause the group
+        client.pause_group(&group_id, &creator);
+
+        // execute_payout() must fail with InvalidState (1003) because group is Paused
+        client.execute_payout(&group_id);
+    }
+
+    // ── Test 3: operations resume correctly after unpause_group() ────────────
+
+    #[test]
+    fn test_operations_resume_after_unpause() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let (group_id, creator, _member) = setup_active_group(&env, &contract_id);
+
+        // Pause the group
+        client.pause_group(&group_id, &creator);
+
+        let status_key = StorageKeyBuilder::group_status(group_id);
+        let paused_status: GroupStatus = env.storage().persistent().get(&status_key).unwrap();
+        assert_eq!(paused_status, GroupStatus::Paused);
+
+        // Unpause the group
+        client.unpause_group(&group_id, &creator);
+
+        // Status must be Active again
+        let active_status: GroupStatus = env.storage().persistent().get(&status_key).unwrap();
+        assert_eq!(active_status, GroupStatus::Active);
+
+        // Group struct paused flag must be cleared
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group: Group = env.storage().persistent().get(&group_key).unwrap();
+        assert!(!group.paused);
+        assert_eq!(group.status, GroupStatus::Active);
+    }
+
+    // ── Bonus: pause by non-creator is rejected ───────────────────────────────
+
+    #[test]
+    fn test_pause_group_non_creator_rejected() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let (group_id, _creator, _member) = setup_active_group(&env, &contract_id);
+        let outsider = Address::generate(&env);
+
+        let result = client.try_pause_group(&group_id, &outsider);
+        assert!(result.is_err());
+    }
+
+    // ── Bonus: unpause by non-creator is rejected ─────────────────────────────
+
+    #[test]
+    fn test_unpause_group_non_creator_rejected() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let (group_id, creator, _member) = setup_active_group(&env, &contract_id);
+        let outsider = Address::generate(&env);
+
+        // Pause first
+        client.pause_group(&group_id, &creator);
+
+        let result = client.try_unpause_group(&group_id, &outsider);
+        assert!(result.is_err());
+    }
 }
