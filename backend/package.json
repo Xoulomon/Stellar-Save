@@ -13,6 +13,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "prom-client": "^15.1.3",
     "fast-csv": "^5.0.0",
     "@apollo/server": "^4.12.2",
     "@elastic/elasticsearch": "^9.3.4",

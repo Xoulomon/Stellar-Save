@@ -1,6 +1,7 @@
 import { Horizon } from '@stellar/stellar-sdk';
 import { PrismaClient } from './generated/prisma/client';
 import { WebPushService } from './web_push_service';
+import { eventsIndexedTotal, sorobanRpcCallsTotal } from './metrics';
 
 // Event types emitted by the Stellar savings contract
 const PAYOUT_EVENT_TYPES = ['payout', 'payout_received', 'payoutreceived', 'payout_processed'];
@@ -86,6 +87,7 @@ export class ContractEventIndexer {
         url.searchParams.set('limit', '200');
 
         const response = await fetch(url.toString());
+        sorobanRpcCallsTotal.inc({ method: 'getEvents', status: response.ok ? 'success' : 'error' });
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -127,6 +129,7 @@ export class ContractEventIndexer {
         },
       });
       console.log(`Stored event: ${event.type} in ledger ${event.ledger}`);
+      eventsIndexedTotal.inc({ event_type: event.type || 'unknown' });
 
       // Deliver signed webhook notifications for group events
       const webhookEvent = this.mapToWebhookEvent(stored.eventType);
