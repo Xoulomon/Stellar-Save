@@ -80,6 +80,17 @@ pub struct PayoutExecuted {
     pub executed_at: u64,
 }
 
+/// Event emitted when a member misses a contribution deadline.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContributionMissed {
+    pub group_id: u64,
+    pub member: Address,
+    pub cycle: u32,
+    pub penalty_applied: i128,
+    pub missed_at: u64,
+}
+
 /// Event emitted when a group completes all cycles.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -143,6 +154,7 @@ pub struct ContractUnpaused {
     pub timestamp: u64,
 }
 
+/// Event emitted when a cycle is advanced via tick function.
 /// Event emitted when a contribution proof is verified (#479).
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -198,6 +210,13 @@ pub struct GroupUnpaused {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CycleAdvanced {
     pub group_id: u64,
+    pub old_cycle: u32,
+    pub new_cycle: u32,
+    pub payout_executed: bool,
+    pub defaulted: bool,
+    pub advanced_at: u64,
+}
+
     pub new_cycle: u32,
     pub advanced_at: u64,
 }
@@ -584,6 +603,21 @@ impl EventEmitter {
         env.events().publish(("contract_unpaused",), event);
     }
 
+    pub fn emit_cycle_advanced(
+        env: &Env,
+        group_id: u64,
+        old_cycle: u32,
+        new_cycle: u32,
+        payout_executed: bool,
+        defaulted: bool,
+        advanced_at: u64,
+    ) {
+        let event = CycleAdvanced {
+            group_id,
+            old_cycle,
+            new_cycle,
+            payout_executed,
+            defaulted,
     pub fn emit_contribution_verified(
         env: &Env,
         group_id: u64,
@@ -1166,6 +1200,30 @@ mod tests {
     }
 
     #[test]
+    fn test_cycle_advanced_event() {
+        let env = Env::default();
+
+        let event = CycleAdvanced {
+            group_id: 1,
+            old_cycle: 0,
+            new_cycle: 1,
+            payout_executed: true,
+            defaulted: false,
+            advanced_at: 1234567890,
+        };
+
+        assert_eq!(event.group_id, 1);
+        assert_eq!(event.old_cycle, 0);
+        assert_eq!(event.new_cycle, 1);
+        assert!(event.payout_executed);
+        assert!(!event.defaulted);
+    }
+
+    #[test]
+    fn test_event_emitter_cycle_advanced() {
+        let env = Env::default();
+
+        EventEmitter::emit_cycle_advanced(&env, 1, 0, 1, true, false, 1234567890);
     fn test_group_paused_event() {
         let env = Env::default();
         let creator = Address::generate(&env);

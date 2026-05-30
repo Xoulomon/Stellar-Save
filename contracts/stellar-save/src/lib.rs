@@ -69,7 +69,7 @@ pub use refund::RefundRecord;
 pub use search::{SearchParams, SearchResult};
 #[cfg(test)]
 use soroban_sdk::testutils::{Events, Ledger};
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String, Symbol, Vec};
+use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String, Symbol, Vec, Map, BytesN};
 pub use status::StatusError;
 pub use storage::{StorageKey, StorageKeyBuilder};
 
@@ -495,7 +495,6 @@ impl StellarSaveContract {
             if !allowed_tokens.contains(&token_address) {
                 return Err(StellarSaveError::InvalidToken);
             }
-        }
 
         // 5. Validate token via SEP-41 decimals() call
         let token_decimals = crate::token::validate_token(&env, &token_address)?;
@@ -514,7 +513,7 @@ impl StellarSaveContract {
             max_members,
             min_members,
             current_time,
-            grace_period_seconds,
+            grace_period,
         );
         new_group.payout_order = payout_order;
 
@@ -563,7 +562,7 @@ impl StellarSaveContract {
 
         // 11. Emit GroupCreated Event (include token_address as second data field)
         env.events()
-            .publish((Symbol::new(&env, "GroupCreated"), creator), (group_id, token_address));
+            .publish((Symbol::new(&env, "GroupCreated"), creator), (group_id, token_address.clone()));
 
         // 12. Return Group ID
         Ok(group_id)
@@ -1923,6 +1922,100 @@ impl StellarSaveContract {
         payout_executor::execute_payout(env, group_id)
     }
 
+    /// Advances the cycle if the deadline has passed, enabling trustless automation.
+    /// Anyone can call this function to advance a group's cycle when the deadline is reached.
+    /// 
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group to advance
+    /// 
+    /// # Returns
+    /// * `Ok(())` - Cycle advanced successfully
+    /// * `Err(StellarSaveError)` - Various error conditions:
+    ///   - `GroupNotFound` - Group doesn't exist
+    ///   - `InvalidState` - Group not in active state or already complete
+    ///   - `DeadlineNotReached` - Cycle deadline has not yet passed
+    /// 
+    /// # Behavior
+    /// - Checks if current cycle deadline has passed using `env.ledger().timestamp()`
+    /// - If all contributions received: executes payout and advances to next cycle
+    /// - If contributions missing: marks cycle as defaulted and advances to next cycle
+    /// - Emits `CycleAdvanced` event with old/new cycle numbers and execution status
+    /// - Completes group if all cycles are finished
+    pub fn tick(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
+        // 1. Load group from storage
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let mut group = env
+            .storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // 2. Verify group is in valid state for ticking
+        if !group.is_active || group.is_complete() {
+            return Err(StellarSaveError::InvalidState);
+        }
+
+        // 3. Check if cycle deadline has passed
+        let current_time = env.ledger().timestamp();
+        if !crate::helpers::is_cycle_deadline_passed(&group, current_time) {
+            return Err(StellarSaveError::DeadlineNotReached);
+        }
+
+        // 4. Store old cycle for event emission
+        let old_cycle = group.current_cycle;
+        let mut payout_executed = false;
+        let mut defaulted = false;
+
+        // 5. Check if cycle is complete (all contributions received)
+        let cycle_complete = Self::is_cycle_complete(env.clone(), group_id)?;
+        
+        if cycle_complete {
+            // 5a. Execute payout if cycle is complete
+            match Self::execute_payout(env.clone(), group_id) {
+                Ok(()) => {
+                    payout_executed = true;
+                }
+                Err(_) => {
+                    // If payout fails, still advance cycle but mark as defaulted
+                    defaulted = true;
+                }
+            }
+        } else {
+            // 5b. Mark cycle as defaulted if contributions are missing
+            defaulted = true;
+        }
+
+        // 6. Advance the cycle
+        group.advance_cycle(&env);
+        let new_cycle = group.current_cycle;
+
+        // 7. Update group storage
+        env.storage().persistent().set(&group_key, &group);
+
+        // 8. Emit CycleAdvanced event
+        crate::events::EventEmitter::emit_cycle_advanced(
+            &env,
+            group_id,
+            old_cycle,
+            new_cycle,
+            payout_executed,
+            defaulted,
+            current_time,
+        );
+
+        // 9. If group is now complete, emit completion event
+        if group.is_complete() {
+            let total_distributed = Self::get_total_paid_out(env.clone(), group_id).unwrap_or(0);
+            crate::events::EventEmitter::emit_group_completed(
+                &env,
+                group_id,
+                group.creator.clone(),
+                group.max_members,
+                total_distributed,
+                current_time,
+            );
+        }
     /// Submits a bid for the current payout cycle in a `Bid`-order group.
     ///
     /// The member with the highest bid at payout time wins the cycle payout.
@@ -1978,6 +2071,9 @@ impl StellarSaveContract {
         Ok(())
     }
 
+    // ============================================================================
+    // ISSUE #425: Group Status Management
+    // ============================================================================
     /// Returns true if the group is currently paused.
     ///
     /// Reads the group from storage and checks the paused flag / status.
@@ -3750,6 +3846,20 @@ impl StellarSaveContract {
                 .get::<_, ContributionRecord>(&contrib_key)
                 .is_some();
 
+        // Update user member groups index
+        let user_groups_key = StorageKeyBuilder::user_member_groups(member.clone());
+        let mut user_groups: Vec<u64> = env
+            .storage()
+            .persistent()
+            .get(&user_groups_key)
+            .unwrap_or(Vec::new(&env));
+        user_groups.push_back(group_id);
+        env.storage()
+            .persistent()
+            .set(&user_groups_key, &user_groups);
+
+        // Emit event
+        EventEmitter::emit_member_joined(&env, group_id, member, group.member_count, timestamp);
             if !has_contributed {
                 members_needing_reminder.push_back(member.clone());
             }
@@ -4047,6 +4157,22 @@ impl StellarSaveContract {
         );
 
         Ok(())
+    }
+
+    /// Returns a list of all group IDs that a member belongs to.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `member` - Address of the member to query
+    ///
+    /// # Returns
+    /// * `Vec<u64>` - A vector of group IDs the member belongs to
+    pub fn list_groups_by_member(env: Env, member: Address) -> Vec<u64> {
+        let user_groups_key = StorageKeyBuilder::user_member_groups(member);
+        env.storage()
+            .persistent()
+            .get(&user_groups_key)
+            .unwrap_or(Vec::new(&env))
     }
 
     /// Allows members to withdraw their share in emergency situations.
@@ -14308,5 +14434,476 @@ mod tests {
 
         // Cycle 0 is now in the past
         client.contribute_batch(&group_id, &member, &soroban_sdk::vec![&env, 0u32]);
+    }
+
+    // Tests for member groups index functionality
+
+    #[test]
+    fn test_list_groups_by_member_empty() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let member = Address::generate(&env);
+
+        // Test: Member not in any groups
+        let groups = client.list_groups_by_member(&member);
+        assert_eq!(groups.len(), 0);
+    }
+
+    #[test]
+    fn test_list_groups_by_member_single_group() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+
+        // Create group and add member
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+        client.join_group(&group_id, &member);
+
+        // Test: Member in one group
+        let groups = client.list_groups_by_member(&member);
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups.get(0).unwrap(), group_id);
+    }
+
+    #[test]
+    fn test_list_groups_by_member_multiple_groups() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator1 = Address::generate(&env);
+        let creator2 = Address::generate(&env);
+        let creator3 = Address::generate(&env);
+        let member = Address::generate(&env);
+
+        // Create multiple groups
+        let group_id1 = client.create_group(&creator1, &100, &3600, &3);
+        let group_id2 = client.create_group(&creator2, &200, &7200, &4);
+        let group_id3 = client.create_group(&creator3, &300, &10800, &5);
+
+        // Add member to all groups
+        client.join_group(&group_id1, &member);
+        client.join_group(&group_id2, &member);
+        client.join_group(&group_id3, &member);
+
+        // Test: Member in multiple groups
+        let groups = client.list_groups_by_member(&member);
+        assert_eq!(groups.len(), 3);
+        
+        // Verify all group IDs are present (order should be join order)
+        assert_eq!(groups.get(0).unwrap(), group_id1);
+        assert_eq!(groups.get(1).unwrap(), group_id2);
+        assert_eq!(groups.get(2).unwrap(), group_id3);
+    }
+
+    #[test]
+    fn test_list_groups_by_member_different_members() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member1 = Address::generate(&env);
+        let member2 = Address::generate(&env);
+
+        // Create groups
+        let group_id1 = client.create_group(&creator, &100, &3600, &3);
+        let group_id2 = client.create_group(&creator, &200, &7200, &4);
+
+        // Member1 joins group1, Member2 joins group2
+        client.join_group(&group_id1, &member1);
+        client.join_group(&group_id2, &member2);
+
+        // Test: Each member should only see their own groups
+        let groups1 = client.list_groups_by_member(&member1);
+        let groups2 = client.list_groups_by_member(&member2);
+
+        assert_eq!(groups1.len(), 1);
+        assert_eq!(groups1.get(0).unwrap(), group_id1);
+
+        assert_eq!(groups2.len(), 1);
+        assert_eq!(groups2.get(0).unwrap(), group_id2);
+    }
+
+    #[test]
+    fn test_member_groups_index_maintained_on_join() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+
+        // Create group
+        let group_id = client.create_group(&creator, &100, &3600, &3);
+
+        // Verify member has no groups initially
+        let groups_before = client.list_groups_by_member(&member);
+        assert_eq!(groups_before.len(), 0);
+
+        // Join group
+        client.join_group(&group_id, &member);
+
+        // Verify member groups index is updated
+        let groups_after = client.list_groups_by_member(&member);
+        assert_eq!(groups_after.len(), 1);
+        assert_eq!(groups_after.get(0).unwrap(), group_id);
+
+        // Verify the index is stored correctly by checking storage directly
+        let user_groups_key = StorageKeyBuilder::user_member_groups(member.clone());
+        let stored_groups: Vec<u64> = env
+            .storage()
+            .persistent()
+            .get(&user_groups_key)
+            .unwrap();
+        assert_eq!(stored_groups.len(), 1);
+        assert_eq!(stored_groups.get(0).unwrap(), group_id);
+    }
+
+    #[test]
+    fn test_member_groups_index_consistency() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+
+        // Create multiple groups
+        let group_id1 = client.create_group(&creator, &100, &3600, &3);
+        let group_id2 = client.create_group(&creator, &200, &7200, &4);
+
+        // Join groups in specific order
+        client.join_group(&group_id1, &member);
+        client.join_group(&group_id2, &member);
+
+        // Verify order is maintained
+        let groups = client.list_groups_by_member(&member);
+        assert_eq!(groups.len(), 2);
+        assert_eq!(groups.get(0).unwrap(), group_id1);
+        assert_eq!(groups.get(1).unwrap(), group_id2);
+
+        // Verify member profile exists in both groups
+        let profile1 = client.get_member(&group_id1, &member);
+        let profile2 = client.get_member(&group_id2, &member);
+
+        assert_eq!(profile1.address, member);
+        assert_eq!(profile1.group_id, group_id1);
+        assert_eq!(profile2.address, member);
+        assert_eq!(profile2.group_id, group_id2);
+    }
+
+    #[test]
+    fn test_member_groups_index_large_scale() {
+        let env = Env::default();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+        let mut expected_groups = Vec::new(&env);
+
+        // Create and join 10 groups
+        for i in 0..10 {
+            let group_id = client.create_group(&creator, &(100 + i as i128), &3600, &3);
+            client.join_group(&group_id, &member);
+            expected_groups.push_back(group_id);
+        }
+
+        // Verify all groups are tracked
+        let groups = client.list_groups_by_member(&member);
+        assert_eq!(groups.len(), 10);
+
+        // Verify order is maintained
+        for i in 0..10 {
+            assert_eq!(groups.get(i).unwrap(), expected_groups.get(i).unwrap());
+        }
+    }
+
+    // ============================================================================
+    // TICK FUNCTION TESTS
+    // ============================================================================
+
+    #[test]
+    fn test_tick_group_not_found() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let result = client.try_tick(&999);
+        assert_eq!(result, Err(Ok(StellarSaveError::GroupNotFound)));
+    }
+
+    #[test]
+    fn test_tick_group_not_active() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let group_id = client.create_group(
+            &creator,
+            &10_000_000,
+            &604800,
+            &3,
+            &2,
+        );
+
+        // Group is not active yet (no members joined)
+        let result = client.try_tick(&group_id);
+        assert_eq!(result, Err(Ok(StellarSaveError::InvalidState)));
+    }
+
+    #[test]
+    fn test_tick_deadline_not_reached() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+
+        // Set initial time
+        env.ledger().set_timestamp(1000);
+
+        let group_id = client.create_group(
+            &creator,
+            &10_000_000,
+            &604800, // 1 week cycle
+            &2,
+            &2,
+        );
+
+        client.join_group(&group_id, &creator);
+        client.join_group(&group_id, &member);
+        client.activate_group(&group_id, &creator, &2);
+
+        // Try to tick before deadline (1000 + 604800 = 605800)
+        env.ledger().set_timestamp(500000); // Still before deadline
+        let result = client.try_tick(&group_id);
+        assert_eq!(result, Err(Ok(StellarSaveError::DeadlineNotReached)));
+    }
+
+    #[test]
+    fn test_tick_cycle_complete_with_payout() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+
+        // Set initial time
+        env.ledger().set_timestamp(1000);
+
+        let group_id = client.create_group(
+            &creator,
+            &10_000_000,
+            &604800, // 1 week cycle
+            &2,
+            &2,
+        );
+
+        client.join_group(&group_id, &creator);
+        client.join_group(&group_id, &member);
+        client.activate_group(&group_id, &creator, &2);
+
+        // Assign payout positions
+        let positions = vec![&env, creator.clone(), member.clone()];
+        client.assign_payout_positions(&group_id, &creator, &positions, &0);
+
+        // Both members contribute
+        client.contribute(&group_id, &creator, &10_000_000);
+        client.contribute(&group_id, &member, &10_000_000);
+
+        // Move past deadline
+        env.ledger().set_timestamp(1000 + 604800 + 1);
+
+        // Tick should execute payout and advance cycle
+        let result = client.tick(&group_id);
+        assert!(result.is_ok());
+
+        // Verify cycle advanced
+        let group = client.get_group(&group_id);
+        assert_eq!(group.current_cycle, 1);
+    }
+
+    #[test]
+    fn test_tick_cycle_incomplete_defaulted() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+
+        // Set initial time
+        env.ledger().set_timestamp(1000);
+
+        let group_id = client.create_group(
+            &creator,
+            &10_000_000,
+            &604800, // 1 week cycle
+            &2,
+            &2,
+        );
+
+        client.join_group(&group_id, &creator);
+        client.join_group(&group_id, &member);
+        client.activate_group(&group_id, &creator, &2);
+
+        // Only one member contributes
+        client.contribute(&group_id, &creator, &10_000_000);
+        // member doesn't contribute
+
+        // Move past deadline
+        env.ledger().set_timestamp(1000 + 604800 + 1);
+
+        // Tick should advance cycle without payout (defaulted)
+        let result = client.tick(&group_id);
+        assert!(result.is_ok());
+
+        // Verify cycle advanced
+        let group = client.get_group(&group_id);
+        assert_eq!(group.current_cycle, 1);
+    }
+
+    #[test]
+    fn test_tick_completes_group() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+
+        // Set initial time
+        env.ledger().set_timestamp(1000);
+
+        let group_id = client.create_group(
+            &creator,
+            &10_000_000,
+            &604800, // 1 week cycle
+            &2,      // 2 members = 2 cycles total
+            &2,
+        );
+
+        client.join_group(&group_id, &creator);
+        client.join_group(&group_id, &member);
+        client.activate_group(&group_id, &creator, &2);
+
+        // Assign payout positions
+        let positions = vec![&env, creator.clone(), member.clone()];
+        client.assign_payout_positions(&group_id, &creator, &positions, &0);
+
+        // Complete cycle 0
+        client.contribute(&group_id, &creator, &10_000_000);
+        client.contribute(&group_id, &member, &10_000_000);
+        env.ledger().set_timestamp(1000 + 604800 + 1);
+        client.tick(&group_id);
+
+        // Complete cycle 1 (final cycle)
+        client.contribute(&group_id, &creator, &10_000_000);
+        client.contribute(&group_id, &member, &10_000_000);
+        env.ledger().set_timestamp(1000 + 604800 * 2 + 1);
+        client.tick(&group_id);
+
+        // Verify group is complete
+        let group = client.get_group(&group_id);
+        assert!(group.is_complete());
+        assert_eq!(group.current_cycle, 2);
+    }
+
+    #[test]
+    fn test_tick_already_complete_group() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+
+        let group_id = client.create_group(
+            &creator,
+            &10_000_000,
+            &604800,
+            &1, // 1 member = completes after 1 cycle
+            &1,
+        );
+
+        client.join_group(&group_id, &creator);
+        client.activate_group(&group_id, &creator, &1);
+
+        // Assign payout positions
+        let positions = vec![&env, creator.clone()];
+        client.assign_payout_positions(&group_id, &creator, &positions, &0);
+
+        // Complete the single cycle
+        client.contribute(&group_id, &creator, &10_000_000);
+        env.ledger().set_timestamp(1000 + 604800 + 1);
+        client.tick(&group_id);
+
+        // Try to tick again on completed group
+        env.ledger().set_timestamp(1000 + 604800 * 2 + 1);
+        let result = client.try_tick(&group_id);
+        assert_eq!(result, Err(Ok(StellarSaveError::InvalidState)));
+    }
+
+    #[test]
+    fn test_tick_emits_cycle_advanced_event() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+
+        // Set initial time
+        env.ledger().set_timestamp(1000);
+
+        let group_id = client.create_group(
+            &creator,
+            &10_000_000,
+            &604800,
+            &2,
+            &2,
+        );
+
+        client.join_group(&group_id, &creator);
+        client.join_group(&group_id, &member);
+        client.activate_group(&group_id, &creator, &2);
+
+        // Assign payout positions
+        let positions = vec![&env, creator.clone(), member.clone()];
+        client.assign_payout_positions(&group_id, &creator, &positions, &0);
+
+        // Both members contribute
+        client.contribute(&group_id, &creator, &10_000_000);
+        client.contribute(&group_id, &member, &10_000_000);
+
+        // Move past deadline and tick
+        env.ledger().set_timestamp(1000 + 604800 + 1);
+        client.tick(&group_id);
+
+        // Verify CycleAdvanced event was emitted
+        let events = env.events().all();
+        let cycle_advanced_events: Vec<_> = events
+            .iter()
+            .filter(|e| e.0.contains(&"cycle_advanced"))
+            .collect();
+        
+        assert_eq!(cycle_advanced_events.len(), 1);
     }
 }

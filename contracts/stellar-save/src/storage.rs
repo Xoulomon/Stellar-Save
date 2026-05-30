@@ -47,6 +47,9 @@ pub enum UserKey {
 
     /// Tracks the last ledger timestamp a specific user joined a group.
     LastGroupJoin(Address),
+
+    /// Tracks all group IDs a user is a member of.
+    MemberGroups(Address),
 }
 
 /// Storage keys for group-related data.
@@ -578,6 +581,11 @@ impl StorageKeyBuilder {
     /// Creates a key storing the timestamp of a user's last group join action.
     pub fn user_last_join(user: Address) -> StorageKey {
         StorageKey::User(UserKey::LastGroupJoin(user))
+    }
+
+    /// Creates a key storing a user's joined groups list.
+    pub fn user_member_groups(user: Address) -> StorageKey {
+        StorageKey::User(UserKey::MemberGroups(user))
     }
 }
 
