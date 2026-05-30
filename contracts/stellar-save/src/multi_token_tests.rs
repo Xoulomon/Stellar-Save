@@ -152,10 +152,10 @@ fn test_contribute_transfers_correct_token() {
 
     // Create group and join
     let group_id = create_group_with_token(&env, &client, &creator, &token);
-    client.join_group(&group_id, &member);
+    client.join_group(&group_id, &member, &None);
 
     // Activate group (need min members — add creator too)
-    client.join_group(&group_id, &creator);
+    client.join_group(&group_id, &creator, &None);
     client.activate_group(&group_id, &creator, &2u32);
 
     // Approve contract to spend member's tokens
@@ -189,8 +189,8 @@ fn test_contribute_wrong_amount() {
     sac.mint(&member, &10_000_000i128);
 
     let group_id = create_group_with_token(&env, &client, &creator, &token);
-    client.join_group(&group_id, &member);
-    client.join_group(&group_id, &creator);
+    client.join_group(&group_id, &member, &None);
+    client.join_group(&group_id, &creator, &None);
     client.activate_group(&group_id, &creator, &2u32);
 
     let token_client = TokenClient::new(&env, &token);
@@ -219,8 +219,8 @@ fn test_contribute_insufficient_allowance() {
     sac.mint(&member, &10_000_000i128);
 
     let group_id = create_group_with_token(&env, &client, &creator, &token);
-    client.join_group(&group_id, &member);
-    client.join_group(&group_id, &creator);
+    client.join_group(&group_id, &member, &None);
+    client.join_group(&group_id, &creator, &None);
     client.activate_group(&group_id, &creator, &2u32);
 
     // No approve call — transfer_from should fail
@@ -302,8 +302,8 @@ fn prop_wrong_amount_rejected() {
     StellarAssetClient::new(&env, &token).mint(&member, &100_000_000i128);
 
     let group_id = create_group_with_token(&env, &client, &creator, &token);
-    client.join_group(&group_id, &member);
-    client.join_group(&group_id, &creator);
+    client.join_group(&group_id, &member, &None);
+    client.join_group(&group_id, &creator, &None);
     client.activate_group(&group_id, &creator, &2u32);
 
     let token_client = TokenClient::new(&env, &token);
@@ -319,4 +319,90 @@ fn prop_wrong_amount_rejected() {
             wrong_amount
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// Issue #762 — Contribution amount validation: under / over / exact
+// ---------------------------------------------------------------------------
+
+/// Helper: set up an active group with one member, mint tokens, and return
+/// (group_id, member, contract_id, token_client).
+fn setup_contribute_env(
+    env: &Env,
+    client: &StellarSaveContractClient,
+    contract_id: &Address,
+) -> (u64, Address, Address) {
+    let creator = Address::generate(env);
+    let member = Address::generate(env);
+    let token = deploy_mock_token(env);
+
+    // Mint enough tokens to cover any test amount
+    StellarAssetClient::new(env, &token).mint(&member, &100_000_000i128);
+
+    let group_id = create_group_with_token(env, client, &creator, &token);
+    client.join_group(&group_id, &member);
+    client.join_group(&group_id, &creator);
+    client.activate_group(&group_id, &creator, &2u32);
+
+    (group_id, member, token)
+}
+
+/// Under-contribution: amount < group.contribution_amount → InvalidAmount (3001)
+#[test]
+#[should_panic(expected = "Error(Contract, #3001)")]
+fn test_contribute_under_amount() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (contract_id, client) = deploy_contract(&env);
+
+    let (group_id, member, token) = setup_contribute_env(&env, &client, &contract_id);
+
+    // contribution_amount is 1_000_000; send less
+    let under_amount = 999_999i128;
+    let token_client = TokenClient::new(&env, &token);
+    token_client.approve(&member, &contract_id, &under_amount, &(env.ledger().sequence() + 1000));
+
+    client.contribute(&group_id, &member, &under_amount);
+}
+
+/// Over-contribution: amount > group.contribution_amount → InvalidAmount (3001)
+#[test]
+#[should_panic(expected = "Error(Contract, #3001)")]
+fn test_contribute_over_amount() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (contract_id, client) = deploy_contract(&env);
+
+    let (group_id, member, token) = setup_contribute_env(&env, &client, &contract_id);
+
+    // contribution_amount is 1_000_000; send more
+    let over_amount = 1_000_001i128;
+    let token_client = TokenClient::new(&env, &token);
+    token_client.approve(&member, &contract_id, &over_amount, &(env.ledger().sequence() + 1000));
+
+    client.contribute(&group_id, &member, &over_amount);
+}
+
+/// Exact-match contribution: amount == group.contribution_amount → success
+#[test]
+fn test_contribute_exact_amount() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (contract_id, client) = deploy_contract(&env);
+
+    let (group_id, member, token) = setup_contribute_env(&env, &client, &contract_id);
+
+    let exact_amount = 1_000_000i128;
+    let token_client = TokenClient::new(&env, &token);
+    token_client.approve(&member, &contract_id, &exact_amount, &(env.ledger().sequence() + 1000));
+
+    // Should succeed without panic
+    client.contribute(&group_id, &member, &exact_amount);
+
+    // Verify the contribution was recorded
+    let status = client.get_contribution_status(&group_id, &0u32);
+    assert!(
+        status.iter().any(|(addr, contributed)| addr == member && contributed),
+        "member contribution should be recorded"
+    );
 }

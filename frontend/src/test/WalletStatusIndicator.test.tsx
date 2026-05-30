@@ -4,7 +4,6 @@ import { userEvent } from '@testing-library/user-event';
 import { WalletStatusIndicator } from '../components/WalletStatusIndicator';
 import * as useWalletHook from '../hooks/useWallet';
 import * as useClipboardHook from '../hooks/useClipboard';
-import { WalletProvider } from '../wallet/WalletProvider';
 import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('../hooks/useWallet');

@@ -1,0 +1,121 @@
+name: Contract Size Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'contracts/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'contracts/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  WASM_PATH: target/wasm32-unknown-unknown/release/stellar_save.wasm
+  WASM_SIZE_LIMIT_KB: 100
+  WARN_THRESHOLD_PCT: 80
+
+jobs:
+  size-check:
+    name: Contract Size Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # needed for trend history
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Build WASM
+        run: |
+          cargo build \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            --target wasm32-unknown-unknown \
+            --release
+
+      - name: Download size history artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: size-history
+          path: deployment-records/
+        continue-on-error: true   # first run has no history yet
+
+      - name: Run size check
+        id: size
+        run: |
+          bash scripts/check_contract_size.sh
+          # Expose values for the PR comment step
+          SIZE_KB=$(python3 -c "
+import json
+e = json.load(open('deployment-records/size_history.json'))[-1]
+print(e['size_kb'])
+")
+          USED_PCT=$(python3 -c "
+import json
+e = json.load(open('deployment-records/size_history.json'))[-1]
+print(e['used_pct'])
+")
+          echo "size_kb=${SIZE_KB}"   >> "$GITHUB_OUTPUT"
+          echo "used_pct=${USED_PCT}" >> "$GITHUB_OUTPUT"
+        env:
+          WASM_PATH: ${{ env.WASM_PATH }}
+          WASM_SIZE_LIMIT_KB: ${{ env.WASM_SIZE_LIMIT_KB }}
+          WARN_THRESHOLD_PCT: ${{ env.WARN_THRESHOLD_PCT }}
+          GIT_SHA: ${{ github.sha }}
+
+      - name: Upload size history
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: size-history
+          path: deployment-records/size_history.json
+          retention-days: 90
+          overwrite: true
+
+      - name: Post PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('deployment-records/size_report.md', 'utf8');
+
+            // Find and update existing size-check comment, or create new one
+            const marker = '<!-- contract-size-check -->';
+            const body = `${marker}\n${report}`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

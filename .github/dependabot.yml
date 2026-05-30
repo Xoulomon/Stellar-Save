@@ -1,34 +1,119 @@
 version: 2
 updates:
+  # ── Frontend (React/Vite/TypeScript) ────────────────────────────────────────
   - package-ecosystem: npm
     directory: /frontend
     schedule:
       interval: weekly
       day: monday
+      time: "06:00"
+      timezone: "UTC"
     open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - frontend
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(dev-deps)"
+      include: scope
     groups:
-      dev-dependencies:
+      stellar-sdk:
+        patterns:
+          - "@stellar/*"
+          - "stellar-sdk"
+      mui:
+        patterns:
+          - "@mui/*"
+          - "@emotion/*"
+      testing:
         dependency-type: development
-      production-dependencies:
-        dependency-type: production
+        patterns:
+          - "@testing-library/*"
+          - "@vitest/*"
+          - "vitest"
+          - "playwright"
+          - "@playwright/*"
+      vite-tooling:
+        dependency-type: development
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+          - "typescript"
+          - "typescript-eslint"
+          - "eslint*"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "react-*"
+          - "@types/react*"
 
+  # ── Backend (Node.js/TypeScript) ─────────────────────────────────────────────
   - package-ecosystem: npm
     directory: /backend
     schedule:
       interval: weekly
       day: monday
+      time: "06:00"
+      timezone: "UTC"
     open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - backend
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(dev-deps)"
+      include: scope
+    groups:
+      stellar-sdk:
+        patterns:
+          - "@stellar/*"
+          - "stellar-sdk"
+      graphql:
+        patterns:
+          - "graphql*"
+          - "@apollo/*"
+          - "@graphql-tools/*"
+      dev-dependencies:
+        dependency-type: development
 
+  # ── Rust / Cargo ─────────────────────────────────────────────────────────────
   - package-ecosystem: cargo
     directory: /
     schedule:
       interval: weekly
       day: monday
+      time: "06:00"
+      timezone: "UTC"
     open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - rust
+    commit-message:
+      prefix: "chore(deps)"
+      include: scope
+    groups:
+      soroban:
+        patterns:
+          - "soroban-*"
+          - "stellar-*"
 
+  # ── GitHub Actions ────────────────────────────────────────────────────────────
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
+      time: "06:00"
+      timezone: "UTC"
     open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: "chore(ci)"
+      include: scope
+    groups:
+      actions:
+        patterns:
+          - "*"

@@ -3,6 +3,36 @@
 use soroban_sdk::{String, Env, Bytes};
 use crate::{Group, StellarSaveError, StorageKeyBuilder};
 
+/// Validates a group metadata string (name or description).
+///
+/// Rejects inputs that:
+/// - Exceed `max_bytes` in byte length
+/// - Contain null bytes (0x00), which can cause frontend rendering issues
+///
+/// Soroban `String` values are always valid UTF-8 by construction, so no
+/// additional UTF-8 check is required.
+///
+/// # Arguments
+/// * `s`         - The string to validate
+/// * `max_bytes` - Maximum allowed byte length
+///
+/// # Returns
+/// * `Ok(())` - String is valid
+/// * `Err(StellarSaveError::InvalidMetadata)` - String exceeds limit or contains null bytes
+pub fn validate_group_string(s: &String, max_bytes: u32) -> Result<(), StellarSaveError> {
+    if s.len() > max_bytes {
+        return Err(StellarSaveError::InvalidMetadata);
+    }
+    // Convert to Bytes and scan for null bytes (0x00)
+    let bytes = s.to_bytes();
+    for i in 0..bytes.len() {
+        if bytes.get(i).unwrap() == 0x00 {
+            return Err(StellarSaveError::InvalidMetadata);
+        }
+    }
+    Ok(())
+}
+
 /// Rounding precision for contribution amounts (0.01 XLM = 10^5 stroops).
 /// This prevents precision issues with very small amounts.
 pub const ROUNDING_PRECISION: i128 = 100_000; // 10^5 stroops = 0.01 XLM
@@ -154,8 +184,79 @@ mod tests {
     use soroban_sdk::{Env, Address};
     use crate::group::GroupStatus;
 
+    // ── validate_group_string tests ──────────────────────────────────────────
+
     #[test]
-    fn test_format_group_id_single_digit() {
+    fn test_validate_group_string_valid_name() {
+        let env = Env::default();
+        let s = String::from_str(&env, "My Group");
+        assert!(validate_group_string(&s, 64).is_ok());
+    }
+
+    #[test]
+    fn test_validate_group_string_exactly_max_bytes() {
+        let env = Env::default();
+        // 64 ASCII characters = 64 bytes
+        let s = String::from_str(&env, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        assert_eq!(s.len(), 64);
+        assert!(validate_group_string(&s, 64).is_ok());
+    }
+
+    #[test]
+    fn test_validate_group_string_exceeds_max_bytes() {
+        let env = Env::default();
+        // 65 ASCII characters = 65 bytes
+        let s = String::from_str(&env, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        assert_eq!(s.len(), 65);
+        assert_eq!(validate_group_string(&s, 64), Err(StellarSaveError::InvalidMetadata));
+    }
+
+    #[test]
+    fn test_validate_group_string_empty_allowed_by_zero_limit() {
+        let env = Env::default();
+        let s = String::from_str(&env, "");
+        // Empty string has 0 bytes — passes any max_bytes >= 0
+        assert!(validate_group_string(&s, 256).is_ok());
+    }
+
+    #[test]
+    fn test_validate_group_string_description_exactly_256_bytes() {
+        let env = Env::default();
+        // 256 ASCII characters = 256 bytes
+        let desc = "a".repeat(256);
+        let s = String::from_str(&env, &desc);
+        assert_eq!(s.len(), 256);
+        assert!(validate_group_string(&s, 256).is_ok());
+    }
+
+    #[test]
+    fn test_validate_group_string_description_exceeds_256_bytes() {
+        let env = Env::default();
+        let desc = "a".repeat(257);
+        let s = String::from_str(&env, &desc);
+        assert_eq!(s.len(), 257);
+        assert_eq!(validate_group_string(&s, 256), Err(StellarSaveError::InvalidMetadata));
+    }
+
+    #[test]
+    fn test_validate_group_string_multibyte_utf8_within_limit() {
+        let env = Env::default();
+        // "é" is 2 bytes in UTF-8; 32 × "é" = 64 bytes
+        let s = String::from_str(&env, "éééééééééééééééééééééééééééééééé");
+        assert_eq!(s.len(), 64);
+        assert!(validate_group_string(&s, 64).is_ok());
+    }
+
+    #[test]
+    fn test_validate_group_string_multibyte_utf8_exceeds_limit() {
+        let env = Env::default();
+        // 33 × "é" = 66 bytes > 64
+        let s = String::from_str(&env, "ééééééééééééééééééééééééééééééééé");
+        assert!(s.len() > 64);
+        assert_eq!(validate_group_string(&s, 64), Err(StellarSaveError::InvalidMetadata));
+    }
+
+
         let env = Env::default();
         let result = format_group_id(&env, 1);
         assert_eq!(result, String::from_str(&env, "GROUP-1"));

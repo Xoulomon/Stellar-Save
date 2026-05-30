@@ -113,10 +113,15 @@ Follow the step-by-step guide in [demo/demo-script.md](demo/demo-script.md)
 
 ## 📖 Documentation
 
+- [User Guide](docs/user-guide.md)
 - [Architecture Overview](docs/architecture.md)
 - [Storage Layout](docs/storage-layout.md)
 - [Threat Model & Security](docs/threat-model.md)
+- [Performance Optimization Guide](docs/performance-optimization.md)
 - [Roadmap](docs/roadmap.md)
+- [Frequently Asked Questions (FAQ)](docs/faq.md)
+- [Mobile App User Guide](docs/mobile-app-guide.md)
+- [Troubleshooting Guide](docs/troubleshooting.md)
 
 ## 🎓 Smart Contract API
 
