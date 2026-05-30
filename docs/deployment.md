@@ -2,22 +2,275 @@
 
 Complete guide for deploying the Stellar-Save smart contract to Stellar testnet and mainnet.
 
-**Version**: 1.0.0  
-**Last Updated**: 2026-02-24
+**Version**: 2.0.0  
+**Last Updated**: 2026-04-25
 
 ---
 
 ## Table of Contents
 
-1. [Prerequisites](#prerequisites)
-2. [Environment Setup](#environment-setup)
-3. [Building the Contract](#building-the-contract)
-4. [Testnet Deployment](#testnet-deployment)
-5. [Mainnet Deployment](#mainnet-deployment)
-6. [Post-Deployment Configuration](#post-deployment-configuration)
-7. [Verification](#verification)
-8. [Troubleshooting](#troubleshooting)
-9. [Deployment Checklist](#deployment-checklist)
+1. [Automated CI/CD Pipeline](#automated-cicd-pipeline)
+   - [Pipeline Overview](#pipeline-overview)
+   - [Required Secrets](#required-secrets)
+   - [GitHub Environments](#github-environments)
+   - [Triggering a Deploy](#triggering-a-deploy)
+   - [Rollback Procedure](#rollback-procedure)
+   - [Pipeline Scripts Reference](#pipeline-scripts-reference)
+2. [Promotion Process: Testnet → Staging → Mainnet](#promotion-process-testnet--staging--mainnet)
+3. [Release Tags and What CI/CD Does Automatically](#release-tags-and-what-cicd-does-automatically)
+4. [Pre-Deployment Checklist](#pre-deployment-checklist)
+5. [Prerequisites](#prerequisites)
+3. [Environment Setup](#environment-setup)
+4. [Building the Contract](#building-the-contract)
+5. [Testnet Deployment](#testnet-deployment)
+6. [Mainnet Deployment](#mainnet-deployment)
+7. [Post-Deployment Configuration](#post-deployment-configuration)
+8. [Verification](#verification)
+9. [Troubleshooting](#troubleshooting)
+10. [Deployment Checklist](#deployment-checklist)
+
+---
+
+## Automated CI/CD Pipeline
+
+### Pipeline Overview
+
+The deployment pipeline lives in `.github/workflows/deploy.yml` and runs four jobs in sequence:
+
+```
+push / workflow_dispatch
+        │
+        ▼
+┌─────────────────────┐
+│  pre-deploy         │  clippy · cargo audit · WASM size · secrets scan · unit tests
+└────────┬────────────┘
+         │ artifact: stellar_save.wasm + sha256 hash
+         ▼
+┌─────────────────────┐        ┌─────────────────────┐
+│  deploy-testnet     │  OR    │  deploy-mainnet      │
+│  (develop branch)   │        │  (main branch)       │
+│                     │        │  ⚠️ requires approval │
+└────────┬────────────┘        └────────┬─────────────┘
+         │                              │
+         ▼                              ▼
+  verify_contract.sh            verify_contract.sh
+  smoke_test_post_deploy.sh     smoke_test_post_deploy.sh
+  deployment-record artifact    GitHub Release created
+```
+
+**Rollback** is a separate manual job triggered via `workflow_dispatch` with a `rollback_artifact` run ID.
+
+### Required Secrets
+
+Configure these in **Settings → Secrets and variables → Actions**:
+
+| Secret | Description |
+|--------|-------------|
+| `TESTNET_DEPLOYER_SECRET` | Stellar secret key (`S…`) for the testnet deployer account |
+| `MAINNET_DEPLOYER_SECRET` | Stellar secret key (`S…`) for the mainnet deployer account |
+
+The deployer accounts must be funded before deployment:
+- Testnet: use [Friendbot](https://friendbot.stellar.org/?addr=<PUBLIC_KEY>)
+- Mainnet: fund with real XLM (minimum ~2 XLM for contract deployment fees)
+
+### GitHub Environments
+
+Create two environments in **Settings → Environments**:
+
+**`testnet`**
+- No required reviewers (auto-deploys from `develop`)
+- Optional: add deployment branch rule to `develop` only
+
+**`production`**
+- Add at least one required reviewer
+- Restrict to `main` branch only
+- This gate is what prevents accidental mainnet deploys
+
+### Triggering a Deploy
+
+**Automatic (recommended)**
+
+| Branch push | Target |
+|-------------|--------|
+| `develop` | Testnet |
+| `main` | Mainnet (after reviewer approval) |
+
+**Manual via workflow_dispatch**
+
+```
+GitHub → Actions → "Contract Deployment Pipeline" → Run workflow
+  network: testnet | mainnet
+  rollback_artifact: (leave empty for normal deploy)
+```
+
+### Rollback Procedure
+
+1. Find the GitHub Actions **run ID** of the last known-good deployment (visible in the Actions URL: `.../runs/<RUN_ID>`).
+2. Trigger the workflow manually:
+   ```
+   network: testnet | mainnet
+   rollback_artifact: <RUN_ID>
+   ```
+3. The pipeline will:
+   - Download the WASM from that run's artifact
+   - Re-deploy it to the target network
+   - Run `verify_contract.sh` and `smoke_test_post_deploy.sh`
+   - Print the new contract ID
+
+> **Note**: Soroban contracts are immutable once deployed. "Rollback" means deploying a new contract instance from the old WASM. Update your frontend `CONTRACT_ID` env var to point to the new address.
+
+### Pipeline Scripts Reference
+
+| Script | Purpose | Key checks |
+|--------|---------|------------|
+| `scripts/pre_deploy_check.sh` | Validation gate — blocks deploy on failure | Clippy, cargo audit, WASM size ≤ 100 KB, secrets scan, unit tests |
+| `scripts/verify_contract.sh` | Post-deploy integrity check | Contract exists on-chain, WASM hash matches, contract is callable |
+| `scripts/smoke_test_post_deploy.sh` | Live network smoke tests | RPC reachable, contract exists, read-only call, write-path (testnet only) |
+| `scripts/rollback.sh` | Re-deploy previous WASM | Downloads artifact, deploys, verifies, smoke tests |
+
+**Running scripts locally**
+
+```bash
+# Pre-deploy check (builds WASM if needed)
+WASM_SIZE_LIMIT_KB=100 bash scripts/pre_deploy_check.sh
+
+# Verify a deployed contract
+CONTRACT_ID=C... \
+STELLAR_NETWORK=testnet \
+STELLAR_RPC_URL=https://soroban-testnet.stellar.org \
+EXPECTED_WASM_HASH=<sha256> \
+bash scripts/verify_contract.sh
+
+# Smoke test a deployed contract
+CONTRACT_ID=C... \
+STELLAR_NETWORK=testnet \
+STELLAR_RPC_URL=https://soroban-testnet.stellar.org \
+bash scripts/smoke_test_post_deploy.sh
+```
+
+---
+
+## Promotion Process: Testnet → Staging → Mainnet
+
+Stellar-Save follows a three-stage promotion model. Code only reaches mainnet after passing every gate below.
+
+```
+feature branch
+      │  PR review + CI (unit tests, clippy, cargo audit)
+      ▼
+  develop ──push──► Testnet  (auto-deploy via deploy.yml)
+      │                │
+      │         smoke tests pass?
+      │                │ yes
+      ▼                ▼
+   main  ──push──► Mainnet  (requires reviewer approval in GitHub "production" environment)
+```
+
+### Stage 1 — Testnet
+
+| Trigger | `push` to `develop` (or `workflow_dispatch` with `network: testnet`) |
+|---------|----------------------------------------------------------------------|
+| Gate | `pre-deploy` job: clippy, `cargo audit`, WASM ≤ 100 KB, unit tests |
+| Post-deploy | `verify_contract.sh` + `smoke_test_post_deploy.sh` |
+| Artifact | `deployment-record-testnet-<sha>.json` retained 90 days |
+
+Testnet is the integration environment. All new features must be validated here before promotion.
+
+### Stage 2 — Staging (pre-mainnet gate)
+
+Staging is enforced through the GitHub **`production` environment** protection rules rather than a separate network. Before the mainnet job runs, GitHub pauses and requires at least one designated reviewer to approve. Use this window to:
+
+1. Confirm testnet smoke tests passed in the previous run.
+2. Review the deployment record artifact (`deployment-record-testnet-<sha>.json`).
+3. Verify the WASM hash matches the build you audited.
+4. Check the pre-deployment checklist below.
+
+To approve: **Actions → the pending workflow run → Review deployments → Approve**.
+
+### Stage 3 — Mainnet
+
+| Trigger | `push` to `main` (or `workflow_dispatch` with `network: mainnet`) after reviewer approval |
+|---------|------------------------------------------------------------------------------------------|
+| Gate | Same `pre-deploy` job + reviewer approval in `production` environment |
+| Post-deploy | `verify_contract.sh` + `smoke_test_post_deploy.sh` (read-only path only) |
+| Artifact | `deployment-record-mainnet-<sha>.json` retained 365 days |
+| Release | GitHub Release created automatically (see next section) |
+
+---
+
+## Release Tags and What CI/CD Does Automatically
+
+### Creating a Release Tag
+
+A mainnet deployment automatically creates a Git tag and GitHub Release. You do not need to tag manually. The tag format is:
+
+```
+contract-mainnet-<first-8-chars-of-commit-sha>
+```
+
+Example: `contract-mainnet-a1b2c3d4`
+
+If you want to cut a **named semantic-version release** before merging to `main`:
+
+```bash
+git tag -a v1.2.0 -m "Release v1.2.0 — <brief description>"
+git push origin v1.2.0
+```
+
+Then open a PR from `develop` → `main` and merge. The pipeline will deploy and attach the release notes to the tag.
+
+### What the Pipeline Does Automatically on `main` Push
+
+| Step | Job | What happens |
+|------|-----|--------------|
+| 1 | `pre-deploy` | Runs `clippy`, `cargo audit`, checks WASM ≤ 100 KB, runs unit tests, builds optimised WASM, uploads artifact |
+| 2 | `deploy-mainnet` | Waits for reviewer approval, downloads WASM artifact, deploys via `stellar contract deploy`, captures contract ID |
+| 3 | `deploy-mainnet` | Runs `verify_contract.sh` — confirms contract exists on-chain, WASM hash matches, contract is callable |
+| 4 | `deploy-mainnet` | Runs `smoke_test_post_deploy.sh` — read-only call against live mainnet |
+| 5 | `deploy-mainnet` | Saves `deployment-record-mainnet-<sha>.json` artifact (365-day retention) |
+| 6 | `deploy-mainnet` | Creates Git tag `contract-mainnet-<sha>` and GitHub Release with contract ID, WASM hash, and explorer link |
+
+The `rollback` job is **not** triggered automatically — it requires a manual `workflow_dispatch` with a `rollback_artifact` run ID.
+
+---
+
+## Pre-Deployment Checklist
+
+Complete every item before approving a mainnet deployment in the GitHub environment gate.
+
+### Contract Audit
+
+- [ ] All unit and property-based tests pass locally (`cargo test --workspace`)
+- [ ] `cargo audit` reports no critical or high-severity advisories (`scripts/pre_deploy_check.sh` enforces this in CI)
+- [ ] WASM binary size is within the 100 KB limit (enforced by `pre-deploy` job)
+- [ ] A manual or third-party security audit has been completed for any new contract logic (required before first mainnet deploy and after significant changes)
+- [ ] No hardcoded secrets, private keys, or test-only addresses remain in contract source
+- [ ] Contract upgrade/migration path is documented if storage layout changed (see `docs/migration.md`)
+
+### Frontend Build
+
+- [ ] Frontend builds without errors: `cd frontend && npm run build`
+- [ ] All frontend unit tests pass: `npm test run`
+- [ ] Frontend `.env` (or CI environment variables) updated with the new contract ID from testnet smoke test
+- [ ] End-to-end tests pass against the testnet deployment: `npx playwright test`
+- [ ] Bundle size has not regressed unexpectedly (`npm run build` output reviewed)
+
+### Database / Backend Migrations
+
+- [ ] Any new Prisma schema changes have a migration file: `npx prisma migrate dev --name <description>`
+- [ ] Migration has been applied and tested against the staging database
+- [ ] `npx prisma migrate status` shows no pending migrations on the target environment
+- [ ] Backward-compatible: the new backend can run against the old schema during a rolling deploy (or a maintenance window is scheduled)
+- [ ] Database backup taken immediately before applying migrations to production
+
+### Final Go / No-Go
+
+- [ ] Testnet deployment record artifact reviewed and WASM hash confirmed
+- [ ] At least one reviewer has approved the GitHub `production` environment gate
+- [ ] Rollback plan confirmed: previous deployment record artifact run ID noted in case `rollback` job is needed
+- [ ] On-call engineer identified for the 30 minutes following mainnet deploy
+
+---
 
 ---
 

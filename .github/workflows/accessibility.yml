@@ -1,0 +1,224 @@
+name: Accessibility Testing
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # ─── Unit-level axe-core accessibility tests (Vitest + jest-axe) ────────────
+  axe-unit:
+    name: axe-core Component Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run accessibility unit tests
+        run: npm run test:a11y:ci
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: a11y-unit-results
+          path: frontend/test-results/
+          retention-days: 30
+
+  # ─── Pa11y full-page WCAG 2.1 AA scan ───────────────────────────────────────
+  pa11y:
+    name: Pa11y WCAG 2.1 AA Scan
+    runs-on: ubuntu-latest
+    needs: axe-unit
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
+
+      - name: Install pa11y-ci
+        run: npm install -g pa11y-ci@3.1.0
+
+      - name: Start preview server
+        run: |
+          nohup npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/pa11y-server.log 2>&1 &
+          echo $! > /tmp/pa11y-server.pid
+          # Wait for server to be ready
+          timeout 30 bash -c 'until curl -sf http://127.0.0.1:4173 > /dev/null; do sleep 1; done'
+        working-directory: frontend
+
+      - name: Create screenshots directory
+        run: mkdir -p frontend/pa11y-screenshots
+
+      - name: Run Pa11y CI scan
+        run: pa11y-ci --config frontend/.pa11yrc.json
+        continue-on-error: true
+        id: pa11y_scan
+
+      - name: Stop preview server
+        if: always()
+        run: |
+          PID=$(cat /tmp/pa11y-server.pid 2>/dev/null || echo "")
+          [ -n "$PID" ] && kill "$PID" || true
+
+      - name: Upload Pa11y screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pa11y-screenshots
+          path: frontend/pa11y-screenshots/
+          retention-days: 30
+
+      - name: Upload Pa11y server log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pa11y-server-log
+          path: /tmp/pa11y-server.log
+          retention-days: 7
+
+      - name: Fail if Pa11y found errors
+        if: steps.pa11y_scan.outcome == 'failure'
+        run: |
+          echo "::error::Pa11y found WCAG 2.1 AA violations. Review the uploaded screenshots and logs."
+          exit 1
+
+  # ─── Lighthouse accessibility audit ─────────────────────────────────────────
+  lighthouse-a11y:
+    name: Lighthouse Accessibility Audit
+    runs-on: ubuntu-latest
+    needs: axe-unit
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
+
+      - name: Start preview server
+        run: |
+          cd frontend
+          nohup npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/lhci-a11y.log 2>&1 &
+          echo $! > /tmp/lhci-server.pid
+          timeout 30 bash -c 'until curl -sf http://127.0.0.1:4173 > /dev/null; do sleep 1; done'
+
+      - name: Run Lighthouse accessibility audit
+        run: |
+          npx lhci autorun \
+            --collect.url=http://127.0.0.1:4173 \
+            --collect.numberOfRuns=1 \
+            --assert.assertions.accessibility=["error",{"minScore":0.9}] \
+            --assert.assertions.best-practices=["warn",{"minScore":0.8}] \
+            --upload.target=filesystem \
+            --upload.outputDir=/tmp/lhci-results
+        continue-on-error: true
+        id: lhci_a11y
+
+      - name: Stop preview server
+        if: always()
+        run: |
+          PID=$(cat /tmp/lhci-server.pid 2>/dev/null || echo "")
+          [ -n "$PID" ] && kill "$PID" || true
+
+      - name: Upload Lighthouse results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-a11y-results
+          path: /tmp/lhci-results/
+          retention-days: 30
+
+      - name: Comment Lighthouse score on PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const resultsDir = '/tmp/lhci-results';
+            let comment = '## ♿ Lighthouse Accessibility Audit\n\n';
+
+            try {
+              const files = fs.readdirSync(resultsDir);
+              const manifestFile = files.find(f => f === 'manifest.json');
+              if (manifestFile) {
+                const manifest = JSON.parse(fs.readFileSync(`${resultsDir}/${manifestFile}`, 'utf8'));
+                const run = manifest[0];
+                if (run && run.summary) {
+                  const score = Math.round(run.summary.accessibility * 100);
+                  const emoji = score >= 90 ? '✅' : score >= 70 ? '⚠️' : '❌';
+                  comment += `${emoji} **Accessibility Score: ${score}/100**\n\n`;
+                  comment += `> Minimum required: 90/100\n\n`;
+                  comment += `[View full report](${run.url})\n`;
+                }
+              }
+            } catch (e) {
+              comment += `_Could not parse Lighthouse results: ${e.message}_\n`;
+            }
+
+            if (context.payload.pull_request) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: comment,
+              });
+            }
+
+  # ─── Summary gate ────────────────────────────────────────────────────────────
+  a11y-gate:
+    name: Accessibility Gate
+    runs-on: ubuntu-latest
+    needs: [axe-unit, pa11y, lighthouse-a11y]
+    if: always()
+
+    steps:
+      - name: Check all accessibility jobs passed
+        run: |
+          if [ "${{ needs.axe-unit.result }}" != "success" ]; then
+            echo "::error::axe-core unit tests failed"
+            exit 1
+          fi
+          if [ "${{ needs.pa11y.result }}" != "success" ]; then
+            echo "::error::Pa11y WCAG scan failed"
+            exit 1
+          fi
+          echo "✅ All accessibility checks passed"

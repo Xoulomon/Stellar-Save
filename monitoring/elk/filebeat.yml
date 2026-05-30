@@ -1,0 +1,26 @@
+filebeat.inputs:
+  - type: container
+    paths:
+      - /var/lib/docker/containers/*/*.log
+    processors:
+      - add_docker_metadata:
+          host: "unix:///var/run/docker.sock"
+      - decode_json_fields:
+          fields: ["message"]
+          target: ""
+          overwrite_keys: true
+
+processors:
+  - add_host_metadata: ~
+  - add_cloud_metadata: ~
+
+output.elasticsearch:
+  hosts: ["${ELASTICSEARCH_HOST:elasticsearch:9200}"]
+  index: "stellar-save-backend-%{+yyyy.MM.dd}"
+
+setup.kibana:
+  host: "${KIBANA_HOST:kibana:5601}"
+
+setup.ilm.enabled: true
+setup.ilm.rollover_alias: "stellar-save-backend"
+setup.ilm.pattern: "{now/d}-000001"

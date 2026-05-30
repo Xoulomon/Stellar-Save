@@ -15,3 +15,11 @@ export {
 export type { ContributionReminder } from './contributionScheduler';
 
 export { isNotificationsEnabled, setNotificationsEnabled } from './notificationPreferences';
+
+export {
+  getReminderPreferences,
+  setReminderPreferences,
+  resetReminderPreferences,
+  isWithinQuietHours,
+} from './reminderPreferences';
+export type { ReminderPreferences, ReminderTiming, NotificationChannel, QuietHours } from './reminderPreferences';

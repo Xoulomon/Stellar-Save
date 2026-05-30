@@ -1,0 +1,11 @@
+[default]
+# Run on native target; wasm32 is not supported by tarpaulin
+target-dir = "target"
+workspace = true
+features = ["testutils"]
+out = ["Html"]
+output-dir = "coverage"
+fail-under = 85
+timeout = "120s"
+# Exclude non-contract code from coverage measurement
+exclude-files = ["*/tests/*", "*/frontend/*"]

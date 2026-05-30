@@ -19,8 +19,8 @@ export type { Breakpoint } from './useMediaQuery';
 export { useBalance } from './useBalance';
 export type { Balance, BalanceState, UseBalanceOptions } from './useBalance';
 
-export { useTransaction } from './useTransaction';
-export type { TransactionStatus, TransactionResult, UseTransactionReturn } from './useTransaction';
+export { useTransaction, explorerUrl, STELLAR_NETWORK } from './useTransaction';
+export type { TransactionState, UseTransactionReturn } from './useTransaction';
 export { useTransactions } from './useTransactions';
 export { useUserProfile } from './useUserProfile';
 export { useWallet } from './useWallet';
@@ -28,6 +28,7 @@ export { useNotification } from './useNotification';
 export type { NotificationOptions, NotifyOptions, UseNotificationReturn } from './useNotification';
 export { useClipboard } from './useClipboard';
 export type { UseClipboardOptions, UseClipboardReturn } from './useClipboard';
+export { useReminderPreferences } from './useReminderPreferences';
 export { useTheme } from './useTheme';
 export type { ThemeMode } from './useTheme';
 export { usePayouts } from './usePayouts';
@@ -42,3 +43,4 @@ export type {
   UseActivityFeedOptions,
   UseActivityFeedReturn,
 } from './useActivityFeed';
+export { useDiscoveryFeed } from './useDiscoveryFeed';

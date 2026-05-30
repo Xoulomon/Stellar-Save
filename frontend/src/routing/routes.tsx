@@ -18,9 +18,16 @@ const MemberDirectoryPage = lazy(() => import("../pages/MemberDirectoryPage"));
 const LeaderboardPage = lazy(() => import("../pages/LeaderboardPage"));
 
 const GroupComparisonPage = lazy(() => import("../pages/GroupComparisonPage"));
+const GroupAnalyticsPage = lazy(() => import("../pages/GroupAnalytics"));
 
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
 const ErrorPage = lazy(() => import("../pages/ErrorPage"));
+const TemplateGalleryPage = lazy(() => import("../pages/TemplateGalleryPage"));
+const AnalyticsDashboardPage = lazy(() => import("../pages/AnalyticsDashboardPage"));
+const JoinGroupPage = lazy(() => import("../pages/JoinGroupPage"));
+const JoinViaInvite = lazy(() => import("../pages/JoinViaInvite"));
+const MemberProfilePage = lazy(() => import("../pages/MemberProfilePage"));
+const NotificationSettings = lazy(() => import("../pages/settings/NotificationSettings"));
 /**
  * Centralized route configuration.
  * All application routes are defined here with their properties.
@@ -62,19 +69,20 @@ export const routeConfig: RouteConfig[] = [
     description: "Discover and join public savings groups",
   },
   {
-
-    path: ROUTES.GROUP_CALENDAR,
-    component: ContributionCalendarPage,
-    protected: true,
-    title: "Contribution Calendar - Stellar Save",
-    description: "View contribution deadlines and payment history",
-
     path: ROUTES.GROUPS_COMPARE,
     component: GroupComparisonPage,
     protected: true,
     title: "Compare Groups - Stellar Save",
     description: "Compare savings groups side-by-side before joining",
 
+  },
+  {
+    path: ROUTES.GROUP_ANALYTICS,
+    component: GroupAnalyticsPage,
+    protected: true,
+    title: "Group Analytics - Stellar Save",
+    description: "Detailed analytics for your savings group",
+    // Permissions will be handled within the component or a dedicated hook
   },
   {
     path: ROUTES.GROUP_DETAIL,
@@ -103,6 +111,12 @@ export const routeConfig: RouteConfig[] = [
     title: "Profile - Stellar Save",
   },
   {
+    path: ROUTES.PROFILE_DETAIL,
+    component: ProfilePage,
+    protected: true,
+    title: "Profile - Stellar Save",
+  },
+  {
     path: ROUTES.SETTINGS,
     component: SettingsPage,
     protected: true,
@@ -121,10 +135,45 @@ export const routeConfig: RouteConfig[] = [
     title: "Error - Stellar Save",
   },
   {
+    path: ROUTES.TEMPLATES,
+    component: TemplateGalleryPage,
+    protected: true,
+    title: "Group Templates - Stellar Save",
+    description: "Browse and use group templates",
+  },
+  {
+    path: ROUTES.ANALYTICS,
+    component: AnalyticsDashboardPage,
+    protected: true,
+    title: "Analytics - Stellar Save",
+    description: "Your contribution analytics and statistics",
+  },
+  {
     path: ROUTES.LEADERBOARD,
     component: LeaderboardPage,
     protected: true,
     title: "Leaderboard - Stellar Save",
     description: "Top-performing groups and contributors",
+  },
+  {
+    path: ROUTES.GROUP_JOIN,
+    component: JoinViaInvite,
+    protected: false,
+    title: "Join Group - Stellar Save",
+    description: "Join a savings group via invitation link",
+  },
+  {
+    path: ROUTES.MEMBER_PROFILE,
+    component: MemberProfilePage,
+    protected: false,
+    title: "Member Profile - Stellar Save",
+    description: "View a member's contribution history and reputation",
+  },
+  {
+    path: ROUTES.SETTINGS_NOTIFICATIONS,
+    component: NotificationSettings,
+    protected: true,
+    title: "Notification Preferences - Stellar Save",
+    description: "Configure your notification preferences",
   },
 ];

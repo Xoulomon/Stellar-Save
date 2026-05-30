@@ -7,17 +7,13 @@ import {
   DialogTitle,
   DialogContent,
   Chip,
-  Alert,
   Tooltip,
   IconButton,
   Divider,
   CircularProgress,
 } from '@mui/material';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
-import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import { Button } from './Button';
+import { WalletSelectModal } from './WalletSelectModal';
 import { useWallet } from '../hooks/useWallet';
 import { useBalance } from '../hooks/useBalance';
 import { useClipboard } from '../hooks/useClipboard';
@@ -65,88 +61,6 @@ function StatusDot({ status }: StatusDotProps) {
   );
 }
 
-// ── Wallet selection dialog ──────────────────────────────────────────────────
-
-interface WalletSelectionDialogProps {
-  open: boolean;
-  onClose: () => void;
-}
-
-function WalletSelectionDialog({ open, onClose }: WalletSelectionDialogProps) {
-  const { wallets, selectedWalletId, status, error, connect, switchWallet } = useWallet();
-
-  const handleSelect = async (walletId: string) => {
-    if (walletId !== selectedWalletId) {
-      await switchWallet(walletId);
-    }
-    await connect();
-    onClose();
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <AccountBalanceWalletIcon fontSize="small" />
-          Connect Wallet
-        </Box>
-      </DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          {error && <Alert severity="error">{error}</Alert>}
-
-          <Typography variant="body2" color="text.secondary">
-            Select a wallet to connect to Stellar Save.
-          </Typography>
-
-          {wallets.map((wallet) => (
-            <Box
-              key={wallet.id}
-              onClick={() => wallet.installed && void handleSelect(wallet.id)}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                p: 2,
-                border: '1px solid',
-                borderColor: selectedWalletId === wallet.id ? 'primary.main' : 'divider',
-                borderRadius: 2,
-                cursor: wallet.installed ? 'pointer' : 'not-allowed',
-                opacity: wallet.installed ? 1 : 0.5,
-                bgcolor: selectedWalletId === wallet.id ? 'action.selected' : 'transparent',
-                '&:hover': wallet.installed ? { bgcolor: 'action.hover' } : {},
-                transition: 'all 0.2s',
-              }}
-            >
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <AccountBalanceWalletIcon color={wallet.installed ? 'primary' : 'disabled'} />
-                <Box>
-                  <Typography variant="body1" fontWeight={600}>{wallet.name}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {wallet.installed ? 'Installed' : 'Not installed — install the browser extension'}
-                  </Typography>
-                </Box>
-              </Stack>
-              {status === 'connecting' && selectedWalletId === wallet.id ? (
-                <CircularProgress size={18} />
-              ) : wallet.installed ? (
-                <Chip label="Connect" size="small" color="primary" variant="outlined" />
-              ) : (
-                <Chip label="Install" size="small" variant="outlined" />
-              )}
-            </Box>
-          ))}
-
-          <Divider />
-          <Typography variant="caption" color="text.secondary" textAlign="center">
-            By connecting, you agree to interact with the Stellar network.
-          </Typography>
-        </Stack>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 // ── Connected wallet panel ───────────────────────────────────────────────────
 
 interface ConnectedPanelProps {
@@ -185,7 +99,7 @@ function ConnectedPanel({ address, network, onDisconnect, onSwitchAccount, conne
           </Typography>
           <Tooltip title={copied ? 'Copied!' : 'Copy address'}>
             <IconButton size="small" onClick={() => copy(address)} aria-label="Copy wallet address">
-              {copied ? <CheckCircleIcon fontSize="small" color="success" /> : <ContentCopyIcon fontSize="small" />}
+              {copied ? <span style={{ color: 'green', fontSize: 14 }}>✓</span> : <span style={{ fontSize: 14 }}>⎘</span>}
             </IconButton>
           </Tooltip>
         </Box>
@@ -222,7 +136,7 @@ function ConnectedPanel({ address, network, onDisconnect, onSwitchAccount, conne
                   gap: 1,
                 }}
               >
-                {acc === address && <CheckCircleIcon fontSize="small" color="primary" />}
+                {acc === address && <span style={{ color: 'var(--mui-palette-primary-main, #1976d2)', fontSize: 14 }}>✓</span>}
                 <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
                   {acc.slice(0, 8)}…{acc.slice(-6)}
                 </Typography>
@@ -283,7 +197,7 @@ export function WalletIntegration() {
           <StatusDot status={status} />
           {error && (
             <Tooltip title={error}>
-              <ErrorIcon fontSize="small" color="error" />
+              <span style={{ color: '#ef4444', fontSize: 16 }} aria-label="Wallet error">⚠</span>
             </Tooltip>
           )}
           <Button
@@ -296,7 +210,7 @@ export function WalletIntegration() {
           </Button>
         </Box>
 
-        <WalletSelectionDialog
+        <WalletSelectModal
           open={selectionOpen}
           onClose={() => setSelectionOpen(false)}
         />
@@ -315,7 +229,7 @@ export function WalletIntegration() {
           aria-label="Wallet options"
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <AccountBalanceWalletIcon fontSize="small" />
+            <span style={{ fontSize: 16 }}>👛</span>
             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
               {activeAddress.slice(0, 6)}…{activeAddress.slice(-4)}
             </Typography>

@@ -18,6 +18,10 @@ pub enum StellarSaveError {
     /// Error Code: 1002
     GroupFull = 1002,
 
+    /// The requested max_members exceeds the protocol-level MAX_MEMBERS cap (20).
+    /// Error Code: 1005
+    MaxMembersExceeded = 1005,
+
     /// The group is not in a valid state for the requested operation.
     /// Error Code: 1003
     InvalidState = 1003,
@@ -56,6 +60,9 @@ pub enum StellarSaveError {
     /// Error Code: 3004
     ContributionNotFound = 3004,
 
+    /// The cycle deadline has not yet been reached.
+    /// Error Code: 3005
+    DeadlineNotReached = 3005,
     /// The contribution amount is below the configured minimum.
     /// Error Code: 3006
     ContributionTooLow = 3006,
@@ -99,6 +106,14 @@ pub enum StellarSaveError {
     /// Error Code: 6002
     RewardNotEligible = 6002,
 
+    /// The contribution has already been refunded.
+    /// Error Code: 6003
+    AlreadyRefunded = 6003,
+
+    /// Refund is not eligible: group is active and payout has already occurred for this cycle.
+    /// Error Code: 6004
+    RefundNotEligible = 6004,
+
     // System-related errors (9000-9999)
     /// An internal contract error occurred.
     /// Error Code: 9001
@@ -131,6 +146,22 @@ pub enum StellarSaveError {
     /// The group cannot be archived because it is not in a terminal state (Completed or Cancelled).
     /// Error Code: 1007
     GroupNotArchivable = 1007,
+
+    // Deadline-related errors (7000-7999)
+    /// The requested deadline extension exceeds the maximum allowed (7 days), or is zero.
+    /// Error Code: 7001
+    DeadlineExtensionExceedsMax = 7001,
+
+    /// The member has already voted to dissolve this group.
+    /// Error Code: 7002
+    AlreadyVotedDissolve = 7002,
+
+    /// The group has already been dissolved.
+    /// Error Code: 7003
+    GroupAlreadyDissolved = 7003,
+    /// The member has already voted on the current dispute.
+    /// Error Code: 2005
+    AlreadyVoted = 2005,
 }
 
 impl StellarSaveError {
@@ -190,6 +221,8 @@ impl StellarSaveError {
             StellarSaveError::ContributionNotFound => {
                 "The contribution record was not found for the specified member and cycle."
             }
+            StellarSaveError::DeadlineNotReached => {
+                "The cycle deadline has not yet been reached. Cannot advance cycle until deadline passes."
             StellarSaveError::ContributionTooLow => {
                 "The contribution amount is below the configured minimum limit."
             }
@@ -221,6 +254,28 @@ impl StellarSaveError {
             StellarSaveError::TokenTransferFailed => {
                 "The token transfer failed. Ensure the member has granted sufficient allowance to the contract."
             }
+            StellarSaveError::InvalidTokenContract => {
+                "The token address is not a valid Soroban token contract."
+            }
+
+            // Penalty-related errors
+            StellarSaveError::InvalidPenaltyRate => {
+                "The penalty rate is invalid. Must be between 0 and 100 percent."
+            }
+            StellarSaveError::TooManyMissedContributions => {
+                "The member has missed too many contributions and is no longer eligible."
+            }
+
+            // Upgrade-related errors
+            StellarSaveError::NotAdmin => {
+                "Only the contract admin can perform this operation."
+            }
+            StellarSaveError::InvalidWasmHash => {
+                "The provided WASM hash is invalid or empty."
+            }
+            StellarSaveError::UpgradeFailed => {
+                "The contract upgrade failed. Please check the WASM hash and try again."
+            }
 
             // Reward-related errors
             StellarSaveError::RewardAlreadyClaimed => {
@@ -228,6 +283,12 @@ impl StellarSaveError {
             }
             StellarSaveError::RewardNotEligible => {
                 "You are not eligible to claim a completion reward. Only members who completed all cycles are eligible."
+            }
+            StellarSaveError::AlreadyRefunded => {
+                "This contribution has already been refunded."
+            }
+            StellarSaveError::RefundNotEligible => {
+                "Refund is not eligible: the group is active and a payout has already occurred for this cycle."
             }
 
             // System-related errors
@@ -239,6 +300,21 @@ impl StellarSaveError {
             }
             StellarSaveError::Overflow => {
                 "The ID counter has reached its maximum limit. No more IDs can be generated."
+            }
+
+            // Deadline-related errors
+            StellarSaveError::DeadlineExtensionExceedsMax => {
+                "The requested deadline extension exceeds the maximum allowed (7 days), or is zero."
+            }
+
+            // Dissolution errors
+            StellarSaveError::AlreadyVotedDissolve => {
+                "You have already voted to dissolve this group."
+            }
+            StellarSaveError::GroupAlreadyDissolved => {
+                "The group has already been dissolved or completed."
+            StellarSaveError::AlreadyVoted => {
+                "You have already raised a dispute for this group. Each member may only vote once per dispute round."
             }
         }
     }
@@ -258,6 +334,7 @@ impl StellarSaveError {
             4000..=4999 => ErrorCategory::Payout,
             5000..=5999 => ErrorCategory::Token,
             6000..=6999 => ErrorCategory::Reward,
+            7000..=7999 => ErrorCategory::Deadline,
             9000..=9999 => ErrorCategory::System,
             _ => ErrorCategory::Unknown,
         }
@@ -285,6 +362,9 @@ pub enum ErrorCategory {
 
     /// Errors related to completion reward operations.
     Reward,
+
+    /// Errors related to deadline extension operations.
+    Deadline,
 
     /// System-level errors and internal failures.
     System,
@@ -358,6 +438,8 @@ impl ErrorRecoveryStrategy {
             StellarSaveError::ContributionNotFound => {
                 "The contribution record doesn't exist. Verify the member and cycle number are correct."
             }
+            StellarSaveError::DeadlineNotReached => {
+                "The cycle deadline has not yet passed. Wait until the deadline is reached before calling tick()."
             StellarSaveError::ContributionTooLow => {
                 "Increase the contribution amount to meet the configured minimum."
             }
@@ -397,6 +479,12 @@ impl ErrorRecoveryStrategy {
             StellarSaveError::RewardNotEligible => {
                 "Only members who contributed in every cycle are eligible. Verify your contribution history."
             }
+            StellarSaveError::AlreadyRefunded => {
+                "This contribution has already been refunded. Each contribution can only be refunded once."
+            }
+            StellarSaveError::RefundNotEligible => {
+                "Refund is not eligible. The group is active and a payout has already occurred for this cycle."
+            }
 
             // System errors - recovery strategies
             StellarSaveError::InternalError => {
@@ -408,6 +496,19 @@ impl ErrorRecoveryStrategy {
             StellarSaveError::Overflow => {
                 "The ID counter has reached its maximum. This is extremely rare and requires contract upgrade."
             }
+
+            // Deadline errors - recovery strategies
+            StellarSaveError::DeadlineExtensionExceedsMax => {
+                "Provide an extension between 1 and 604800 seconds (7 days). Split larger extensions across multiple calls."
+            }
+
+            // Dissolution errors - recovery strategies
+            StellarSaveError::AlreadyVotedDissolve => {
+                "Each member can only vote once to dissolve a group."
+            }
+            StellarSaveError::GroupAlreadyDissolved => {
+                "The group is already in a terminal state and cannot be dissolved again."
+            }
         }
     }
 
@@ -418,6 +519,7 @@ impl ErrorRecoveryStrategy {
             StellarSaveError::PayoutFailed
                 | StellarSaveError::InternalError
                 | StellarSaveError::CycleNotComplete
+                | StellarSaveError::DeadlineNotReached
         )
     }
 
@@ -579,7 +681,11 @@ mod tests {
 
         for error in &errors {
             let guidance = ErrorRecoveryStrategy::recovery_guidance(error);
-            assert!(!guidance.is_empty(), "Error {:?} has no recovery guidance", error);
+            assert!(
+                !guidance.is_empty(),
+                "Error {:?} has no recovery guidance",
+                error
+            );
             assert!(
                 guidance.len() > 20,
                 "Error {:?} has insufficient recovery guidance",
