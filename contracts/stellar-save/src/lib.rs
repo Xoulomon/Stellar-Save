@@ -54,6 +54,8 @@ pub mod search;
 mod upgrade_tests;
 mod fuzz_tests;
 mod property_tests;
+mod tests;
+
 
 // Re-export for convenience
 pub use contribution::{ContributionPage, ContributionRecord};
@@ -513,7 +515,7 @@ impl StellarSaveContract {
             max_members,
             min_members,
             current_time,
-            grace_period,
+            grace_period_seconds,
         );
         new_group.payout_order = payout_order;
 
