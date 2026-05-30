@@ -1,6 +1,6 @@
 #![allow(deprecated)]
 use core::fmt;
-use soroban_sdk::{contracttype, Address};
+use soroban_sdk::{contracttype, Address, Env, Map};
 
 /// Protocol-level maximum number of members per group.
 /// Prevents unbounded storage growth and gas exhaustion.
@@ -14,8 +14,11 @@ pub const MAX_MEMBERS: u32 = 20;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TokenConfig {
     /// The SEP-41 token contract address for this group.
+    /// Must be a valid deployed token contract on the same network.
     pub token_address: Address,
     /// Decimal precision of the token, cached from `decimals()` at group creation.
+    /// Stored to avoid repeated cross-contract calls during contribution validation.
+    /// Typical values: 7 for XLM, 6 for USDC.
     pub token_decimals: u32,
 }
 
@@ -104,7 +107,10 @@ impl GroupStatus {
         matches!(self, GroupStatus::Completed | GroupStatus::Cancelled)
     }
 
-    /// Converts GroupStatus to u32 representation.
+    /// Converts `GroupStatus` to its `u32` wire representation.
+    ///
+    /// Matches the `#[repr(u32)]` discriminants used in `status.rs`:
+    /// `Pending=0`, `Active=1`, `Paused=2`, `Completed=3`, `Cancelled=4`.
     pub fn as_u32(&self) -> u32 {
         match self {
             GroupStatus::Pending => 0,
@@ -115,7 +121,9 @@ impl GroupStatus {
         }
     }
 
-    /// Converts u32 to GroupStatus.
+    /// Converts a `u32` discriminant back to a `GroupStatus`.
+    ///
+    /// Returns `None` for any value outside the range 0–4.
     pub fn from_u32(value: u32) -> Option<Self> {
         match value {
             0 => Some(GroupStatus::Pending),
@@ -211,43 +219,58 @@ pub struct Group {
     pub started_at: u64,
 
     /// Whether members must provide a signed proof when contributing.
-    /// If true, contributions require an additional signature verification step.
+    /// If `true`, contributions require an additional signature verification step
+    /// before the contribution amount is accepted.
     pub require_contribution_proof: bool,
 
     /// Whether the group allows the contribution amount to be changed between cycles.
-    /// If true, the creator can propose a new amount and members can vote on it.
+    /// If `true`, the creator can propose a new amount and members can vote on it.
+    /// Defaults to `false`; dynamic contributions are not yet enforced on-chain.
     pub allow_dynamic_contributions: bool,
 
     /// Grace period in seconds after the cycle deadline before a member is
     /// considered to have missed their contribution.
-    /// Maximum allowed value is 604800 (7 days). Defaults to 0 (no grace period).
+    /// Valid range: 0–604800 (0 to 7 days). Defaults to 0 (no grace period).
     pub grace_period_seconds: u64,
 
-    /// When true, only addresses explicitly invited by the creator may join.
+    /// When `true`, only addresses explicitly invited by the creator may join.
+    /// Uninvited join attempts are rejected with `Unauthorized`.
     pub invitation_only: bool,
+
     /// Accumulated reward pool from contribution fees (1% of each contribution).
-    /// Distributed equally among members who complete all cycles.
+    /// Distributed equally among members who complete all cycles without missing
+    /// a contribution. Denominated in stroops. Starts at 0.
     pub reward_pool: i128,
 
     /// Whether the group is temporarily paused by the creator.
+    /// When `true`, contributions and payouts are blocked. Use `is_paused()` to
+    /// check the combined paused state (this flag OR `status == Paused`).
     pub paused: bool,
 
     /// Whether penalty deductions are enabled for this group.
+    /// When `true`, members who miss a contribution deadline are charged
+    /// `penalty_amount` stroops (or a percentage if `penalty_amount == 0`).
     pub penalty_enabled: bool,
 
-    /// Fixed penalty amount per missed cycle in stroops (0 = use percentage-based).
+    /// Fixed penalty amount per missed cycle in stroops.
+    /// A value of 0 means use a percentage-based penalty instead.
+    /// Only relevant when `penalty_enabled` is `true`.
     pub penalty_amount: i128,
 
     /// Whether a dispute is currently active for this group.
+    /// When `true`, payouts are blocked until the dispute is resolved.
     pub dispute_active: bool,
 
-    /// Optional display name for the group (up to 50 chars).
+    /// Optional display name for the group (up to 50 characters).
+    /// `None` if the creator did not provide a name.
     pub name: Option<soroban_sdk::String>,
 
-    /// Optional description for the group (up to 500 chars).
+    /// Optional human-readable description for the group (up to 500 characters).
+    /// `None` if the creator did not provide a description.
     pub description: Option<soroban_sdk::String>,
 
-    /// Optional image URL for the group.
+    /// Optional image URL for the group avatar or banner.
+    /// `None` if the creator did not provide an image URL.
     pub image_url: Option<soroban_sdk::String>,
 
     /// Whether this group has been archived by its creator.
@@ -259,13 +282,15 @@ pub struct Group {
     pub archived: bool,
 
     /// How the payout recipient is selected each cycle.
-    /// Defaults to Sequential (join-order rotation).
+    /// Defaults to `PayoutOrder::Sequential` (join-order rotation).
+    /// See [`crate::payout::PayoutOrder`] for available strategies.
     pub payout_order: crate::payout::PayoutOrder,
 }
 impl Group {
     /// Creates a new Group with validation.
     ///
     /// # Arguments
+    /// * `env` - Soroban environment
     /// * `id` - Unique group identifier
     /// * `creator` - Address of the group creator
     /// * `contribution_amount` - Amount each member contributes per cycle (in stroops)
@@ -284,6 +309,7 @@ impl Group {
     /// - min_members must be <= max_members
     /// - grace_period_seconds must be <= 604800 (7 days)
     pub fn new(
+        env: &Env,
         id: u64,
         creator: Address,
         contribution_amount: i128,
@@ -294,6 +320,7 @@ impl Group {
         grace_period_seconds: u64,
     ) -> Self {
         Self::new_with_penalty(
+            env,
             id,
             creator,
             contribution_amount,
@@ -308,7 +335,17 @@ impl Group {
     }
 
     /// Creates a new Group with penalty configuration.
+    ///
+    /// Extends [`Group::new`] with explicit penalty settings. All validation
+    /// from `new` applies; additionally:
+    ///
+    /// # Arguments
+    /// * `penalty_enabled` - Whether missed-contribution penalties are active
+    /// * `penalty_amount`  - Fixed penalty in stroops; 0 means percentage-based
+    ///
+    /// All other arguments are identical to [`Group::new`].
     pub fn new_with_penalty(
+        env: &Env,
         id: u64,
         creator: Address,
         contribution_amount: i128,
@@ -378,8 +415,9 @@ impl Group {
         }
     }
     /// Checks if the group has completed all cycles.
-    /// A group is complete when current_cycle equals max_members
-    /// or when status is Completed.
+    ///
+    /// Returns `true` when `current_cycle >= max_members` (all payout slots
+    /// exhausted) or when `status` has been explicitly set to `Completed`.
     pub fn is_complete(&self) -> bool {
         self.current_cycle >= self.max_members || self.status == GroupStatus::Completed
     }
@@ -439,6 +477,10 @@ impl Group {
     }
 
     /// Deactivates the group, preventing further contributions.
+    ///
+    /// Sets `is_active` to `false` without changing `status`. This is used
+    /// internally when the group completes or is paused. To fully pause the
+    /// group (blocking payouts too), set `status = GroupStatus::Paused` instead.
     pub fn deactivate(&mut self) {
         self.is_active = false;
     }
@@ -479,18 +521,33 @@ impl Group {
     }
 
     /// Checks if the group has met the minimum member requirement for activation.
+    ///
+    /// Returns `true` when the group has not yet been started and the current
+    /// `member_count` is at least `min_members`.
     pub fn can_activate(&self) -> bool {
         !self.started && self.member_count >= self.min_members
     }
 
-    /// Calculates the total pool amount for a cycle.
-    /// This is the amount distributed to the recipient each cycle.
+    /// Calculates the total pool amount for a single cycle.
+    ///
+    /// This is the gross amount distributed to the payout recipient each cycle:
+    /// `contribution_amount × max_members`. Denominated in stroops.
+    ///
+    /// Note: this uses `max_members`, not `member_count`, because the pool size
+    /// is fixed at group creation and does not change as members join.
     pub fn total_pool_amount(&self) -> i128 {
         self.contribution_amount * (self.max_members as i128)
     }
 
-    /// Validates that the group configuration is sound.
-    /// Returns true if all constraints are met.
+    /// Validates that the group configuration is internally consistent.
+    ///
+    /// Returns `true` when all of the following hold:
+    /// - `contribution_amount > 0`
+    /// - `cycle_duration > 0`
+    /// - `max_members >= 2`
+    /// - `min_members >= 2`
+    /// - `min_members <= max_members`
+    /// - `current_cycle <= max_members`
     pub fn validate(&self) -> bool {
         self.contribution_amount > 0
             && self.cycle_duration > 0
@@ -500,16 +557,21 @@ impl Group {
             && self.current_cycle <= self.max_members
     }
 
-    /// Adds a member to the group.
-    /// Increments the member_count.
+    /// Adds a member to the group by incrementing `member_count`.
+    ///
+    /// The caller is responsible for also appending the member's `Address` to
+    /// the `GROUP_MEMBERS_{id}` storage list and verifying that
+    /// `member_count < max_members` before calling this method.
     pub fn add_member(&mut self) {
         self.member_count += 1;
     }
 
-    /// Returns true if the group is currently paused.
+    /// Returns `true` if the group is currently paused.
     ///
     /// A group is considered paused when either the `paused` flag is set
-    /// or the `status` is `GroupStatus::Paused`.
+    /// (creator-initiated soft pause) or `status == GroupStatus::Paused`
+    /// (formal state-machine pause). Both conditions block contributions
+    /// and payouts.
     pub fn is_paused(&self) -> bool {
         self.paused || self.status == GroupStatus::Paused
     }
