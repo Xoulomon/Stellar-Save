@@ -14,6 +14,7 @@
     "test:coverage:watch": "vitest --coverage",
     "lhci": "lhci autorun --config .lighthouserc.json --upload.target temporary-public-storage",
     "test:e2e": "vitest run src/test/integration",
+    "test:e2e:journey": "playwright test --config=e2e/playwright.config.ts",
     "test:e2e:testnet": "tsx src/test/e2e-testnet/testnet.e2e.ts",
     "test:mutation": "stryker run stryker.config.mjs",
     "test:mutation:ci": "stryker run stryker.config.mjs --reporters json,clear-text --concurrency 2",

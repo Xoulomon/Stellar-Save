@@ -254,6 +254,28 @@ impl StellarSaveError {
             StellarSaveError::TokenTransferFailed => {
                 "The token transfer failed. Ensure the member has granted sufficient allowance to the contract."
             }
+            StellarSaveError::InvalidTokenContract => {
+                "The token address is not a valid Soroban token contract."
+            }
+
+            // Penalty-related errors
+            StellarSaveError::InvalidPenaltyRate => {
+                "The penalty rate is invalid. Must be between 0 and 100 percent."
+            }
+            StellarSaveError::TooManyMissedContributions => {
+                "The member has missed too many contributions and is no longer eligible."
+            }
+
+            // Upgrade-related errors
+            StellarSaveError::NotAdmin => {
+                "Only the contract admin can perform this operation."
+            }
+            StellarSaveError::InvalidWasmHash => {
+                "The provided WASM hash is invalid or empty."
+            }
+            StellarSaveError::UpgradeFailed => {
+                "The contract upgrade failed. Please check the WASM hash and try again."
+            }
 
             // Reward-related errors
             StellarSaveError::RewardAlreadyClaimed => {

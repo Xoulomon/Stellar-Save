@@ -80,6 +80,17 @@ pub struct PayoutExecuted {
     pub executed_at: u64,
 }
 
+/// Event emitted when a member misses a contribution deadline.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContributionMissed {
+    pub group_id: u64,
+    pub member: Address,
+    pub cycle: u32,
+    pub penalty_applied: i128,
+    pub missed_at: u64,
+}
+
 /// Event emitted when a group completes all cycles.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]

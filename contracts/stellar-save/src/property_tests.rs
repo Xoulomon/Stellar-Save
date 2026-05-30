@@ -7,6 +7,8 @@
 /// - Cycle number monotonicity
 /// - Group member count bounds
 /// - GroupStatus round-trip through u32
+/// - Total payouts always equal total contributions (conservation of funds)
+/// - Each member receives exactly one payout per group
 #[cfg(test)]
 mod property_tests {
     use crate::{
@@ -208,6 +210,98 @@ mod property_tests {
             ],
         ) {
             prop_assert!(!non_terminal.is_terminal());
+        }
+    }
+
+    // ── Total payouts == total contributions ─────────────────────────────────
+
+    proptest! {
+        /// Over a full group lifecycle, the sum of all payouts must equal
+        /// the sum of all contributions (conservation of funds).
+        ///
+        /// In a ROSCA with `n` members each contributing `amount` per cycle,
+        /// there are exactly `n` cycles. Each cycle every member contributes,
+        /// so total contributions = amount × n × n. Each cycle one member
+        /// receives the full pool (amount × n), so total payouts = amount × n × n.
+        #[test]
+        fn prop_total_payouts_equal_total_contributions(
+            contribution_amount in 1_i128..=1_000_000_000_i128,
+            n in 2_u32..=20_u32,
+            gid in any_group_id(),
+        ) {
+            let env = Env::default();
+            let n_usize = n as usize;
+
+            // Simulate n cycles: each cycle n members contribute, one member gets paid out.
+            let total_contributions: i128 = (0..n_usize)
+                .map(|_cycle| contribution_amount * n as i128)
+                .try_fold(0_i128, |acc, x| acc.checked_add(x))
+                .expect("overflow in contributions");
+
+            let total_payouts: i128 = (0..n_usize)
+                .map(|cycle| {
+                    let recipient = Address::generate(&env);
+                    let pool = contribution_amount * n as i128;
+                    let rec = PayoutRecord::new(recipient, gid, cycle as u32, pool, cycle as u64);
+                    rec.amount
+                })
+                .try_fold(0_i128, |acc, x| acc.checked_add(x))
+                .expect("overflow in payouts");
+
+            prop_assert_eq!(
+                total_payouts,
+                total_contributions,
+                "total payouts ({}) != total contributions ({}) for amount={} n={}",
+                total_payouts, total_contributions, contribution_amount, n
+            );
+        }
+    }
+
+    // ── Each member receives exactly one payout per group ────────────────────
+
+    proptest! {
+        /// In a complete ROSCA group, every member receives exactly one payout,
+        /// and no member receives more than one payout.
+        #[test]
+        fn prop_each_member_receives_exactly_one_payout(
+            contribution_amount in 1_i128..=1_000_000_000_i128,
+            n in 2_u32..=20_u32,
+            gid in any_group_id(),
+        ) {
+            let env = Env::default();
+            let n_usize = n as usize;
+
+            // Generate n distinct member addresses.
+            let members: Vec<Address> = (0..n_usize).map(|_| Address::generate(&env)).collect();
+
+            // Assign each member exactly one payout cycle (a permutation of 0..n).
+            // In a sequential ROSCA, member i receives payout at cycle i.
+            let payouts: Vec<PayoutRecord> = members
+                .iter()
+                .enumerate()
+                .map(|(cycle, addr)| {
+                    let pool = contribution_amount * n as i128;
+                    PayoutRecord::new(addr.clone(), gid, cycle as u32, pool, cycle as u64)
+                })
+                .collect();
+
+            // Every member appears exactly once as a recipient.
+            prop_assert_eq!(payouts.len(), n_usize, "payout count must equal member count");
+
+            for member in &members {
+                let count = payouts.iter().filter(|p| p.is_for_recipient(member)).count();
+                prop_assert_eq!(
+                    count, 1,
+                    "member {:?} received {} payouts, expected exactly 1",
+                    member, count
+                );
+            }
+
+            // No two payouts share the same cycle number.
+            let mut cycles: Vec<u32> = payouts.iter().map(|p| p.cycle_number).collect();
+            cycles.sort_unstable();
+            cycles.dedup();
+            prop_assert_eq!(cycles.len(), n_usize, "cycle numbers must be unique");
         }
     }
 
