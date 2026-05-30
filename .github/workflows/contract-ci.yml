@@ -38,6 +38,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
+
+      - name: Audit contract dependencies
+        run: cargo audit --file Cargo.lock
+
       - name: Build contracts
         run: cargo build --workspace --target wasm32-unknown-unknown --release
 
