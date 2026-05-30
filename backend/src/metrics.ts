@@ -64,6 +64,28 @@ export const backupJobsActive = new Gauge({
   registers: [registry],
 });
 
+export const apiRequestDuration = new Histogram({
+  name: 'api_request_duration_seconds',
+  help: 'API request duration in seconds',
+  labelNames: ['method', 'route', 'status_code'],
+  buckets: [0.01, 0.05, 0.1, 0.3, 0.5, 1, 2, 5],
+  registers: [registry],
+});
+
+export const sorobanRpcCallsTotal = new Counter({
+  name: 'soroban_rpc_calls_total',
+  help: 'Total Soroban RPC calls made',
+  labelNames: ['method', 'status'],
+  registers: [registry],
+});
+
+export const eventsIndexedTotal = new Counter({
+  name: 'events_indexed_total',
+  help: 'Total contract events indexed',
+  labelNames: ['event_type'],
+  registers: [registry],
+});
+
 // ── Middleware ────────────────────────────────────────────────────────────────
 export function metricsMiddleware(req: Request, res: Response, next: NextFunction): void {
   const start = process.hrtime.bigint();
@@ -75,6 +97,7 @@ export function metricsMiddleware(req: Request, res: Response, next: NextFunctio
     const labels = { method: req.method, route, status_code: String(res.statusCode) };
     httpRequestsTotal.inc(labels);
     httpRequestDuration.observe(labels, durationSec);
+    apiRequestDuration.observe(labels, durationSec);
     activeConnections.dec();
   });
 

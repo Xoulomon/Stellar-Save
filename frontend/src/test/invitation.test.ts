@@ -38,7 +38,7 @@ describe('invitation utils', () => {
     it('includes the groupId in the URL', () => {
       const link = generateInviteLink('group-42');
       expect(link).toContain('group-42');
-      expect(link).toContain('/groups/join/');
+      expect(link).toContain('/join?groupId=');
     });
 
     it('generates different links for different groups', () => {

@@ -33,6 +33,17 @@ pub struct MemberLeft {
     pub left_at: u64,
 }
 
+/// Event emitted when the group creator removes a member before cycle 1 begins.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemberRemoved {
+    pub group_id: u64,
+    pub member: Address,
+    pub removed_by: Address,
+    pub member_count: u32,
+    pub removed_at: u64,
+}
+
 /// Event emitted when a member makes a contribution.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -45,6 +56,19 @@ pub struct ContributionMade {
     pub contributed_at: u64,
 }
 
+/// Structured on-chain contribution receipt event for backend indexers.
+/// Emitted on every contribution and payout so the indexer can reconstruct
+/// full contribution history without querying state directly (issue #754).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContributionEvent {
+    pub group_id: u64,
+    pub member: Address,
+    pub amount: i128,
+    pub cycle: u32,
+    pub timestamp: u64,
+}
+
 /// Event emitted when a payout is executed.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -54,6 +78,17 @@ pub struct PayoutExecuted {
     pub amount: i128,
     pub cycle: u32,
     pub executed_at: u64,
+}
+
+/// Event emitted when a member misses a contribution deadline.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContributionMissed {
+    pub group_id: u64,
+    pub member: Address,
+    pub cycle: u32,
+    pub penalty_applied: i128,
+    pub missed_at: u64,
 }
 
 /// Event emitted when a group completes all cycles.
@@ -76,6 +111,19 @@ pub struct GroupStatusChanged {
     pub new_status: u32,
     pub changed_by: Address,
     pub changed_at: u64,
+}
+
+/// Event emitted when a contribution is accepted within the grace period
+/// (after the hard deadline but before grace_period_seconds elapses).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GracePeriodContribution {
+    pub group_id: u64,
+    pub contributor: Address,
+    pub amount: i128,
+    pub cycle: u32,
+    pub seconds_late: u64,
+    pub contributed_at: u64,
 }
 
 /// Event emitted when a group's metadata is updated.
@@ -106,6 +154,7 @@ pub struct ContractUnpaused {
     pub timestamp: u64,
 }
 
+/// Event emitted when a cycle is advanced via tick function.
 /// Event emitted when a contribution proof is verified (#479).
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -161,6 +210,13 @@ pub struct GroupUnpaused {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CycleAdvanced {
     pub group_id: u64,
+    pub old_cycle: u32,
+    pub new_cycle: u32,
+    pub payout_executed: bool,
+    pub defaulted: bool,
+    pub advanced_at: u64,
+}
+
     pub new_cycle: u32,
     pub advanced_at: u64,
 }
@@ -263,6 +319,16 @@ pub struct GroupRated {
     pub rated_at: u64,
 }
 
+/// Event emitted when a protocol creation fee is paid by a group creator.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FeePaid {
+    pub creator: Address,
+    pub treasury: Address,
+    pub amount: i128,
+    pub paid_at: u64,
+}
+
 /// Event emitted when a penalty is applied to a member for a missed contribution.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -293,6 +359,16 @@ pub struct RefundIssued {
     pub amount: i128,
     pub cycle: u32,
     pub refunded_at: u64,
+}
+
+/// Event emitted when a member joins a group via a referral.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemberReferred {
+    pub group_id: u64,
+    pub invitee: Address,
+    pub referrer: Address,
+    pub referred_at: u64,
 }
 
 impl EventEmitter {
@@ -348,6 +424,24 @@ impl EventEmitter {
         env.events().publish(("member_left",), event);
     }
 
+    pub fn emit_member_removed(
+        env: &Env,
+        group_id: u64,
+        member: Address,
+        removed_by: Address,
+        member_count: u32,
+        removed_at: u64,
+    ) {
+        let event = MemberRemoved {
+            group_id,
+            member,
+            removed_by,
+            member_count,
+            removed_at,
+        };
+        env.events().publish(("member_removed",), event);
+    }
+
     /// Emits a reminder event when a contribution is due for a member.
     pub fn emit_contribution_due(
         env: &Env,
@@ -374,13 +468,23 @@ impl EventEmitter {
     ) {
         let event = ContributionMade {
             group_id,
-            contributor,
+            contributor: contributor.clone(),
             amount,
             cycle,
             cycle_total,
             contributed_at,
         };
         env.events().publish(("contribution_made",), event);
+
+        // Issue #754: emit structured receipt for indexer
+        let receipt = ContributionEvent {
+            group_id,
+            member: contributor,
+            amount,
+            cycle,
+            timestamp: contributed_at,
+        };
+        env.events().publish(("contribution_receipt",), receipt);
     }
 
     pub fn emit_payout_executed(
@@ -437,6 +541,20 @@ impl EventEmitter {
         env.events().publish(("refund_issued",), event);
     }
 
+    pub fn emit_group_dissolved(
+        env: &Env,
+        group_id: u64,
+        dissolved_at: u64,
+        total_refunded: i128,
+    ) {
+        let event = GroupDissolved {
+            group_id,
+            dissolved_at,
+            total_refunded,
+        };
+        env.events().publish(("group_dissolved",), event);
+    }
+
     pub fn emit_group_status_changed(
         env: &Env,
         group_id: u64,
@@ -485,6 +603,21 @@ impl EventEmitter {
         env.events().publish(("contract_unpaused",), event);
     }
 
+    pub fn emit_cycle_advanced(
+        env: &Env,
+        group_id: u64,
+        old_cycle: u32,
+        new_cycle: u32,
+        payout_executed: bool,
+        defaulted: bool,
+        advanced_at: u64,
+    ) {
+        let event = CycleAdvanced {
+            group_id,
+            old_cycle,
+            new_cycle,
+            payout_executed,
+            defaulted,
     pub fn emit_contribution_verified(
         env: &Env,
         group_id: u64,
@@ -555,6 +688,26 @@ impl EventEmitter {
             unpaused_at,
         };
         env.events().publish(("group_unpaused",), event);
+    }
+
+    pub fn emit_grace_period_contribution(
+        env: &Env,
+        group_id: u64,
+        contributor: Address,
+        amount: i128,
+        cycle: u32,
+        seconds_late: u64,
+        contributed_at: u64,
+    ) {
+        let event = GracePeriodContribution {
+            group_id,
+            contributor,
+            amount,
+            cycle,
+            seconds_late,
+            contributed_at,
+        };
+        env.events().publish(("grace_period_contribution",), event);
     }
 
     pub fn emit_penalty_applied(
@@ -742,6 +895,22 @@ impl EventEmitter {
         env.events().publish(("group_rated",), event);
     }
 
+    pub fn emit_fee_paid(
+        env: &Env,
+        creator: Address,
+        treasury: Address,
+        amount: i128,
+        paid_at: u64,
+    ) {
+        let event = FeePaid {
+            creator,
+            treasury,
+            amount,
+            paid_at,
+        };
+        env.events().publish(("fee_paid",), event);
+    }
+
     pub fn emit_cycle_deadline_extended(
         env: &Env,
         group_id: u64,
@@ -776,6 +945,23 @@ impl EventEmitter {
             cloned_at,
         };
         env.events().publish(("group_cloned",), event);
+    }
+
+    /// Emits an event when a member joins a group via a referral.
+    pub fn emit_member_referred(
+        env: &Env,
+        group_id: u64,
+        invitee: Address,
+        referrer: Address,
+        referred_at: u64,
+    ) {
+        let event = MemberReferred {
+            group_id,
+            invitee,
+            referrer,
+            referred_at,
+        };
+        env.events().publish(("member_referred",), event);
     }
 }
 
@@ -1014,6 +1200,30 @@ mod tests {
     }
 
     #[test]
+    fn test_cycle_advanced_event() {
+        let env = Env::default();
+
+        let event = CycleAdvanced {
+            group_id: 1,
+            old_cycle: 0,
+            new_cycle: 1,
+            payout_executed: true,
+            defaulted: false,
+            advanced_at: 1234567890,
+        };
+
+        assert_eq!(event.group_id, 1);
+        assert_eq!(event.old_cycle, 0);
+        assert_eq!(event.new_cycle, 1);
+        assert!(event.payout_executed);
+        assert!(!event.defaulted);
+    }
+
+    #[test]
+    fn test_event_emitter_cycle_advanced() {
+        let env = Env::default();
+
+        EventEmitter::emit_cycle_advanced(&env, 1, 0, 1, true, false, 1234567890);
     fn test_group_paused_event() {
         let env = Env::default();
         let creator = Address::generate(&env);

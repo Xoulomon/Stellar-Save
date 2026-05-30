@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { NotificationService } from '../notification_service';
 import { PushNotificationService } from '../push_notification_service';
+import { WebPushService } from '../web_push_service';
 import { UserPreferenceManager } from '../user_preference_manager';
 import { NotificationTemplateManager } from '../notification_template_manager';
 import { logger } from '../logger';
@@ -13,6 +14,7 @@ export function createNotificationRouter(): Router {
   const router = Router();
   const notificationService = new NotificationService();
   const pushNotificationService = new PushNotificationService();
+  const webPushService = new WebPushService();
 
   // ========== PREFERENCE MANAGEMENT ROUTES ==========
 
@@ -466,6 +468,68 @@ export function createNotificationRouter(): Router {
     }
   });
 
+  // ========== WEB PUSH SUBSCRIPTION ROUTES ==========
+
+  /**
+   * GET /api/v1/notifications/vapid-public-key
+   * Return the VAPID public key so the frontend can subscribe
+   */
+  router.get('/vapid-public-key', (req: Request, res: Response) => {
+    const key = webPushService.getVapidPublicKey();
+    if (!key) {
+      return res.status(503).json({ error: 'Web push not configured' });
+    }
+    res.json({ publicKey: key });
+  });
+
+  /**
+   * POST /api/v1/notifications/subscribe
+   * Store a browser push subscription for a user
+   * Body: { userId, subscription: { endpoint, keys: { p256dh, auth } } }
+   */
+  router.post('/subscribe', async (req: Request, res: Response) => {
+    try {
+      const { userId, subscription } = req.body;
+
+      if (!userId || !subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+        return res.status(400).json({
+          error: 'userId and subscription (with endpoint, keys.p256dh, keys.auth) are required',
+        });
+      }
+
+      if (!webPushService.isEnabled()) {
+        return res.status(503).json({ error: 'Web push not configured on the server' });
+      }
+
+      await webPushService.saveSubscription(userId, subscription);
+      res.status(201).json({ message: 'Push subscription registered' });
+    } catch (error) {
+      logger.error('Error saving push subscription', { error: String(error) });
+      res.status(500).json({ error: 'Failed to save push subscription' });
+    }
+  });
+
+  /**
+   * DELETE /api/v1/notifications/subscribe
+   * Remove a browser push subscription
+   * Body: { endpoint }
+   */
+  router.delete('/subscribe', async (req: Request, res: Response) => {
+    try {
+      const { endpoint } = req.body;
+
+      if (!endpoint) {
+        return res.status(400).json({ error: 'endpoint is required' });
+      }
+
+      await webPushService.deleteSubscription(endpoint);
+      res.json({ message: 'Push subscription removed' });
+    } catch (error) {
+      logger.error('Error removing push subscription', { error: String(error) });
+      res.status(500).json({ error: 'Failed to remove push subscription' });
+    }
+  });
+
   // ========== HEALTH CHECK ==========
 
   /**
@@ -479,6 +543,7 @@ export function createNotificationRouter(): Router {
       providers: {
         email: !!process.env.SENDGRID_API_KEY,
         push: pushNotificationService.getAvailableProviders(),
+        webPush: webPushService.isEnabled(),
       },
     };
 

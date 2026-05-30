@@ -2,6 +2,11 @@ import { useState } from "react";
 import { Button } from "./Button";
 import { Input } from "./Input";
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import {
+  validateFormStep,
+  validateAndTransformFormData,
+  VALIDATION_CONSTANTS,
+} from "../schemas/groupSchema";
 import type { GroupData } from "../utils/groupApi";
 import "./CreateGroupForm.css";
 
@@ -48,54 +53,6 @@ interface CreateGroupFormProps {
   isSubmitting?: boolean;
 }
 
-export function validateStep(
-  currentStep: number,
-  formData: FormData,
-): FormErrors {
-  const newErrors: FormErrors = {};
-
-  if (currentStep === 1) {
-    if (!formData.name.trim() || formData.name.trim().length < 3) {
-      newErrors.name = "Group name must be at least 3 characters";
-    } else if (formData.name.trim().length > 50) {
-      newErrors.name = "Group name must be 50 characters or fewer";
-    }
-    if (!formData.description.trim()) {
-      newErrors.description = "Description is required";
-    } else if (formData.description.trim().length > 500) {
-      newErrors.description = "Description must be 500 characters or fewer";
-    }
-  }
-
-  if (currentStep === 2) {
-    const amount = parseFloat(formData.contributionAmount);
-    if (!formData.contributionAmount || isNaN(amount) || amount <= 0) {
-      newErrors.contributionAmount =
-        "Contribution amount must be greater than 0";
-    }
-    if (!formData.cycleDuration) {
-      newErrors.cycleDuration = "Cycle duration is required";
-    }
-  }
-
-  if (currentStep === 3) {
-    const max = parseInt(formData.maxMembers);
-    const min = parseInt(formData.minMembers);
-    if (!formData.maxMembers || isNaN(max) || max < 2) {
-      newErrors.maxMembers = "Maximum members must be at least 2";
-    }
-    if (!formData.minMembers || isNaN(min) || min < 2) {
-      newErrors.minMembers = "Minimum members must be at least 2";
-    }
-    if (!newErrors.maxMembers && !newErrors.minMembers && max < min) {
-      newErrors.maxMembers =
-        "Maximum members must be greater than or equal to minimum members";
-    }
-  }
-
-  return newErrors;
-}
-
 export function CreateGroupForm({
   onSubmit,
   onCancel,
@@ -115,7 +72,9 @@ export function CreateGroupForm({
   };
 
   const runValidateStep = (currentStep: number): boolean => {
-    const newErrors = validateStep(currentStep, formData);
+    // Use Zod schema validation for the current step
+    const formDataRecord = formData as unknown as Record<string, string>;
+    const newErrors = validateFormStep(currentStep, formDataRecord);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -141,18 +100,26 @@ export function CreateGroupForm({
 
   const handleSubmit = () => {
     if (runValidateStep(3)) {
+      // Validate and transform form data using Zod schema
+      const formDataRecord: Record<string, string> = {
+        name: formData.name,
+        description: formData.description,
+        imageUrl: formData.imageUrl,
+        contributionAmount: formData.contributionAmount,
+        cycleDuration: formData.cycleDuration,
+        maxMembers: formData.maxMembers,
+        minMembers: formData.minMembers,
+      };
+
+      const result = validateAndTransformFormData(formDataRecord);
+
+      if (!result.success) {
+        setErrors(result.errors);
+        return;
+      }
+
       setDraft(EMPTY_FORM); // clear draft on successful submit
-      onSubmit({
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        image_url: formData.imageUrl.trim(),
-        contribution_amount: Math.round(
-          parseFloat(formData.contributionAmount) * 10_000_000,
-        ),
-        cycle_duration: parseInt(formData.cycleDuration),
-        max_members: parseInt(formData.maxMembers),
-        min_members: parseInt(formData.minMembers),
-      });
+      onSubmit(result.data);
     }
   };
 
@@ -194,7 +161,7 @@ export function CreateGroupForm({
             required
             aria-required="true"
             disabled={isSubmitting}
-            helperText='e.g. "Family Savings Circle" or "Lagos Tech Workers Fund"'
+            helperText={`Name should be 3-${VALIDATION_CONSTANTS.GROUP_NAME_MAX} characters (e.g. "Family Savings Circle")`}
           />
           <Input
             label="Description"
@@ -204,7 +171,7 @@ export function CreateGroupForm({
             required
             aria-required="true"
             disabled={isSubmitting}
-            helperText="Describe the group's purpose and who it's for (max 500 characters)"
+            helperText={`Describe the group's purpose (max ${VALIDATION_CONSTANTS.GROUP_DESCRIPTION_MAX} characters)`}
           />
           <Input
             label="Image URL (Optional)"
@@ -228,7 +195,7 @@ export function CreateGroupForm({
             value={formData.contributionAmount}
             onChange={(e) => updateField("contributionAmount", e.target.value)}
             error={errors.contributionAmount}
-            helperText="Amount each member contributes per cycle — e.g. 100 XLM"
+            helperText={`Each member contributes per cycle — between ${VALIDATION_CONSTANTS.MIN_CONTRIBUTION_XLM} and ${VALIDATION_CONSTANTS.MAX_CONTRIBUTION_XLM} XLM`}
             required
             aria-required="true"
             disabled={isSubmitting}
@@ -282,7 +249,7 @@ export function CreateGroupForm({
             value={formData.maxMembers}
             onChange={(e) => updateField("maxMembers", e.target.value)}
             error={errors.maxMembers}
-            helperText="Maximum number of members — e.g. 10 for a monthly group"
+            helperText={`Maximum number of group members (${VALIDATION_CONSTANTS.MIN_MEMBERS}-${VALIDATION_CONSTANTS.MAX_MEMBERS_LIMIT})`}
             required
             aria-required="true"
             disabled={isSubmitting}
@@ -293,7 +260,7 @@ export function CreateGroupForm({
             value={formData.minMembers}
             onChange={(e) => updateField("minMembers", e.target.value)}
             error={errors.minMembers}
-            helperText="Minimum members needed before the first cycle can start (at least 2)"
+            helperText={`Minimum members needed to start first cycle (at least ${VALIDATION_CONSTANTS.MIN_MEMBERS})`}
             required
             aria-required="true"
             disabled={isSubmitting}

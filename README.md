@@ -113,6 +113,7 @@ Follow the step-by-step guide in [demo/demo-script.md](demo/demo-script.md)
 
 ## 📖 Documentation
 
+- [User Guide](docs/user-guide.md)
 - [Architecture Overview](docs/architecture.md)
 - [Storage Layout](docs/storage-layout.md)
 - [Threat Model & Security](docs/threat-model.md)

@@ -33,6 +33,10 @@ describe('ROUTES constants', () => {
   it('defines ERROR route', () => {
     expect(ROUTES.ERROR).toBe('/500');
   });
+
+  it('defines PROFILE_DETAIL route with param', () => {
+    expect(ROUTES.PROFILE_DETAIL).toBe('/profile/:address');
+  });
 });
 
 describe('buildRoute helpers', () => {
@@ -42,5 +46,9 @@ describe('buildRoute helpers', () => {
 
   it('handles numeric string groupId', () => {
     expect(buildRoute.groupDetail('42')).toBe('/groups/42');
+  });
+
+  it('builds profile route with address', () => {
+    expect(buildRoute.profile('GABC1234')).toBe('/profile/GABC1234');
   });
 });

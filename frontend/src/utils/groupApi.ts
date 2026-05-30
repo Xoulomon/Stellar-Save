@@ -206,6 +206,38 @@ export async function fetchGroups(filters?: Partial<GroupFilters>): Promise<Publ
 
 export async function fetchGroup(groupId: string): Promise<DetailedGroup | null> {
   // TODO: replace with actual Soroban contract invocation
-  void groupId;
-  return Promise.resolve(null);
+  await new Promise((r) => setTimeout(r, 600)); // Simulate network delay
+
+  const group = MOCK_GROUPS.find((g) => g.id === groupId);
+  if (!group) {
+    return null;
+  }
+
+  const now = new Date();
+  const members: GroupMember[] = [
+    { id: '1', address: 'GABC1234567890ABCDEF', name: 'Alice', joinedAt: new Date('2026-01-10'), totalContributions: 750, isActive: true },
+    { id: '2', address: 'GDEF0987654321FEDCBA', name: 'Bob', joinedAt: new Date('2026-01-12'), totalContributions: 500, isActive: true },
+    { id: '3', address: 'GXYZ1111222233334444', name: 'Carol', joinedAt: new Date('2026-01-15'), totalContributions: 250, isActive: true },
+    { id: '4', address: 'GAAA5555666677778888', name: 'Dave', joinedAt: new Date('2026-02-01'), totalContributions: 250, isActive: false },
+  ];
+
+  return {
+    ...group,
+    totalMembers: members.length,
+    targetAmount: group.memberCount * group.contributionAmount * 10, // Example target amount
+    currentAmount: members.reduce((sum, m) => sum + m.totalContributions, 0),
+    contributionFrequency: 'monthly', // Mock frequency
+    members,
+    contributions: [
+      { id: 'c1', memberId: '1', memberName: 'Alice', amount: group.contributionAmount, timestamp: new Date(now.getTime() - 86400000 * 2), transactionHash: 'tx_abc123', status: 'completed' },
+      { id: 'c2', memberId: '2', memberName: 'Bob', amount: group.contributionAmount, timestamp: new Date(now.getTime() - 86400000 * 3), transactionHash: 'tx_def456', status: 'completed' },
+      { id: 'c3', memberId: '3', memberName: 'Carol', amount: group.contributionAmount, timestamp: new Date(now.getTime() - 86400000 * 5), transactionHash: 'tx_ghi789', status: 'completed' },
+      { id: 'c4', memberId: '4', memberName: 'Dave', amount: group.contributionAmount, timestamp: new Date(now.getTime() - 86400000 * 7), transactionHash: 'tx_jkl012', status: 'pending' },
+    ],
+    cycles: [
+      { cycleNumber: 1, startDate: new Date('2026-01-01'), endDate: new Date('2026-01-31'), targetAmount: group.memberCount * group.contributionAmount, currentAmount: group.memberCount * group.contributionAmount, status: 'completed' },
+      { cycleNumber: 2, startDate: new Date('2026-02-01'), endDate: new Date('2026-02-28'), targetAmount: group.memberCount * group.contributionAmount, currentAmount: group.memberCount * group.contributionAmount * 0.75, status: 'active' },
+    ],
+    currentCycle: { cycleNumber: 2, startDate: new Date('2026-02-01'), endDate: new Date('2026-02-28'), targetAmount: group.memberCount * group.contributionAmount, currentAmount: group.memberCount * group.contributionAmount * 0.75, status: 'active' },
+  };
 }

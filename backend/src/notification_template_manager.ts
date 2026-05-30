@@ -82,7 +82,16 @@ export class NotificationTemplateManager {
 
           Visit: {{appUrl}}/groups/{{groupId}}
         `,
-        placeholders: ['userName', 'groupName', 'amount', 'dueDate', 'daysRemaining', 'appUrl', 'groupId', 'unsubscribeUrl'],
+        placeholders: [
+          'userName',
+          'groupName',
+          'amount',
+          'dueDate',
+          'daysRemaining',
+          'appUrl',
+          'groupId',
+          'unsubscribeUrl',
+        ],
       },
       {
         templateKey: 'email_contribution_confirmed',
@@ -124,7 +133,15 @@ export class NotificationTemplateManager {
 
           You're {{membersRemaining}} step away from receiving your payout.
         `,
-        placeholders: ['userName', 'groupName', 'amount', 'txHash', 'timestamp', 'membersRemaining', 'unsubscribeUrl'],
+        placeholders: [
+          'userName',
+          'groupName',
+          'amount',
+          'txHash',
+          'timestamp',
+          'membersRemaining',
+          'unsubscribeUrl',
+        ],
       },
       {
         templateKey: 'email_payout_notification',
@@ -175,7 +192,68 @@ export class NotificationTemplateManager {
 
           Visit: {{appUrl}}/groups/{{groupId}}
         `,
-        placeholders: ['userName', 'groupName', 'amount', 'cycleNumber', 'payoutWallet', 'appUrl', 'groupId', 'unsubscribeUrl'],
+        placeholders: [
+          'userName',
+          'groupName',
+          'amount',
+          'cycleNumber',
+          'payoutWallet',
+          'appUrl',
+          'groupId',
+          'unsubscribeUrl',
+        ],
+      },
+      {
+        templateKey: 'email_group_update',
+        templateName: 'Group Update - Email',
+        templateType: NotificationTemplateType.Email,
+        subject: 'Update: {{groupName}}',
+        htmlContent: `
+      },
+      {
+        templateKey: 'email_group_invitation',
+        templateName: 'Group Invitation - Email',
+        templateType: NotificationTemplateType.Email,
+        subject: 'You\'re invited to join {{groupName}}',
+        htmlContent:
+          <html>
+            <body style="font-family: Arial, sans-serif; color: #333;">
+              <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2>You're Invited!</h2>
+                <p>Hi {{recipientEmail}},</p>
+                <p>{{creatorName}} has shared a group invite with you:</p>
+                <div style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #007bff;">
+                  <p><strong>Group:</strong> {{groupName}}</p>
+                  <p style="color:#555; margin-top: 10px;">Click below to join the group and start contributing.</p>
+                  <p style="margin-top: 20px;">
+                    <a href="{{joinLink}}" style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                      Join {{groupName}}
+                    </a>
+                  </p>
+                </div>
+                <p style="margin-top: 30px; color: #666; font-size: 12px;">
+                  If you didn’t expect this invite, you can ignore this email.
+                  <br>
+                  <a href="{{unsubscribeUrl}}" style="color: #666;">Unsubscribe</a>
+                </p>
+              </div>
+            </body>
+          </html>
+        `,
+        textContent: `
+          You're Invited!
+
+          Hi {{recipientEmail}},
+
+          {{creatorName}} has shared a group invite with you:
+
+          Group: {{groupName}}
+
+          Join link: {{joinLink}}
+
+          If you didn’t expect this invite, you can ignore this email.
+        `,
+        placeholders: ['recipientEmail', 'creatorName', 'groupName', 'joinLink', 'unsubscribeUrl'],
       },
       {
         templateKey: 'email_group_update',
@@ -217,7 +295,15 @@ export class NotificationTemplateManager {
 
           Visit: {{appUrl}}/groups/{{groupId}}
         `,
-        placeholders: ['userName', 'groupName', 'updateTitle', 'updateMessage', 'appUrl', 'groupId', 'unsubscribeUrl'],
+        placeholders: [
+          'userName',
+          'groupName',
+          'updateTitle',
+          'updateMessage',
+          'appUrl',
+          'groupId',
+          'unsubscribeUrl',
+        ],
       },
 
       // Push Notification Templates
@@ -226,8 +312,9 @@ export class NotificationTemplateManager {
         templateName: 'Contribution Reminder - Push',
         templateType: NotificationTemplateType.Push,
         subject: undefined,
-        htmlContent: 'Contribution Reminder: {{daysRemaining}} days left to contribute {{amount}} XLM to {{groupName}}',
-        textContent: 'Don\'t miss your contribution deadline! {{daysRemaining}} days remaining.',
+        htmlContent:
+          'Contribution Reminder: {{daysRemaining}} days left to contribute {{amount}} XLM to {{groupName}}',
+        textContent: "Don't miss your contribution deadline! {{daysRemaining}} days remaining.",
         placeholders: ['groupName', 'amount', 'daysRemaining'],
       },
       {

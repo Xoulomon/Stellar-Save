@@ -54,6 +54,13 @@
   color: var(--color-header-text);
 }
 
+.wallet-integration-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
 .wallet-button {
   background: #4a90e2;
   color: #fff;
