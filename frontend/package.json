@@ -25,7 +25,7 @@
     "test:visual:ci": "percy exec -- playwright test --config=playwright.visual.config.ts --reporter=github"
   },
   "dependencies": {
-    "@creit.tech/stellar-wallets-kit": "2.2.0",
+    "@tanstack/react-query": "5.80.7",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.9",

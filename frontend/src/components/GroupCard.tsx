@@ -4,11 +4,7 @@ import { buildRoute } from '../routing/constants';
 import { fetchGroup } from '../utils/groupApi';
 import type { GroupDetail } from '../types/group';
 import { GroupBadge } from './GroupBadge';
-import { GroupCardSkeleton } from './Skeleton/GroupCardSkeleton';
-import { Button } from './Button';
-import './GroupCard.css';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { usePrefetchGroup } from '../hooks/useGroup';
 
 type Status = 'active' | 'completed' | 'pending' | 'complete';
 
@@ -111,6 +107,12 @@ function GroupCardUI({
   className = '',
 }: CardUIProps) {
   const classes = ['group-card', className].filter(Boolean).join(' ');
+  const prefetchGroup = usePrefetchGroup();
+
+  // Prefetch group detail data on hover so navigation feels instant
+  const handleMouseEnter = () => {
+    if (groupId) prefetchGroup(groupId);
+  };
 
   const handleCardClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
@@ -189,6 +191,7 @@ function GroupCardUI({
         className={classes}
         style={{ textDecoration: 'none', color: 'inherit' }}
         onClick={handleCardClick}
+        onMouseEnter={handleMouseEnter}
       >
         {content}
       </Link>
@@ -196,8 +199,8 @@ function GroupCardUI({
   }
 
   return (
-    <div className={classes} onClick={handleCardClick}>
-      {content}
+    <div className={classes} onClick={handleCardClick} onMouseEnter={handleMouseEnter}>
+      {cardContent}
     </div>
   );
 }
