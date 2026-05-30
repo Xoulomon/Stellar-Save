@@ -62,6 +62,7 @@ pub use error::{ContractResult, ErrorCategory, StellarSaveError};
 pub use events::EventEmitter;
 pub use events::*;
 pub use group::{Group, GroupStatus};
+use migration::{initialize_storage_version, migrate};
 pub use payout::PayoutRecord;
 pub use pool::{PoolCalculator, PoolInfo};
 pub use rating::{GroupRating, RatingAggregate, RatingEntry};
@@ -364,6 +365,9 @@ impl StellarSaveContract {
     }
 
     /// Initializes or updates the global contract configuration.
+    /// 
+    /// This function also handles storage migration when needed and initializes
+    /// the storage version on first deployment.
     /// Only the current admin can perform this update.
     pub fn update_config(env: Env, new_config: ContractConfig) -> Result<(), StellarSaveError> {
         // 1. Validation Logic
@@ -379,13 +383,51 @@ impl StellarSaveContract {
         } else {
             // First time initialization: caller becomes admin
             new_config.admin.require_auth();
+            
+            // Initialize storage version on first deployment
+            initialize_storage_version(&env);
         }
 
-        // 3. Save Configuration
+        // 3. Perform migration if needed
+        migrate(&env)?;
+
+        // 4. Save Configuration
         env.storage().persistent().set(&key, &new_config);
         Ok(())
     }
 
+    /// Performs storage migration to the latest schema version.
+    /// 
+    /// This function can be called by the admin to manually trigger migration
+    /// without updating the contract configuration.
+    /// 
+    /// # Returns
+    /// * `Ok(())` - If migration completed successfully or no migration needed
+    /// * `Err(StellarSaveError)` - If migration failed or caller is not admin
+    pub fn migrate_storage(env: Env, caller: Address) -> Result<(), StellarSaveError> {
+        // Require admin authorization
+        let config_key = StorageKeyBuilder::contract_config();
+        if let Some(config) = env.storage().persistent().get::<_, ContractConfig>(&config_key) {
+            if config.admin != caller {
+                return Err(StellarSaveError::Unauthorized);
+            }
+            caller.require_auth();
+        } else {
+            return Err(StellarSaveError::InvalidState); // No config means contract not initialized
+        }
+
+        // Perform migration
+        migrate(&env)?;
+        
+        Ok(())
+    }
+
+    /// Gets the current storage schema version.
+    /// 
+    /// Returns the version number of the storage schema currently in use.
+    /// This can be used to check if migration is needed.
+    pub fn get_storage_version(env: Env) -> u32 {
+        migration::get_storage_version(&env)
     /// Updates the global contribution amount limits.
     ///
     /// Only the contract admin can call this function.
@@ -14871,5 +14913,232 @@ mod tests {
             .collect();
         
         assert_eq!(cycle_advanced_events.len(), 1);
+    }
+
+    // Migration Tests
+    #[test]
+    fn test_get_storage_version_new_contract() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        // New contract should default to v1 until initialized
+        let version = client.get_storage_version();
+        assert_eq!(version, 1);
+    }
+
+    #[test]
+    fn test_storage_version_initialized_on_config_update() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let config = ContractConfig {
+            admin: admin.clone(),
+            min_contribution: 1_000_000,
+            max_contribution: 1_000_000_000,
+            min_members: 2,
+            max_members: 10,
+            min_cycle_duration: 86400,
+            max_cycle_duration: 2_592_000,
+        };
+
+        // Initialize config (first time)
+        client.update_config(&config);
+
+        // Storage version should now be current
+        let version = client.get_storage_version();
+        assert_eq!(version, storage::STORAGE_VERSION);
+    }
+
+    #[test]
+    fn test_migrate_storage_requires_admin() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let non_admin = Address::generate(&env);
+        
+        let config = ContractConfig {
+            admin: admin.clone(),
+            min_contribution: 1_000_000,
+            max_contribution: 1_000_000_000,
+            min_members: 2,
+            max_members: 10,
+            min_cycle_duration: 86400,
+            max_cycle_duration: 2_592_000,
+        };
+
+        // Initialize config
+        client.update_config(&config);
+
+        // Non-admin should not be able to migrate
+        let result = client.try_migrate_storage(&non_admin);
+        assert_eq!(result, Err(Ok(StellarSaveError::Unauthorized)));
+
+        // Admin should be able to migrate
+        let result = client.try_migrate_storage(&admin);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_migrate_storage_uninitialized_contract() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let caller = Address::generate(&env);
+
+        // Should fail on uninitialized contract
+        let result = client.try_migrate_storage(&caller);
+        assert_eq!(result, Err(Ok(StellarSaveError::InvalidState)));
+    }
+
+    #[test]
+    fn test_migration_from_v1_to_v2() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let creator = Address::generate(&env);
+
+        // Simulate v1 contract state
+        // 1. Set up config without version
+        let config = ContractConfig {
+            admin: admin.clone(),
+            min_contribution: 1_000_000,
+            max_contribution: 1_000_000_000,
+            min_members: 2,
+            max_members: 10,
+            min_cycle_duration: 86400,
+            max_cycle_duration: 2_592_000,
+        };
+
+        // Store config directly to simulate v1 state
+        let config_key = StorageKeyBuilder::contract_config();
+        env.storage().persistent().set(&config_key, &config);
+
+        // Create a group in v1 format (without balance tracking)
+        let group_id = client.create_group(&creator, &10_000_000, &604800, &5);
+        
+        // Manually set storage version to v1
+        let version_key = StorageKeyBuilder::storage_version();
+        env.storage().persistent().set(&version_key, &1u32);
+
+        // Verify we're at v1
+        assert_eq!(client.get_storage_version(), 1);
+
+        // Run migration
+        client.migrate_storage(&admin);
+
+        // Verify migration to v2
+        assert_eq!(client.get_storage_version(), storage::STORAGE_VERSION);
+
+        // Verify v2 fields were initialized
+        let pause_key = StorageKeyBuilder::emergency_pause();
+        let guard_key = StorageKeyBuilder::reentrancy_guard();
+        let balance_key = StorageKeyBuilder::group_balance(group_id);
+        let paid_out_key = StorageKeyBuilder::group_total_paid_out(group_id);
+
+        assert_eq!(env.storage().persistent().get::<bool>(&pause_key).unwrap(), false);
+        assert_eq!(env.storage().persistent().get::<bool>(&guard_key).unwrap(), false);
+        assert_eq!(env.storage().persistent().get::<i128>(&balance_key).unwrap(), 0);
+        assert_eq!(env.storage().persistent().get::<i128>(&paid_out_key).unwrap(), 0);
+
+        // Verify original group data is preserved
+        let group = client.get_group(&group_id);
+        assert_eq!(group.creator, creator);
+        assert_eq!(group.contribution_amount, 10_000_000);
+    }
+
+    #[test]
+    fn test_migration_idempotent() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let config = ContractConfig {
+            admin: admin.clone(),
+            min_contribution: 1_000_000,
+            max_contribution: 1_000_000_000,
+            min_members: 2,
+            max_members: 10,
+            min_cycle_duration: 86400,
+            max_cycle_duration: 2_592_000,
+        };
+
+        // Initialize config (triggers migration)
+        client.update_config(&config);
+        let version_after_init = client.get_storage_version();
+
+        // Run migration again
+        client.migrate_storage(&admin);
+        let version_after_migrate = client.get_storage_version();
+
+        // Should be the same
+        assert_eq!(version_after_init, version_after_migrate);
+        assert_eq!(version_after_migrate, storage::STORAGE_VERSION);
+    }
+
+    #[test]
+    fn test_migration_preserves_existing_data() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(StellarSaveContract, ());
+        let client = StellarSaveContractClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+
+        // Set up v1 contract with data
+        let config = ContractConfig {
+            admin: admin.clone(),
+            min_contribution: 1_000_000,
+            max_contribution: 1_000_000_000,
+            min_members: 2,
+            max_members: 10,
+            min_cycle_duration: 86400,
+            max_cycle_duration: 2_592_000,
+        };
+
+        // Store config and create group
+        let config_key = StorageKeyBuilder::contract_config();
+        env.storage().persistent().set(&config_key, &config);
+        
+        let group_id = client.create_group(&creator, &10_000_000, &604800, &5);
+        client.join_group(&group_id, &creator);
+        client.join_group(&group_id, &member);
+
+        // Set to v1 and add some contributions
+        let version_key = StorageKeyBuilder::storage_version();
+        env.storage().persistent().set(&version_key, &1u32);
+
+        // Store some v1 data
+        let total_groups_key = StorageKeyBuilder::total_groups();
+        env.storage().persistent().set(&total_groups_key, &1u64);
+
+        // Run migration
+        client.migrate_storage(&admin);
+
+        // Verify data preservation
+        assert_eq!(client.get_storage_version(), storage::STORAGE_VERSION);
+        
+        let group = client.get_group(&group_id);
+        assert_eq!(group.creator, creator);
+        assert_eq!(group.contribution_amount, 10_000_000);
+        
+        let total_groups: u64 = env.storage().persistent().get(&total_groups_key).unwrap();
+        assert_eq!(total_groups, 1);
     }
 }
