@@ -1,9 +1,12 @@
+import fs from 'fs';
+import http2 from 'http2';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 import express from 'express';
-import { app } from './app';
+import compression from 'compression';
+import cors from 'cors';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import { makeExecutableSchema } from '@graphql-tools/schema';
@@ -46,6 +49,7 @@ const CSP_POLICY = [
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(compression());
 app.use(requestLogger);
 app.use(metricsMiddleware);
 
@@ -228,8 +232,21 @@ app.use((req, res, next) => {
 });
 app.use('/', createV1Router(services));
 
-app.listen(PORT, () => {
+const hasTls = Boolean(process.env.TLS_KEY_PATH && process.env.TLS_CERT_PATH);
+const server = hasTls
+  ? http2.createSecureServer(
+      {
+        key: fs.readFileSync(process.env.TLS_KEY_PATH as string),
+        cert: fs.readFileSync(process.env.TLS_CERT_PATH as string),
+        allowHTTP1: true,
+      },
+      app
+    )
+  : http2.createServer({ allowHTTP1: true }, app);
+
+server.listen(PORT, () => {
   console.log(`API server running on port ${PORT}`);
+  console.log(`  HTTP/2 enabled${hasTls ? ' (TLS)' : ' (h2c cleartext)'}.`);
   console.log(`  Versioned:  /api/v1/...  /api/v2/...`);
   console.log(`  Legacy:     /health  /recommendations  etc. (deprecated)`);
   console.log(`  Cache stats: http://localhost:${PORT}/api/cache/stats`);
