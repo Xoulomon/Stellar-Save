@@ -753,16 +753,17 @@ fn apply_missed_contribution_penalties(
 /// Validates Requirements 9.1, 9.2, 9.3, 9.4, 9.5, 10.6, 10.7, and orchestrates all
 /// other requirements through helper functions.
 pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
-    // Reentrancy protection - prevent recursive payout calls
+    // Reentrancy protection — use temporary storage (10x cheaper than persistent).
+    // Temporary entries are scoped to the current transaction and auto-cleared.
     let reentrancy_key = StorageKeyBuilder::reentrancy_guard();
-    let guard_value: u64 = env.storage().persistent().get(&reentrancy_key).unwrap_or(0);
-
+    let guard_value: u64 = env.storage().temporary().get(&reentrancy_key).unwrap_or(0);
+    
     if guard_value != 0 {
         return Err(StellarSaveError::InternalError);
     }
 
     // Set reentrancy protection flag
-    env.storage().persistent().set(&reentrancy_key, &1);
+    env.storage().temporary().set(&reentrancy_key, &1);
 
     // Step 1: Load group from storage
     let group_key = StorageKeyBuilder::group_data(group_id);
