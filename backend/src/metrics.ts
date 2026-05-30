@@ -36,6 +36,21 @@ export const httpRequestDuration = new Histogram({
   registers: [registry],
 });
 
+// ── Cache counters ────────────────────────────────────────────────────────────
+export const cacheHitsTotal = new Counter({
+  name: 'cache_hits_total',
+  help: 'Total cache hits',
+  labelNames: ['cache'],
+  registers: [registry],
+});
+
+export const cacheMissesTotal = new Counter({
+  name: 'cache_misses_total',
+  help: 'Total cache misses',
+  labelNames: ['cache'],
+  registers: [registry],
+});
+
 // ── Gauges ────────────────────────────────────────────────────────────────────
 export const activeConnections = new Gauge({
   name: 'active_connections',

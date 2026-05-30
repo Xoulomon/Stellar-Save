@@ -237,6 +237,18 @@ model IndexedTransaction {
   @@index([createdAt])
 }
 
+// ========== SOROBAN EVENT CURSOR ==========
+
+model SorobanEventCursor {
+  id         String   @id @default("singleton")
+  contractId String   @unique
+  lastLedger Int      @default(0)
+  lastCursor String   @default("")
+  updatedAt  DateTime @updatedAt
+
+  @@index([contractId])
+}
+
 // ========== WEBHOOK MODELS (Issue #559) ==========
 
 model Webhook {
