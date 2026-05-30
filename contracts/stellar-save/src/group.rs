@@ -528,15 +528,18 @@ impl Group {
         !self.started && self.member_count >= self.min_members
     }
 
-    /// Calculates the total pool amount for a single cycle.
-    ///
-    /// This is the gross amount distributed to the payout recipient each cycle:
-    /// `contribution_amount × max_members`. Denominated in stroops.
-    ///
-    /// Note: this uses `max_members`, not `member_count`, because the pool size
-    /// is fixed at group creation and does not change as members join.
+    /// Calculates the total pool amount for a cycle.
+    /// This is the amount distributed to the recipient each cycle.
+    /// Returns None on overflow.
     pub fn total_pool_amount(&self) -> i128 {
-        self.contribution_amount * (self.max_members as i128)
+        self.contribution_amount
+            .checked_mul(self.max_members as i128)
+            .expect("pool amount overflow")
+    }
+
+    /// Checked variant — returns None instead of panicking on overflow.
+    pub fn checked_total_pool_amount(&self) -> Option<i128> {
+        self.contribution_amount.checked_mul(self.max_members as i128)
     }
 
     /// Validates that the group configuration is internally consistent.
