@@ -1,77 +1,42 @@
-name: Coverage Report
+name: Coverage
 
 on:
-  schedule:
-    # Run every day at midnight UTC
-    - cron: '0 0 * * *'
-  workflow_dispatch:
-    inputs:
-      upload_to_codecov:
-        description: 'Upload results to Codecov'
-        required: false
-        default: 'true'
-        type: boolean
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   coverage:
-    name: Full Coverage Report
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
-      # ── Frontend ──────────────────────────────────────────────────────────
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend dependencies
-        run: npm ci
-        working-directory: frontend
-
-      - name: Frontend coverage
-        run: npm run test:coverage
-        working-directory: frontend
-
-      # ── Rust ──────────────────────────────────────────────────────────────
-      - name: Install Rust toolchain
+      - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
         with:
-          components: llvm-tools-preview
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
-
-      - name: Rust coverage
-        run: |
-          cargo llvm-cov \
-            --manifest-path contracts/stellar-save/Cargo.toml \
-            --lcov \
-            --output-path rust-lcov.info \
-            -- --test-threads=1
-
-      # ── Upload ────────────────────────────────────────────────────────────
-      - name: Upload combined coverage to Codecov
-        if: ${{ github.event.inputs.upload_to_codecov != 'false' }}
-        uses: codecov/codecov-action@v4
-        with:
-          files: frontend/coverage/lcov.info,rust-lcov.info
-          flags: combined
-          name: combined-coverage
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-reports
           path: |
-            frontend/coverage/
-            rust-lcov.info
-          retention-days: 90
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install cargo-tarpaulin
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-tarpaulin
+
+      - name: Run coverage
+        run: cargo tarpaulin --config tarpaulin.toml
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 30

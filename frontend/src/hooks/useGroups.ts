@@ -19,9 +19,7 @@ function applyFilters(groups: PublicGroup[], filters: GroupFilters): PublicGroup
   if (filters.search.trim()) {
     const q = filters.search.toLowerCase();
     result = result.filter(
-      (g) =>
-        g.name.toLowerCase().includes(q) ||
-        g.description?.toLowerCase().includes(q),
+      (g) => g.name.toLowerCase().includes(q) || g.description?.toLowerCase().includes(q)
     );
   }
   if (filters.status !== 'all') result = result.filter((g) => g.status === filters.status);
@@ -85,7 +83,7 @@ export function useGroups(options: UseGroupsOptions = {}): UseGroupsReturn {
 
   const filteredAndSorted = useMemo(
     () => applySort(applyFilters(rawGroups, filters), filters.sort),
-    [rawGroups, filters],
+    [rawGroups, filters]
   );
 
   const totalItems = filteredAndSorted.length;
@@ -112,7 +110,9 @@ export function useGroups(options: UseGroupsOptions = {}): UseGroupsReturn {
     filters.minAmount !== '' ||
     filters.maxAmount !== '' ||
     filters.minMembers !== '' ||
-    filters.maxMembers !== '';
+    filters.maxMembers !== '' ||
+    filters.minCycleDuration !== '' ||
+    filters.maxCycleDuration !== '';
 
   // ─── Actions ────────────────────────────────────────────────────────────────
 

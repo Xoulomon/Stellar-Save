@@ -2,7 +2,7 @@
 mod tests {
     use crate::{
         group::{Group, GroupStatus},
-        milestones::{self, ContributionStreak, MemberMilestone, MILESTONE_THRESHOLDS},
+        milestones::{self, MILESTONE_THRESHOLDS},
         storage::StorageKeyBuilder,
         ContributionRecord, MemberProfile, StellarSaveContract, StellarSaveError,
     };
@@ -32,9 +32,10 @@ mod tests {
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Active);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_status(group_id),
+            &GroupStatus::Active,
+        );
 
         let profile = MemberProfile {
             address: member.clone(),
@@ -43,9 +44,10 @@ mod tests {
             joined_at: env.ledger().timestamp(),
             auto_contribute_enabled: false,
         };
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::member_profile(group_id, member.clone()), &profile);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::member_profile(group_id, member.clone()),
+            &profile,
+        );
     }
 
     /// Record a contribution directly in storage (bypasses token transfer).
@@ -111,7 +113,7 @@ mod tests {
 
         let streak = milestones::get_streak(&env, group_id, member);
         assert_eq!(streak.current_streak, 1); // reset after gap
-        assert_eq!(streak.best_streak, 3);    // best was 3 before the gap
+        assert_eq!(streak.best_streak, 3); // best was 3 before the gap
     }
 
     #[test]
@@ -152,8 +154,7 @@ mod tests {
 
         setup_group_and_member(&env, group_id, &creator, &member, 0);
 
-        let milestones_vec =
-            milestones::get_member_milestones(&env, group_id, member).unwrap();
+        let milestones_vec = milestones::get_member_milestones(&env, group_id, member).unwrap();
         assert_eq!(milestones_vec.len(), 0);
     }
 

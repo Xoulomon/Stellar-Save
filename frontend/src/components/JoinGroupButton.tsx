@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Button } from './Button';
 import { useWallet } from '../hooks/useWallet';
+import { useContract } from '../hooks/useContract';
+import { useTransaction, explorerUrl } from '../hooks/useTransaction';
 
 interface JoinGroupButtonProps {
   groupId: number;
@@ -20,85 +22,67 @@ export function JoinGroupButton({
   onSuccess,
 }: JoinGroupButtonProps) {
   const { activeAddress, status: walletStatus } = useWallet();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { joinGroup } = useContract();
+  const { state, txHash, error, execute, reset } = useTransaction();
   const [showConfirm, setShowConfirm] = useState(false);
 
   const isFull = currentMembers >= maxMembers;
-  const isEligible = !isMember && !isFull && !isActive && walletStatus === 'connected';
+  const isPending = state === 'pending';
+
+  if (isMember) return <Button disabled size="sm">Already Joined</Button>;
+  if (isFull) return <Button disabled size="sm">Group Full</Button>;
+  if (isActive) return <Button disabled size="sm">Group Active</Button>;
+  if (walletStatus !== 'connected') return <Button disabled size="sm">Connect Wallet</Button>;
 
   const handleJoin = async () => {
-    if (!activeAddress) {
-      setError('Please connect your wallet');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // TODO: Implement contract interaction
-      // const contract = new Contract(CONTRACT_ADDRESS);
-      // await contract.join_group({ group_id: groupId, member: activeAddress });
-      
-      // Simulate transaction for now
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setShowConfirm(false);
-      onSuccess?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to join group');
-    } finally {
-      setLoading(false);
-    }
+    setShowConfirm(false);
+    await execute(async () => {
+      const result = await joinGroup({ groupId: BigInt(groupId) });
+      if (result.error) throw new Error(result.error.message);
+      return result.txHash!;
+    });
+    if (state !== 'failed') onSuccess?.();
   };
 
-  if (isMember) {
-    return <Button disabled size="sm">Already Joined</Button>;
-  }
-
-  if (isFull) {
-    return <Button disabled size="sm">Group Full</Button>;
-  }
-
-  if (isActive) {
-    return <Button disabled size="sm">Group Active</Button>;
-  }
-
-  if (walletStatus !== 'connected') {
-    return <Button disabled size="sm">Connect Wallet</Button>;
+  if (state === 'confirmed') {
+    return (
+      <div>
+        <Button disabled size="sm" variant="ghost">Joined ✓</Button>
+        {txHash && (
+          <a
+            href={explorerUrl(txHash)}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: 11, display: 'block', marginTop: 4 }}
+          >
+            View TX →
+          </a>
+        )}
+      </div>
+    );
   }
 
   if (showConfirm) {
     return (
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <Button
-          size="sm"
-          onClick={handleJoin}
-          loading={loading}
-          disabled={loading}
-        >
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <Button size="sm" onClick={handleJoin} loading={isPending} disabled={isPending || !activeAddress}>
           Confirm
         </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setShowConfirm(false)}
-          disabled={loading}
-        >
+        <Button size="sm" variant="ghost" onClick={() => setShowConfirm(false)} disabled={isPending}>
           Cancel
         </Button>
-        {error && <span style={{ color: 'var(--color-error)', fontSize: '12px' }}>{error}</span>}
+        {state === 'failed' && error && (
+          <span style={{ color: 'var(--color-error)', fontSize: 12 }}>
+            {error}{' '}
+            <button onClick={reset} style={{ fontSize: 11 }}>Dismiss</button>
+          </span>
+        )}
       </div>
     );
   }
 
   return (
-    <Button
-      size="sm"
-      onClick={() => setShowConfirm(true)}
-      disabled={!isEligible}
-    >
+    <Button size="sm" onClick={() => setShowConfirm(true)} disabled={isPending}>
       Join Group
     </Button>
   );
