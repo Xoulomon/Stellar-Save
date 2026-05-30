@@ -6,7 +6,7 @@ import { CreateGroupForm } from '../components/CreateGroupForm';
 import { ToastProvider } from '../components/Toast/ToastProvider';
 import { useToast } from '../components/Toast/useToast';
 import { useWallet } from '../hooks/useWallet';
-import { createGroup, parseContractError } from '../lib/contractClient';
+import { stellarSaveClient, parseContractError } from '../lib/client';
 import type { GroupData } from '../utils/groupApi';
 import { ROUTES, buildRoute } from '../routing/constants';
 
@@ -41,7 +41,7 @@ function CreateGroupContent() {
     setErrorMessage(null);
 
     try {
-      const groupId = await createGroup({
+      const groupId = await stellarSaveClient.createGroup({
         creator: activeAddress,
         contributionAmount: BigInt(data.contribution_amount), // already in stroops
         cycleDuration: BigInt(data.cycle_duration),
