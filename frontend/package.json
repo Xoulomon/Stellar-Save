@@ -39,7 +39,7 @@
     "react": "^19.2.0",
     "react-big-calendar": "^1.19.4",
     "react-dom": "^19.2.0",
-    "react-i18next": "15.5.1",
+    "react-i18next": "17.0.8",
     "react-router-dom": "^7.13.2",
     "recharts": "^3.8.1",
     "zod": "^4.4.3"
