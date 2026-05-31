@@ -1,3 +1,17 @@
+# ════════════════════════════════════════════════════════════════════════════════
+# Dependabot Configuration
+# 
+# Automated dependency updates for all project ecosystems:
+# - npm (frontend and backend)
+# - Cargo (Rust contracts)
+# - GitHub Actions (CI/CD workflows)
+#
+# SCHEDULE: Weekly updates on Mondays at 06:00 UTC
+# LIMITS: Maximum 5 open PRs per ecosystem to avoid overwhelming the team
+# AUTO-MERGE: Patch and minor updates automatically merge after CI passes
+#             (see .github/workflows/dependabot-auto-merge.yml)
+# ════════════════════════════════════════════════════════════════════════════════
+
 version: 2
 updates:
   # ── Frontend (React/Vite/TypeScript) ────────────────────────────────────────
