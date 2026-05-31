@@ -51,7 +51,7 @@
   },
   "devDependencies": {
     "@types/graphql-depth-limit": "^1.1.5",
-    "@types/ioredis": "^4.28.10",
+    "@types/ioredis": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/supertest": "^6.0.2",
     "@types/web-push": "^3.6.4",
