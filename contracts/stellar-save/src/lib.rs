@@ -35,6 +35,7 @@ pub mod penalty;
 pub mod pool;
 pub mod rating;
 pub mod refund;
+pub mod repository;
 pub mod status;
 pub mod storage;
 pub mod storage_benchmark;
@@ -181,13 +182,10 @@ impl StellarSaveContract {
         group_id: u64,
         amount: i128,
     ) -> Result<(), StellarSaveError> {
-        // Load the group from storage
-        let group_key = StorageKeyBuilder::group_data(group_id);
-        let group = env
-            .storage()
-            .persistent()
-            .get::<_, Group>(&group_key)
-            .ok_or(StellarSaveError::GroupNotFound)?;
+        use crate::repository::GroupRepository;
+        
+        // Load the group from storage using the repository abstraction
+        let group = GroupRepository::get_group(env, group_id)?;
 
         // Compare the provided amount with the group's required contribution amount
         if amount != group.contribution_amount {
@@ -561,9 +559,9 @@ impl StellarSaveContract {
         );
         new_group.payout_order = payout_order;
 
-        // 8. Store Group Data
-        let group_key = StorageKeyBuilder::group_data(group_id);
-        env.storage().persistent().set(&group_key, &new_group);
+        // 8. Store Group Data using repository abstraction
+        use crate::repository::GroupRepository;
+        GroupRepository::save_group(&env, &new_group);
 
         // Initialize Group Status as Pending
         let status_key = StorageKeyBuilder::group_status(group_id);
@@ -571,15 +569,12 @@ impl StellarSaveContract {
             .persistent()
             .set(&status_key, &GroupStatus::Pending);
 
-        // 9. Store TokenConfig for this group
+        // 9. Store TokenConfig for this group using repository abstraction
         let token_config = crate::group::TokenConfig {
             token_address: token_address.clone(),
             token_decimals,
         };
-        let token_config_key = StorageKeyBuilder::group_token_config(group_id);
-        env.storage()
-            .persistent()
-            .set(&token_config_key, &token_config);
+        GroupRepository::save_token_config(&env, group_id, &token_config);
 
         // 10. Charge optional protocol creation fee
         let current_time = env.ledger().timestamp();
@@ -2147,13 +2142,9 @@ impl StellarSaveContract {
     /// - `InvalidState` - Group not in Active status
     pub fn pause_group(env: Env, group_id: u64, caller: Address) -> Result<(), StellarSaveError> {
         caller.require_auth();
+        use crate::repository::GroupRepository;
 
-        let group_key = StorageKeyBuilder::group_data(group_id);
-        let mut group = env
-            .storage()
-            .persistent()
-            .get::<_, Group>(&group_key)
-            .ok_or(StellarSaveError::GroupNotFound)?;
+        let mut group = GroupRepository::get_group(&env, group_id)?;
 
         if group.creator != caller {
             return Err(StellarSaveError::Unauthorized);
@@ -2176,7 +2167,7 @@ impl StellarSaveContract {
         // Update the paused flag on the Group struct
         group.paused = true;
         group.status = GroupStatus::Paused;
-        env.storage().persistent().set(&group_key, &group);
+        GroupRepository::save_group(&env, &group);
 
         let timestamp = env.ledger().timestamp();
         EventEmitter::emit_group_paused(&env, group_id, caller, timestamp);
@@ -2201,13 +2192,9 @@ impl StellarSaveContract {
     /// - `InvalidState` - Group not in Paused status
     pub fn resume_group(env: Env, group_id: u64, caller: Address) -> Result<(), StellarSaveError> {
         caller.require_auth();
+        use crate::repository::GroupRepository;
 
-        let group_key = StorageKeyBuilder::group_data(group_id);
-        let mut group = env
-            .storage()
-            .persistent()
-            .get::<_, Group>(&group_key)
-            .ok_or(StellarSaveError::GroupNotFound)?;
+        let mut group = GroupRepository::get_group(&env, group_id)?;
 
         if group.creator != caller {
             return Err(StellarSaveError::Unauthorized);
@@ -2230,7 +2217,7 @@ impl StellarSaveContract {
         // Update the paused flag on the Group struct
         group.paused = false;
         group.status = GroupStatus::Active;
-        env.storage().persistent().set(&group_key, &group);
+        GroupRepository::save_group(&env, &group);
 
         let timestamp = env.ledger().timestamp();
         EventEmitter::emit_group_unpaused(&env, group_id, caller, timestamp);
