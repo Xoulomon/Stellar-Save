@@ -19,7 +19,7 @@
     "@elastic/elasticsearch": "^9.3.4",
     "@graphql-tools/schema": "^10.0.13",
     "@nestjs/bullmq": "^11.0.4",
-    "@nestjs/common": "^10.0.0",
+    "@nestjs/common": "^11.1.24",
     "@nestjs/config": "^3.0.0",
     "@nestjs/core": "^10.0.0",
     "@nestjs/schedule": "^6.1.3",
