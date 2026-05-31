@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { BackupService, S3Client } from './backup_service';
 import { BackupJob } from './models';
+import { config } from './config';
 
 export interface RecoveryResult {
   jobId: string;
@@ -17,7 +18,7 @@ export class RecoveryService {
   constructor(service: BackupService, s3Client: S3Client) {
     this.service = service;
     this.s3 = s3Client;
-    this.bucket = process.env.BACKUP_S3_BUCKET || 'stellar-save-backups';
+    this.bucket = config.backup.bucket;
   }
 
   /** Restore from a specific backup job */

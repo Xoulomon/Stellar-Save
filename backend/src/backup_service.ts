@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { BackupJob, BackupType, BackupStatus } from './models';
+import { config } from './config';
 
 export interface S3Client {
   putObject(params: { Bucket: string; Key: string; Body: Buffer; ContentType: string }): Promise<void>;
@@ -16,10 +17,10 @@ export class S3HttpClient implements S3Client {
   private secretAccessKey: string;
 
   constructor() {
-    this.region = process.env.AWS_REGION || 'us-east-1';
-    this.bucket = process.env.BACKUP_S3_BUCKET || '';
-    this.accessKeyId = process.env.AWS_ACCESS_KEY_ID || '';
-    this.secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || '';
+    this.region = config.aws.region;
+    this.bucket = config.backup.bucket;
+    this.accessKeyId = config.aws.accessKeyId;
+    this.secretAccessKey = config.aws.secretAccessKey;
   }
 
   private sign(method: string, key: string, body: Buffer, contentType: string): Record<string, string> {
@@ -140,8 +141,8 @@ export class BackupService {
 
   constructor(s3Client?: S3Client) {
     this.s3 = s3Client ?? new S3HttpClient();
-    this.bucket = process.env.BACKUP_S3_BUCKET || 'stellar-save-backups';
-    this.retentionDays = parseInt(process.env.BACKUP_RETENTION_DAYS || '30', 10);
+    this.bucket = config.backup.bucket;
+    this.retentionDays = config.backup.retentionDays;
   }
 
   /** Collect all application data to back up */

@@ -138,7 +138,7 @@ apolloServer.start().then(() => {
   }));
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = config.port;
 
 // ── Mock Data ────────────────────────────────────────────────────────────────
 const mockGroups: Group[] = [
@@ -163,7 +163,7 @@ const backupService = new BackupService(s3Client);
 const backupScheduler = new BackupScheduler(backupService);
 const recoveryService = new RecoveryService(backupService, s3Client);
 const backupMonitor = new BackupMonitor(backupService, {
-  alertWebhookUrl: process.env.BACKUP_ALERT_WEBHOOK_URL,
+  alertWebhookUrl: config.backup.alertWebhookUrl,
 });
 
 const adminService = new AdminService();
