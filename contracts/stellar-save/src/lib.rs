@@ -539,6 +539,7 @@ impl StellarSaveContract {
             if !allowed_tokens.contains(&token_address) {
                 return Err(StellarSaveError::InvalidToken);
             }
+        }
 
         // 5. Validate token via SEP-41 decimals() call
         let token_decimals = crate::token::validate_token(&env, &token_address)?;
@@ -1174,13 +1175,13 @@ impl StellarSaveContract {
         let mut total_refunded: i128 = 0;
 
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let members: soroban_sdk::Vec<Address> = env
+        let members: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&members_key)
-            .unwrap_or(soroban_sdk::Vec::new(&env));
+            .unwrap_or(Map::new(&env));
 
-        for member in members.iter() {
+        for (_, member) in members.iter() {
             // Skip members who already received their payout
             let payout_pos_key =
                 StorageKeyBuilder::member_payout_eligibility(group_id, member.clone());
@@ -1268,13 +1269,17 @@ impl StellarSaveContract {
         let _group = Self::get_group(env.clone(), group_id)?;
 
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let members: Vec<Address> = env
+        let members_map: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&members_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        Ok(members)
+        let mut result = Vec::new(&env);
+        for (_, addr) in members_map.iter() {
+            result.push_back(addr);
+        }
+        Ok(result)
     }
 
     /// Gets the complete profile of a specific member in a group.
@@ -1517,7 +1522,7 @@ impl StellarSaveContract {
         }
 
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let members: Vec<Address> = env
+        let members: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&members_key)
@@ -1525,7 +1530,7 @@ impl StellarSaveContract {
 
         let mut schedule = Vec::new(&env);
 
-        for member in members.iter() {
+        for (_, member) in members.iter() {
             let position = Self::get_payout_position(env.clone(), group_id, member.clone())?;
 
             let payout_date = group
@@ -1589,7 +1594,7 @@ impl StellarSaveContract {
             .ok_or(StellarSaveError::GroupNotFound)?;
 
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let members: Vec<Address> = env
+        let members: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&members_key)
@@ -1604,7 +1609,7 @@ impl StellarSaveContract {
             slots.push_back(None);
         }
 
-        for member in members.iter() {
+        for (_, member) in members.iter() {
             let pos_key = StorageKeyBuilder::member_payout_eligibility(group_id, member.clone());
             if let Some(position) = env.storage().persistent().get::<_, u32>(&pos_key) {
                 // Skip members who have already received their payout
@@ -1671,7 +1676,7 @@ impl StellarSaveContract {
         }
 
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let members: Vec<Address> = env
+        let members: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&members_key)
@@ -1702,8 +1707,9 @@ impl StellarSaveContract {
             }
         };
 
-        for (idx, member) in members.iter().enumerate() {
-            let position = positions.get(idx as u32).unwrap();
+        let mut loop_idx: u32 = 0;
+        for (_, member) in members.iter() {
+            let position = positions.get(loop_idx).unwrap();
             let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
             let mut profile: MemberProfile = env
                 .storage()
@@ -1721,6 +1727,7 @@ impl StellarSaveContract {
             // identify_recipient() can do a single O(1) SLOAD.
             let pos_idx_key = StorageKeyBuilder::group_payout_position_index(group_id, position);
             env.storage().persistent().set(&pos_idx_key, &member);
+            loop_idx += 1;
         }
 
         Ok(())
@@ -1889,14 +1896,20 @@ impl StellarSaveContract {
         }
 
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let members: Vec<Address> = env
+        let members_map: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&members_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
+        // Collect into an ordered vec for indexed access during shuffle
+        let mut member_vec: Vec<Address> = Vec::new(&env);
+        for (_, m) in members_map.iter() {
+            member_vec.push_back(m);
+        }
+
         let mut positions = Vec::new(&env);
-        for i in 0..members.len() {
+        for i in 0..member_vec.len() {
             positions.push_back(i);
         }
 
@@ -1914,7 +1927,7 @@ impl StellarSaveContract {
         let mut sequence = Vec::new(&env);
         for i in 0..positions.len() {
             let position = positions.get(i).unwrap();
-            sequence.push_back(members.get(position).unwrap().clone());
+            sequence.push_back(member_vec.get(position).unwrap().clone());
         }
 
         env.storage().persistent().set(&sequence_key, &sequence);
@@ -2387,9 +2400,9 @@ impl StellarSaveContract {
         if let Some(members) = env
             .storage()
             .persistent()
-            .get::<_, soroban_sdk::Vec<Address>>(&members_key)
+            .get::<_, Map<u32, Address>>(&members_key)
         {
-            for member in members.iter() {
+            for (_, member) in members.iter() {
                 let k = StorageKeyBuilder::group_dispute_vote(group_id, member);
                 env.storage().persistent().remove(&k);
             }
@@ -2672,24 +2685,27 @@ impl StellarSaveContract {
         }
 
         // 5. Load member lists from both groups
-        let members1: Vec<Address> = env
+        let members1: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&StorageKeyBuilder::group_members(group_id_1))
-            .unwrap_or(Vec::new(&env));
-        let members2: Vec<Address> = env
+            .unwrap_or(Map::new(&env));
+        let members2: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&StorageKeyBuilder::group_members(group_id_2))
-            .unwrap_or(Vec::new(&env));
+            .unwrap_or(Map::new(&env));
 
-        // 6. Combine member lists
-        let mut combined_members: Vec<Address> = Vec::new(&env);
-        for m in members1.iter() {
-            combined_members.push_back(m);
+        // 6. Combine member lists with sequential join-order keys
+        let mut combined_members: Map<u32, Address> = Map::new(&env);
+        let mut pos: u32 = 0;
+        for (_, m) in members1.iter() {
+            combined_members.set(pos, m);
+            pos += 1;
         }
-        for m in members2.iter() {
-            combined_members.push_back(m);
+        for (_, m) in members2.iter() {
+            combined_members.set(pos, m);
+            pos += 1;
         }
         let total_members = combined_members.len();
 
@@ -2868,7 +2884,7 @@ impl StellarSaveContract {
             .ok_or(StellarSaveError::GroupNotFound)?;
 
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let members: Vec<Address> = env
+        let members: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&members_key)
@@ -2876,7 +2892,7 @@ impl StellarSaveContract {
 
         let mut status = Vec::new(&env);
 
-        for member in members.iter() {
+        for (_, member) in members.iter() {
             let contrib_key =
                 StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
             let has_contributed = env.storage().persistent().has(&contrib_key);
@@ -3515,17 +3531,17 @@ impl StellarSaveContract {
 
         // 2. Get the list of members in the group
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let members: Vec<Address> = env
+        let members: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&members_key)
-            .unwrap_or(Vec::new(&env));
+            .unwrap_or(Map::new(&env));
 
         // 3. Initialize result vector
         let mut contributions = Vec::new(&env);
 
         // 4. Query each member's contribution for this cycle
-        for member in members.iter() {
+        for (_, member) in members.iter() {
             let contrib_key =
                 StorageKeyBuilder::contribution_individual(group_id, cycle_number, member.clone());
 
@@ -3559,7 +3575,7 @@ impl StellarSaveContract {
         cycle_number: u32,
     ) -> Result<bool, StellarSaveError> {
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let members: Vec<Address> = env
+        let members: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&members_key)
@@ -3622,7 +3638,7 @@ impl StellarSaveContract {
 
         // 3. Get all members in the group
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let members: Vec<Address> = env
+        let members: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&members_key)
@@ -3630,7 +3646,7 @@ impl StellarSaveContract {
 
         // 4. Collect members with no contribution record for this cycle
         let mut missed_members = Vec::new(&env);
-        for member in members.iter() {
+        for (_, member) in members.iter() {
             let contrib_key =
                 StorageKeyBuilder::contribution_individual(group_id, cycle_number, member.clone());
             if !env.storage().persistent().has(&contrib_key) {
@@ -3872,15 +3888,15 @@ impl StellarSaveContract {
 
         // 6. Get all members in the group
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let members: Vec<Address> = env
+        let members: Map<u32, Address> = env
             .storage()
             .persistent()
-            .get::<_, Vec<Address>>(&members_key)
-            .unwrap_or_else(|| Vec::new(&env));
+            .get::<_, Map<u32, Address>>(&members_key)
+            .unwrap_or_else(|| Map::new(&env));
 
         // 7. Filter members who haven't contributed and need reminders
         let mut members_needing_reminder = Vec::new(&env);
-        for member in members.iter() {
+        for (_, member) in members.iter() {
             // Check if member has already contributed in this cycle
             let contrib_key =
                 StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
@@ -4060,14 +4076,14 @@ impl StellarSaveContract {
         };
         env.storage().persistent().set(&member_key, &member_profile);
 
-        // Add to member list
+        // Add to member list (Map indexed by join-order position)
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let mut members: Vec<Address> = env
+        let mut members: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&members_key)
-            .unwrap_or(Vec::new(&env));
-        members.push_back(member.clone());
+            .unwrap_or(Map::new(&env));
+        members.set(payout_position, member.clone());
         env.storage().persistent().set(&members_key, &members);
 
         // Store payout eligibility (position in payout order)
@@ -4165,20 +4181,14 @@ impl StellarSaveContract {
         );
         env.storage().persistent().remove(&pos_idx_key);
 
-        // Remove from member list
+        // Remove from member list (keyed by payout_position)
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let mut members: Vec<Address> = env
+        let mut members: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&members_key)
-            .unwrap_or(Vec::new(&env));
-        let mut new_members = Vec::new(&env);
-        for m in members.iter() {
-            if m != member {
-                new_members.push_back(m);
-            }
-        }
-        members = new_members;
+            .unwrap_or(Map::new(&env));
+        members.remove(profile.payout_position);
         env.storage().persistent().set(&members_key, &members);
 
         // Update group member count
@@ -4450,18 +4460,21 @@ impl StellarSaveContract {
             return Err(StellarSaveError::Overflow);
         }
 
-        // 3. Load all members from storage
+        // 3. Load members map and collect in join order
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let all_members: Vec<Address> = env
+        let members_map: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&members_key)
-            .unwrap_or(Vec::new(&env));
+            .unwrap_or(Map::new(&env));
 
-        // 4. Members are already sorted by join order (stored in join order)
-        // No additional sorting needed as they're stored in the order they joined
+        // Collect into ordered vec (Map iterates keys in ascending order = join order)
+        let mut all_members: Vec<Address> = Vec::new(&env);
+        for (_, addr) in members_map.iter() {
+            all_members.push_back(addr);
+        }
 
-        // 5. Apply pagination with gas optimization (cap limit at 100)
+        // 4. Apply pagination (cap limit at 100 for gas safety)
         let page_limit = cmp::min(limit, 100);
         let total_members = all_members.len();
 
@@ -4478,7 +4491,7 @@ impl StellarSaveContract {
             total_members,
         );
 
-        // 6. Extract paginated slice
+        // 5. Extract paginated slice
         let mut paginated_members = Vec::new(&env);
         for i in offset..end_index {
             if let Some(member) = all_members.get(i) {
@@ -4487,6 +4500,58 @@ impl StellarSaveContract {
         }
 
         Ok(paginated_members)
+    }
+
+    /// Returns a paginated page of member addresses for a group.
+    ///
+    /// Reads the `Map<u32, Address>` member store and returns entries
+    /// in join order (ascending key) from `offset` up to `offset + limit`.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group_id` - ID of the group
+    /// * `offset` - Number of members to skip (0-indexed)
+    /// * `limit` - Maximum number of members to return (capped at 20)
+    ///
+    /// # Returns
+    /// * `Ok(Vec<Address>)` - Paginated member addresses in join order
+    /// * `Err(StellarSaveError::GroupNotFound)` - Group does not exist
+    pub fn list_members(
+        env: Env,
+        group_id: u64,
+        offset: u32,
+        limit: u32,
+    ) -> Result<Vec<Address>, StellarSaveError> {
+        // Verify group exists
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        env.storage()
+            .persistent()
+            .get::<_, Group>(&group_key)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+
+        let members_key = StorageKeyBuilder::group_members(group_id);
+        let members_map: Map<u32, Address> = env
+            .storage()
+            .persistent()
+            .get(&members_key)
+            .unwrap_or(Map::new(&env));
+
+        // Cap page size at MAX_MEMBERS to prevent gas exhaustion
+        let page_size = cmp::min(limit, crate::group::MAX_MEMBERS);
+
+        let mut result = Vec::new(&env);
+        let mut idx: u32 = 0;
+        for (_, addr) in members_map.iter() {
+            if idx >= offset && idx < offset.saturating_add(page_size) {
+                result.push_back(addr);
+            }
+            idx += 1;
+            if idx >= offset.saturating_add(page_size) {
+                break;
+            }
+        }
+
+        Ok(result)
     }
 
     /// Returns the total number of members in a group.
@@ -4509,13 +4574,13 @@ impl StellarSaveContract {
             .get::<_, Group>(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        // Load member list and return count
+        // Load member map and return count
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let members: Vec<Address> = env
+        let members: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&members_key)
-            .unwrap_or(Vec::new(&env));
+            .unwrap_or(Map::new(&env));
 
         Ok(members.len())
     }
@@ -5104,7 +5169,7 @@ impl StellarSaveContract {
 
         // ── 3. Load member list ───────────────────────────────────────────────
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let members: soroban_sdk::Vec<Address> = env
+        let members: Map<u32, Address> = env
             .storage()
             .persistent()
             .get(&members_key)
@@ -5114,7 +5179,7 @@ impl StellarSaveContract {
         let mut executed_count: u32 = 0;
 
         // ── 4. Iterate members ────────────────────────────────────────────────
-        for member in members.iter() {
+        for (_, member) in members.iter() {
             // 4a. Check if auto-contribute is enabled for this member (O(1) flag lookup)
             let flag_key = StorageKeyBuilder::member_auto_contribute(group_id, member.clone());
             let auto_enabled: bool = env
@@ -6988,9 +7053,9 @@ mod tests {
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
 
-        // Add member to group members list
-        let mut members = Vec::new(&env);
-        members.push_back(member.clone());
+        // Add member to group members map
+        let mut members = Map::new(&env);
+        members.set(0u32, member.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -7034,11 +7099,11 @@ mod tests {
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
 
-        // Add members to group members list
-        let mut members = Vec::new(&env);
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
-        members.push_back(member3.clone());
+        // Add members to group members map
+        let mut members = Map::new(&env);
+        members.set(0u32, member1.clone());
+        members.set(1u32, member2.clone());
+        members.set(2u32, member3.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -7092,11 +7157,11 @@ mod tests {
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
 
-        // Add members to group members list
-        let mut members = Vec::new(&env);
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
-        members.push_back(member3.clone());
+        // Add members to group members map
+        let mut members = Map::new(&env);
+        members.set(0u32, member1.clone());
+        members.set(1u32, member2.clone());
+        members.set(2u32, member3.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -7149,10 +7214,10 @@ mod tests {
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
 
-        // Add members to group members list
-        let mut members = Vec::new(&env);
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
+        // Add members to group members map
+        let mut members = Map::new(&env);
+        members.set(0u32, member1.clone());
+        members.set(1u32, member2.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -7237,10 +7302,10 @@ mod tests {
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
 
-        // Add members to group members list
-        let mut members = Vec::new(&env);
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
+        // Add members to group members map
+        let mut members = Map::new(&env);
+        members.set(0u32, member1.clone());
+        members.set(1u32, member2.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -7293,9 +7358,9 @@ mod tests {
             .persistent()
             .set(&status_key, &GroupStatus::Pending);
 
-        // Store initial member list with creator
-        let mut members = Vec::new(&env);
-        members.push_back(creator.clone());
+        // Store initial member map with creator
+        let mut members = Map::new(&env);
+        members.set(0u32, creator.clone());
         let members_key = StorageKeyBuilder::group_members(group_id);
         env.storage().persistent().set(&members_key, &members);
 
@@ -7311,9 +7376,9 @@ mod tests {
         assert_eq!(profile.group_id, group_id);
 
         // Assert: Member added to list
-        let updated_members: Vec<Address> = env.storage().persistent().get(&members_key).unwrap();
+        let updated_members: Map<u32, Address> = env.storage().persistent().get(&members_key).unwrap();
         assert_eq!(updated_members.len(), 2);
-        assert_eq!(updated_members.get(1).unwrap(), new_member);
+        assert_eq!(updated_members.get(1u32).unwrap(), new_member);
 
         // Assert: Member count increased
         let updated_group: Group = env.storage().persistent().get(&group_key).unwrap();
@@ -7465,10 +7530,10 @@ mod tests {
             .persistent()
             .set(&status_key, &GroupStatus::Pending);
 
-        // Store initial member list
-        let mut members = Vec::new(&env);
-        members.push_back(creator.clone());
-        members.push_back(member1.clone());
+        // Store initial member map
+        let mut members = Map::new(&env);
+        members.set(0u32, creator.clone());
+        members.set(1u32, member1.clone());
         let members_key = StorageKeyBuilder::group_members(group_id);
         env.storage().persistent().set(&members_key, &members);
 
@@ -7503,11 +7568,11 @@ mod tests {
         let group_id = 1;
         let cycle = 0;
 
-        // Setup: Create members list
-        let mut members = Vec::new(&env);
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
-        members.push_back(member3.clone());
+        // Setup: Create members map
+        let mut members = Map::new(&env);
+        members.set(0u32, member1.clone());
+        members.set(1u32, member2.clone());
+        members.set(2u32, member3.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -7540,16 +7605,16 @@ mod tests {
             &GroupStatus::Pending,
         );
 
-        let mut members = Vec::new(&env);
-        members.push_back(creator.clone());
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
+        let mut members = Map::new(&env);
+        members.set(0u32, creator.clone());
+        members.set(1u32, member1.clone());
+        members.set(2u32, member2.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
 
         // Create member profiles
-        for (idx, member) in members.iter().enumerate() {
+        for (_, member) in members.iter() {
             let profile = MemberProfile {
                 address: member.clone(),
                 group_id,
@@ -7610,11 +7675,11 @@ mod tests {
         let group_id = 1;
         let cycle = 0;
 
-        // Setup: Create members list
-        let mut members = Vec::new(&env);
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
-        members.push_back(member3.clone());
+        // Setup: Create members map
+        let mut members = Map::new(&env);
+        members.set(0u32, member1.clone());
+        members.set(1u32, member2.clone());
+        members.set(2u32, member3.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -7647,10 +7712,10 @@ mod tests {
             &GroupStatus::Pending,
         );
 
-        let mut members = Vec::new(&env);
-        members.push_back(creator.clone());
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
+        let mut members = Map::new(&env);
+        members.set(0u32, creator.clone());
+        members.set(1u32, member1.clone());
+        members.set(2u32, member2.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -7732,10 +7797,10 @@ mod tests {
             &GroupStatus::Pending,
         );
 
-        let mut members = Vec::new(&env);
-        members.push_back(creator.clone());
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
+        let mut members = Map::new(&env);
+        members.set(0u32, creator.clone());
+        members.set(1u32, member1.clone());
+        members.set(2u32, member2.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -7769,10 +7834,10 @@ mod tests {
             &GroupStatus::Pending,
         );
 
-        let mut members = Vec::new(&env);
-        members.push_back(creator.clone());
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
+        let mut members = Map::new(&env);
+        members.set(0u32, creator.clone());
+        members.set(1u32, member1.clone());
+        members.set(2u32, member2.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -7850,10 +7915,11 @@ mod tests {
             &GroupStatus::Pending,
         );
 
-        let mut members = Vec::new(&env);
+        let mut members = Map::new(&env);
+        let mut member_idx: u32 = 0;
         for _ in 0..10 {
             let member = Address::generate(&env);
-            members.push_back(member.clone());
+            members.set(member_idx, member.clone());
             let profile = MemberProfile {
                 address: member.clone(),
                 group_id,
@@ -7865,6 +7931,7 @@ mod tests {
                 &StorageKeyBuilder::member_profile(group_id, member),
                 &profile,
             );
+            member_idx += 1;
         }
         env.storage()
             .persistent()
@@ -7878,9 +7945,13 @@ mod tests {
 
         assert_eq!(sequence.len(), 10);
 
+        // Collect members in order for comparison
+        let mut member_vec: Vec<Address> = Vec::new(&env);
+        for (_, m) in members.iter() { member_vec.push_back(m); }
+
         let mut same_order = true;
         for i in 0..sequence.len() {
-            if sequence.get(i).unwrap() != members.get(i).unwrap() {
+            if sequence.get(i).unwrap() != member_vec.get(i).unwrap() {
                 same_order = false;
                 break;
             }
@@ -7910,8 +7981,8 @@ mod tests {
             &GroupStatus::Pending,
         );
 
-        let mut members = Vec::new(&env);
-        members.push_back(creator.clone());
+        let mut members = Map::new(&env);
+        members.set(0u32, creator.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -7932,10 +8003,10 @@ mod tests {
         let member2 = Address::generate(&env);
         let group_id = 1;
 
-        // Setup: Create members list
-        let mut members = Vec::new(&env);
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
+        // Setup: Create members map
+        let mut members = Map::new(&env);
+        members.set(0u32, member1.clone());
+        members.set(1u32, member2.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -7971,8 +8042,8 @@ mod tests {
             &GroupStatus::Active,
         );
 
-        let mut members = Vec::new(&env);
-        members.push_back(creator.clone());
+        let mut members = Map::new(&env);
+        members.set(0u32, creator.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -7995,11 +8066,11 @@ mod tests {
         let group_id = 1;
         let cycle = 0;
 
-        // Setup: Create members list with 3 members
-        let mut members = Vec::new(&env);
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
-        members.push_back(member3.clone());
+        // Setup: Create members map with 3 members
+        let mut members = Map::new(&env);
+        members.set(0u32, member1.clone());
+        members.set(1u32, member2.clone());
+        members.set(2u32, member3.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -8034,9 +8105,9 @@ mod tests {
             &GroupStatus::Pending,
         );
 
-        let mut members = Vec::new(&env);
-        members.push_back(creator.clone());
-        members.push_back(member1.clone());
+        let mut members = Map::new(&env);
+        members.set(0u32, creator.clone());
+        members.set(1u32, member1.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -8513,11 +8584,11 @@ mod tests {
         let group_id = 1;
         let cycle = 0;
 
-        // Setup: Create members list
-        let mut members = Vec::new(&env);
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
-        members.push_back(member3.clone());
+        // Setup: Create members map
+        let mut members = Map::new(&env);
+        members.set(0u32, member1.clone());
+        members.set(1u32, member2.clone());
+        members.set(2u32, member3.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -8550,11 +8621,11 @@ mod tests {
         let group_id = 1;
         let cycle = 0;
 
-        // Setup: Create members list
-        let mut members = Vec::new(&env);
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
-        members.push_back(member3.clone());
+        // Setup: Create members map
+        let mut members = Map::new(&env);
+        members.set(0u32, member1.clone());
+        members.set(1u32, member2.clone());
+        members.set(2u32, member3.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -8599,10 +8670,10 @@ mod tests {
         let group_id = 1;
         let cycle = 0;
 
-        // Setup: Create members list
-        let mut members = Vec::new(&env);
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
+        // Setup: Create members map
+        let mut members = Map::new(&env);
+        members.set(0u32, member1.clone());
+        members.set(1u32, member2.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -8639,10 +8710,10 @@ mod tests {
         let member2 = Address::generate(&env);
         let group_id = 1;
 
-        // Setup: Create members list
-        let mut members = Vec::new(&env);
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
+        // Setup: Create members map
+        let mut members = Map::new(&env);
+        members.set(0u32, member1.clone());
+        members.set(1u32, member2.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -8686,8 +8757,8 @@ mod tests {
         let group_id = 1;
         let cycle = 0;
 
-        // Setup: Create empty members list
-        let members: Vec<Address> = Vec::new(&env);
+        // Setup: Create empty members map
+        let members: Map<u32, Address> = Map::new(&env);
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -8710,8 +8781,8 @@ mod tests {
         let cycle = 0;
 
         // Setup: Create single member group
-        let mut members = Vec::new(&env);
-        members.push_back(member.clone());
+        let mut members = Map::new(&env);
+        members.set(0u32, member.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -8736,11 +8807,11 @@ mod tests {
         let cycle = 0;
 
         // Setup: Create group with 10 members
-        let mut members = Vec::new(&env);
+        let mut members = Map::new(&env);
         let mut member_addresses = Vec::new(&env);
-        for _ in 0..10 {
+        for i in 0..10u32 {
             let member = Address::generate(&env);
-            members.push_back(member.clone());
+            members.set(i, member.clone());
             member_addresses.push_back(member);
         }
         env.storage()
@@ -9866,10 +9937,10 @@ mod tests {
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
 
-        // Setup members list
-        let mut members = Vec::new(&env);
-        members.push_back(creator.clone());
-        members.push_back(Address::generate(&env));
+        // Setup members map
+        let mut members = Map::new(&env);
+        members.set(0u32, creator.clone());
+        members.set(1u32, Address::generate(&env));
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -9903,10 +9974,10 @@ mod tests {
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
 
-        // Setup members list
-        let mut members = Vec::new(&env);
-        members.push_back(creator.clone());
-        members.push_back(Address::generate(&env));
+        // Setup members map
+        let mut members = Map::new(&env);
+        members.set(0u32, creator.clone());
+        members.set(1u32, Address::generate(&env));
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -9940,10 +10011,10 @@ mod tests {
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
 
-        // Setup members list
-        let mut members = Vec::new(&env);
-        members.push_back(creator.clone());
-        members.push_back(Address::generate(&env));
+        // Setup members map
+        let mut members = Map::new(&env);
+        members.set(0u32, creator.clone());
+        members.set(1u32, Address::generate(&env));
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -12310,9 +12381,9 @@ mod tests {
             .persistent()
             .set(&StorageKeyBuilder::group_data(1), &group);
 
-        let mut members = Vec::new(&env);
-        members.push_back(member1.clone());
-        members.push_back(member2.clone());
+        let mut members = Map::new(&env);
+        members.set(0u32, member1.clone());
+        members.set(1u32, member2.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(1), &members);
@@ -12334,8 +12405,8 @@ mod tests {
             .persistent()
             .set(&StorageKeyBuilder::group_data(1), &group);
 
-        let mut members = Vec::new(&env);
-        members.push_back(member.clone());
+        let mut members = Map::new(&env);
+        members.set(0u32, member.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(1), &members);
@@ -12990,10 +13061,10 @@ mod tests {
             .create_group(&creator, &10_000_000, &cycle_duration, &5, &grace)
             .unwrap();
 
-        // Store members list directly so get_missed_contributions can find them
+        // Store members map directly so get_missed_contributions can find them
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let mut members = soroban_sdk::Vec::new(&env);
-        members.push_back(member.clone());
+        let mut members = Map::new(&env);
+        members.set(0u32, member.clone());
         env.storage().persistent().set(&members_key, &members);
 
         // Activate the group
@@ -13039,10 +13110,10 @@ mod tests {
             .create_group(&creator, &10_000_000, &cycle_duration, &5, &grace)
             .unwrap();
 
-        // Store members list
+        // Store members map
         let members_key = StorageKeyBuilder::group_members(group_id);
-        let mut members = soroban_sdk::Vec::new(&env);
-        members.push_back(member.clone());
+        let mut members = Map::new(&env);
+        members.set(0u32, member.clone());
         env.storage().persistent().set(&members_key, &members);
 
         // Activate the group
@@ -13386,8 +13457,8 @@ mod tests {
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
-        let mut members = Vec::new(env);
-        members.push_back(member.clone());
+        let mut members = Map::new(env);
+        members.set(0u32, member.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -14140,8 +14211,8 @@ mod tests {
             &StorageKeyBuilder::group_status(group_id),
             &GroupStatus::Pending,
         );
-        let mut members = Vec::new(&env);
-        members.push_back(creator.clone());
+        let mut members = Map::new(&env);
+        members.set(0u32, creator.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -14174,8 +14245,8 @@ mod tests {
             &StorageKeyBuilder::group_status(group_id),
             &GroupStatus::Pending,
         );
-        let mut members = Vec::new(&env);
-        members.push_back(creator.clone());
+        let mut members = Map::new(&env);
+        members.set(0u32, creator.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -14209,8 +14280,8 @@ mod tests {
             &StorageKeyBuilder::group_status(group_id),
             &GroupStatus::Pending,
         );
-        let mut members = Vec::new(&env);
-        members.push_back(creator.clone());
+        let mut members = Map::new(&env);
+        members.set(0u32, creator.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -14242,8 +14313,8 @@ mod tests {
             &StorageKeyBuilder::group_status(group_id),
             &GroupStatus::Pending,
         );
-        let mut members = Vec::new(&env);
-        members.push_back(creator.clone());
+        let mut members = Map::new(&env);
+        members.set(0u32, creator.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -15173,4 +15244,3 @@ mod tests {
         let total_groups: u64 = env.storage().persistent().get(&total_groups_key).unwrap();
         assert_eq!(total_groups, 1);
     }
-}

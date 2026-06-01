@@ -1,10 +1,12 @@
-use soroban_sdk::{Env, Vec};
+use soroban_sdk::{contracttype, symbol_short, Address, Env, Symbol, Vec};
 use crate::{
     error::StellarSaveError,
     storage::{StorageKeyBuilder, STORAGE_VERSION},
     group::Group,
     status::GroupStatus,
+    ContractConfig,
 };
+
 
 /// Migration utilities for handling storage schema upgrades.
 /// 
@@ -336,19 +338,18 @@ mod tests {
         assert!(!is_migration_needed(&env));
     }
 }
-//! # Migration Framework
-//!
-//! Version-tracked, admin-gated schema migrations for the Stellar-Save contract.
-//!
-//! ## Design
-//! - `SCHEMA_VERSION` key in persistent storage tracks the current on-chain schema.
-//! - Each migration has a `from_version` and `to_version`; only the matching
-//!   migration runs, preventing double-application.
-//! - `migrate(env, admin)` applies the next pending migration.
-//! - `rollback(env, admin)` reverses the last applied migration (if reversible).
-//! - Both functions are no-ops when the schema is already at the target version.
 
-use soroban_sdk::{contracttype, symbol_short, Address, Env, Symbol};
+// # Migration Framework
+//
+// Version-tracked, admin-gated schema migrations for the Stellar-Save contract.
+//
+// ## Design
+// - `SCHEMA_VERSION` key in persistent storage tracks the current on-chain schema.
+// - Each migration has a `from_version` and `to_version`; only the matching
+//   migration runs, preventing double-application.
+// - `migrate(env, admin)` applies the next pending migration.
+// - `rollback(env, admin)` reverses the last applied migration (if reversible).
+// - Both functions are no-ops when the schema is already at the target version.
 
 // ─── Storage key ─────────────────────────────────────────────────────────────
 
@@ -424,9 +425,6 @@ pub fn load_migration_record(env: &Env) -> Option<MigrationRecord> {
 }
 
 // ─── Admin guard ─────────────────────────────────────────────────────────────
-
-use crate::storage::StorageKeyBuilder;
-use crate::ContractConfig;
 
 /// Panics if `caller` is not the contract admin.
 pub fn require_admin(env: &Env, caller: &Address) {

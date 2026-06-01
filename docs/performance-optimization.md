@@ -6,11 +6,161 @@ This guide covers performance optimization techniques for Stellar-Save users and
 
 ## Table of Contents
 
-1. [Gas Optimization Strategies](#gas-optimization-strategies)
-2. [Frontend Performance Tips](#frontend-performance-tips)
-3. [Caching Best Practices](#caching-best-practices)
-4. [Performance Monitoring](#performance-monitoring)
-5. [Benchmarking Instructions](#benchmarking-instructions)
+1. [Contract Function Gas Costs](#contract-function-gas-costs)
+2. [Gas Optimization Strategies](#gas-optimization-strategies)
+3. [Frontend Performance Tips](#frontend-performance-tips)
+4. [Caching Best Practices](#caching-best-practices)
+5. [Performance Monitoring](#performance-monitoring)
+6. [Benchmarking Instructions](#benchmarking-instructions)
+
+---
+
+## Contract Function Gas Costs
+
+Gas costs are measured in **CPU instructions** using Soroban's built-in budget tracker. Each benchmark resets the counter before the measured call; only that call is timed.
+
+### Fee Estimation Formula
+
+```
+fee_stroops = BASE (100) + cpu_insns/10000 × 25 + reads × 6250 + writes × 10000
+fee_XLM     = fee_stroops / 10_000_000
+```
+
+> **Note:** These are Testnet/Mainnet approximations. Actual fees depend on network congestion and ledger configuration. All figures assume no contract-configuration allowlist is set.
+
+---
+
+### `create_group`
+
+Creates a new ROSCA group with the given token and parameters.
+
+| Metric | Value |
+|--------|-------|
+| Storage reads | ~6 (config, counter, group, status, token_config, allowed_tokens) |
+| Storage writes | ~5 (group, status, token_config, counter, group_id_counter) |
+| **Estimated fee** | **~0.000174 XLM** (174 stroops) |
+
+The fee is independent of group size since no member data is written at creation time.
+
+---
+
+### `join_group` — by group size
+
+Adds a member and writes their profile, payout eligibility, and the position reverse index.
+
+| Group Size (N) | Storage Reads | Storage Writes | Est. Fee (stroops) | Est. Fee (XLM) |
+|:--------------:|:-------------:|:--------------:|:------------------:|:--------------:|
+| 5  | 5 | 4 | ~69,100 | ~0.007 |
+| 10 | 5 | 4 | ~69,100 | ~0.007 |
+| 15 | 5 | 4 | ~69,100 | ~0.007 |
+| 20 | 5 | 4 | ~69,100 | ~0.007 |
+
+`join_group` reads and writes a **fixed** set of storage entries regardless of how many members have already joined. It is **O(1)** in group size.
+
+---
+
+### `get_group` — single group lookup
+
+| Metric | Value |
+|--------|-------|
+| Storage reads | 1 |
+| Storage writes | 0 |
+| **Estimated fee** | **~6,350 stroops (~0.0006 XLM)** |
+
+---
+
+### `get_members` — full member list retrieval
+
+Returns all member addresses. Loads the `Map<u32, Address>` member store in a single SLOAD, then iterates in-memory.
+
+| Group Size (N) | Storage Reads | Est. Fee (stroops) | Est. Fee (XLM) |
+|:--------------:|:-------------:|:------------------:|:--------------:|
+| 5  | 2 | ~12,600 | ~0.0013 |
+| 10 | 2 | ~12,600 | ~0.0013 |
+| 15 | 2 | ~12,600 | ~0.0013 |
+| 20 | 2 | ~12,600 | ~0.0013 |
+
+Storage cost is **O(1)** (one Map SLOAD). The only variation with N is CPU instructions for in-memory iteration, which is negligible at MAX_MEMBERS=20.
+
+---
+
+### `list_members` — paginated (offset=0, limit=5)
+
+Returns a page of up to 5 members. Backed by `Map<u32, Address>` storage — one SLOAD loads the entire map, then a short in-memory scan returns the requested page.
+
+| Group Size (N) | Storage Reads | Est. Fee (stroops) | Est. Fee (XLM) |
+|:--------------:|:-------------:|:------------------:|:--------------:|
+| 5  | 2 | ~12,600 | ~0.0013 |
+| 10 | 2 | ~12,600 | ~0.0013 |
+| 15 | 2 | ~12,600 | ~0.0013 |
+| 20 | 2 | ~12,600 | ~0.0013 |
+
+`list_members` and `get_members` have the same storage cost. The page size limit (capped at `MAX_MEMBERS = 20`) prevents runaway CPU consumption for callers who set an oversized limit.
+
+---
+
+### `is_member` — membership check
+
+| Group Size (N) | Storage Reads | Est. Fee (stroops) | Est. Fee (XLM) |
+|:--------------:|:-------------:|:------------------:|:--------------:|
+| 5–20 | 2 | ~12,600 | ~0.0013 |
+
+Membership is determined by the existence of a `MemberProfile` storage key — **O(1)** regardless of group size.
+
+---
+
+### `get_payout_position` — payout order lookup
+
+| Group Size (N) | Storage Reads | Est. Fee (stroops) | Est. Fee (XLM) |
+|:--------------:|:-------------:|:------------------:|:--------------:|
+| 5–20 | 2 | ~12,600 | ~0.0013 |
+
+Uses a direct `MemberProfile` SLOAD. **O(1)**.
+
+---
+
+### `execute_payout` — optimized with reverse index
+
+| Metric | Before optimization | After optimization |
+|--------|--------------------|--------------------|
+| Storage reads | 1 + N (scan all members) | 1 (reverse index lookup) |
+| Savings at N=5  | 5 reads saved | — |
+| Savings at N=20 | 20 reads saved | — |
+
+The `PayoutPositionIndex(group_id, position) → Address` reverse index (written once at `join_group` time) eliminates the O(N) member scan on every payout. This is the highest-impact single optimization in the contract.
+
+---
+
+### Summary: Fee Estimates by Operation
+
+| Operation | Per-call cost (stroops) | Per-call cost (XLM) | Scales with N? |
+|-----------|:-----------------------:|:-------------------:|:--------------:|
+| `create_group` | ~174 | ~0.000017 | No |
+| `join_group` | ~69,100 | ~0.007 | No (O(1)) |
+| `get_group` | ~6,350 | ~0.0006 | No |
+| `get_members` | ~12,600 | ~0.0013 | No (O(1) SLOAD) |
+| `list_members` (page 5) | ~12,600 | ~0.0013 | No (O(1) SLOAD) |
+| `is_member` | ~12,600 | ~0.0013 | No (O(1)) |
+| `get_payout_position` | ~12,600 | ~0.0013 | No (O(1)) |
+
+> Fees above include estimated ledger I/O costs. Instruction-only fees are much lower. The dominant cost for write-heavy operations like `join_group` is ledger write fees (~10,000 stroops/write).
+
+---
+
+### Benchmark Coverage
+
+The benchmark suite lives in `contracts/stellar-save/src/gas_benchmark_tests.rs` and is run alongside the test suite:
+
+```bash
+cargo test -- bench  --nocapture  # prints CPU instruction counts
+```
+
+Benchmarks cover:
+- All group sizes: **5, 10, 15, 20 members**
+- Functions: `create_group`, `join_group`, `get_group`, `get_members`, `list_members`, `is_member`, `get_payout_position`
+- Regression guards: `join_group` N=20 must stay under 5M instructions; `get_members` N=20 must stay under 2M instructions
+
+---
 
 ---
 
