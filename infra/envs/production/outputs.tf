@@ -12,43 +12,33 @@ output "cloudfront_domain_name" {
   value = module.frontend.cloudfront_domain_name
 }
 
-# ── CloudWatch Logging Outputs ────────────────────────────────────────────────
-output "app_log_group_name" {
-  description = "CloudWatch Log Group for application logs"
-  value       = module.cloudwatch_logging.app_log_group_name
+# CodeDeploy Outputs
+output "codedeploy_app_name" {
+  description = "Name of the CodeDeploy application"
+  value       = module.codedeploy.codedeploy_app_name
 }
 
-output "app_log_group_arn" {
-  description = "ARN of the application log group"
-  value       = module.cloudwatch_logging.app_log_group_arn
+output "codedeploy_app_arn" {
+  description = "ARN of the CodeDeploy application"
+  value       = module.codedeploy.codedeploy_app_arn
 }
 
-output "audit_log_group_name" {
-  description = "CloudWatch Log Group for audit logs"
-  value       = module.cloudwatch_logging.audit_log_group_name
+output "deployment_group_name" {
+  description = "Name of the CodeDeploy deployment group"
+  value       = module.codedeploy.deployment_group_name
 }
 
-output "audit_log_group_arn" {
-  description = "ARN of the audit log group"
-  value       = module.cloudwatch_logging.audit_log_group_arn
+output "codedeploy_role_arn" {
+  description = "ARN of the CodeDeploy service role"
+  value       = module.codedeploy.codedeploy_role_arn
 }
 
-output "ecs_task_execution_role_arn" {
-  description = "ARN of the ECS task execution role"
-  value       = module.cloudwatch_logging.ecs_task_execution_role_arn
+output "error_rate_alarm_name" {
+  description = "CloudWatch alarm for 5xx error rate"
+  value       = module.codedeploy.error_rate_alarm_name
 }
 
-output "ecs_task_role_arn" {
-  description = "ARN of the ECS task role"
-  value       = module.cloudwatch_logging.ecs_task_role_arn
-}
-
-output "lambda_execution_role_arn" {
-  description = "ARN of the Lambda execution role"
-  value       = module.cloudwatch_logging.lambda_execution_role_arn
-}
-
-output "log_configuration_for_ecs" {
-  description = "Log configuration to use in ECS task definitions"
-  value       = module.cloudwatch_logging.log_configuration_for_ecs
+output "blue_green_deployment_config" {
+  description = "Blue-green deployment configuration summary"
+  value       = module.codedeploy.blue_green_deployment_info
 }

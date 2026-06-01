@@ -12,32 +12,51 @@ variable "acm_certificate_arn" {
   default     = ""
 }
 
-variable "app_log_retention_days" {
-  description = "CloudWatch Logs retention period for application logs (days)"
+# CodeDeploy Configuration
+variable "alb_name" {
+  description = "Name of the Application Load Balancer (optional - uses default if not provided)"
+  type        = string
+  default     = ""
+}
+
+variable "listener_arn" {
+  description = "ARN of the ALB production listener for CodeDeploy traffic shifting"
+  type        = string
+  default     = ""
+}
+
+variable "blue_target_group_name" {
+  description = "Name of the blue (current) target group (optional - uses default if not provided)"
+  type        = string
+  default     = ""
+}
+
+variable "green_target_group_name" {
+  description = "Name of the green (replacement) target group (optional - uses default if not provided)"
+  type        = string
+  default     = ""
+}
+
+variable "canary_traffic_percentage" {
+  description = "Percentage of traffic to shift to green during canary phase"
   type        = number
-  default     = 30
+  default     = 10
 }
 
-variable "audit_log_retention_days" {
-  description = "CloudWatch Logs retention period for audit logs (days)"
+variable "canary_duration_minutes" {
+  description = "Duration of canary phase in minutes"
   type        = number
-  default     = 90
+  default     = 5
 }
 
-variable "create_cloudwatch_alarms" {
-  description = "Whether to create CloudWatch alarms for error monitoring"
-  type        = bool
-  default     = true
-}
-
-variable "critical_error_alarm_threshold" {
-  description = "Threshold for triggering critical error alarms"
+variable "blue_termination_wait_minutes" {
+  description = "Minutes to wait before terminating blue instances"
   type        = number
-  default     = 1
+  default     = 5
 }
 
-variable "create_lambda_role" {
-  description = "Whether to create Lambda execution role for CloudWatch logging"
-  type        = bool
-  default     = false
+variable "error_rate_threshold" {
+  description = "Number of 5xx errors per minute to trigger automatic rollback"
+  type        = number
+  default     = 10
 }
