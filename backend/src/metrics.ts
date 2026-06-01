@@ -36,6 +36,21 @@ export const httpRequestDuration = new Histogram({
   registers: [registry],
 });
 
+// ── Cache counters ────────────────────────────────────────────────────────────
+export const cacheHitsTotal = new Counter({
+  name: 'cache_hits_total',
+  help: 'Total cache hits',
+  labelNames: ['cache'],
+  registers: [registry],
+});
+
+export const cacheMissesTotal = new Counter({
+  name: 'cache_misses_total',
+  help: 'Total cache misses',
+  labelNames: ['cache'],
+  registers: [registry],
+});
+
 // ── Gauges ────────────────────────────────────────────────────────────────────
 export const activeConnections = new Gauge({
   name: 'active_connections',
@@ -46,6 +61,28 @@ export const activeConnections = new Gauge({
 export const backupJobsActive = new Gauge({
   name: 'backup_jobs_active',
   help: 'Number of currently running backup jobs',
+  registers: [registry],
+});
+
+export const apiRequestDuration = new Histogram({
+  name: 'api_request_duration_seconds',
+  help: 'API request duration in seconds',
+  labelNames: ['method', 'route', 'status_code'],
+  buckets: [0.01, 0.05, 0.1, 0.3, 0.5, 1, 2, 5],
+  registers: [registry],
+});
+
+export const sorobanRpcCallsTotal = new Counter({
+  name: 'soroban_rpc_calls_total',
+  help: 'Total Soroban RPC calls made',
+  labelNames: ['method', 'status'],
+  registers: [registry],
+});
+
+export const eventsIndexedTotal = new Counter({
+  name: 'events_indexed_total',
+  help: 'Total contract events indexed',
+  labelNames: ['event_type'],
   registers: [registry],
 });
 
@@ -60,6 +97,7 @@ export function metricsMiddleware(req: Request, res: Response, next: NextFunctio
     const labels = { method: req.method, route, status_code: String(res.statusCode) };
     httpRequestsTotal.inc(labels);
     httpRequestDuration.observe(labels, durationSec);
+    apiRequestDuration.observe(labels, durationSec);
     activeConnections.dec();
   });
 

@@ -1,7 +1,9 @@
 import { Box, Stack, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { AppButton, AppCard } from "../ui";
-import ErrorIllustration from "../img/something_went_wrong.png";
+import ErrorIllustrationPng from "../img/something_went_wrong.png";
+import ErrorIllustrationWebp from "../img/something_went_wrong.png?format=webp&as=url";
+
 export default function ErrorPage() {
   const handleRetryClick = () => {
     window.location.reload();
@@ -30,12 +32,16 @@ export default function ErrorPage() {
         }}
       >
         <Stack spacing={0} alignItems="center">
-          <Box
-            component="img"
-            src={ErrorIllustration}
-            alt="Error Illustration"
-            sx={{ width: "100%", maxWidth: 400 }}
-          />
+          <picture>
+            <source srcSet={ErrorIllustrationWebp} type="image/webp" />
+            <Box
+              component="img"
+              src={ErrorIllustrationPng}
+              alt="Error Illustration"
+              loading="lazy"
+              sx={{ width: "100%", maxWidth: 400 }}
+            />
+          </picture>
 
           <Box sx={{ position: "relative", top: "-30px", textAlign: "center" }}>
             <Typography variant="h2" gutterBottom>

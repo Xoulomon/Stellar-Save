@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
-import { ThemeContextProvider } from "./ThemeContext";
-
-export function AppThemeProvider({ children }: { children: ReactNode }) {
-  return <ThemeContextProvider>{children}</ThemeContextProvider>;
-}
+/**
+ * Re-exports AppThemeProvider from ThemeContext so existing imports
+ * (`import { AppThemeProvider } from './ui/providers/AppThemeProvider'`)
+ * continue to work without changes.
+ */
+export { AppThemeProvider } from '../../context/ThemeContext';

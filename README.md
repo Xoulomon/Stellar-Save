@@ -75,20 +75,37 @@ For detailed architecture documentation, see [docs/architecture.md](docs/archite
 cp .env.example .env
 ```
 
-2. Configure your environment variables in `.env`:
+2. Fill in the values for your environment. The backend validates all variables at startup using a [zod](https://zod.dev) schema in `backend/src/config.ts`. If a required variable is missing or malformed the server exits immediately with a descriptive error.
+
+**Backend variables** (all have sensible defaults for local development):
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `NODE_ENV` | no | `development` | `development` / `test` / `production` |
+| `PORT` | no | `3001` | API server port |
+| `ADMIN_SECRET` | **yes (prod)** | `super-secret-admin-key` | `x-admin-secret` header value |
+| `STELLAR_NETWORK` | no | `testnet` | `testnet` / `mainnet` / `futurenet` / `standalone` |
+| `STELLAR_RPC_URL` | no | testnet RPC | Soroban RPC endpoint |
+| `STELLAR_NETWORK_PASSPHRASE` | no | testnet passphrase | Stellar network passphrase |
+| `BACKUP_ENABLED` | no | `false` | Enable backup scheduler & monitor |
+| `BACKUP_S3_BUCKET` | no | `stellar-save-backups` | S3 bucket for backups |
+| `BACKUP_RETENTION_DAYS` | no | `30` | Days to keep backups |
+| `BACKUP_ALERT_WEBHOOK_URL` | no | — | Webhook for backup alerts |
+| `AWS_REGION` | no | `us-east-1` | AWS region (needed when backup enabled) |
+| `AWS_ACCESS_KEY_ID` | no | — | AWS credentials (needed when backup enabled) |
+| `AWS_SECRET_ACCESS_KEY` | no | — | AWS credentials (needed when backup enabled) |
+| `ELASTICSEARCH_NODE` | no | `http://localhost:9200` | Elasticsearch endpoint |
+| `ELASTICSEARCH_USERNAME` | no | `elastic` | Elasticsearch username |
+| `ELASTICSEARCH_PASSWORD` | no | `changeme` | Elasticsearch password |
+
+**Frontend variables** (prefixed `VITE_`, exposed to the browser — no secrets):
+
 ```bash
-# Network configuration
-STELLAR_NETWORK=testnet
-STELLAR_RPC_URL=https://soroban-testnet.stellar.org
-
-# Contract addresses (after deployment)
-CONTRACT_GUESS_THE_NUMBER=<your-contract-id>
-CONTRACT_FUNGIBLE_ALLOWLIST=<your-contract-id>
-CONTRACT_NFT_ENUMERABLE=<your-contract-id>
-
-# Frontend configuration
 VITE_STELLAR_NETWORK=testnet
 VITE_STELLAR_RPC_URL=https://soroban-testnet.stellar.org
+VITE_CONTRACT_GUESS_THE_NUMBER=<your-contract-id>
+VITE_CONTRACT_FUNGIBLE_ALLOWLIST=<your-contract-id>
+VITE_CONTRACT_NFT_ENUMERABLE=<your-contract-id>
 ```
 
 3. Network configurations are defined in `environments.toml`:
@@ -113,11 +130,15 @@ Follow the step-by-step guide in [demo/demo-script.md](demo/demo-script.md)
 
 ## 📖 Documentation
 
+- [User Guide](docs/user-guide.md)
 - [Architecture Overview](docs/architecture.md)
 - [Storage Layout](docs/storage-layout.md)
 - [Threat Model & Security](docs/threat-model.md)
+- [Performance Optimization Guide](docs/performance-optimization.md)
 - [Roadmap](docs/roadmap.md)
 - [Frequently Asked Questions (FAQ)](docs/faq.md)
+- [Mobile App User Guide](docs/mobile-app-guide.md)
+- [Troubleshooting Guide](docs/troubleshooting.md)
 
 ## 🎓 Smart Contract API
 

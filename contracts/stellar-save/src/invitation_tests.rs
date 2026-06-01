@@ -290,7 +290,7 @@ mod tests {
         setup_invitation_only_group(&env, 1, &creator);
         client.invite_member(&1u64, &invitee);
 
-        client.join_group(&1u64, &invitee);
+        client.join_group(&1u64, &invitee, &None);
 
         assert!(client.is_member(&1u64, &invitee).unwrap());
     }
@@ -321,7 +321,7 @@ mod tests {
         let member = Address::generate(&env);
         setup_pending_group(&env, 1, &creator); // invitation_only = false
 
-        client.join_group(&1u64, &member);
+        client.join_group(&1u64, &member, &None);
 
         assert!(client.is_member(&1u64, &member).unwrap());
     }

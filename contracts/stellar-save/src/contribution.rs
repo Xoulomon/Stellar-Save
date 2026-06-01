@@ -1,12 +1,18 @@
 use soroban_sdk::{contracttype, Address, Vec};
 
 /// Paginated result for contribution history queries.
+///
+/// Returned by any endpoint that lists contributions with a page size limit,
+/// allowing callers to detect whether additional pages exist without a
+/// separate count query.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ContributionPage {
     /// The contributions in this page.
     pub items: Vec<ContributionRecord>,
-    /// True if there are more contributions beyond this page.
+    /// `true` if there are more contributions beyond this page.
+    /// Use the last item's `(group_id, cycle_number, member_address)` as the
+    /// cursor for the next request.
     pub has_more: bool,
 }
 

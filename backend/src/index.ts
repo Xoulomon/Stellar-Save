@@ -1,6 +1,12 @@
-import express from 'express';
-import cors from 'cors';
+import fs from 'fs';
+import http2 from 'http2';
 import dotenv from 'dotenv';
+
+dotenv.config();
+
+import express from 'express';
+import compression from 'compression';
+import cors from 'cors';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import { makeExecutableSchema } from '@graphql-tools/schema';
@@ -13,22 +19,60 @@ import { BackupService, S3HttpClient } from './backup_service';
 import { BackupScheduler } from './backup_scheduler';
 import { RecoveryService } from './recovery_service';
 import { BackupMonitor } from './backup_monitor';
+import { ContractEventIndexer } from './contract_event_indexer';
+import { WebPushService } from './web_push_service';
 import { versionMiddleware } from './versioning';
 import { createV1Router } from './routes/v1';
 import { createV2Router } from './routes/v2';
 import { metricsMiddleware, metricsHandler } from './metrics';
 import { requestLogger } from './logger';
-import { createRateLimiterMiddleware } from './rate_limiter';
+import { createRateLimiterMiddleware, createAuthRateLimiterMiddleware } from './rate_limiter';
+import { createWebhookRouter } from './routes/webhooks';
+import { getMemberReputation } from './reputation_service';
+import { createAuthRouter } from './routes/auth';
+import { createUserRouter } from './routes/user';
 
-dotenv.config();
+const CSP_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' https://cdn.jsdelivr.net/npm/stellar-sdk",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "connect-src 'self' https://horizon-testnet.stellar.org https://soroban-testnet.stellar.org https://horizon.stellar.org",
+  "font-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "report-uri /api/csp-report",
+].join('; ');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(compression());
 app.use(requestLogger);
 app.use(metricsMiddleware);
+
+// CSP middleware — applied to all responses
+app.use((_req, res, next) => {
+  res.setHeader('Content-Security-Policy', CSP_POLICY);
+  next();
+});
+
 app.get('/metrics', metricsHandler);
 app.use(createRateLimiterMiddleware());
+
+// Stricter rate limiting on auth/admin endpoints: 10 req / 15 min per IP
+const authRateLimiter = createAuthRateLimiterMiddleware();
+app.use('/api/admin', authRateLimiter);
+app.use('/graphql', authRateLimiter);
+
+// ── CSP violation reporting ───────────────────────────────────────────────────
+app.post('/api/csp-report', express.json({ type: ['application/json', 'application/csp-report'] }), (req, res) => {
+  const report = req.body?.['csp-report'] ?? req.body;
+  console.warn('[CSP Violation]', JSON.stringify(report));
+  res.status(204).end();
+});
 
 // ========== CACHE ROUTES (Issue #563) ==========
 
@@ -94,7 +138,7 @@ apolloServer.start().then(() => {
   }));
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = config.port;
 
 // ── Mock Data ────────────────────────────────────────────────────────────────
 const mockGroups: Group[] = [
@@ -119,22 +163,62 @@ const backupService = new BackupService(s3Client);
 const backupScheduler = new BackupScheduler(backupService);
 const recoveryService = new RecoveryService(backupService, s3Client);
 const backupMonitor = new BackupMonitor(backupService, {
-  alertWebhookUrl: process.env.BACKUP_ALERT_WEBHOOK_URL,
+  alertWebhookUrl: config.backup.alertWebhookUrl,
 });
 
 const adminService = new AdminService();
+
+const webPushService = new WebPushService();
+
+const eventIndexer = new ContractEventIndexer(
+  process.env.HORIZON_URL || 'https://horizon-testnet.stellar.org',
+  process.env.CONTRACT_ID || 'CA...', // Placeholder contract ID
+  process.env.DATABASE_URL || 'postgresql://user:pass@localhost:5432/stellar_save',
+  webPushService
+);
 
 if (process.env.BACKUP_ENABLED === 'true') {
   backupScheduler.start();
   backupMonitor.start();
 }
 
-const services = { engine, abTest, exportService, backupService, backupScheduler, recoveryService, backupMonitor };
+// Start the contract event indexer
+if (process.env.INDEXER_ENABLED === 'true') {
+  eventIndexer.start().catch(console.error);
+}
+
+// Start analytics resync job if enabled
+if (process.env.ANALYTICS_RESYNC_ENABLED === 'true') {
+  startAnalyticsResyncJob(process.env.ANALYTICS_RESYNC_SCHEDULE || '0 * * * *'); // default: top of every hour
+}
+
+const services = { engine, abTest, exportService, backupService, backupScheduler, recoveryService, backupMonitor, eventIndexer };
+
+// ── Auth routes (public — no JWT required) ───────────────────────────────────
+app.use('/api/auth', createAuthRouter());
+
+// ── User routes (JWT protected) ───────────────────────────────────────────────
+app.use('/api/user', createUserRouter());
 
 // ── Versioned API routes ──────────────────────────────────────────────────────
 app.use('/api', versionMiddleware);
 app.use('/api/v1', createV1Router(services));
 app.use('/api/v2', createV2Router(services));
+app.use('/api/webhooks', createWebhookRouter());
+
+// ── Member reputation endpoint (Issue #800) ───────────────────────────────────
+app.get('/api/members/:address/reputation', async (req, res) => {
+  const { address } = req.params;
+  if (!address || address.trim().length === 0) {
+    return res.status(400).json({ error: 'address is required' });
+  }
+  try {
+    const reputation = await getMemberReputation(address.trim());
+    return res.json(reputation);
+  } catch {
+    return res.status(500).json({ error: 'Failed to fetch reputation' });
+  }
+});
 
 // ── Legacy unversioned routes (redirect to v1 for backward compatibility) ────
 app.use((req, res, next) => {
@@ -148,8 +232,21 @@ app.use((req, res, next) => {
 });
 app.use('/', createV1Router(services));
 
-app.listen(PORT, () => {
+const hasTls = Boolean(process.env.TLS_KEY_PATH && process.env.TLS_CERT_PATH);
+const server = hasTls
+  ? http2.createSecureServer(
+      {
+        key: fs.readFileSync(process.env.TLS_KEY_PATH as string),
+        cert: fs.readFileSync(process.env.TLS_CERT_PATH as string),
+        allowHTTP1: true,
+      },
+      app
+    )
+  : http2.createServer({ allowHTTP1: true }, app);
+
+server.listen(PORT, () => {
   console.log(`API server running on port ${PORT}`);
+  console.log(`  HTTP/2 enabled${hasTls ? ' (TLS)' : ' (h2c cleartext)'}.`);
   console.log(`  Versioned:  /api/v1/...  /api/v2/...`);
   console.log(`  Legacy:     /health  /recommendations  etc. (deprecated)`);
   console.log(`  Cache stats: http://localhost:${PORT}/api/cache/stats`);

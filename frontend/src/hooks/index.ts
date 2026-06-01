@@ -19,8 +19,8 @@ export type { Breakpoint } from './useMediaQuery';
 export { useBalance } from './useBalance';
 export type { Balance, BalanceState, UseBalanceOptions } from './useBalance';
 
-export { useTransaction } from './useTransaction';
-export type { TransactionStatus, TransactionResult, UseTransactionReturn } from './useTransaction';
+export { useTransaction, explorerUrl, STELLAR_NETWORK } from './useTransaction';
+export type { TransactionState, UseTransactionReturn } from './useTransaction';
 export { useTransactions } from './useTransactions';
 export { useUserProfile } from './useUserProfile';
 export { useWallet } from './useWallet';
@@ -44,4 +44,3 @@ export type {
   UseActivityFeedReturn,
 } from './useActivityFeed';
 export { useDiscoveryFeed } from './useDiscoveryFeed';
-export type { UseDiscoveryFeedReturn } from './useDiscoveryFeed';

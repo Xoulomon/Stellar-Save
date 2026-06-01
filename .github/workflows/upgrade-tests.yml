@@ -28,8 +28,8 @@ jobs:
         with:
           workspaces: ". -> target"
 
-      # ── Data migration tests ─────────────────────────────────────────────
-      - name: Run data migration tests
+      # ── 1. State preservation tests ──────────────────────────────────────
+      - name: Run state preservation tests
         run: |
           cargo test \
             --manifest-path contracts/stellar-save/Cargo.toml \
@@ -38,7 +38,7 @@ jobs:
         env:
           RUST_BACKTRACE: 1
 
-      # ── API compatibility tests ──────────────────────────────────────────
+      # ── 2. API compatibility tests ────────────────────────────────────────
       - name: Run API compatibility tests
         run: |
           cargo test \
@@ -48,7 +48,67 @@ jobs:
         env:
           RUST_BACKTRACE: 1
 
-      # ── Performance regression tests ─────────────────────────────────────
+      # ── 3. Rollback scenario tests ────────────────────────────────────────
+      - name: Run rollback tests
+        run: |
+          cargo test \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            upgrade_tests::upgrade_tests::test_rollback \
+            -- --test-threads=1 --nocapture
+        env:
+          RUST_BACKTRACE: 1
+
+      # ── 4. Backward compatibility tests ──────────────────────────────────
+      - name: Run backward compatibility tests
+        run: |
+          cargo test \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            upgrade_tests::upgrade_tests::test_backward_compat \
+            -- --test-threads=1 --nocapture
+        env:
+          RUST_BACKTRACE: 1
+
+      # ── 5. Schema version guard tests ────────────────────────────────────
+      - name: Run schema version guard tests
+        run: |
+          cargo test \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            upgrade_tests::upgrade_tests::test_schema_version_guard \
+            -- --test-threads=1 --nocapture
+        env:
+          RUST_BACKTRACE: 1
+
+      # ── 6. ContractConfig preservation tests ─────────────────────────────
+      - name: Run config preservation tests
+        run: |
+          cargo test \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            upgrade_tests::upgrade_tests::test_config_preservation \
+            -- --test-threads=1 --nocapture
+        env:
+          RUST_BACKTRACE: 1
+
+      # ── 7. Token allowlist preservation tests ────────────────────────────
+      - name: Run token allowlist preservation tests
+        run: |
+          cargo test \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            upgrade_tests::upgrade_tests::test_token_allowlist \
+            -- --test-threads=1 --nocapture
+        env:
+          RUST_BACKTRACE: 1
+
+      # ── 8. Full lifecycle tests ───────────────────────────────────────────
+      - name: Run full lifecycle tests
+        run: |
+          cargo test \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            upgrade_tests::upgrade_tests::test_full_lifecycle \
+            -- --test-threads=1 --nocapture
+        env:
+          RUST_BACKTRACE: 1
+
+      # ── 9. Performance regression tests ──────────────────────────────────
       - name: Run performance regression tests
         run: |
           cargo test \
@@ -58,7 +118,7 @@ jobs:
         env:
           RUST_BACKTRACE: 1
 
-      # ── Full upgrade test suite ──────────────────────────────────────────
+      # ── Full upgrade test suite (all 36 tests) ────────────────────────────
       - name: Run full upgrade test suite
         run: |
           cargo test \

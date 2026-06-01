@@ -20,6 +20,8 @@ export function Button({
   iconPosition = "left",
   children,
   className = "",
+  "aria-label": ariaLabel,
+  role = "button",
   ...rest
 }: ButtonProps) {
   const classes = [
@@ -32,8 +34,17 @@ export function Button({
     .filter(Boolean)
     .join(" ");
 
+  // Provide a fallback label if there are no children but there is an icon
+  const computedAriaLabel = ariaLabel || (!children && icon ? "Icon Button" : undefined);
+
   return (
-    <button className={classes} disabled={disabled || loading} {...rest}>
+    <button 
+      className={classes} 
+      disabled={disabled || loading} 
+      aria-label={computedAriaLabel}
+      role={role}
+      {...rest}
+    >
       {loading && <span className="btn-spinner" aria-hidden="true" />}
       {!loading && icon && iconPosition === "left" && icon}
       {children}
