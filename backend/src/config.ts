@@ -32,6 +32,15 @@ const envSchema = z.object({
     .default('3001')
     .transform(Number),
 
+  // ── Database ──────────────────────────────────────────────────────────────
+  // Support both DATABASE_URL (local/legacy) and individual components (ECS with Secrets Manager)
+  DATABASE_URL: z.string().url().optional(),
+  DB_USERNAME: z.string().optional(),
+  DB_PASSWORD: z.string().optional(),
+  DB_HOST: z.string().optional(),
+  DB_PORT: z.string().optional(),
+  DB_NAME: z.string().optional(),
+
   // ── Admin ─────────────────────────────────────────────────────────────────
   ADMIN_SECRET: z
     .string()
@@ -97,12 +106,42 @@ if (!parsed.success) {
 const env = parsed.data;
 
 // ---------------------------------------------------------------------------
+// Database URL construction
+// ---------------------------------------------------------------------------
+
+/**
+ * Construct DATABASE_URL from individual components if not provided directly.
+ * This supports ECS deployments where credentials come from Secrets Manager.
+ */
+function getDatabaseUrl(): string {
+  if (env.DATABASE_URL) {
+    return env.DATABASE_URL;
+  }
+
+  // Construct from individual components
+  if (env.DB_USERNAME && env.DB_PASSWORD && env.DB_HOST && env.DB_PORT && env.DB_NAME) {
+    return `postgresql://${env.DB_USERNAME}:${env.DB_PASSWORD}@${env.DB_HOST}:${env.DB_PORT}/${env.DB_NAME}`;
+  }
+
+  // Fallback for local development
+  console.warn(
+    '[config] ⚠️  Neither DATABASE_URL nor complete DB_* variables provided. ' +
+    'Using default local connection.'
+  );
+  return 'postgresql://user:pass@localhost:5432/stellar_save';
+}
+
+// ---------------------------------------------------------------------------
 // Typed config object (grouped for readability)
 // ---------------------------------------------------------------------------
 
 export const config = {
   nodeEnv: env.NODE_ENV,
   port: env.PORT,
+
+  database: {
+    url: getDatabaseUrl(),
+  },
 
   admin: {
     secret: env.ADMIN_SECRET,

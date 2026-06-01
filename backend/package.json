@@ -47,7 +47,8 @@
     "uuid": "^14.0.0",
     "web-push": "^3.6.7",
     "winston": "^3.17.0",
-    "winston-daily-rotate-file": "^5.0.0"
+    "winston-daily-rotate-file": "^5.0.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/graphql-depth-limit": "^1.1.5",

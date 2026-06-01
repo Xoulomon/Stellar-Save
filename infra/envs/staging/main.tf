@@ -12,6 +12,8 @@ module "rds" {
   multi_az                   = false
   db_username                = var.db_username
   db_password                = var.db_password
+  rotation_days              = 30
+  aws_region                 = var.aws_region
 
   tags = {
     Project    = "stellar-save"
