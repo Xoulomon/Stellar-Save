@@ -4,29 +4,29 @@
  */
 export const ROUTES = {
   HOME: "/",
+  LANDING: "/welcome",
   DASHBOARD: "/dashboard",
   GROUPS: "/groups",
   GROUP_DETAIL: "/groups/:groupId",
+  GROUP_CREATE: "/groups/create",
+  GROUPS_BROWSE: "/groups/browse",
+  GROUPS_COMPARE: "/groups/compare",
+  GROUP_CALENDAR: "/groups/:groupId/calendar",
+  GROUP_ANALYTICS: "/groups/:groupId/analytics",
+  GROUP_MEMBERS: "/groups/:groupId/members",
+  GROUP_JOIN: "/join/:inviteCode",
   PROFILE: "/profile",
   PROFILE_DETAIL: "/profile/:address",
   SETTINGS: "/settings",
-  NOT_FOUND: "/404",
-  ERROR: "/500",
-  GROUP_CREATE: "/groups/create",
-  GROUPS_BROWSE: "/groups/browse",
-
-  GROUP_CALENDAR: "/groups/:groupId/calendar",
-  GROUP_ANALYTICS: "/groups/:groupId/analytics",
-
-  GROUPS_COMPARE: "/groups/compare",
-
-  GROUP_MEMBERS: "/groups/:groupId/members",
-
+  SETTINGS_NOTIFICATIONS: "/settings/notifications",
   LEADERBOARD: "/leaderboard",
   TEMPLATES: "/templates",
   ANALYTICS: "/analytics",
+  TRANSACTIONS: "/transactions",
   MEMBER_PROFILE: "/members/:address",
-  GROUP_JOIN: "/join",
+  ABOUT: "/about",
+  NOT_FOUND: "/404",
+  ERROR: "/500",
 } as const;
 
 /**
@@ -42,6 +42,6 @@ export const buildRoute = {
   groupCalendar: (groupId: string) => `/groups/${groupId}/calendar`,
   groupAnalytics: (groupId: string) => `/groups/${groupId}/analytics`,
   groupMembers: (groupId: string) => `/groups/${groupId}/members`,
+  groupJoin: (inviteCode: string) => `/join/${inviteCode}`,
   memberProfile: (address: string) => `/members/${address}`,
-  groupJoin: (groupId: string) => `/join?groupId=${encodeURIComponent(groupId)}`,
 } as const;

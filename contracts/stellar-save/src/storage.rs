@@ -573,6 +573,8 @@ impl StorageKeyBuilder {
     /// Creates a key for the storage schema version.
     pub fn storage_version() -> StorageKey {
         StorageKey::Counter(CounterKey::StorageVersion)
+    }
+
     /// Creates a key for the deadline extension of a specific group cycle.
     pub fn deadline_extension(group_id: u64, cycle: u32) -> StorageKey {
         StorageKey::Counter(CounterKey::DeadlineExtension(group_id, cycle))

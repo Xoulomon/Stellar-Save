@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { imagetools } from 'vite-imagetools'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 const CSP = [
   "default-src 'self'",
@@ -18,10 +19,27 @@ const CSP = [
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    imagetools(),
+    // Writes dist/stats.html — open after `npm run build:analyze`
+    visualizer({ filename: 'dist/stats.html', gzipSize: true, brotliSize: true }),
+  ],
   server: {
     headers: {
       'Content-Security-Policy': CSP,
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-mui': ['@mui/material', '@emotion/react', '@emotion/styled'],
+          'vendor-stellar': ['@stellar/stellar-sdk', '@stellar/freighter-api'],
+          'vendor-i18n': ['i18next', 'react-i18next'],
+        },
+      },
     },
   },
 })
