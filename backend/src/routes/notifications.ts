@@ -4,6 +4,7 @@ import { PushNotificationService } from '../push_notification_service';
 import { WebPushService } from '../web_push_service';
 import { UserPreferenceManager } from '../user_preference_manager';
 import { NotificationTemplateManager } from '../notification_template_manager';
+import { deviceTokenService } from '../device_token_service';
 import { logger } from '../logger';
 
 /**
@@ -548,6 +549,36 @@ export function createNotificationRouter(): Router {
     };
 
     res.json(health);
+  });
+
+  // ========== MOBILE DEVICE TOKEN ROUTES (Issue #1027) ==========
+
+  router.post('/device-tokens', async (req: Request, res: Response) => {
+    try {
+      const { userId, token, platform } = req.body as { userId?: string; token?: string; platform?: string };
+      if (!userId || !token || !platform) {
+        return res.status(400).json({ error: 'userId, token, and platform are required' });
+      }
+      if (platform !== 'ios' && platform !== 'android') {
+        return res.status(400).json({ error: 'platform must be ios or android' });
+      }
+      await deviceTokenService.registerToken(userId, token, platform);
+      res.status(201).json({ message: 'Device token registered' });
+    } catch (error) {
+      logger.error('Error registering device token', { error: String(error) });
+      res.status(500).json({ error: 'Failed to register device token' });
+    }
+  });
+
+  router.delete('/device-tokens/:token', async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      await deviceTokenService.removeToken(token);
+      res.status(204).end();
+    } catch (error) {
+      logger.error('Error removing device token', { error: String(error) });
+      res.status(500).json({ error: 'Failed to remove device token' });
+    }
   });
 
   return router;

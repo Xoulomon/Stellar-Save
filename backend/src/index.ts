@@ -31,6 +31,7 @@ import { createWebhookRouter } from './routes/webhooks';
 import { getMemberReputation } from './reputation_service';
 import { createAuthRouter } from './routes/auth';
 import { createUserRouter } from './routes/user';
+import { fraudDetectionWorker } from './fraud_detection_worker';
 
 const CSP_POLICY = [
   "default-src 'self'",
@@ -244,12 +245,23 @@ const server = hasTls
     )
   : http2.createServer({ allowHTTP1: true }, app);
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`API server running on port ${PORT}`);
   console.log(`  HTTP/2 enabled${hasTls ? ' (TLS)' : ' (h2c cleartext)'}.`);
   console.log(`  Versioned:  /api/v1/...  /api/v2/...`);
   console.log(`  Legacy:     /health  /recommendations  etc. (deprecated)`);
   console.log(`  Cache stats: http://localhost:${PORT}/api/cache/stats`);
+
+  // Start fraud detection worker (Issue #1028)
+  if (process.env.FRAUD_DETECTION_ENABLED !== 'false') {
+    await fraudDetectionWorker.start();
+  }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  fraudDetectionWorker.stop();
+  server.close();
 });
 
 export { app }; 

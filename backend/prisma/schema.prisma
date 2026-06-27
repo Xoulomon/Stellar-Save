@@ -239,6 +239,8 @@ model IndexedTransaction {
   @@index([ledgerSeq])
   @@index([sourceAccount])
   @@index([createdAt])
+}
+
 // ========== WEB PUSH SUBSCRIPTION MODELS ==========
 
 model PushSubscription {
@@ -315,4 +317,74 @@ model MemberReputation {
 
   @@index([address])
   @@index([score])
+}
+
+// ========== MOBILE DEVICE TOKEN MODELS (Issue #1027) ==========
+
+model MobileDeviceToken {
+  id          String    @id @default(cuid())
+  userId      String
+  token       String    @unique
+  platform    String    // 'ios' | 'android'
+  isValid     Boolean   @default(true)
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([token])
+  @@index([isValid])
+}
+
+// ========== FRAUD DETECTION MODELS (Issue #1028) ==========
+
+model FraudFlag {
+  id          String    @id @default(cuid())
+  entityType  String    // 'account' | 'group'
+  entityId    String
+  riskScore   Float
+  reasons     String[]
+  status      String    @default("pending") // pending | reviewed | dismissed
+  evidence    Json
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([entityType, entityId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ========== API KEY MODELS (Issue #1030) ==========
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  keyHash     String    @unique
+  keyPrefix   String
+  userId      String
+  name        String
+  tier        String    @default("free")
+  rateLimit   Int       @default(100)
+  isActive    Boolean   @default(true)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([keyHash])
+  @@index([isActive])
+}
+
+model ApiKeyUsage {
+  id         String   @id @default(cuid())
+  keyId      String
+  endpoint   String
+  method     String
+  statusCode Int
+  createdAt  DateTime @default(now())
+
+  @@index([keyId])
+  @@index([createdAt])
 }

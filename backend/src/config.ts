@@ -35,6 +35,7 @@ const envSchema = z.object({
   // ── Database ──────────────────────────────────────────────────────────────
   // Support both DATABASE_URL (local/legacy) and individual components (ECS with Secrets Manager)
   DATABASE_URL: z.string().url().optional(),
+  DATABASE_REPLICA_URL: z.string().url().optional(),
   DB_USERNAME: z.string().optional(),
   DB_PASSWORD: z.string().optional(),
   DB_HOST: z.string().optional(),
@@ -141,6 +142,7 @@ export const config = {
 
   database: {
     url: getDatabaseUrl(),
+    replicaUrl: env.DATABASE_REPLICA_URL,
   },
 
   admin: {
