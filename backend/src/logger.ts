@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import winston from 'winston';
 import 'winston-daily-rotate-file';
+import { getCorrelationId } from './correlation';
 
 // ── Winston logger with JSON formatter and daily log rotation ─────────────────
 
@@ -35,11 +36,17 @@ export const winstonLogger = winston.createLogger({
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
+/** Merge in correlationId from AsyncLocalStorage if present. */
+function withCorrelation(fields?: Record<string, unknown>): Record<string, unknown> {
+  const cid = getCorrelationId();
+  return cid ? { correlationId: cid, ...fields } : (fields ?? {});
+}
+
 export const logger = {
-  debug: (msg: string, fields?: Record<string, unknown>) => winstonLogger.debug(msg, fields),
-  info:  (msg: string, fields?: Record<string, unknown>) => winstonLogger.info(msg, fields),
-  warn:  (msg: string, fields?: Record<string, unknown>) => winstonLogger.warn(msg, fields),
-  error: (msg: string, fields?: Record<string, unknown>) => winstonLogger.error(msg, fields),
+  debug: (msg: string, fields?: Record<string, unknown>) => winstonLogger.debug(msg, withCorrelation(fields)),
+  info:  (msg: string, fields?: Record<string, unknown>) => winstonLogger.info(msg,  withCorrelation(fields)),
+  warn:  (msg: string, fields?: Record<string, unknown>) => winstonLogger.warn(msg,  withCorrelation(fields)),
+  error: (msg: string, fields?: Record<string, unknown>) => winstonLogger.error(msg, withCorrelation(fields)),
 };
 
 // ── Lazy Prisma import to avoid circular deps and missing generated client ────
@@ -84,6 +91,7 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
       wallet_address: walletAddress,
       user_agent: req.headers['user-agent'],
       ip: req.ip,
+      // correlationId is injected automatically by withCorrelation() inside logger
     });
 
     // Persist to audit_logs table (non-blocking)

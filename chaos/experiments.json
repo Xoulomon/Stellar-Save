@@ -1,0 +1,177 @@
+{
+  "version": "1",
+  "description": "Stellar-Save chaos experiments for staging environment",
+  "experiments": [
+    {
+      "id": "soroban-rpc-outage",
+      "name": "Soroban RPC Outage",
+      "description": "Block all outbound traffic to the Soroban RPC endpoint for 60 seconds. The backend should degrade gracefully: return 503 with a Retry-After header, and resume automatically when connectivity is restored.",
+      "category": "network",
+      "durationSeconds": 60,
+      "cooldownSeconds": 120,
+      "expectedBehavior": "Backend returns HTTP 503 with Retry-After header for contract calls. No panic/crash. Metrics show increased error rate but process remains alive. Recovery within 30s after connectivity restored.",
+      "passCriteria": {
+        "maxErrorRatePercent": 100,
+        "processAlive": true,
+        "recoveryWithinSeconds": 30,
+        "noDataLoss": true
+      },
+      "sloAssertions": [
+        "backend process does not crash",
+        "health endpoint returns 200 (or 503 with valid body) — not a 5xx crash",
+        "no database writes are lost",
+        "error logs include structured context (correlationId, service)"
+      ],
+      "steps": [
+        {
+          "action": "block_url",
+          "target": "${STELLAR_RPC_URL}",
+          "method": "iptables_drop",
+          "durationSeconds": 60
+        },
+        {
+          "action": "assert_health",
+          "endpoint": "${BACKEND_URL}/health",
+          "expectedStatusCodes": [200, 503],
+          "pollIntervalSeconds": 5,
+          "timeoutSeconds": 10
+        },
+        {
+          "action": "restore_network",
+          "target": "${STELLAR_RPC_URL}"
+        },
+        {
+          "action": "assert_recovery",
+          "endpoint": "${BACKEND_URL}/health",
+          "expectedStatusCode": 200,
+          "withinSeconds": 30
+        }
+      ]
+    },
+    {
+      "id": "db-latency-injection",
+      "name": "Database Latency Injection",
+      "description": "Inject 500ms latency on all traffic to the Postgres port (5432) for 90 seconds. API p95 should degrade but not exceed the SLO timeout. No transactions should be lost.",
+      "category": "latency",
+      "durationSeconds": 90,
+      "cooldownSeconds": 120,
+      "expectedBehavior": "API p95 latency rises proportionally. Requests do not time out below the 5000ms application timeout. Connection pool absorbs burst. Queries complete (slowly) — no data loss.",
+      "passCriteria": {
+        "maxP95LatencyMs": 5000,
+        "processAlive": true,
+        "noDataLoss": true,
+        "errorRateBelow": 5
+      },
+      "sloAssertions": [
+        "API p95 latency < 5000ms during injection",
+        "no 5xx errors on read endpoints",
+        "application does not kill the Postgres connection pool",
+        "latency returns to baseline within 30s after injection removed"
+      ],
+      "steps": [
+        {
+          "action": "tc_netem_add_latency",
+          "interface": "eth0",
+          "dstPort": 5432,
+          "latencyMs": 500,
+          "jitterMs": 50,
+          "durationSeconds": 90
+        },
+        {
+          "action": "benchmark",
+          "endpoint": "${BACKEND_URL}/api/v1/groups",
+          "rps": 10,
+          "durationSeconds": 60,
+          "assertP95Ms": 5000
+        },
+        {
+          "action": "tc_netem_remove",
+          "interface": "eth0",
+          "dstPort": 5432
+        },
+        {
+          "action": "assert_recovery",
+          "endpoint": "${BACKEND_URL}/api/v1/groups",
+          "p95BelowMs": 500,
+          "withinSeconds": 30
+        }
+      ]
+    },
+    {
+      "id": "redis-eviction",
+      "name": "Redis Cache Eviction",
+      "description": "Flush all Redis keys (FLUSHDB) to simulate a cache eviction / Redis restart. The backend should handle cache misses gracefully and fall back to the database without errors.",
+      "category": "state",
+      "durationSeconds": 10,
+      "cooldownSeconds": 60,
+      "expectedBehavior": "Cache miss rate spikes to 100% immediately after flush. Requests fall through to the DB and succeed. No 5xx errors. Cache repopulates within the warm-up period. No user-visible data loss.",
+      "passCriteria": {
+        "noUserVisibleError": true,
+        "errorRateBelow": 1,
+        "recoveryWithinSeconds": 60
+      },
+      "sloAssertions": [
+        "all API endpoints return 2xx after flush",
+        "no 5xx errors within 10 requests following flush",
+        "cache hit rate returns above 50% within 60s"
+      ],
+      "steps": [
+        {
+          "action": "redis_flushdb",
+          "target": "${REDIS_URL}"
+        },
+        {
+          "action": "assert_health",
+          "endpoint": "${BACKEND_URL}/health",
+          "expectedStatusCode": 200,
+          "pollIntervalSeconds": 2,
+          "timeoutSeconds": 30
+        },
+        {
+          "action": "load_test",
+          "endpoint": "${BACKEND_URL}/api/v1/groups",
+          "requests": 20,
+          "assertSuccessRate": 99
+        }
+      ]
+    },
+    {
+      "id": "worker-crash",
+      "name": "Worker Process Crash",
+      "description": "Send SIGKILL to the backend Node.js process. The process manager (ECS / PM2) should restart it and the service should be healthy within the RTO.",
+      "category": "process",
+      "durationSeconds": 0,
+      "cooldownSeconds": 120,
+      "expectedBehavior": "Process restarts within 30 seconds (ECS health check period). All in-flight requests fail with 502 (gateway level). After restart, the service returns 200 on /health and resumes normal operation. No permanent data loss.",
+      "passCriteria": {
+        "restartWithinSeconds": 30,
+        "healthyAfterRestart": true,
+        "noDataLoss": true
+      },
+      "sloAssertions": [
+        "ECS task restarts within 30s",
+        "health endpoint returns 200 within 30s of restart",
+        "no database corruption — groups and members data intact",
+        "in-flight requests fail with 502, not silent data drop"
+      ],
+      "steps": [
+        {
+          "action": "kill_process",
+          "signal": "SIGKILL",
+          "target": "node backend/src/index.ts"
+        },
+        {
+          "action": "assert_recovery",
+          "endpoint": "${BACKEND_URL}/health",
+          "expectedStatusCode": 200,
+          "withinSeconds": 30
+        },
+        {
+          "action": "assert_data_integrity",
+          "endpoint": "${BACKEND_URL}/api/v1/groups",
+          "minResponseItems": 0
+        }
+      ]
+    }
+  ]
+}

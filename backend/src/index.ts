@@ -26,7 +26,9 @@ import { createV1Router } from './routes/v1';
 import { createV2Router } from './routes/v2';
 import { metricsMiddleware, metricsHandler } from './metrics';
 import { requestLogger } from './logger';
+import { correlationMiddleware } from './correlation';
 import { createRateLimiterMiddleware, createAuthRateLimiterMiddleware } from './rate_limiter';
+import { initSentry, sentryErrorHandler } from './sentry';
 import { createWebhookRouter } from './routes/webhooks';
 import { getMemberReputation } from './reputation_service';
 import { createAuthRouter } from './routes/auth';
@@ -50,8 +52,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(compression());
+app.use(correlationMiddleware);
 app.use(requestLogger);
 app.use(metricsMiddleware);
+
+// Initialise Sentry as early as possible (after basic middleware)
+initSentry();
 
 // CSP middleware — applied to all responses
 app.use((_req, res, next) => {
@@ -230,6 +236,9 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// ── Sentry (must be after routes, before generic error handler) ───────────────
+app.use(sentryErrorHandler);
 app.use('/', createV1Router(services));
 
 const hasTls = Boolean(process.env.TLS_KEY_PATH && process.env.TLS_CERT_PATH);

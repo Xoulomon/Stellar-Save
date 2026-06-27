@@ -1,0 +1,199 @@
+name: Chaos Engineering
+
+# Scheduled chaos experiment suite against staging.
+# Runs each of the 4 defined experiments in sequence and asserts SLOs.
+#
+# Schedule: weekly on Wednesday at 03:00 UTC (low-traffic window)
+# Manual dispatch: allows targeting a single experiment
+
+on:
+  schedule:
+    - cron: '0 3 * * 3'   # Wednesday 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      experiment:
+        description: 'Experiment ID to run (or "all")'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - soroban-rpc-outage
+          - db-latency-injection
+          - redis-eviction
+          - worker-crash
+      dry_run:
+        description: 'Dry-run (print steps only)'
+        required: false
+        default: 'false'
+        type: boolean
+
+concurrency:
+  group: chaos-staging
+  cancel-in-progress: false   # never cancel a running chaos job
+
+env:
+  EXPERIMENT: ${{ github.event.inputs.experiment || 'all' }}
+  CHAOS_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+
+jobs:
+  # ── Preflight: ensure staging backend is healthy before injecting faults ────
+  preflight:
+    name: Staging Health Preflight
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check staging health
+        run: |
+          BACKEND_URL="${{ secrets.STAGING_BACKEND_URL || 'http://localhost:3001' }}"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BACKEND_URL/health" --max-time 10 || echo "000")
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Staging health check returned $STATUS — aborting chaos run"
+            exit 1
+          fi
+          echo "✅ Staging is healthy (HTTP $STATUS)"
+
+  # ── Soroban RPC Outage ───────────────────────────────────────────────────────
+  soroban-rpc-outage:
+    name: Experiment — Soroban RPC Outage
+    runs-on: ubuntu-latest
+    needs: preflight
+    if: github.event.inputs.experiment == 'all' || github.event.inputs.experiment == 'soroban-rpc-outage' || github.event_name == 'schedule'
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run soroban-rpc-outage
+        env:
+          BACKEND_URL: ${{ secrets.STAGING_BACKEND_URL || 'http://localhost:3001' }}
+          STELLAR_RPC_URL: ${{ secrets.STAGING_STELLAR_RPC_URL || 'https://soroban-testnet.stellar.org' }}
+          CHAOS_DRY_RUN: ${{ env.CHAOS_DRY_RUN }}
+        run: node chaos/runner.js soroban-rpc-outage
+
+      - name: Write SLO assertion summary
+        if: always()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY <<'EOF'
+          ### SLO Assertions — Soroban RPC Outage
+          - Backend process must not crash during RPC blackout
+          - `/health` must return 200 or 503 (never 5xx crash)
+          - Recovery must complete within 30s of network restored
+          - All errors logged with structured JSON + correlationId
+          EOF
+
+  # ── DB Latency Injection ─────────────────────────────────────────────────────
+  db-latency-injection:
+    name: Experiment — DB Latency Injection
+    runs-on: ubuntu-latest
+    needs: preflight
+    if: github.event.inputs.experiment == 'all' || github.event.inputs.experiment == 'db-latency-injection' || github.event_name == 'schedule'
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run db-latency-injection
+        env:
+          BACKEND_URL: ${{ secrets.STAGING_BACKEND_URL || 'http://localhost:3001' }}
+          CHAOS_DRY_RUN: ${{ env.CHAOS_DRY_RUN }}
+        run: node chaos/runner.js db-latency-injection
+
+      - name: Write SLO assertion summary
+        if: always()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY <<'EOF'
+          ### SLO Assertions — DB Latency Injection
+          - API p95 latency < 5000ms during 500ms DB latency injection
+          - No 5xx errors on read endpoints
+          - Connection pool must not be exhausted
+          - Latency returns to baseline within 30s after injection removed
+          EOF
+
+  # ── Redis Cache Eviction ─────────────────────────────────────────────────────
+  redis-eviction:
+    name: Experiment — Redis Cache Eviction
+    runs-on: ubuntu-latest
+    needs: preflight
+    if: github.event.inputs.experiment == 'all' || github.event.inputs.experiment == 'redis-eviction' || github.event_name == 'schedule'
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run redis-eviction
+        env:
+          BACKEND_URL: ${{ secrets.STAGING_BACKEND_URL || 'http://localhost:3001' }}
+          REDIS_URL: ${{ secrets.STAGING_REDIS_URL || 'redis://localhost:6379' }}
+          CHAOS_DRY_RUN: ${{ env.CHAOS_DRY_RUN }}
+        run: node chaos/runner.js redis-eviction
+
+      - name: Write SLO assertion summary
+        if: always()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY <<'EOF'
+          ### SLO Assertions — Redis Cache Eviction
+          - All endpoints return 2xx immediately after flush
+          - Zero 5xx errors in 20 requests following flush
+          - Cache hit rate recovers above 50% within 60s
+          EOF
+
+  # ── Worker Process Crash ─────────────────────────────────────────────────────
+  worker-crash:
+    name: Experiment — Worker Process Crash
+    runs-on: ubuntu-latest
+    needs: preflight
+    if: github.event.inputs.experiment == 'all' || github.event.inputs.experiment == 'worker-crash' || github.event_name == 'schedule'
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js (to start backend for local runs)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Run worker-crash
+        env:
+          BACKEND_URL: ${{ secrets.STAGING_BACKEND_URL || 'http://localhost:3001' }}
+          CHAOS_DRY_RUN: ${{ env.CHAOS_DRY_RUN }}
+        run: node chaos/runner.js worker-crash
+
+      - name: Write SLO assertion summary
+        if: always()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY <<'EOF'
+          ### SLO Assertions — Worker Process Crash
+          - Process restarts within 30s (ECS / process manager)
+          - `/health` returns 200 within 30s of restart
+          - No database corruption after crash
+          - In-flight requests fail with 502, not silent data drop
+          EOF
+
+  # ── Aggregate report ─────────────────────────────────────────────────────────
+  report:
+    name: Chaos Report
+    runs-on: ubuntu-latest
+    needs: [soroban-rpc-outage, db-latency-injection, redis-eviction, worker-crash]
+    if: always()
+    steps:
+      - name: Write aggregate summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY <<EOF
+          ## Chaos Engineering Summary — $(date -u +"%Y-%m-%d")
+
+          | Experiment | Status |
+          |-----------|--------|
+          | Soroban RPC Outage | ${{ needs.soroban-rpc-outage.result }} |
+          | DB Latency Injection | ${{ needs.db-latency-injection.result }} |
+          | Redis Cache Eviction | ${{ needs.redis-eviction.result }} |
+          | Worker Process Crash | ${{ needs.worker-crash.result }} |
+
+          Runbook: [docs/runbooks/chaos-runbook.md](../docs/runbooks/chaos-runbook.md)
+          EOF
+
+      - name: Fail if any experiment failed
+        run: |
+          FAILED=""
+          [ "${{ needs.soroban-rpc-outage.result }}"   = "failure" ] && FAILED="$FAILED soroban-rpc-outage"
+          [ "${{ needs.db-latency-injection.result }}" = "failure" ] && FAILED="$FAILED db-latency-injection"
+          [ "${{ needs.redis-eviction.result }}"        = "failure" ] && FAILED="$FAILED redis-eviction"
+          [ "${{ needs.worker-crash.result }}"          = "failure" ] && FAILED="$FAILED worker-crash"
+          if [ -n "$FAILED" ]; then
+            echo "::error::Chaos experiments failed:$FAILED"
+            exit 1
+          fi
+          echo "✅ All chaos experiments passed"

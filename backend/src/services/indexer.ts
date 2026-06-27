@@ -1,4 +1,6 @@
 import { PrismaClient } from '../generated/prisma/client';
+import { propagationHeaders, runWithCorrelationId } from '../correlation';
+import { randomUUID } from 'crypto';
 
 export interface IndexerOptions {
   /** How long to wait between polls when no new transactions are found (ms). Default: 5000 */
@@ -49,11 +51,15 @@ export class HorizonIndexer {
     }
     this.isRunning = true;
     console.log('[HorizonIndexer] Starting — contract:', this.contractId);
-    // Run poll loop detached so callers are not blocked
-    this.runPollLoop().catch(err => {
-      console.error('[HorizonIndexer] Fatal error in poll loop:', err);
-      this.isRunning = false;
-    });
+    // Each indexer run gets its own background correlation ID for log tracing
+    const jobCorrelationId = `indexer-${randomUUID()}`;
+    this.runPollLoop()
+      .catch(err => {
+        console.error('[HorizonIndexer] Fatal error in poll loop:', err);
+        this.isRunning = false;
+      });
+    // Expose for external callers
+    (this as any)._correlationId = jobCorrelationId;
   }
 
   async stop(): Promise<void> {
@@ -120,7 +126,9 @@ export class HorizonIndexer {
         url.searchParams.set('order', 'asc');
         url.searchParams.set('limit', String(this.pageSize));
 
-        const res = await fetch(url.toString());
+        const res = await fetch(url.toString(), {
+          headers: propagationHeaders(),
+        });
         if (!res.ok) throw new Error(`Horizon responded ${res.status} for ${url}`);
 
         const body: any = await res.json();

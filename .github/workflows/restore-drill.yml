@@ -1,0 +1,139 @@
+name: Backup Restore Drill
+
+# Automated restore drill that:
+#   1. Spins up a temporary Postgres container
+#   2. Runs the restore drill service against it
+#   3. Asserts all integrity checks pass and RTO is within budget
+#   4. Posts a summary to the job step and (optionally) to a webhook
+#
+# Schedule: daily at 02:00 UTC (off-peak)
+# Can also be triggered manually via workflow_dispatch
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      rto_seconds:
+        description: 'RTO threshold in seconds (default: 300)'
+        required: false
+        default: '300'
+
+concurrency:
+  group: restore-drill
+  cancel-in-progress: false   # never cancel a running drill
+
+env:
+  RESTORE_DRILL_RTO_SECONDS: ${{ github.event.inputs.rto_seconds || '300' }}
+  EPHEMERAL_DB_NAME: stellar_save_drill
+
+jobs:
+  restore-drill:
+    name: Run Restore Drill
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: ${{ env.EPHEMERAL_DB_NAME }}
+          POSTGRES_USER: drill_user
+          POSTGRES_PASSWORD: drill_pass
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U drill_user"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Wait for Postgres to be ready
+        run: |
+          until pg_isready -h localhost -p 5433 -U drill_user; do
+            echo "Waiting for postgres…"; sleep 2
+          done
+
+      - name: Run Restore Drill
+        id: drill
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET || 'stellar-save-backups' }}
+          RESTORE_DRILL_DB_URL: "postgresql://drill_user:drill_pass@localhost:5433/${{ env.EPHEMERAL_DB_NAME }}"
+          RESTORE_DRILL_RTO_SECONDS: ${{ env.RESTORE_DRILL_RTO_SECONDS }}
+          BACKUP_ALERT_WEBHOOK_URL: ${{ secrets.BACKUP_ALERT_WEBHOOK_URL }}
+          NODE_ENV: test
+        run: |
+          node -e "
+          const { RestoreDrillService } = require('./src/restore_drill_service');
+          const svc = new RestoreDrillService();
+          svc.runDrill().then(result => {
+            const out = JSON.stringify(result, null, 2);
+            console.log(out);
+            // Write summary
+            const { execSync } = require('child_process');
+            const summary = [
+              '## Restore Drill Result',
+              '',
+              '| Field | Value |',
+              '|-------|-------|',
+              \`| Status | \${result.status} |\`,
+              \`| Backup | \${result.backupKey} |\`,
+              \`| Backup Size | \${(result.backupSizeBytes/1024/1024).toFixed(2)} MB |\`,
+              \`| Download | \${result.downloadDurationMs}ms |\`,
+              \`| Restore | \${result.restoreDurationMs}ms |\`,
+              \`| Total RTO | \${result.totalDurationMs}ms / \${result.rtoThresholdMs}ms threshold |\`,
+              \`| RTO Breached | \${result.rtoBreached} |\`,
+              '',
+              '### Integrity Checks',
+              ...result.integrityChecks.map(c => \`- \${c.passed ? '✅' : '❌'} **\${c.name}**: \${c.detail || ''}\`),
+            ].join('\n');
+            require('fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary + '\n');
+            if (result.status !== 'pass') {
+              console.error('Drill FAILED:', result.status, result.error || '');
+              process.exit(1);
+            }
+            console.log('Drill PASSED');
+          }).catch(err => {
+            console.error('Drill threw:', err);
+            process.exit(1);
+          });
+          "
+        working-directory: backend
+
+      - name: Assert pass
+        if: always()
+        run: |
+          if [ "${{ steps.drill.outcome }}" != "success" ]; then
+            echo "::error::Restore drill failed — backup integrity or RTO violated. Check logs above."
+            exit 1
+          fi
+          echo "✅ Restore drill passed"
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `🚨 **Restore drill failed** on \`${new Date().toISOString()}\`.\n\nSee [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.`
+            }).catch(() => {});  // non-fatal if no PR context

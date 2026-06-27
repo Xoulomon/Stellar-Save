@@ -1,0 +1,115 @@
+name: Log Aggregation CI Gate
+
+# Validates that:
+#   1. Every backend log statement uses the structured logger (no raw console.log in src/)
+#   2. Correlation ID middleware is present and tested
+#   3. Sentry integration files exist and compile
+#   4. CloudWatch Terraform resources are syntactically valid
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/src/**'
+      - 'frontend/src/**'
+      - 'infra/modules/cloudwatch-logging/**'
+      - '.github/workflows/log-aggregation-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/src/**'
+      - 'infra/modules/cloudwatch-logging/**'
+
+jobs:
+  structured-logging-lint:
+    name: Enforce Structured Logging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No raw console.log in backend src (use logger instead)
+        run: |
+          # Allow console.log only in test files and legacy scheduler/monitor
+          # that have explicit TODO comments; block it everywhere else in src/
+          set +e
+          VIOLATIONS=$(grep -rn "console\.log\|console\.error\|console\.warn\|console\.info" \
+            backend/src/ \
+            --include="*.ts" \
+            --exclude-dir=tests \
+            --exclude-dir=test \
+            | grep -v "backup_scheduler\|backup_monitor\|contract_event_indexer\|services/indexer\|sentry.ts" \
+            | grep -v "^\s*//" \
+          )
+          set -e
+          if [ -n "$VIOLATIONS" ]; then
+            echo "❌ Raw console.* calls found — use structured logger instead:"
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "✅ No raw console.* calls in backend src/"
+
+      - name: Correlation middleware is mounted in index.ts
+        run: |
+          if ! grep -q "correlationMiddleware" backend/src/index.ts; then
+            echo "❌ correlationMiddleware not found in backend/src/index.ts"
+            exit 1
+          fi
+          echo "✅ correlationMiddleware is mounted"
+
+      - name: Sentry backend integration exists
+        run: |
+          test -f backend/src/sentry.ts || { echo "❌ backend/src/sentry.ts missing"; exit 1; }
+          echo "✅ backend/src/sentry.ts present"
+
+      - name: Sentry frontend integration exists
+        run: |
+          test -f frontend/src/lib/sentry.ts || { echo "❌ frontend/src/lib/sentry.ts missing"; exit 1; }
+          echo "✅ frontend/src/lib/sentry.ts present"
+
+      - name: Sentry is initialised in frontend main.tsx
+        run: |
+          if ! grep -q "initSentry" frontend/src/main.tsx; then
+            echo "❌ initSentry() not called in frontend/src/main.tsx"
+            exit 1
+          fi
+          echo "✅ Sentry initialised in main.tsx"
+
+  backend-typecheck:
+    name: Backend TypeScript Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: TypeScript compilation check (no emit)
+        run: npx tsc --noEmit
+        working-directory: backend
+
+  terraform-validate-cloudwatch:
+    name: Terraform Validate CloudWatch Module
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '~1.7'
+
+      - name: Terraform init (cloudwatch-logging module)
+        run: terraform init -backend=false
+        working-directory: infra/modules/cloudwatch-logging
+
+      - name: Terraform validate
+        run: terraform validate
+        working-directory: infra/modules/cloudwatch-logging

@@ -9,7 +9,11 @@ import { ToastProvider } from './components/Toast';
 import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
 import { queryClient } from './lib/queryClient';
+import { initSentry } from './lib/sentry';
 import './index.css';
+
+// Initialise Sentry before anything else so all subsequent errors are captured
+initSentry();
 
 // Register service worker for PWA support
 if ('serviceWorker' in navigator) {
