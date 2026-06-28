@@ -1,75 +1,53 @@
-# Security Policy
+# Bug Bounty Program
 
-## Supported Versions
+We welcome responsible disclosure of security vulnerabilities. This document outlines our vulnerability classifications, reward tiers, and response procedures.
 
-| Version | Supported |
-|---------|-----------|
-| main    | ✅        |
-| develop | ✅        |
-| others  | ❌        |
+## Vulnerability Classifications
 
-## Reporting a Vulnerability
+- **Critical**: Remote code execution, authentication bypass, data loss, significant financial impact.
+- **High**: Privilege escalation, sensitive data exposure, denial of service with moderate impact.
+- **Medium**: Cross-site scripting (XSS), CSRF, limited information disclosure.
+- **Low**: Minor information leakage, logging issues, lack of security headers.
 
-**Do not open a public GitHub issue for security vulnerabilities.**
+## Reward Tiers
 
-Report vulnerabilities via [GitHub Private Security Advisories](https://github.com/Xoulomon/Stellar-Save/security/advisories/new).
+| Tier          | Reward (USD) | Points |
+|---------------|--------------|--------|
+| Critical      | $5,000       | 500    |
+| High          | $1,000       | 300    |
+| Medium        | $500         | 150    |
+| Low           | $100         | 50     |
 
-Include:
-- Description and impact
-- Steps to reproduce
-- Affected component (contract, frontend, backend)
-- Suggested fix (optional)
+Rewards are paid via stablecoin (USDC) or equivalent upon validation and fix deployment.
 
-You will receive an acknowledgment within **48 hours** and a resolution timeline within **7 days**.
+## Response Procedures
 
-## Automated Security Scanning
+1. **Report Submission**: Report via email to security@stellarsave.io or through our HackerOne program.
+2. **Acknowledgement**: Within 24 hours of receipt.
+3. **Triage**: Vulnerability classified and validated within 48 hours.
+4. **Fix Development**: Timeline based on severity:
+   - Critical: 72 hours
+   - High: 1 week
+   - Medium: 2 weeks
+   - Low: 30 days
+5. **Deployment**: Fix deployed to production within 24 hours of completion.
+6. **Public Disclosure**: Coordinated disclosure after fix deployment (allow 7 days minimum for users to update).
 
-This repository runs the following checks on every PR and push:
+## Responsible Disclosure Policy
 
-| Tool | Scope | Trigger |
-|------|-------|---------|
-| **Semgrep** | SAST — Rust & TypeScript | Push / PR / Weekly |
-| **CodeQL** | SAST — JavaScript/TypeScript | Push / PR / Weekly |
-| **Snyk** | Dependency CVEs (npm + Cargo) | Push / PR / Weekly |
-| **Dependabot** | Automated dependency updates | Weekly |
-| **cargo-audit** | Rust advisory database | Push / PR |
-| **npm audit** | Node advisory database | Push / PR |
-| **Gitleaks** | Secret detection | Push / PR |
+- Do not access or modify data not owned by you.
+- Do not perform destructive tests (e.g., DoS, spam).
+- Provide sufficient details to reproduce the issue.
+- Allow reasonable time for fix before public disclosure.
 
-### Security Gate
+## Rewards Distribution
 
-PRs targeting `main` or `develop` are **blocked** from merging if any **critical** or **high** severity finding is detected. Findings are visible in the repository's [Security tab](../../security/code-scanning).
+Rewards are processed within 14 business days of successful fix deployment. Duplicate reports will not be rewarded (first reporter receives credit).
 
-## Secrets Management
+## Platform
 
-- Never commit secrets, private keys, or mnemonics
-- Use GitHub Actions secrets for CI credentials (`SNYK_TOKEN`, `SEMGREP_APP_TOKEN`)
-- `.env` files are git-ignored; use `.env.example` as a template
-- Stellar private keys must never appear in source code or logs
+We use [HackerOne](https://hackerone.com) for managing submissions. Reporters are encouraged to register there for streamlined tracking.
 
-## Smart Contract Security
+---
 
-The Soroban contract implements the following protections:
-
-- **Reentrancy guard** on `transfer_payout()`
-- **Admin-only** pause/unpause and configuration
-- **Rate limiting** on group creation and joins
-- **Atomic storage** updates to prevent partial state
-- **Overflow checks** enabled in release profile (`overflow-checks = true`)
-- **Panic = abort** to prevent unwinding exploits
-
-See [docs/threat-model.md](docs/threat-model.md) for the full threat model.
-
-## Dependency Policy
-
-- Pin exact versions in `Cargo.toml` and `package.json`
-- Review Dependabot PRs weekly; merge security patches within **48 hours**
-- Run `cargo audit` and `npm audit` locally before releasing
-
-## Incident Response
-
-1. Maintainer confirms and assesses severity
-2. Patch developed on a private branch
-3. Coordinated disclosure after patch is ready
-4. Release published with security advisory
-5. CVE requested if applicable
+*Last updated: 2025-03-25*
