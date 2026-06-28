@@ -547,6 +547,29 @@ export function createV1Router(services: V1Services): Router {
     csvStream.end();
   });
 
+  // ── Admin Reconciliation (Issue #3) ──────────────────────────────────────
+  router.get('/admin/reconciliation/status', adminAuthMiddleware, async (_req, res) => {
+    try {
+      const { getReconciliationService } = await import('../reconciliation_service');
+      const svc = getReconciliationService();
+      if (!svc) return res.status(503).json({ error: 'Reconciliation service not started' });
+      res.json({ message: 'Use POST /admin/reconciliation/run to trigger a run or check Prometheus metrics.' });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to get reconciliation status' });
+    }
+  });
+
+  router.post('/admin/reconciliation/run', adminAuthMiddleware, async (_req, res) => {
+    try {
+      const { getReconciliationService, initReconciliationService } = await import('../reconciliation_service');
+      const svc = getReconciliationService() ?? initReconciliationService();
+      const result = await svc.run();
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: 'Reconciliation run failed', detail: String(err) });
+    }
+  });
+
   // ── Admin Fraud Detection (Issue #1028) ──────────────────────────────────
   router.get('/admin/fraud/flags', adminAuthMiddleware, async (req, res) => {
     const { status } = req.query;

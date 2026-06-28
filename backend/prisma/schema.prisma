@@ -305,6 +305,37 @@ model AuditLog {
   @@index([createdAt])
 }
 
+// ========== EVENT-SOURCING AUDIT LOG (Issue #1 — tamper-evident hash chain) ==========
+
+model AuditEventLog {
+  id           String   @id
+  /// Who performed the action (wallet address, admin ID, or system)
+  actor        String
+  /// Verb e.g. "group.create", "POST /api/v1/groups/:id/contribute"
+  action       String
+  /// Model/domain noun e.g. "Group", "ContractEvent"
+  resourceType String
+  /// Primary key / contract ID of the affected record
+  resourceId   String?
+  /// JSON snapshot of relevant fields before the change (null for creates)
+  before       Json?
+  /// JSON snapshot of relevant fields after the change (null for deletes)
+  after        Json?
+  /// Arbitrary extra context (IP, user-agent, path, …)
+  metadata     Json?
+  /// Hash of the previous entry in the chain (genesis = 64 zeros)
+  prevHash     String
+  /// SHA-256( id | prevHash | actor | action | resourceType | resourceId | before | after | createdAt )
+  hash         String   @unique
+  createdAt    DateTime
+
+  @@index([actor])
+  @@index([action])
+  @@index([resourceType])
+  @@index([resourceId])
+  @@index([createdAt])
+}
+
 // ========== PRIVACY / GDPR MODELS (Issue #1107) ==========
 
 model PrivacyRequest {

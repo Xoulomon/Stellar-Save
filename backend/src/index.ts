@@ -42,6 +42,9 @@ import { createAuthRouter } from './routes/auth';
 import { createUserRouter } from './routes/user';
 import { createRampRouter } from './routes/ramp';
 import { errorMiddleware, notFoundMiddleware } from './lib/errorMiddleware';
+import { AuditEventLog, auditMiddleware, createAuditRouter } from './audit_event_log';
+import { initWebSocketGateway } from './ws_gateway';
+import { initReconciliationService } from './reconciliation_service';
 
 const CSP_POLICY = [
   "default-src 'self'",
@@ -63,6 +66,8 @@ app.use(express.json());
 app.use(compression());
 app.use(requestLogger);
 app.use(metricsMiddleware);
+// Tamper-evident audit log for all state-changing operations (Issue #1)
+app.use(auditMiddleware);
 
 // CSP middleware — applied to all responses
 app.use((_req, res, next) => {
@@ -235,6 +240,21 @@ app.get('/api/members/:address/reputation', async (req, res) => {
   }
 });
 
+// ── Legacy unversioned routes (redirect to v1 for backward compatibility) ────
+app.use((req, res, next) => {
+  const legacyPaths = ['/health', '/recommendations', '/preferences', '/export', '/backup', '/search'];
+  if (legacyPaths.some(p => req.path.startsWith(p))) {
+    res.setHeader('X-API-Deprecation-Notice', 'Unversioned paths are deprecated. Use /api/v1/...');
+    res.setHeader('Deprecation', 'true');
+    res.setHeader('Sunset', '2027-01-01');
+  }
+  next();
+});
+app.use('/', createV1Router(services));
+
+// ── Admin audit-log routes (Issue #1 — event-sourcing audit log) ──────────────
+app.use('/api/admin/audit-log', createAuditRouter());
+
 // ── Error handling (must be last) ─────────────────────────────────────────────
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
@@ -260,6 +280,50 @@ server.listen(PORT, async () => {
   // Start fraud detection worker (Issue #1028)
   if (config.fraud.enabled) {
     await fraudDetectionWorker.start();
+  }
+
+  // ── Issue #2: WebSocket gateway for real-time event streaming ──────────────
+  const wsGateway = initWebSocketGateway(server as any);
+  console.log(`  WebSocket:  ws://localhost:${PORT}/ws?token=<jwt>`);
+
+  // Patch the ContractEventIndexer to publish events to the WS gateway
+  // after each indexed event.  We do this post-init to avoid circular deps.
+  const origStoreEvent = (eventIndexer as any).storeEvent?.bind(eventIndexer);
+  if (origStoreEvent) {
+    (eventIndexer as any).storeEvent = async (event: any) => {
+      await origStoreEvent(event);
+      // Publish to WebSocket subscribers
+      try {
+        const data = event.data ?? {};
+        wsGateway.publishContractEvent({
+          contractId: event.contractId || event.contract_id || '',
+          eventType: event.type || event.eventType || 'unknown',
+          data,
+          txHash: event.transactionHash || event.txHash || '',
+          ledgerSeq: event.ledger || event.ledgerSeq || 0,
+          timestamp: event.createdAt ? new Date(event.createdAt) : new Date(),
+        });
+      } catch { /* non-blocking */ }
+    };
+  }
+
+  // ── Issue #1: Start audit chain integrity verification job ────────────────
+  if (process.env.AUDIT_VERIFY_ENABLED !== 'false') {
+    const auditIntervalMs = parseInt(process.env.AUDIT_VERIFY_INTERVAL_MS ?? String(60 * 60 * 1000));
+    AuditEventLog.startVerificationJob(auditIntervalMs);
+    console.log(`  Audit:      integrity verification every ${auditIntervalMs / 60000} min`);
+  }
+
+  // ── Issue #3: Start reconciliation service ────────────────────────────────
+  if (process.env.RECONCILIATION_ENABLED === 'true') {
+    const reconciliation = initReconciliationService({
+      contractId: process.env.CONTRACT_ID ?? '',
+      sampleSize: parseInt(process.env.RECONCILIATION_SAMPLE_SIZE ?? '50'),
+      driftThreshold: parseInt(process.env.RECONCILIATION_DRIFT_THRESHOLD ?? '3'),
+      intervalMs: parseInt(process.env.RECONCILIATION_INTERVAL_MS ?? String(15 * 60 * 1000)),
+    });
+    reconciliation.start();
+    console.log(`  Reconciliation: drift check every ${parseInt(process.env.RECONCILIATION_INTERVAL_MS ?? String(15 * 60 * 1000)) / 60000} min`);
   }
 });
 
