@@ -6,11 +6,61 @@
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e5e5);
   border-radius: 12px;
+  position: relative;
+  overflow: hidden;
 }
 
 .streak-display--at-risk {
   border-color: var(--color-warning, #f59e0b);
 }
+
+.streak-display--celebrating {
+  border-color: var(--color-primary, #6366f1);
+  box-shadow: 0 0 0 2px var(--color-primary-light, #c7d2fe);
+}
+
+/* ── Celebration burst ─────────────────────────────────────────────────────── */
+
+.streak-celebration {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  z-index: 1;
+}
+
+.streak-celebration-particle {
+  position: absolute;
+  font-size: 1.5rem;
+  animation: streak-burst 1.8s ease-out forwards;
+  animation-delay: calc(var(--i) * 0.12s);
+  opacity: 0;
+}
+
+@keyframes streak-burst {
+  0%   { transform: translate(0, 0) scale(0.5); opacity: 1; }
+  60%  { opacity: 1; }
+  100% {
+    transform:
+      translate(
+        calc((var(--i) - 2) * 60px),
+        calc(-80px - var(--i) * 10px)
+      )
+      scale(1.1);
+    opacity: 0;
+  }
+}
+
+/* Honour prefers-reduced-motion — kill all decorative animations */
+@media (prefers-reduced-motion: reduce) {
+  .streak-celebration { display: none; }
+  .streak-progress-fill { transition: none; }
+}
+
+/* ── Warning ──────────────────────────────────────────────────────────────── */
 
 .streak-warning {
   background: var(--color-warning-bg, #fffbeb);
@@ -21,6 +71,8 @@
   color: var(--color-warning-text, #92400e);
   font-weight: 500;
 }
+
+/* ── Stats ────────────────────────────────────────────────────────────────── */
 
 .streak-stats {
   display: flex;
@@ -47,6 +99,8 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+/* ── Progress bar ─────────────────────────────────────────────────────────── */
 
 .streak-progress {
   display: flex;
@@ -83,6 +137,8 @@
   font-size: 0.8rem;
   color: var(--color-text-muted, #888);
 }
+
+/* ── Badges ───────────────────────────────────────────────────────────────── */
 
 .streak-badges-title {
   font-size: 0.9rem;
@@ -125,4 +181,98 @@
   color: var(--color-text-muted, #888);
   font-style: italic;
   margin: 0;
+}
+
+/* ── Divider ──────────────────────────────────────────────────────────────── */
+
+.streak-divider {
+  height: 1px;
+  background: var(--color-border, #e5e5e5);
+  margin: 0 -1.25rem;
+}
+
+/* ── Referral rewards ─────────────────────────────────────────────────────── */
+
+.streak-referral {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.streak-referral-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-text, #1a1a1a);
+}
+
+.streak-referral-loading {
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #888);
+  font-style: italic;
+}
+
+.streak-referral-stats {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.streak-referral-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.streak-referral-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-primary, #6366f1);
+}
+
+.streak-referral-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.streak-referral-claim-btn {
+  align-self: flex-start;
+  padding: 0.45rem 1.1rem;
+  background: var(--color-primary, #6366f1);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.streak-referral-claim-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.streak-referral-claim-btn:not(:disabled):hover {
+  opacity: 0.87;
+}
+
+.streak-referral-success {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: #166534;
+  font-weight: 500;
+}
+
+.streak-referral-error {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: #991b1b;
 }

@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
 import { routeConfig } from './routes';
 import { ProtectedRoute } from './ProtectedRoute';
+import { AdminRoute } from './AdminRoute';
 import { ROUTES } from './constants';
 
 /**
@@ -33,13 +34,22 @@ export function AppRouter() {
       <Routes>
         {routeConfig.map((route) => {
           const Component = route.component;
-          const element = route.protected ? (
-            <ProtectedRoute>
-              <Component />
-            </ProtectedRoute>
-          ) : (
-            <Component />
-          );
+          let element: JSX.Element;
+          if (route.adminOnly) {
+            element = (
+              <AdminRoute>
+                <Component />
+              </AdminRoute>
+            );
+          } else if (route.protected) {
+            element = (
+              <ProtectedRoute>
+                <Component />
+              </ProtectedRoute>
+            );
+          } else {
+            element = <Component />;
+          }
 
           return <Route key={route.path} path={route.path} element={element} />;
         })}

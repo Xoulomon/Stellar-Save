@@ -30,6 +30,8 @@ export const ROUTES = {
   MEMBER_PROFILE: "/members/:address",
   ABOUT: "/about",
   FEEDBACK_ADMIN: "/admin/feedback",
+  ADMIN_DASHBOARD: "/admin/dashboard",
+  RECOVERY: "/settings/recovery",
   GOVERNANCE: "/governance",
   NOT_FOUND: "/404",
   ERROR: "/500",

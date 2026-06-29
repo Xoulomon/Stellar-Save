@@ -2,6 +2,8 @@ import { lazy } from "react";
 import { ROUTES } from "./constants";
 import type { RouteConfig } from "./types";
 
+const AdminDashboardPage = lazy(() => import("../pages/AdminDashboardPage"));
+const RecoverySetupPage = lazy(() => import("../pages/RecoverySetupPage"));
 const HomePage = lazy(() => import("../pages/HomePage"));
 const LandingPage = lazy(() => import("../pages/LandingPage"));
 const DashboardPage = lazy(() => import("../pages/DashboardPage"));
@@ -215,6 +217,21 @@ export const routeConfig: RouteConfig[] = [
     protected: true,
     title: "Feedback Dashboard - Stellar Save",
     description: "Review and respond to user feedback",
+  },
+  {
+    path: ROUTES.ADMIN_DASHBOARD,
+    component: AdminDashboardPage,
+    protected: true,
+    adminOnly: true,
+    title: "Admin Dashboard - Stellar Save",
+    description: "Platform health, moderation, and audit logs",
+  },
+  {
+    path: ROUTES.RECOVERY,
+    component: RecoverySetupPage,
+    protected: true,
+    title: "Social Recovery - Stellar Save",
+    description: "Configure guardians and approve recovery requests",
   },
   {
     path: ROUTES.GOVERNANCE,
