@@ -114,6 +114,26 @@ model NotificationQueue {
   @@index([userId])
 }
 
+// ========== SMS/WHATSAPP REMINDER OPT-IN (Issue #SMS) ==========
+
+model SmsReminder {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  phone       String                       // E.164 format
+  channel     String    @default("sms")    // "sms" | "whatsapp"
+  verified    Boolean   @default(false)
+  optedOut    Boolean   @default(false)
+  otpCode     String?                      // 6-digit, cleared after verify
+  otpExpiresAt DateTime?
+  leadTimeHours Int     @default(24)       // hours before deadline
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([verified])
+  @@index([optedOut])
+}
+
 // ========== ANALYTICS MODELS (Issue #558) ==========
 
 model PlatformMetrics {
