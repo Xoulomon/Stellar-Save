@@ -29,4 +29,23 @@ export const queryKeys = {
     proposal: (id: string) => ['governance', 'proposals', id] as const,
     governors: () => ['governance', 'governors'] as const,
   },
+
+  // Admin dashboard
+  admin: {
+    stats: () => ['admin', 'stats'] as const,
+    users: () => ['admin', 'users'] as const,
+    groups: () => ['admin', 'groups'] as const,
+    auditLogs: () => ['admin', 'audit-logs'] as const,
+  },
+
+  // Social recovery
+  recovery: {
+    config: (owner: string) => ['recovery', 'config', owner] as const,
+    incoming: (guardian: string) => ['recovery', 'incoming', guardian] as const,
+  },
+
+  // Referral rewards
+  referral: {
+    rewards: (address: string) => ['referralRewards', address] as const,
+  },
 } as const;

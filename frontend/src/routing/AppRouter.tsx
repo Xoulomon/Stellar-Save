@@ -4,6 +4,7 @@ import { Box } from '@mui/material';
 import { Skeleton } from '../components/Skeleton/Skeleton';
 import { routeConfig } from './routes';
 import { ProtectedRoute } from './ProtectedRoute';
+import { AdminRoute } from './AdminRoute';
 import { ROUTES } from './constants';
 
 /** Skeleton fallback shown while a lazy route chunk is downloading. */
@@ -32,13 +33,22 @@ export function AppRouter() {
       <Routes>
         {routeConfig.map((route) => {
           const Component = route.component;
-          const element = route.protected ? (
-            <ProtectedRoute>
-              <Component />
-            </ProtectedRoute>
-          ) : (
-            <Component />
-          );
+          let element: JSX.Element;
+          if (route.adminOnly) {
+            element = (
+              <AdminRoute>
+                <Component />
+              </AdminRoute>
+            );
+          } else if (route.protected) {
+            element = (
+              <ProtectedRoute>
+                <Component />
+              </ProtectedRoute>
+            );
+          } else {
+            element = <Component />;
+          }
 
           return <Route key={route.path} path={route.path} element={element} />;
         })}

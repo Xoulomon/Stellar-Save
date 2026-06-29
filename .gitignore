@@ -1,5 +1,5 @@
 # Rust
-target/
+/target/
 Cargo.lock
 **/*.rs.bk
 *.pdb
@@ -27,4 +27,6 @@ Thumbs.db
 
 # Test snapshots (optional - uncomment if you don't want to commit these)
 # **/test_snapshots/
-node_modules
+
+# Dependencies
+node_modules/

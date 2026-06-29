@@ -1,5 +1,6 @@
 [package]
 name = "stellar-save"
+<<<<<<< HEAD
 description = "Rotational savings and credit association (ROSCA) on Stellar"
 edition = "2021"
 license = "MIT"
@@ -8,12 +9,21 @@ publish = false
 
 [package.metadata.stellar]
 cargo_inherit = true 
+=======
+description = "Rotational Savings and Credit Association (ROSCA) on Stellar Soroban"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+version.workspace = true
+>>>>>>> 46b7416 (feat: implement bug bounty program and vulnerability disclosure)
 
 [lib]
 crate-type = ["cdylib"]
 doctest = false
 
 [dependencies]
+<<<<<<< HEAD
 soroban-sdk = "23.0.3"
 
 [dev-dependencies]
@@ -39,3 +49,9 @@ coverage = []
 # enabled for the wasm `cdylib` target, so it cannot bloat or break on-chain
 # builds. See docs/distributed-tracing.md for the full architecture.
 host-tracing = []
+=======
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+>>>>>>> 46b7416 (feat: implement bug bounty program and vulnerability disclosure)
