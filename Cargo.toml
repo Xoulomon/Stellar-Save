@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "contracts/stellar-save",
+<<<<<<< HEAD
 ]
 exclude = [
     "contracts/guess-the-number",
@@ -9,6 +10,11 @@ exclude = [
     "contracts/nft-enumerable",
     "contracts/stellar-save",
     "client",
+=======
+    "contracts/guess-the-number",
+    "contracts/nft-enumerable",
+    "contracts/fungible-allowlist",
+>>>>>>> 46b7416 (feat: implement bug bounty program and vulnerability disclosure)
 ]
 
 [workspace.package]
@@ -19,6 +25,7 @@ repository = "https://github.com/Xoulomon/Stellar-Save"
 
 [workspace.dependencies]
 soroban-sdk = "23.0.3"
+<<<<<<< HEAD
 stellar-access = "0.6.0"
 stellar-macros = "0.6.0"
 stellar-tokens = "0.6.0"
@@ -36,3 +43,8 @@ lto = true
 [profile.release-with-logs]
 inherits = "release"
 debug-assertions = true
+=======
+stellar-tokens = "0.7.2"
+stellar-macros = "0.7.2"
+stellar-access = "0.7.2"
+>>>>>>> 46b7416 (feat: implement bug bounty program and vulnerability disclosure)
