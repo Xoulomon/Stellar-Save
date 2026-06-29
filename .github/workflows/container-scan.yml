@@ -1,0 +1,612 @@
+name: Container Image Scanning & SBOM
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/container-scan.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/container-scan.yml'
+  release:
+    types: [published]
+  schedule:
+    - cron: '0 5 * * 1'  # Weekly Monday 5am UTC - catch new CVEs in existing images
+  workflow_dispatch:
+    inputs:
+      fail_on_severity:
+        description: 'Minimum severity to fail the build (CRITICAL, HIGH, MEDIUM, LOW)'
+        required: false
+        default: 'HIGH'
+        type: choice
+        options: [CRITICAL, HIGH, MEDIUM, LOW]
+
+# Policy: fail on CRITICAL or HIGH CVEs by default.
+# To accept a specific CVE, add it to .github/trivy-ignore.txt with a justification comment.
+env:
+  FAIL_ON_SEVERITY: ${{ github.event.inputs.fail_on_severity || 'HIGH' }}
+  REGISTRY: ghcr.io
+  IMAGE_BACKEND: ghcr.io/${{ github.repository }}/backend
+  IMAGE_FRONTEND: ghcr.io/${{ github.repository }}/frontend
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  id-token: write   # needed for OIDC signing with cosign
+
+jobs:
+  # ── Job 1: Build backend image ───────────────────────────────────────────────
+  build-backend:
+    name: Build Backend Image
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.tags }}
+      digest: ${{ steps.build.outputs.digest }}
+      image_ref: ${{ env.IMAGE_BACKEND }}@${{ steps.build.outputs.digest }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_BACKEND }}
+          tags: |
+            type=sha,prefix=sha-
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push backend image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: false   # we generate SBOM separately with Syft for full control
+
+      - name: Export image to local tar (for scanning on PRs)
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: ${{ env.IMAGE_BACKEND }}:pr-scan
+          outputs: type=docker,dest=/tmp/backend-image.tar
+          cache-from: type=gha
+
+      - name: Upload backend image tar
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-image-tar
+          path: /tmp/backend-image.tar
+          retention-days: 1
+
+  # ── Job 2: Build frontend image ──────────────────────────────────────────────
+  build-frontend:
+    name: Build Frontend Image
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.tags }}
+      digest: ${{ steps.build.outputs.digest }}
+      image_ref: ${{ env.IMAGE_FRONTEND }}@${{ steps.build.outputs.digest }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_FRONTEND }}
+          tags: |
+            type=sha,prefix=sha-
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push frontend image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: false
+
+      - name: Export image to local tar (for scanning on PRs)
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          tags: ${{ env.IMAGE_FRONTEND }}:pr-scan
+          outputs: type=docker,dest=/tmp/frontend-image.tar
+          cache-from: type=gha
+
+      - name: Upload frontend image tar
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-image-tar
+          path: /tmp/frontend-image.tar
+          retention-days: 1
+
+  # ── Job 3: Vulnerability scan — backend ──────────────────────────────────────
+  scan-backend:
+    name: Scan Backend Image
+    runs-on: ubuntu-latest
+    needs: build-backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download backend image tar (PR builds)
+        if: github.event_name == 'pull_request'
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-image-tar
+          path: /tmp
+
+      - name: Load backend image from tar (PR builds)
+        if: github.event_name == 'pull_request'
+        run: docker load --input /tmp/backend-image.tar
+
+      # Full Trivy scan — table output for logs
+      - name: Trivy scan (table) — backend
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ github.event_name == 'pull_request' && format('{0}:pr-scan', env.IMAGE_BACKEND) || needs.build-backend.outputs.image }}
+          format: table
+          exit-code: '0'   # don't fail here; we use the SARIF upload + gate below
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH,MEDIUM,LOW
+          trivyignore-file: .github/trivy-ignore.txt
+
+      # SARIF output — uploaded to GitHub Security tab
+      - name: Trivy scan (SARIF) — backend
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ github.event_name == 'pull_request' && format('{0}:pr-scan', env.IMAGE_BACKEND) || needs.build-backend.outputs.image }}
+          format: sarif
+          output: trivy-backend.sarif
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH,MEDIUM,LOW
+          trivyignore-file: .github/trivy-ignore.txt
+
+      - name: Upload backend SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-backend.sarif
+          category: trivy-backend
+
+      # JSON output — used by the policy gate step
+      - name: Trivy scan (JSON) — backend
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ github.event_name == 'pull_request' && format('{0}:pr-scan', env.IMAGE_BACKEND) || needs.build-backend.outputs.image }}
+          format: json
+          output: trivy-backend.json
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH,MEDIUM,LOW
+          trivyignore-file: .github/trivy-ignore.txt
+
+      - name: Upload backend Trivy JSON report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-backend-report
+          path: trivy-backend.json
+          retention-days: 30
+
+      # Policy gate — fail build if CVEs at or above FAIL_ON_SEVERITY exist
+      - name: CVE policy gate — backend
+        run: |
+          SEVERITY="${{ env.FAIL_ON_SEVERITY }}"
+          echo "Policy: fail on severity >= ${SEVERITY}"
+
+          # Map severity to numeric level for comparison
+          declare -A SEV_LEVEL=([LOW]=1 [MEDIUM]=2 [HIGH]=3 [CRITICAL]=4)
+          THRESHOLD=${SEV_LEVEL[$SEVERITY]}
+
+          COUNT=$(python3 - <<'PYEOF'
+          import json, sys
+          threshold_map = {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
+          threshold = threshold_map.get("$SEVERITY", 3)
+          with open("trivy-backend.json") as f:
+              data = json.load(f)
+          total = 0
+          for result in data.get("Results", []):
+              for vuln in result.get("Vulnerabilities", []) or []:
+                  sev = vuln.get("Severity", "")
+                  if threshold_map.get(sev, 0) >= threshold:
+                      print(f"  [{sev}] {vuln.get('VulnerabilityID')} in {vuln.get('PkgName')} — {vuln.get('Title','')[:80]}", file=sys.stderr)
+                      total += 1
+          print(total)
+          PYEOF
+          )
+
+          echo "Found ${COUNT} vulnerabilities at or above ${SEVERITY}"
+          if [ "${COUNT}" -gt "0" ]; then
+            echo ""
+            echo "❌ Build blocked: ${COUNT} CVE(s) at severity ${SEVERITY} or above detected in backend image."
+            echo "   To accept a specific CVE, add it to .github/trivy-ignore.txt with justification."
+            echo "   See SECURITY.md#vulnerability-exception-process for the full exception workflow."
+            exit 1
+          fi
+          echo "✅ No CVEs at or above ${SEVERITY} — backend image passed policy gate."
+
+  # ── Job 4: Vulnerability scan — frontend ─────────────────────────────────────
+  scan-frontend:
+    name: Scan Frontend Image
+    runs-on: ubuntu-latest
+    needs: build-frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download frontend image tar (PR builds)
+        if: github.event_name == 'pull_request'
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-image-tar
+          path: /tmp
+
+      - name: Load frontend image from tar (PR builds)
+        if: github.event_name == 'pull_request'
+        run: docker load --input /tmp/frontend-image.tar
+
+      - name: Trivy scan (table) — frontend
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ github.event_name == 'pull_request' && format('{0}:pr-scan', env.IMAGE_FRONTEND) || needs.build-frontend.outputs.image }}
+          format: table
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH,MEDIUM,LOW
+          trivyignore-file: .github/trivy-ignore.txt
+
+      - name: Trivy scan (SARIF) — frontend
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ github.event_name == 'pull_request' && format('{0}:pr-scan', env.IMAGE_FRONTEND) || needs.build-frontend.outputs.image }}
+          format: sarif
+          output: trivy-frontend.sarif
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH,MEDIUM,LOW
+          trivyignore-file: .github/trivy-ignore.txt
+
+      - name: Upload frontend SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-frontend.sarif
+          category: trivy-frontend
+
+      - name: Trivy scan (JSON) — frontend
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ github.event_name == 'pull_request' && format('{0}:pr-scan', env.IMAGE_FRONTEND) || needs.build-frontend.outputs.image }}
+          format: json
+          output: trivy-frontend.json
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH,MEDIUM,LOW
+          trivyignore-file: .github/trivy-ignore.txt
+
+      - name: Upload frontend Trivy JSON report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-frontend-report
+          path: trivy-frontend.json
+          retention-days: 30
+
+      - name: CVE policy gate — frontend
+        run: |
+          SEVERITY="${{ env.FAIL_ON_SEVERITY }}"
+          echo "Policy: fail on severity >= ${SEVERITY}"
+
+          COUNT=$(python3 - <<'PYEOF'
+          import json, sys
+          threshold_map = {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
+          threshold = threshold_map.get("$SEVERITY", 3)
+          with open("trivy-frontend.json") as f:
+              data = json.load(f)
+          total = 0
+          for result in data.get("Results", []):
+              for vuln in result.get("Vulnerabilities", []) or []:
+                  sev = vuln.get("Severity", "")
+                  if threshold_map.get(sev, 0) >= threshold:
+                      print(f"  [{sev}] {vuln.get('VulnerabilityID')} in {vuln.get('PkgName')} — {vuln.get('Title','')[:80]}", file=sys.stderr)
+                      total += 1
+          print(total)
+          PYEOF
+          )
+
+          echo "Found ${COUNT} vulnerabilities at or above ${SEVERITY}"
+          if [ "${COUNT}" -gt "0" ]; then
+            echo ""
+            echo "❌ Build blocked: ${COUNT} CVE(s) at severity ${SEVERITY} or above detected in frontend image."
+            echo "   To accept a specific CVE, add it to .github/trivy-ignore.txt with justification."
+            echo "   See SECURITY.md#vulnerability-exception-process for the full exception workflow."
+            exit 1
+          fi
+          echo "✅ No CVEs at or above ${SEVERITY} — frontend image passed policy gate."
+
+  # ── Job 5: SBOM generation — backend ─────────────────────────────────────────
+  sbom-backend:
+    name: Generate SBOM — Backend
+    runs-on: ubuntu-latest
+    needs: [build-backend, scan-backend]
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@v0.17.2
+
+      - name: Generate CycloneDX SBOM — backend
+        uses: anchore/sbom-action@v0.17.2
+        with:
+          image: ${{ needs.build-backend.outputs.image }}
+          format: cyclonedx-json
+          output-file: sbom-backend-cyclonedx.json
+          artifact-name: sbom-backend-cyclonedx.json
+          upload-artifact: true
+          upload-artifact-retention: 90
+
+      - name: Generate SPDX SBOM — backend
+        uses: anchore/sbom-action@v0.17.2
+        with:
+          image: ${{ needs.build-backend.outputs.image }}
+          format: spdx-json
+          output-file: sbom-backend-spdx.json
+          artifact-name: sbom-backend-spdx.json
+          upload-artifact: true
+          upload-artifact-retention: 90
+
+      # Attach SBOM to release if this is a release event
+      - name: Attach SBOM to release — backend
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: sbom-backend-cyclonedx.json
+          asset_name: sbom-backend-cyclonedx.json
+          asset_content_type: application/json
+
+      - name: Attach SPDX SBOM to release — backend
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: sbom-backend-spdx.json
+          asset_name: sbom-backend-spdx.json
+          asset_content_type: application/json
+
+      # Install cosign and sign the SBOM attestation into the registry
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.7.0
+
+      - name: Attest SBOM to image (cosign) — backend
+        if: github.event_name != 'pull_request'
+        run: |
+          cosign attest \
+            --predicate sbom-backend-cyclonedx.json \
+            --type cyclonedx \
+            --yes \
+            ${{ needs.build-backend.outputs.image_ref }}
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+
+  # ── Job 6: SBOM generation — frontend ────────────────────────────────────────
+  sbom-frontend:
+    name: Generate SBOM — Frontend
+    runs-on: ubuntu-latest
+    needs: [build-frontend, scan-frontend]
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@v0.17.2
+
+      - name: Generate CycloneDX SBOM — frontend
+        uses: anchore/sbom-action@v0.17.2
+        with:
+          image: ${{ needs.build-frontend.outputs.image }}
+          format: cyclonedx-json
+          output-file: sbom-frontend-cyclonedx.json
+          artifact-name: sbom-frontend-cyclonedx.json
+          upload-artifact: true
+          upload-artifact-retention: 90
+
+      - name: Generate SPDX SBOM — frontend
+        uses: anchore/sbom-action@v0.17.2
+        with:
+          image: ${{ needs.build-frontend.outputs.image }}
+          format: spdx-json
+          output-file: sbom-frontend-spdx.json
+          artifact-name: sbom-frontend-spdx.json
+          upload-artifact: true
+          upload-artifact-retention: 90
+
+      - name: Attach SBOM to release — frontend
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: sbom-frontend-cyclonedx.json
+          asset_name: sbom-frontend-cyclonedx.json
+          asset_content_type: application/json
+
+      - name: Attach SPDX SBOM to release — frontend
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: sbom-frontend-spdx.json
+          asset_name: sbom-frontend-spdx.json
+          asset_content_type: application/json
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.7.0
+
+      - name: Attest SBOM to image (cosign) — frontend
+        if: github.event_name != 'pull_request'
+        run: |
+          cosign attest \
+            --predicate sbom-frontend-cyclonedx.json \
+            --type cyclonedx \
+            --yes \
+            ${{ needs.build-frontend.outputs.image_ref }}
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+
+  # ── Job 7: Scan summary comment on PRs ───────────────────────────────────────
+  pr-summary:
+    name: PR Scan Summary
+    runs-on: ubuntu-latest
+    needs: [scan-backend, scan-frontend]
+    if: github.event_name == 'pull_request' && always()
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Download backend report
+        uses: actions/download-artifact@v4
+        with:
+          name: trivy-backend-report
+          path: reports
+        continue-on-error: true
+
+      - name: Download frontend report
+        uses: actions/download-artifact@v4
+        with:
+          name: trivy-frontend-report
+          path: reports
+        continue-on-error: true
+
+      - name: Generate PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const threshold_map = {LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4};
+            const failSeverity = '${{ env.FAIL_ON_SEVERITY }}';
+            const threshold = threshold_map[failSeverity] || 3;
+
+            function summarise(reportPath, label) {
+              if (!fs.existsSync(reportPath)) return `| ${label} | ⚠️ report unavailable | — | — | — | — |\n`;
+              const data = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+              const counts = {CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0};
+              for (const result of data.Results || []) {
+                for (const v of result.Vulnerabilities || []) {
+                  counts[v.Severity] = (counts[v.Severity] || 0) + 1;
+                }
+              }
+              const blocking = (counts.CRITICAL || 0) + (threshold <= 3 ? (counts.HIGH || 0) : 0);
+              const status = blocking > 0 ? '❌ Failed' : '✅ Passed';
+              return `| ${label} | ${status} | ${counts.CRITICAL||0} | ${counts.HIGH||0} | ${counts.MEDIUM||0} | ${counts.LOW||0} |\n`;
+            }
+
+            const backendRow  = summarise('reports/trivy-backend-report/trivy-backend.json', 'Backend');
+            const frontendRow = summarise('reports/trivy-frontend-report/trivy-frontend.json', 'Frontend');
+
+            const body = [
+              '## 🔍 Container Image Scan Results',
+              '',
+              `**CVE Policy:** Fail on **${failSeverity}** and above  `,
+              `**Unfixed CVEs:** excluded from gate (flagged for tracking)`,
+              '',
+              '| Image | Gate | 🔴 Critical | 🟠 High | 🟡 Medium | 🟢 Low |',
+              '|-------|------|-------------|---------|-----------|--------|',
+              backendRow.trim(),
+              frontendRow.trim(),
+              '',
+              '> Full findings are uploaded to the [Security tab](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/security/code-scanning).',
+              '> To accept a specific CVE, follow the [exception process](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/blob/main/docs/vulnerability-exception-process.md).',
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body,
+            });
