@@ -20,6 +20,7 @@ import {
 import { Button } from './Button';
 import { formatAddress } from '../utils/formatAddress';
 import { formatAmount } from '../utils/formatAmount';
+import { getExplorerTxUrl } from '../utils/explorerUrl';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -344,7 +345,7 @@ function SuccessStep({ txHash, tx, onClose }: SuccessStepProps) {
 
       <Box
         component="a"
-        href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
+        href={getExplorerTxUrl(txHash)}
         target="_blank"
         rel="noopener noreferrer"
         sx={{ color: 'primary.main', fontSize: '0.875rem', '&:hover': { textDecoration: 'underline' } }}

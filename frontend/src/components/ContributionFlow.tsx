@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { Button } from './Button';
 import { ContributionSuccessModal } from './ContributionSuccessModal';
+import { getExplorerTxUrl } from '../utils/explorerUrl';
 import type { TransactionStatus } from '../types/contribution';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -28,6 +29,8 @@ export interface ContributionFlowProps {
   defaultAmount?: number;
   /** Current cycle number */
   cycleId: number;
+  /** Human-readable group name shown in confirmation */
+  groupName?: string;
   /** Connected wallet address */
   walletAddress?: string;
   /** Called with tx hash on success */
@@ -86,16 +89,20 @@ interface ConfirmDialogProps {
   open: boolean;
   amount: number;
   cycleId: number;
+  groupName?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-function ConfirmDialog({ open, amount, cycleId, onConfirm, onCancel }: ConfirmDialogProps) {
+function ConfirmDialog({ open, amount, cycleId, groupName, onConfirm, onCancel }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onClose={onCancel} maxWidth="xs" fullWidth>
       <DialogTitle>Confirm Contribution</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
+          {groupName && (
+            <Typography variant="subtitle2" fontWeight={600}>{groupName}</Typography>
+          )}
           <Typography variant="body2" color="text.secondary">
             Cycle #{cycleId}
           </Typography>
@@ -146,6 +153,7 @@ export function ContributionFlow({
   maxAmount = 100000,
   defaultAmount,
   cycleId,
+  groupName,
   walletAddress,
   onSuccess,
   onError,
@@ -235,7 +243,7 @@ export function ContributionFlow({
             <span>{STATUS_LABEL[status]}</span>
             {txHash && status === 'success' && (
               <a
-                href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
+                href={getExplorerTxUrl(txHash)}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ fontSize: '0.75rem', color: 'inherit' }}
@@ -319,6 +327,7 @@ export function ContributionFlow({
         open={confirmOpen}
         amount={parsedAmount || 0}
         cycleId={cycleId}
+        groupName={groupName}
         onConfirm={() => void handleConfirm()}
         onCancel={() => setConfirmOpen(false)}
       />

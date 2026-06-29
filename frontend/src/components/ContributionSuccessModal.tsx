@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { getExplorerTxUrl } from '../utils/explorerUrl';
 import './ContributionSuccessModal.css';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -283,7 +284,7 @@ export function ContributionSuccessModal({
         {txHash && (
           <p style={{ margin: '0 0 20px', fontSize: '12px' }}>
             <a
-              href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
+              href={getExplorerTxUrl(txHash)}
               target="_blank"
               rel="noopener noreferrer"
               style={{ color: '#6366f1', textDecoration: 'none' }}
