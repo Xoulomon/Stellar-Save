@@ -67,11 +67,11 @@
   "devDependencies": {
     "@types/graphql-depth-limit": "^1.1.5",
     "@types/ioredis": "^4.28.10",
-    "@types/jest": "^30.0.0",
+    "@types/jest": "^29.5.14",
     "@types/supertest": "^6.0.2",
     "@types/web-push": "^3.6.4",
     "@types/ws": "^8.5.13",
-    "jest": "^30.3.0",
+    "jest": "^29.7.0",
     "supertest": "^7.0.0",
     "ts-jest": "^29.4.9",
     "tsx": "^4.21.0"

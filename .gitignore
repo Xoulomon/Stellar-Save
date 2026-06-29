@@ -1,6 +1,5 @@
 # Rust
-<<<<<<< HEAD
-target/
+/target/
 Cargo.lock
 **/*.rs.bk
 *.pdb
@@ -14,11 +13,6 @@ frontend/.vite/
 .env
 .env.local
 .env.*.local
-=======
-/target/
-Cargo.lock
-**/*.rs.bk
->>>>>>> 46b7416 (feat: implement bug bounty program and vulnerability disclosure)
 
 # IDE
 .vscode/
@@ -31,10 +25,8 @@ Cargo.lock
 .DS_Store
 Thumbs.db
 
-<<<<<<< HEAD
 # Test snapshots (optional - uncomment if you don't want to commit these)
 # **/test_snapshots/
-=======
+
 # Dependencies
 node_modules/
->>>>>>> 46b7416 (feat: implement bug bounty program and vulnerability disclosure)
