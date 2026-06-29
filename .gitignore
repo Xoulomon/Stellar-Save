@@ -27,3 +27,4 @@ Thumbs.db
 
 # Test snapshots (optional - uncomment if you don't want to commit these)
 # **/test_snapshots/
+node_modules
