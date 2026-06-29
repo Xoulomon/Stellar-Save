@@ -38,6 +38,7 @@ import { AppCard, AppLayout } from '../ui';
 import { Button } from '../components/Button';
 import { ContributionFlow } from '../components/ContributionFlow';
 import { InsurancePanel } from '../components/InsurancePanel';
+import { GroupReportExportButton } from '../components/GroupReportExportButton';
 import { useNavigation } from '../routing/useNavigation';
 import { useWallet } from '../hooks/useWallet';
 import type { DetailedGroup, GroupMember } from '../utils/groupApi';
@@ -438,7 +439,7 @@ function GroupDetailContent() {
             </Box>
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Button variant="secondary">Share Group</Button>
-              <Button variant="outline">Export Data</Button>
+              <GroupReportExportButton group={group} />
             </Box>
           </Box>
         </AppCard>

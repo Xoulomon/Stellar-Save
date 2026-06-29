@@ -1841,5 +1841,68 @@ cat performance-results/lighthouse-trends.json
 
 ---
 
-**Last Updated:** April 2026  
+---
+
+## Frontend Bundle Budget
+
+### Overview
+
+Stellar-Save enforces a per-chunk size limit of **100 KB** (uncompressed) via Vite's `chunkSizeWarningLimit`. Breaching this limit emits a build warning and will fail CI once the bundle-size gate is added. The goal is to keep the **initial load** under 200 KB gzipped across all entry-point chunks.
+
+### Running the Analyzer
+
+```bash
+cd frontend
+npm run build:analyze
+```
+
+This runs a production build and then opens `frontend/dist/stats.html` in your browser. The visualizer shows a treemap of every module included in the bundle, colour-coded by chunk.
+
+### Interpreting the Treemap
+
+| Colour / label | Meaning |
+|---|---|
+| `vendor-react` | React, ReactDOM, React Router — should be ≈ 50 KB gz |
+| `vendor-mui` | MUI core + Emotion — largest vendor chunk, ≈ 100–130 KB gz |
+| `vendor-stellar` | Stellar SDK + Freighter API — ≈ 80–100 KB gz |
+| `vendor-i18n` | i18next + react-i18next — ≈ 15 KB gz |
+| `route-analytics` | Analytics, platform analytics, group analytics pages |
+| `route-admin` | Admin feedback dashboard page |
+| `route-charts` | Recharts library — only loaded with chart-heavy routes |
+| `index` (entry) | App shell, router, layout, shared hooks |
+
+**Red flags to look for:**
+
+- The `index` entry chunk grows unexpectedly — a new import in `App.tsx` or `AppRouter.tsx` may have pulled in a heavy module synchronously.
+- A page module appears in the `index` chunk instead of its own `route-*` chunk — check that the import in `routes.tsx` uses `lazy()`.
+- `recharts` appears outside `route-charts` — a page outside the analytics routes may be importing chart components directly.
+
+### Lazy-Loading Convention
+
+All routes are registered through `src/routing/routes.tsx` using `React.lazy`. **Never import a page component directly** from `AppRouter.tsx` or a shared module — this defeats code splitting.
+
+```ts
+// ✅ Correct — creates a separate chunk
+const AnalyticsDashboardPage = lazy(() => import('../pages/AnalyticsDashboardPage'));
+
+// ❌ Wrong — page lands in the initial bundle
+import AnalyticsDashboardPage from '../pages/AnalyticsDashboardPage';
+```
+
+Suspense fallbacks in `AppRouter.tsx` show a skeleton layout (not a blank screen) while the chunk downloads.
+
+### Budget Thresholds
+
+| Chunk | Budget (uncompressed) | Action on breach |
+|---|---|---|
+| `index` (entry) | 200 KB | Investigate new synchronous imports |
+| Any `vendor-*` chunk | 200 KB | Review whether the full library is needed |
+| Any `route-*` chunk | 150 KB | Check for unintended transitive imports |
+| Individual page chunk | 50 KB | Lazy-load heavy sub-components |
+
+Run `npm run build` locally before opening a PR that adds new dependencies. Check the Vite output for `(!) Some chunks are larger than 100 kB` warnings.
+
+---
+
+**Last Updated:** June 2026  
 **Maintained by:** Stellar-Save Contributors

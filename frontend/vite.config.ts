@@ -39,6 +39,22 @@ export default defineConfig({
           'vendor-mui': ['@mui/material', '@emotion/react', '@emotion/styled'],
           'vendor-stellar': ['@stellar/stellar-sdk', '@stellar/freighter-api'],
           'vendor-i18n': ['i18next', 'react-i18next'],
+          // Heavy route chunks split out to reduce initial bundle size.
+          // Each entry is resolved from the page module; tree-shaking keeps
+          // page-specific dependencies (recharts, MUI X Data Grid, etc.) out
+          // of the initial load path.
+          'route-analytics': [
+            './src/pages/AnalyticsDashboardPage.tsx',
+            './src/pages/PlatformAnalyticsDashboard.tsx',
+            './src/pages/GroupAnalytics.tsx',
+            './src/pages/GroupComparisonPage.tsx',
+          ],
+          'route-admin': [
+            './src/pages/FeedbackAdminPage.tsx',
+          ],
+          'route-charts': [
+            'recharts',
+          ],
         },
       },
     },

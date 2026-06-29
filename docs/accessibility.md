@@ -21,6 +21,76 @@ All interactive elements in the Stellar-Save frontend are reachable and operable
 
 ---
 
+## Keyboard Conventions
+
+This section documents the keyboard interaction patterns used consistently throughout Stellar-Save.
+
+### Skip Navigation
+
+A **Skip to main content** link is the first focusable element on every page (rendered by `AppLayout`). It is visually hidden until focused, allowing keyboard users to bypass the navigation bar and jump directly to the page content.
+
+- The link targets `#main-content`, which is set on the `<main>` landmark rendered by `AppLayout`.
+- Test by pressing `Tab` immediately after page load — the skip link should appear and, on `Enter`, move focus past the header.
+
+### Page Structure and Landmarks
+
+| Landmark | Element / Role | Purpose |
+|---|---|---|
+| Banner | `<header>` (`AppBar`) | Site-wide header and navigation |
+| Navigation | `<nav>` (Drawer / top nav) | Primary navigation links |
+| Main | `<main id="main-content">` | Primary page content |
+| Footer | `<footer>` | Footer text and secondary links |
+
+All pages rendered through `AppLayout` automatically carry these landmarks.
+
+### Modal / Dialog Focus Management
+
+Modals follow the [ARIA dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/):
+
+1. **On open**: Focus moves to the first focusable element inside the dialog.
+2. **Trap**: `Tab` / `Shift+Tab` cycle only within the dialog; focus cannot leave.
+3. **On close** (`Escape` or explicit close button): Focus returns to the element that triggered the dialog.
+
+Implement focus trapping with the shared `useFocusTrap(ref, isOpen)` hook (`src/hooks/useFocusTrap.ts`).
+
+```tsx
+const dialogRef = useRef<HTMLDivElement>(null);
+useFocusTrap(dialogRef, isOpen);
+
+<div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+  <h2 id="dialog-title">Confirm Action</h2>
+  …
+</div>
+```
+
+### Interactive Component Conventions
+
+| Component | Keyboard behaviour |
+|---|---|
+| `Button` | Activated with `Enter` or `Space` |
+| `Tabs` | Arrow keys navigate between tabs; `Enter`/`Space` activates |
+| `Dropdown` / `Select` | `Arrow Up`/`Down` move through options; `Enter` selects; `Escape` closes |
+| `SearchBar` | `Enter` submits; `Escape` clears the field |
+| `Pagination` | Arrow keys or `Tab` between page buttons |
+| Export dialogs | `Escape` closes without downloading; `Enter` on focused button triggers action |
+
+### Tab Order Guidelines
+
+- Tab order follows the visual reading order (left-to-right, top-to-bottom).
+- Positive `tabIndex` values are avoided; DOM order determines sequence.
+- Decorative elements carry `aria-hidden="true"` and `tabIndex={-1}` so they are skipped.
+- Disabled controls use `disabled` (not `tabIndex={-1}`) so their state is communicated to screen readers.
+
+### Focus Indicator Requirements
+
+Every interactive element must have a clearly visible focus indicator meeting WCAG 2.1 SC 2.4.7 (AA):
+
+- MUI components inherit the theme's `focusVisible` outline.
+- Custom components must apply a CSS rule such as `outline: 2px solid currentColor` on `:focus-visible`.
+- The focus ring must have at least a **3:1** contrast ratio against its adjacent background.
+
+---
+
 ## Screen Reader Compatibility
 
 Stellar-Save is tested with the following screen readers:
