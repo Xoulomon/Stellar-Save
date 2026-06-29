@@ -11,6 +11,7 @@ import {
 import { AppCard, AppLayout } from '../../ui';
 import { AppButton } from '../../ui/components/AppButton';
 import { useWallet } from '../../hooks/useWallet';
+import { SmsReminderSection } from '../../components/SmsReminderSection';
 
 interface NotificationPrefs {
   emailNotifications: boolean;
@@ -139,6 +140,12 @@ export default function NotificationSettings() {
           )}
         </Stack>
       </AppCard>
+
+      {activeAddress && (
+        <AppCard sx={{ maxWidth: 600, mt: 3 }}>
+          <SmsReminderSection userId={activeAddress} />
+        </AppCard>
+      )}
     </AppLayout>
   );
 }

@@ -42,6 +42,8 @@ import { createAuthRouter } from './routes/auth';
 import { createUserRouter } from './routes/user';
 import { createRampRouter } from './routes/ramp';
 import { createSep31Router } from './routes/sep31';
+import { createSmsRouter } from './routes/sms';
+import { startSmsReminderJob } from './jobs/sms_reminder_job';
 import { rampProtection } from './fiat_ramp_protection';
 import { errorMiddleware, notFoundMiddleware } from './lib/errorMiddleware';
 import { AuditEventLog, auditMiddleware, createAuditRouter } from './audit_event_log';
@@ -225,6 +227,9 @@ if (config.keeper.enabled) {
   startKeeperJob(config.keeper.schedule, config.indexer.contractId, config.stellar.rpcUrl);
 }
 
+// Start SMS/WhatsApp reminder scheduler (always enabled when Twilio is configured)
+startSmsReminderJob();
+
 const services = { engine, exportService, backupService, backupScheduler, recoveryService, backupMonitor, eventIndexer };
 
 // ── Auth routes (public — no JWT required) ───────────────────────────────────
@@ -244,6 +249,9 @@ app.use('/api/ramp', rampProtection(), createRampRouter());
 
 // ── SEP-31 cross-border routes (Issue #1025) ──────────────────────────────────
 app.use('/api/sep31', createSep31Router());
+
+// ── SMS/WhatsApp reminder routes ──────────────────────────────────────────────
+app.use('/api/v1/sms', createSmsRouter());
 
 // ── Versioned API routes ──────────────────────────────────────────────────────
 app.use('/api', versionMiddleware);

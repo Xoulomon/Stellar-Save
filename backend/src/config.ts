@@ -200,6 +200,13 @@ const envSchema = z.object({
   TLS_KEY_PATH: z.string().optional(),
   TLS_CERT_PATH: z.string().optional(),
 
+  // ── Twilio (SMS/WhatsApp reminders) ──────────────────────────────────────
+  TWILIO_ACCOUNT_SID: z.string().default(''),
+  TWILIO_AUTH_TOKEN: z.string().default(''),
+  TWILIO_FROM_NUMBER: z.string().default(''),
+  TWILIO_WHATSAPP_FROM: z.string().default(''),
+  TWILIO_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+
   // ── IPFS ────────────────────────────────────────────────────────────────────
   IPFS_API_URL: z.string().url().default('http://localhost:5001'),
   IPFS_API_TIMEOUT_MS: z.string().regex(/^\d+$/).default('30000').transform(Number),
@@ -427,6 +434,14 @@ export const config = {
   tls: {
     keyPath: env.TLS_KEY_PATH,
     certPath: env.TLS_CERT_PATH,
+  },
+
+  twilio: {
+    enabled: env.TWILIO_ENABLED,
+    accountSid: env.TWILIO_ACCOUNT_SID,
+    authToken: env.TWILIO_AUTH_TOKEN,
+    fromNumber: env.TWILIO_FROM_NUMBER,
+    whatsappFrom: env.TWILIO_WHATSAPP_FROM,
   },
 
   ipfs: {

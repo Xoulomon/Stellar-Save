@@ -145,18 +145,15 @@ Follow the step-by-step guide in [demo/demo-script.md](demo/demo-script.md)
 - [Threat Model & Security](docs/threat-model.md)
 - [Performance Optimization Guide](docs/performance-optimization.md)
 - [Roadmap](docs/roadmap.md)
-<<<<<<< HEAD
 - [Frequently Asked Questions (FAQ)](docs/faq.md)
 - [Mobile App User Guide](docs/mobile-app-guide.md)
 - [Mobile App Developer & Contributor Guide](docs/mobile-app-developer-guide.md)
 - [Troubleshooting Guide](docs/troubleshooting.md)
 - [Synthetic Monitoring / Uptime Canaries](docs/synthetic-monitoring.md)
-=======
 - [Funnel & Cohort Analytics](docs/funnel-analytics.md)
 - [Design Token System](docs/design-tokens.md)
 - [ZK Verification](docs/zk-verification.md)
 - [Bug Bounty Program](security/BUG_BOUNTY.md)
->>>>>>> 46b7416 (feat: implement bug bounty program and vulnerability disclosure)
 
 ## 🎓 Smart Contract API
 

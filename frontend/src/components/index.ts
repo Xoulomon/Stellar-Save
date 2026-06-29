@@ -69,3 +69,4 @@ export { PayoutQueue } from "./PayoutQueue";
 export type { PayoutQueueProps } from "./PayoutQueue";
 export { PayoutStatusScreen } from "./PayoutStatusScreen";
 export type { PayoutStatusScreenProps } from "./PayoutStatusScreen";
+export { SmsReminderSection } from './SmsReminderSection';

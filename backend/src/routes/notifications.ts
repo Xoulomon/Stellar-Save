@@ -582,6 +582,42 @@ export function createNotificationRouter(): Router {
     }
   });
 
+  /**
+   * POST /api/v1/notifications/test-push
+   * Send a test push notification to all registered devices for a user.
+   * Routes the tap to a specific screen via the `data` payload.
+   * Body: { userId, screen?, groupId?, contributionId? }
+   */
+  router.post('/test-push', async (req: Request, res: Response) => {
+    try {
+      const { userId, screen = 'GroupDetail', groupId = 'test-group', contributionId } = req.body as {
+        userId?: string;
+        screen?: string;
+        groupId?: string;
+        contributionId?: string;
+      };
+
+      if (!userId) {
+        return res.status(400).json({ error: 'userId is required' });
+      }
+
+      const data: Record<string, string> = { screen, groupId };
+      if (contributionId) data.contributionId = contributionId;
+
+      await pushNotificationService.sendToUserMobile(
+        userId,
+        'Stellar Save – Test Notification',
+        'Tap to navigate to your group.',
+        data
+      );
+
+      res.json({ message: 'Test push sent', userId, data });
+    } catch (error) {
+      logger.error('Error sending test push', { error: String(error) });
+      res.status(500).json({ error: 'Failed to send test push notification' });
+    }
+  });
+
   return router;
 }
 
