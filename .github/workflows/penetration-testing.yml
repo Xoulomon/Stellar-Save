@@ -1,0 +1,328 @@
+name: OWASP ZAP Penetration Testing
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+env:
+  ZAP_VERSION: '2.14.0'
+  TARGET_URL: 'http://localhost:3001'
+  
+jobs:
+  zap-scan:
+    name: OWASP ZAP Security Scan
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: pass
+          POSTGRES_DB: stellar_save_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Setup test database
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://user:pass@localhost:5432/stellar_save_test
+        run: |
+          npx prisma migrate deploy
+          npx prisma db seed || true
+
+      - name: Start backend server
+        working-directory: backend
+        env:
+          NODE_ENV: test
+          PORT: 3001
+          DATABASE_URL: postgresql://user:pass@localhost:5432/stellar_save_test
+          ADMIN_SECRET: test-admin-secret
+          JWT_SECRET: test-jwt-secret-at-least-32-chars-long
+          STELLAR_NETWORK: testnet
+          STELLAR_RPC_URL: https://soroban-testnet.stellar.org
+          REDIS_URL: redis://localhost:6379
+        run: |
+          npm start &
+          echo $! > server.pid
+          # Wait for server to be ready
+          for i in {1..30}; do
+            if curl -f http://localhost:3001/health > /dev/null 2>&1; then
+              echo "Server is ready"
+              break
+            fi
+            echo "Waiting for server... ($i/30)"
+            sleep 2
+          done
+
+      - name: Generate authentication token
+        id: auth
+        run: |
+          # Generate a test JWT token for authenticated scanning
+          TOKEN=$(curl -X POST http://localhost:3001/api/auth/challenge \
+            -H "Content-Type: application/json" \
+            -d '{"walletAddress":"GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"}' \
+            | jq -r '.token // empty')
+          
+          if [ -n "$TOKEN" ]; then
+            echo "auth_token=$TOKEN" >> $GITHUB_OUTPUT
+          else
+            echo "Failed to generate auth token, proceeding with unauthenticated scan"
+          fi
+
+      - name: Create ZAP configuration
+        run: |
+          mkdir -p zap-config
+          
+          # Create context configuration for authenticated scanning
+          cat > zap-config/context.xml <<EOF
+          <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+          <configuration>
+            <context>
+              <name>Stellar-Save</name>
+              <desc>Stellar Save Backend API</desc>
+              <inscope>true</inscope>
+              <incregexes>http://localhost:3001/api/.*</incregexes>
+              <tech>
+                <include>Db</include>
+                <include>Db.PostgreSQL</include>
+                <include>Language</include>
+                <include>Language.JavaScript</include>
+                <include>OS</include>
+                <include>OS.Linux</include>
+                <include>SCM</include>
+                <include>WS</include>
+              </tech>
+            </context>
+          </configuration>
+          EOF
+          
+          # Create scanning rules configuration
+          cat > zap-config/rules.conf <<EOF
+          # Increase scan intensity for critical endpoints
+          10000=HIGH
+          10001=HIGH
+          10002=HIGH
+          EOF
+
+      - name: Run OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.10.0
+        with:
+          target: ${{ env.TARGET_URL }}
+          rules_file_name: 'zap-config/rules.conf'
+          cmd_options: '-a -j -l WARN -z "-config api.disablekey=true"'
+          fail_action: false
+          allow_issue_writing: true
+
+      - name: Run OWASP ZAP Full Scan
+        uses: zaproxy/action-full-scan@v0.9.0
+        with:
+          target: ${{ env.TARGET_URL }}
+          rules_file_name: 'zap-config/rules.conf'
+          cmd_options: |
+            -a 
+            -j 
+            -l WARN 
+            -z "-config api.disablekey=true" 
+            -T 30
+          fail_action: false
+          allow_issue_writing: true
+          token: ${{ github.token }}
+
+      - name: Run authenticated API scan
+        if: steps.auth.outputs.auth_token != ''
+        run: |
+          docker run --network host --rm \
+            -v $(pwd)/zap-config:/zap/wrk/:rw \
+            -t owasp/zap2docker-stable:${{ env.ZAP_VERSION }} \
+            zap-api-scan.py \
+            -t http://localhost:3001/api \
+            -f openapi \
+            -I \
+            -l WARN \
+            -z "replacer.full_list(0).description=auth1 \
+                replacer.full_list(0).enabled=true \
+                replacer.full_list(0).matchtype=REQ_HEADER \
+                replacer.full_list(0).matchstr=Authorization \
+                replacer.full_list(0).regex=false \
+                replacer.full_list(0).replacement=Bearer ${{ steps.auth.outputs.auth_token }}" \
+            -r /zap/wrk/zap-api-report.html \
+            -w /zap/wrk/zap-api-report.md || true
+
+      - name: Parse ZAP results
+        id: zap-results
+        run: |
+          # Check if report exists
+          if [ -f "zap-config/zap-api-report.md" ]; then
+            # Count vulnerabilities by severity
+            HIGH=$(grep -c "High" zap-config/zap-api-report.md || echo "0")
+            MEDIUM=$(grep -c "Medium" zap-config/zap-api-report.md || echo "0")
+            LOW=$(grep -c "Low" zap-config/zap-api-report.md || echo "0")
+            
+            echo "high_count=$HIGH" >> $GITHUB_OUTPUT
+            echo "medium_count=$MEDIUM" >> $GITHUB_OUTPUT
+            echo "low_count=$LOW" >> $GITHUB_OUTPUT
+            
+            echo "### ZAP Scan Results" >> $GITHUB_STEP_SUMMARY
+            echo "- High: $HIGH" >> $GITHUB_STEP_SUMMARY
+            echo "- Medium: $MEDIUM" >> $GITHUB_STEP_SUMMARY
+            echo "- Low: $LOW" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload ZAP reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-reports
+          path: |
+            zap-config/*.html
+            zap-config/*.md
+            zap-config/*.json
+          retention-days: 30
+
+      - name: Apply severity gating
+        id: severity-gate
+        run: |
+          HIGH=${{ steps.zap-results.outputs.high_count || 0 }}
+          MEDIUM=${{ steps.zap-results.outputs.medium_count || 0 }}
+          
+          # Define thresholds
+          HIGH_THRESHOLD=0
+          MEDIUM_THRESHOLD=5
+          
+          echo "High severity findings: $HIGH (threshold: $HIGH_THRESHOLD)"
+          echo "Medium severity findings: $MEDIUM (threshold: $MEDIUM_THRESHOLD)"
+          
+          if [ "$HIGH" -gt "$HIGH_THRESHOLD" ]; then
+            echo "❌ FAILED: $HIGH high severity vulnerabilities found (max: $HIGH_THRESHOLD)"
+            echo "gate_status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          elif [ "$MEDIUM" -gt "$MEDIUM_THRESHOLD" ]; then
+            echo "⚠️  WARNING: $MEDIUM medium severity vulnerabilities found (max: $MEDIUM_THRESHOLD)"
+            echo "gate_status=warning" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            echo "✅ PASSED: Security scan within acceptable thresholds"
+            echo "gate_status=passed" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+      - name: Create security issue for high findings
+        if: steps.severity-gate.outputs.gate_status == 'failed'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const high = ${{ steps.zap-results.outputs.high_count || 0 }};
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[SECURITY] ZAP Scan found ${high} high severity vulnerabilities`,
+              body: `## Security Alert
+              
+              OWASP ZAP scan on ${context.sha.substring(0, 7)} found **${high} high severity vulnerabilities**.
+              
+              ### Details
+              - Workflow: ${context.workflow}
+              - Run: ${context.runNumber}
+              - Branch: ${context.ref}
+              
+              ### Action Required
+              Review the ZAP reports attached to the workflow run and remediate within SLA:
+              - High severity: 24 hours
+              - Medium severity: 7 days
+              - Low severity: 30 days
+              
+              ### Reports
+              Download the full reports from the workflow artifacts.
+              `,
+              labels: ['security', 'vulnerability', 'high-priority']
+            });
+
+      - name: Cleanup
+        if: always()
+        working-directory: backend
+        run: |
+          if [ -f server.pid ]; then
+            kill $(cat server.pid) || true
+          fi
+
+  remediation-sla-check:
+    name: Check Remediation SLAs
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    
+    steps:
+      - name: Check open security issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'security,vulnerability',
+              state: 'open'
+            });
+            
+            const now = new Date();
+            const overdueSLA = [];
+            
+            for (const issue of issues.data) {
+              const created = new Date(issue.created_at);
+              const ageHours = (now - created) / (1000 * 60 * 60);
+              
+              const isHigh = issue.labels.some(l => l.name === 'high-priority');
+              const isMedium = issue.labels.some(l => l.name === 'medium-priority');
+              
+              if (isHigh && ageHours > 24) {
+                overdueSLA.push({ issue: issue.number, title: issue.title, severity: 'HIGH', age: ageHours });
+              } else if (isMedium && ageHours > 168) { // 7 days
+                overdueSLA.push({ issue: issue.number, title: issue.title, severity: 'MEDIUM', age: ageHours });
+              }
+            }
+            
+            if (overdueSLA.length > 0) {
+              console.log('⚠️  SLA violations detected:');
+              for (const item of overdueSLA) {
+                console.log(`  - #${item.issue}: ${item.title} (${item.severity}, ${Math.floor(item.age)}h old)`);
+              }
+              core.setFailed(`${overdueSLA.length} security issues exceed remediation SLA`);
+            } else {
+              console.log('✅ All security issues within SLA');
+            }

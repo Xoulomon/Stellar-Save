@@ -8,6 +8,7 @@ interface SearchBarProps {
   loading?: boolean;
   className?: string;
   defaultValue?: string;
+  suggestions?: string[];
 }
 
 export function SearchBar({
@@ -17,9 +18,19 @@ export function SearchBar({
   loading = false,
   className = '',
   defaultValue = '',
+  suggestions = [],
 }: SearchBarProps) {
   const [value, setValue] = useState(defaultValue);
-  const debounceTimerRef = useRef<number | null>(null);   // ← Fixed here
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  const debounceTimerRef = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filteredSuggestions =
+    value.trim().length > 0
+      ? suggestions.filter((s) => s.toLowerCase().includes(value.toLowerCase()) && s !== value)
+      : [];
 
   useEffect(() => {
     if (debounceTimerRef.current) {
@@ -37,18 +48,70 @@ export function SearchBar({
     };
   }, [value, debounceMs, onSearch]);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+        setActiveSuggestionIndex(-1);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValue(e.target.value);
+    setShowSuggestions(true);
+    setActiveSuggestionIndex(-1);
   };
 
   const handleClear = () => {
     setValue('');
+    setShowSuggestions(false);
+    setActiveSuggestionIndex(-1);
+    inputRef.current?.focus();
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setValue(suggestion);
+    setShowSuggestions(false);
+    setActiveSuggestionIndex(-1);
+    onSearch(suggestion);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions || filteredSuggestions.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setActiveSuggestionIndex((prev) =>
+          prev < filteredSuggestions.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setActiveSuggestionIndex((prev) =>
+          prev > 0 ? prev - 1 : filteredSuggestions.length - 1
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (activeSuggestionIndex >= 0 && activeSuggestionIndex < filteredSuggestions.length) {
+          handleSuggestionClick(filteredSuggestions[activeSuggestionIndex]);
+        }
+        break;
+      case 'Escape':
+        setShowSuggestions(false);
+        setActiveSuggestionIndex(-1);
+        break;
+    }
   };
 
   const searchBarClasses = ['search-bar', className].filter(Boolean).join(' ');
 
   return (
-    <div className={searchBarClasses}>
+    <div className={searchBarClasses} ref={containerRef}>
       <div className="search-bar-icon" aria-hidden="true">
         <svg
           width="20"
@@ -68,12 +131,24 @@ export function SearchBar({
       </div>
 
       <input
+        ref={inputRef}
         type="search"
         className="search-bar-input"
         placeholder={placeholder}
         value={value}
         onChange={handleChange}
+        onFocus={() => setShowSuggestions(true)}
+        onKeyDown={handleKeyDown}
         aria-label="Search"
+        aria-autocomplete="list"
+        aria-expanded={showSuggestions && filteredSuggestions.length > 0}
+        aria-controls="search-suggestions"
+        aria-activedescendant={
+          activeSuggestionIndex >= 0
+            ? `search-suggestion-${activeSuggestionIndex}`
+            : undefined
+        }
+        autoComplete="off"
       />
 
       {loading && (
@@ -105,6 +180,31 @@ export function SearchBar({
             />
           </svg>
         </button>
+      )}
+
+      {showSuggestions && filteredSuggestions.length > 0 && (
+        <ul
+          id="search-suggestions"
+          className="search-bar-suggestions"
+          role="listbox"
+          aria-label="Search suggestions"
+        >
+          {filteredSuggestions.map((suggestion, index) => (
+            <li
+              key={suggestion}
+              id={`search-suggestion-${index}`}
+              role="option"
+              aria-selected={index === activeSuggestionIndex}
+              className={`search-bar-suggestion-item ${
+                index === activeSuggestionIndex ? 'search-bar-suggestion-item--active' : ''
+              }`}
+              onMouseDown={() => handleSuggestionClick(suggestion)}
+              onMouseEnter={() => setActiveSuggestionIndex(index)}
+            >
+              {suggestion}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

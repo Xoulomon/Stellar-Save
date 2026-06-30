@@ -1,35 +1,18 @@
-# ── Stage 1: build ────────────────────────────────────────────────────────────
+# Stage 1: builder
 FROM node:20-alpine AS builder
-
 WORKDIR /app
-
-# Copy dependency manifests first for layer caching
 COPY package*.json ./
-RUN npm ci --ignore-scripts
+RUN npm ci
+COPY tsconfig.json ./
+COPY src ./src
+RUN npx tsc --outDir dist
 
-# Copy source and compile
-COPY . .
-RUN npx tsc --noEmit || true  # type-check; actual runtime uses tsx
-
-# ── Stage 2: production image ─────────────────────────────────────────────────
-FROM node:20-alpine AS production
-
-# Add non-root user for least-privilege execution
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-
+# Stage 2: runner
+FROM node:20-alpine AS runner
 WORKDIR /app
-
-# Only install production deps
-COPY package*.json ./
-RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
-
-# Copy application source (tsx handles TS at runtime)
-COPY --chown=appuser:appgroup src/ ./src/
-
-USER appuser
-
-EXPOSE 4000
-
 ENV NODE_ENV=production
-
-CMD ["npx", "tsx", "src/index.ts"]
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY --from=builder /app/dist ./dist
+EXPOSE 3001
+CMD ["node", "dist/index.js"]

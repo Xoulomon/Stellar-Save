@@ -4,11 +4,49 @@ export { useDebounce, useDebounceWithCancel } from './useDebounce';
 export type { UseDebounceOptions } from './useDebounce';
 export { useGroup } from './useGroup';
 export { useGroups } from './useGroups';
+export { useMembers } from './useMembers';
+export { useContributions } from './useContributions';
+export {
+  breakpoints,
+  mediaQueries,
+  only,
+  up,
+  down,
+  between,
+  useMediaQuery,
+} from './useMediaQuery';
+export type { Breakpoint } from './useMediaQuery';
 export { useBalance } from './useBalance';
 export type { Balance, BalanceState, UseBalanceOptions } from './useBalance';
 
-export { useTransaction } from './useTransaction';
-export type { TransactionStatus, TransactionResult, UseTransactionReturn } from './useTransaction';
+export { useTransaction, explorerUrl, STELLAR_NETWORK } from './useTransaction';
+export type { TransactionState, UseTransactionReturn } from './useTransaction';
 export { useTransactions } from './useTransactions';
 export { useUserProfile } from './useUserProfile';
 export { useWallet } from './useWallet';
+export { useNotification } from './useNotification';
+export type { NotificationOptions, NotifyOptions, UseNotificationReturn } from './useNotification';
+export { useClipboard } from './useClipboard';
+export type { UseClipboardOptions, UseClipboardReturn } from './useClipboard';
+export { useReminderPreferences } from './useReminderPreferences';
+export { useTheme } from './useTheme';
+export type { ThemeMode } from './useTheme';
+export { usePayouts } from './usePayouts';
+
+export { useRamp, useRampTransactionPoller } from './useRamp';
+export { useKycStatus } from './useKyc';
+export { useBackendAuth } from './useBackendAuth';
+
+export { useEventService } from './useEventService';
+export type { UseEventServiceReturn } from './useEventService';
+
+export { useActivityFeed } from './useActivityFeed';
+export type {
+  ActivityItem,
+  ActivityFeedFilter,
+  UseActivityFeedOptions,
+  UseActivityFeedReturn,
+} from './useActivityFeed';
+export { useDiscoveryFeed } from './useDiscoveryFeed';
+
+export { useOfflineSyncInit, useSyncStatus, useIsOnline, useQueueAction } from './useOfflineSync';

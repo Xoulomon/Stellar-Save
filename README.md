@@ -1,5 +1,11 @@
 # Stellar-Save — Rotational Savings on Stellar
 
+[![Coverage](https://codecov.io/gh/Xoulomon/Stellar-Save/branch/main/graph/badge.svg)](https://codecov.io/gh/Xoulomon/Stellar-Save)
+[![Coverage workflow](https://github.com/Xoulomon/Stellar-Save/actions/workflows/coverage.yml/badge.svg)](https://github.com/Xoulomon/Stellar-Save/actions/workflows/coverage.yml)
+[![frontend](https://codecov.io/gh/Xoulomon/Stellar-Save/branch/main/graph/badge.svg?flag=frontend)](https://codecov.io/gh/Xoulomon/Stellar-Save?flags[0]=frontend)
+[![contracts](https://codecov.io/gh/Xoulomon/Stellar-Save/branch/main/graph/badge.svg?flag=contracts)](https://codecov.io/gh/Xoulomon/Stellar-Save?flags[0]=contracts)
+[![backend](https://codecov.io/gh/Xoulomon/Stellar-Save/branch/main/graph/badge.svg?flag=backend)](https://codecov.io/gh/Xoulomon/Stellar-Save?flags[0]=backend)
+
 **A decentralized rotational savings and credit association (ROSCA) built on Stellar Soroban smart contracts.**
 
 Stellar Save is a traditional community-based savings system where members contribute a fixed amount regularly, and each member receives the total pool on a rotating basis. This project brings this time-tested financial mechanism to the blockchain, making it transparent, trustless, and accessible globally.
@@ -17,6 +23,27 @@ Stellar-Save is a rotating savings and credit association (ROSCA) common in Nige
 - ✅ Transparent (all transactions on-chain)
 - ✅ Accessible (anyone with a Stellar wallet can join)
 - ✅ Programmable (automated payouts, no manual coordination)
+
+## 🏗️ Architecture
+
+The Stellar-Save system consists of four main layers that work together to provide a decentralized ROSCA experience:
+
+![Stellar-Save Architecture](docs/architecture-diagram.svg)
+
+### Architecture Components
+
+- **User Layer**: Users interact with the system through Stellar wallets (Freighter, Lobstr, Albedo)
+- **Frontend Layer**: React + TypeScript SPA with Vite, Material-UI components, and React Query for state management
+- **Blockchain Layer**: Stellar network with Soroban smart contracts managing groups, contributions, and payouts
+- **Data Layer**: On-chain storage, Stellar Horizon API for transaction history, and Soroban events for real-time updates
+
+### Key Data Flows
+
+1. **Group Creation**: User → Frontend → Contract → On-chain Storage → Events → UI Update
+2. **Contribution**: User → Frontend → Contract → Escrow → Storage → Events → UI Update
+3. **Payout**: User → Frontend → Contract → Escrow → Recipient → Storage → Events → UI Update
+
+For detailed architecture documentation, see [docs/architecture.md](docs/architecture.md).
 
 ## 🚀 Features
 
@@ -54,20 +81,37 @@ Stellar-Save is a rotating savings and credit association (ROSCA) common in Nige
 cp .env.example .env
 ```
 
-2. Configure your environment variables in `.env`:
+2. Fill in the values for your environment. The backend validates all variables at startup using a [zod](https://zod.dev) schema in `backend/src/config.ts`. If a required variable is missing or malformed the server exits immediately with a descriptive error.
+
+**Backend variables** (all have sensible defaults for local development):
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `NODE_ENV` | no | `development` | `development` / `test` / `production` |
+| `PORT` | no | `3001` | API server port |
+| `ADMIN_SECRET` | **yes (prod)** | `super-secret-admin-key` | `x-admin-secret` header value |
+| `STELLAR_NETWORK` | no | `testnet` | `testnet` / `mainnet` / `futurenet` / `standalone` |
+| `STELLAR_RPC_URL` | no | testnet RPC | Soroban RPC endpoint |
+| `STELLAR_NETWORK_PASSPHRASE` | no | testnet passphrase | Stellar network passphrase |
+| `BACKUP_ENABLED` | no | `false` | Enable backup scheduler & monitor |
+| `BACKUP_S3_BUCKET` | no | `stellar-save-backups` | S3 bucket for backups |
+| `BACKUP_RETENTION_DAYS` | no | `30` | Days to keep backups |
+| `BACKUP_ALERT_WEBHOOK_URL` | no | — | Webhook for backup alerts |
+| `AWS_REGION` | no | `us-east-1` | AWS region (needed when backup enabled) |
+| `AWS_ACCESS_KEY_ID` | no | — | AWS credentials (needed when backup enabled) |
+| `AWS_SECRET_ACCESS_KEY` | no | — | AWS credentials (needed when backup enabled) |
+| `ELASTICSEARCH_NODE` | no | `http://localhost:9200` | Elasticsearch endpoint |
+| `ELASTICSEARCH_USERNAME` | no | `elastic` | Elasticsearch username |
+| `ELASTICSEARCH_PASSWORD` | no | `changeme` | Elasticsearch password |
+
+**Frontend variables** (prefixed `VITE_`, exposed to the browser — no secrets):
+
 ```bash
-# Network configuration
-STELLAR_NETWORK=testnet
-STELLAR_RPC_URL=https://soroban-testnet.stellar.org
-
-# Contract addresses (after deployment)
-CONTRACT_GUESS_THE_NUMBER=<your-contract-id>
-CONTRACT_FUNGIBLE_ALLOWLIST=<your-contract-id>
-CONTRACT_NFT_ENUMERABLE=<your-contract-id>
-
-# Frontend configuration
 VITE_STELLAR_NETWORK=testnet
 VITE_STELLAR_RPC_URL=https://soroban-testnet.stellar.org
+VITE_CONTRACT_GUESS_THE_NUMBER=<your-contract-id>
+VITE_CONTRACT_FUNGIBLE_ALLOWLIST=<your-contract-id>
+VITE_CONTRACT_NFT_ENUMERABLE=<your-contract-id>
 ```
 
 3. Network configurations are defined in `environments.toml`:
@@ -92,10 +136,27 @@ Follow the step-by-step guide in [demo/demo-script.md](demo/demo-script.md)
 
 ## 📖 Documentation
 
+- [User Guide](docs/user-guide.md)
 - [Architecture Overview](docs/architecture.md)
+- [Public API Reference](docs/api/interactive-api-reference.md) — REST API with code examples
+- [Interactive API Docs](https://api.stellar-save.app/docs) — Try API calls in your browser
+- [Governance Process](docs/governance.md) — How protocol decisions are made on-chain
 - [Storage Layout](docs/storage-layout.md)
 - [Threat Model & Security](docs/threat-model.md)
+- [Performance Optimization Guide](docs/performance-optimization.md)
 - [Roadmap](docs/roadmap.md)
+<<<<<<< HEAD
+- [Frequently Asked Questions (FAQ)](docs/faq.md)
+- [Mobile App User Guide](docs/mobile-app-guide.md)
+- [Mobile App Developer & Contributor Guide](docs/mobile-app-developer-guide.md)
+- [Troubleshooting Guide](docs/troubleshooting.md)
+- [Synthetic Monitoring / Uptime Canaries](docs/synthetic-monitoring.md)
+=======
+- [Funnel & Cohort Analytics](docs/funnel-analytics.md)
+- [Design Token System](docs/design-tokens.md)
+- [ZK Verification](docs/zk-verification.md)
+- [Bug Bounty Program](security/BUG_BOUNTY.md)
+>>>>>>> 46b7416 (feat: implement bug bounty program and vulnerability disclosure)
 
 ## 🎓 Smart Contract API
 
@@ -114,7 +175,7 @@ is_member(group_id, address) -> bool
 
 ### Contributions
 ```rust
-contribute(group_id)
+contribute(group_id, member, amount)
 get_contribution_status(group_id, cycle_number) -> Vec<(Address, bool)>
 ```
 
@@ -122,6 +183,12 @@ get_contribution_status(group_id, cycle_number) -> Vec<(Address, bool)>
 ```rust
 execute_payout(group_id)
 is_complete(group_id) -> bool
+```
+
+### Emergency Pause
+```rust
+pause_group(group_id, caller)    // Creator-only: halt contributions & payouts
+unpause_group(group_id, caller)  // Creator-only: resume contributions & payouts
 ```
 
 ## 🧪 Testing
@@ -132,12 +199,44 @@ Comprehensive test suite covering:
 - ✅ Contribution flow and tracking
 - ✅ Payout rotation and distribution
 - ✅ Group completion lifecycle
+- ✅ Emergency pause/unpause scenarios
 - ✅ Error handling and edge cases
 
 Run tests:
 ```bash
 cargo test
 ```
+
+### Test Coverage
+
+Coverage is tracked and enforced per workspace and published to
+[Codecov](https://codecov.io/gh/Xoulomon/Stellar-Save), which provides public
+reports and historical trends.
+
+| Workspace  | Tool             | Minimum coverage gate |
+|------------|------------------|-----------------------|
+| frontend   | vitest (v8)      | 80% lines / 70% branches |
+| contracts  | cargo-tarpaulin  | 85% lines |
+| backend    | jest (ts-jest)   | 60% lines |
+
+PRs **cannot merge** if coverage falls below these targets or drops versus the
+base commit: the `coverage.yml` workflow uploads results to Codecov on every
+push and pull request, and the Codecov project/patch status checks (configured
+in [`codecov.yml`](./codecov.yml)) act as required PR merge gates. The same
+thresholds also fail CI locally via per-tool gates (tarpaulin `fail-under`,
+vitest `coverage.thresholds`, jest `coverageThreshold`).
+
+Run coverage locally:
+```bash
+# contracts
+cargo tarpaulin --config tarpaulin.toml
+# frontend
+cd frontend && npm run test:coverage
+# backend
+cd backend && npm run test:coverage
+```
+
+See [docs/test-coverage.md](docs/test-coverage.md) for full details.
 
 ## 🌍 Why This Matters
 

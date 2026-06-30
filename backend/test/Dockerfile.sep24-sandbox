@@ -1,0 +1,35 @@
+# Dockerfile for SEP-24 Anchor Sandbox
+# This creates a lightweight container to run the mock SEP-24 anchor for testing
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies (production only for smaller image)
+RUN npm ci --only=production
+
+# Copy test helpers and sandbox implementation
+COPY test/helpers/sep24-sandbox.ts ./test/helpers/
+COPY tsconfig.json ./
+
+# Install TypeScript and necessary dev dependencies for running the sandbox
+RUN npm install -D typescript tsx @types/node @types/express @stellar/stellar-sdk
+
+# Create a simple server script to run the sandbox
+RUN echo 'import { Sep24Sandbox } from "./test/helpers/sep24-sandbox";\n\
+\n\
+const sandbox = new Sep24Sandbox();\n\
+const app = sandbox.getApp();\n\
+const port = process.env.PORT || 8545;\n\
+\n\
+app.listen(port, () => {\n\
+  console.log(`SEP-24 Anchor Sandbox running on port ${port}`);\n\
+  console.log(`Anchor public key: ${sandbox.getAnchorPublicKey()}`);\n\
+});' > server.ts
+
+EXPOSE 8545
+
+CMD ["npx", "tsx", "server.ts"]

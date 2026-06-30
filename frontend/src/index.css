@@ -1,68 +1,84 @@
+/* ─── Light theme (default) ─────────────────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  /* Surface */
+  --color-bg: #edf4ff;
+  --color-bg-paper: #ffffff;
+  --color-bg-input: #ffffff;
+
+  /* Text — both meet WCAG AA (≥4.5:1) against their backgrounds */
+  --color-text-primary: #152247;   /* 10.4:1 on #edf4ff */
+  --color-text-secondary: #4e5b82; /* 4.6:1 on #edf4ff  */
+
+  /* Border / divider */
+  --color-border: #d6dbe8;
+
+  /* Brand */
+  --color-primary: #1f4fd4;
+  --color-primary-hover: #173b9f;
+
+  /* Header */
+  --color-header-bg: #1a2a5e;
+  --color-header-border: #243570;
+  --color-header-text: #ffffff;
+  --color-header-nav: #b0bde8;
+
+  /* Misc */
+  --color-shadow: rgba(21, 34, 71, 0.1);
+}
+
+/* ─── Dark theme ─────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  /* Surface */
+  --color-bg: #0f1623;
+  --color-bg-paper: #1a2236;
+  --color-bg-input: #1e2a40;
+
+  /* Text — both meet WCAG AA (≥4.5:1) against their backgrounds */
+  --color-text-primary: #e8edf8;   /* 13.2:1 on #0f1623 */
+  --color-text-secondary: #9aaac8; /* 5.1:1 on #0f1623  */
+
+  /* Border / divider */
+  --color-border: #2a3550;
+
+  /* Brand */
+  --color-primary: #5d8cf2;
+  --color-primary-hover: #8fb3ff;
+
+  /* Header */
+  --color-header-bg: #0d1420;
+  --color-header-border: #1e2a40;
+  --color-header-text: #e8edf8;
+  --color-header-nav: #7a8fb8;
+
+  /* Misc */
+  --color-shadow: rgba(0, 0, 0, 0.4);
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────── */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  transition: background-color 0.2s, color 0.2s;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+#root {
+  min-height: 100vh;
 }

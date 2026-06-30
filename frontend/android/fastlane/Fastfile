@@ -1,0 +1,66 @@
+# Fastfile for Android builds
+default_platform(:android)
+
+platform :android do
+  desc "Build and upload to Play Console Internal Track"
+  lane :beta do
+    # Ensure we're on the latest code
+    ensure_git_status_clean
+    
+    # Increment version code
+    increment_version_code(
+      gradle_file_path: "app/build.gradle"
+    )
+    
+    # Build the release APK/AAB
+    gradle(
+      task: "bundle",
+      build_type: "Release",
+      properties: {
+        "android.injected.signing.store.file" => ENV["ANDROID_KEYSTORE_FILE"],
+        "android.injected.signing.store.password" => ENV["ANDROID_KEYSTORE_PASSWORD"],
+        "android.injected.signing.key.alias" => ENV["ANDROID_KEY_ALIAS"],
+        "android.injected.signing.key.password" => ENV["ANDROID_KEY_PASSWORD"],
+      }
+    )
+    
+    # Upload to Play Console Internal Track
+    upload_to_play_store(
+      track: "internal",
+      release_status: "draft",
+      skip_upload_apk: true,
+      aab: "app/build/outputs/bundle/release/app-release.aab",
+      json_key_data: ENV["PLAY_STORE_JSON_KEY"]
+    )
+    
+    # Commit version bump
+    git_commit(
+      path: "app/build.gradle",
+      message: "chore: bump Android version code"
+    )
+    
+    # Tag the build
+    version_code = sh("grep versionCode app/build.gradle | awk '{print $2}'").strip
+    add_git_tag(
+      grouping: "android",
+      prefix: "android/v",
+      build_number: version_code
+    )
+  end
+
+  desc "Run tests"
+  lane :test do
+    gradle(
+      task: "test",
+      build_type: "Debug"
+    )
+  end
+
+  desc "Run lint checks"
+  lane :lint do
+    gradle(
+      task: "lint",
+      build_type: "Release"
+    )
+  end
+end

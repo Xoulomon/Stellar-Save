@@ -4,29 +4,93 @@
   padding: 2rem;
 }
 
-/* Progress indicator */
-.form-progress {
+/* Wizard step progress */
+.wizard-steps {
   display: flex;
-  gap: 0.5rem;
+  gap: 0;
   margin-bottom: 0.75rem;
+  counter-reset: step;
 }
 
-.progress-step {
+.wizard-step {
   flex: 1;
-  height: 4px;
-  background: var(--color-border, #e5e7eb);
-  border-radius: 2px;
-  transition: background 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  position: relative;
+  font-size: 0.75rem;
 }
 
-.progress-step.active {
+/* connector line between steps */
+.wizard-step + .wizard-step::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: -50%;
+  width: 100%;
+  height: 2px;
+  background: var(--color-border, #e5e7eb);
+  z-index: 0;
+}
+
+.wizard-step--completed + .wizard-step::before,
+.wizard-step--current + .wizard-step::before {
   background: var(--color-primary, #3b82f6);
+}
+
+.wizard-step__number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 2px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg, #fff);
+  position: relative;
+  z-index: 1;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.wizard-step--completed .wizard-step__number {
+  background: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+  color: #fff;
+}
+
+.wizard-step--current .wizard-step__number {
+  border-color: var(--color-primary, #3b82f6);
+  color: var(--color-primary, #3b82f6);
+}
+
+.wizard-step__label {
+  color: var(--color-text-secondary, #6b7280);
+  font-weight: 500;
+}
+
+.wizard-step--current .wizard-step__label {
+  color: var(--color-primary, #3b82f6);
+  font-weight: 700;
+}
+
+.wizard-step--completed .wizard-step__label {
+  color: var(--color-text-secondary, #6b7280);
 }
 
 .form-step-label {
   font-size: 0.8rem;
   color: var(--color-text-secondary, #6b7280);
   margin: 0 0 1.5rem 0;
+}
+
+/* Helper text below selects */
+.input-helper {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, #6b7280);
+  margin: 0.25rem 0 0.5rem 0;
 }
 
 /* Step content */
@@ -154,5 +218,72 @@
   .review-section {
     background: #f9fafb;
     border-color: #e5e7eb;
+  }
+}
+
+/* ── Insurance step (Issue #1012) ─────────────────────────────────────────── */
+
+.form-step-description {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0 0 1.5rem;
+  line-height: 1.6;
+}
+
+.insurance-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border: 1px solid #333;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  gap: 1rem;
+}
+
+.insurance-toggle-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.insurance-toggle {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: #646cff;
+  cursor: pointer;
+}
+
+.insurance-cost-preview {
+  margin-top: 1rem;
+  padding: 0.875rem 1rem;
+  background-color: rgba(100, 108, 255, 0.08);
+  border: 1px solid rgba(100, 108, 255, 0.25);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
+}
+
+.insurance-cost-preview strong {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+@media (prefers-color-scheme: light) {
+  .form-step-description {
+    color: rgba(0, 0, 0, 0.55);
+  }
+  .insurance-toggle-label {
+    color: rgba(0, 0, 0, 0.87);
+  }
+  .insurance-toggle-row {
+    border-color: #e5e7eb;
+  }
+  .insurance-cost-preview {
+    color: rgba(0, 0, 0, 0.65);
+  }
+  .insurance-cost-preview strong {
+    color: rgba(0, 0, 0, 0.87);
   }
 }

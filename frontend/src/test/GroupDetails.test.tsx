@@ -90,7 +90,7 @@ describe('GroupDetails', () => {
         cycles={cycles}
       />,
     );
-    fireEvent.click(screen.getByText('Members'));
+    fireEvent.click(screen.getByRole('tab', { name: /members/i }));
     expect(screen.getByText('Alice')).toBeInTheDocument();
   });
 
@@ -118,7 +118,7 @@ describe('GroupDetails', () => {
         onMemberClick={onMemberClick}
       />,
     );
-    fireEvent.click(screen.getByText('Members'));
+    fireEvent.click(screen.getByRole('tab', { name: /members/i }));
     fireEvent.click(screen.getByText('Alice'));
     expect(onMemberClick).toHaveBeenCalledWith(members[0]);
   });
@@ -154,7 +154,7 @@ describe('GroupDetails', () => {
         cycles={cycles}
       />,
     );
-    fireEvent.click(screen.getByText('Members'));
+    fireEvent.click(screen.getByRole('tab', { name: /members/i }));
     expect(screen.getByText('Inactive')).toBeInTheDocument();
   });
 });

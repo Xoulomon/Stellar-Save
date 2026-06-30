@@ -1,0 +1,48 @@
+name: Reproducible WASM Verification
+
+on:
+  push:
+    paths:
+      - 'contracts/**'
+      - 'rust-toolchain.toml'
+      - 'scripts/build_reproducible.sh'
+  pull_request:
+    paths:
+      - 'contracts/**'
+      - 'rust-toolchain.toml'
+      - 'scripts/build_reproducible.sh'
+
+jobs:
+  reproducible-build:
+    name: Verify reproducible WASM
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Make build script executable
+        run: chmod +x scripts/build_reproducible.sh
+
+      - name: Build WASM (first time — baseline)
+        run: ./scripts/build_reproducible.sh
+
+      - name: Build WASM (second time — must match baseline)
+        run: ./scripts/build_reproducible.sh --verify
+
+      - name: Upload WASM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stellar-save-wasm-reproducible
+          path: |
+            target/wasm32-unknown-unknown/release/stellar_save.wasm
+            contracts/stellar-save/stellar_save.wasm.sha256
+          retention-days: 90
+
+      - name: Post SHA-256 to step summary
+        run: |
+          SHA=$(cat contracts/stellar-save/stellar_save.wasm.sha256)
+          echo "## ✅ Reproducible Build Verified" >> "$GITHUB_STEP_SUMMARY"
+          echo "| | |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| WASM SHA-256 | \`$SHA\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Commit | ${{ github.sha }} |" >> "$GITHUB_STEP_SUMMARY"

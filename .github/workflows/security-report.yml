@@ -2,7 +2,7 @@ name: Security Report
 
 on:
   workflow_run:
-    workflows: [SAST, Dependency Scanning, Secret Scanning, Container Image Scanning & SBOM]
+    workflows: [SAST, Dependency Scanning, Secret Scanning]
     types: [completed]
   schedule:
     - cron: '0 8 * * 1'  # Weekly Monday 8am UTC
@@ -37,26 +37,9 @@ jobs:
               (bySeverity[sev] || bySeverity.low).push(a);
             }
 
-            // Split findings by source: container image scans vs other (SAST/deps)
-            const containerCategories = ['trivy-backend', 'trivy-frontend'];
-            const containerFindings = { critical: [], high: [], medium: [], low: [] };
-            const otherFindings     = { critical: [], high: [], medium: [], low: [] };
-
-            for (const a of alerts.data) {
-              const sev = a.rule?.security_severity_level || a.rule?.severity || 'low';
-              const bucket = containerCategories.some(c => a.tool?.name?.toLowerCase().includes('trivy') || a.most_recent_instance?.location?.path?.includes('trivy'))
-                ? containerFindings
-                : otherFindings;
-              (bucket[sev] || bucket.low).push(a);
-              // also keep overall for backward compat
-              (bySeverity[sev] || bySeverity.low).push(a);
-            }
-
             const lines = [
               '## 🔒 Weekly Security Report',
               `**Generated**: ${new Date().toISOString().split('T')[0]}`,
-              '',
-              '### Overall Findings',
               '',
               '| Severity | Count |',
               '|----------|-------|',
@@ -64,15 +47,6 @@ jobs:
               `| 🟠 High     | ${bySeverity.high.length} |`,
               `| 🟡 Medium   | ${bySeverity.medium.length} |`,
               `| 🟢 Low      | ${bySeverity.low.length} |`,
-              '',
-              '### 🐳 Container Image CVEs (Trivy)',
-              '',
-              '| Severity | Count |',
-              '|----------|-------|',
-              `| 🔴 Critical | ${containerFindings.critical.length} |`,
-              `| 🟠 High     | ${containerFindings.high.length} |`,
-              `| 🟡 Medium   | ${containerFindings.medium.length} |`,
-              `| 🟢 Low      | ${containerFindings.low.length} |`,
               '',
             ];
 
@@ -84,10 +58,6 @@ jobs:
             } else {
               lines.push('✅ No critical or high severity findings.');
             }
-
-            lines.push('');
-            lines.push('> Container image SBOM artifacts are attached to each [release](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/releases) and available as CI workflow artifacts.');
-            lines.push('> To request a CVE exception, follow the [exception process](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/blob/main/docs/vulnerability-exception-process.md).');
 
             const body = lines.join('\n');
             core.setOutput('report', body);

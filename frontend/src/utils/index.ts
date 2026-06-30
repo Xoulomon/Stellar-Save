@@ -9,5 +9,8 @@ export { errorHandler, formatErrorMessage, type ParsedError } from './errorHandl
 export type { GroupData, PublicGroup } from './groupApi';
 export { createGroup, fetchGroups } from './groupApi';
 export { isValidStellarAddress, validateAddress } from './validateAddress';
+export { formatAmount, type FormatAmountOptions } from './formatAmount';
 export { formatDate, formatDateRelative, formatDateAbsolute, type FormatDateOptions } from './formatDate';
+export { formatAddress, type FormatAddressOptions } from './formatAddress';
+export { CacheService, cache } from './cache';
 

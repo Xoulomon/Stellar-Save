@@ -1,0 +1,96 @@
+{
+  "title": "Stellar-Save Distributed Tracing",
+  "uid": "stellar-save-tracing",
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "tags": ["tracing", "jaeger", "observability"],
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "label": "Service",
+        "type": "custom",
+        "current": { "text": "stellar-save-backend", "value": "stellar-save-backend" },
+        "query": "stellar-save-backend,stellar-save-frontend,stellar-save-indexer",
+        "options": [
+          { "text": "stellar-save-backend", "value": "stellar-save-backend", "selected": true },
+          { "text": "stellar-save-frontend", "value": "stellar-save-frontend", "selected": false },
+          { "text": "stellar-save-indexer", "value": "stellar-save-indexer", "selected": false }
+        ]
+      },
+      {
+        "name": "operation",
+        "label": "Endpoint / Operation",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "How to use",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 4 },
+      "options": {
+        "mode": "markdown",
+        "content": "Trace latency by **service** and **endpoint/operation** from Jaeger. Pick a `$service` and optionally type an `$operation` (e.g. an Express route like `GET /api/v1/groups`, or `soroban.invoke contribute`). Click any trace to open the full waterfall. To follow one request **end-to-end by trace ID**, paste the ID into the *Trace lookup* panel. Frontend spans (page loads / fetches) link to backend spans via the W3C `traceparent` header, which links to indexer + Soroban RPC spans."
+      }
+    },
+    {
+      "id": 2,
+      "title": "Traces — latency by endpoint ($service)",
+      "type": "table",
+      "datasource": { "type": "jaeger", "uid": "jaeger" },
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 12 },
+      "description": "Recent traces for the selected service with their total duration. Sort by Duration to find the slowest endpoints.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "jaeger", "uid": "jaeger" },
+          "queryType": "search",
+          "service": "$service",
+          "operation": "$operation",
+          "limit": 100
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Slow traces (> 500ms) — $service",
+      "type": "table",
+      "datasource": { "type": "jaeger", "uid": "jaeger" },
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 10 },
+      "description": "High-latency traces. Use minDuration to isolate slow requests for diagnosis.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "jaeger", "uid": "jaeger" },
+          "queryType": "search",
+          "service": "$service",
+          "operation": "$operation",
+          "minDuration": "500ms",
+          "limit": 50
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Trace lookup by ID (end-to-end)",
+      "type": "traces",
+      "datasource": { "type": "jaeger", "uid": "jaeger" },
+      "gridPos": { "x": 0, "y": 26, "w": 24, "h": 14 },
+      "description": "Paste a trace ID to view the full cross-service waterfall (frontend -> backend -> indexer / Soroban RPC).",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "jaeger", "uid": "jaeger" },
+          "queryType": "trace",
+          "query": ""
+        }
+      ]
+    }
+  ]
+}

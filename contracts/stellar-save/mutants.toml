@@ -1,0 +1,40 @@
+# cargo-mutants configuration for Stellar-Save contracts
+# https://mutants.rs/configuration.html
+
+# ─── Timeout ──────────────────────────────────────────────────────────────────
+# Soroban tests are CPU-heavy — give mutants enough time
+timeout_multiplier = 3.0
+minimum_test_timeout = 120
+
+# ─── Parallelism ──────────────────────────────────────────────────────────────
+# Let CI use all cores; override locally if needed
+# jobs = 4   # uncomment for local runs
+
+# ─── Scope ────────────────────────────────────────────────────────────────────
+exclude_globs = [
+    # Test-only modules
+    "src/*_tests.rs",
+    "src/fuzz_tests.rs",
+    "src/test_*.rs",
+
+    # Benchmarks and non-logic helpers
+    "src/gas_benchmark*.rs",
+    "src/storage_benchmark.rs",
+    "src/storage_optimization.rs",
+
+    # Migration scaffolding
+    "src/migration*.rs",
+    "src/migrations/**",
+
+    # Backup/old files
+    "src/lib.rs.bak",
+    "**/*.bak",
+]
+
+# ─── Mutation Score Gate ──────────────────────────────────────────────────────
+# Start conservative and raise gradually as test quality improves
+minimum_score = 75
+
+# ─── Output ───────────────────────────────────────────────────────────────────
+# Always generate JSON for CI parsing
+output_json = true

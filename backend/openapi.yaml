@@ -1,0 +1,2443 @@
+openapi: 3.0.3
+info:
+  title: Stellar-Save Backend API
+  description: |
+    REST API for the Stellar-Save decentralised rotational savings platform.
+
+    ## Authentication
+    Most endpoints are public. Endpoints under `/api/user/*` require a Bearer JWT
+    obtained from `POST /api/auth/verify`. Pass it as:
+    ```
+    Authorization: Bearer <token>
+    ```
+
+    ## Versioning
+    The API is versioned via URL path prefix:
+    - `/api/v1/` — stable, production-ready
+    - `/api/v2/` — current development version (some routes return 501)
+
+    Unversioned legacy paths (`/health`, `/recommendations`, etc.) are deprecated
+    and will be removed on 2027-01-01.
+
+    ## Rate Limiting
+    - General endpoints: 100 req / 15 min per IP
+    - Auth & admin endpoints: 10 req / 15 min per IP
+    - Analytics write endpoints: stricter limits apply (see individual routes)
+  version: 1.0.0
+  contact:
+    name: Stellar-Save
+    url: https://github.com/Xoulomon/Stellar-Save
+
+servers:
+  - url: http://localhost:3001
+    description: Local development
+  - url: https://api.stellar-save.app
+    description: Production
+
+tags:
+  - name: Auth
+    description: Stellar wallet-based authentication
+  - name: User
+    description: Authenticated user profile and preferences
+  - name: Health
+    description: Liveness and readiness probes
+  - name: Recommendations
+    description: Group recommendation engine
+  - name: Search
+    description: Full-text and autocomplete search
+  - name: Analytics
+    description: Platform, user, and group analytics
+  - name: Events
+    description: Contract event index queries
+  - name: Export
+    description: Data export jobs (CSV / JSON)
+  - name: Backup
+    description: Database backup management
+  - name: Notifications
+    description: Email, push, and web-push notification management
+  - name: Webhooks
+    description: Outbound webhook registration and management
+  - name: Cache
+    description: Cache statistics and management
+  - name: Stats
+    description: Platform-wide statistics
+
+paths:
+  # ── Auth ──────────────────────────────────────────────────────────────────
+  /api/auth/challenge:
+    post:
+      tags: [Auth]
+      summary: Request a sign challenge
+      description: |
+        Generates a one-time challenge string the client must sign with their
+        Stellar Ed25519 keypair. The challenge expires in 5 minutes.
+      operationId: authChallenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [walletAddress]
+              properties:
+                walletAddress:
+                  type: string
+                  description: Stellar public key (G... address)
+                  example: GABC1234EXAMPLESTELLARADDRESS
+      responses:
+        '200':
+          description: Challenge issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  challenge:
+                    type: string
+                    description: One-time challenge string to sign
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/auth/verify:
+    post:
+      tags: [Auth]
+      summary: Verify signature and receive JWT
+      description: |
+        Verifies the Ed25519 signature against the stored challenge.
+        On success, issues a signed JWT valid for 24 hours.
+        The `signature` must be the base64-encoded Ed25519 signature of the
+        challenge string produced by the wallet's private key.
+      operationId: authVerify
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [walletAddress, challenge, signature]
+              properties:
+                walletAddress:
+                  type: string
+                  example: GABC1234EXAMPLESTELLARADDRESS
+                challenge:
+                  type: string
+                  description: The challenge string returned by /api/auth/challenge
+                signature:
+                  type: string
+                  description: Base64-encoded Ed25519 signature of the challenge
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: Signed JWT valid for 24 hours
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ── User ──────────────────────────────────────────────────────────────────
+  /api/user/me:
+    get:
+      tags: [User]
+      summary: Get authenticated user identity
+      description: Returns the wallet address extracted from the Bearer JWT.
+      operationId: userMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Authenticated user identity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  walletAddress:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/user/{walletAddress}/profile:
+    get:
+      tags: [User]
+      summary: Get user profile
+      description: Returns profile data. Requester must own the wallet address.
+      operationId: userProfile
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/walletAddress'
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/user/{walletAddress}/preferences:
+    get:
+      tags: [User]
+      summary: Get user app preferences
+      operationId: userGetPreferences
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/walletAddress'
+      responses:
+        '200':
+          description: User preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      tags: [User]
+      summary: Update user app preferences
+      operationId: userUpdatePreferences
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/walletAddress'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferencesUpdate'
+      responses:
+        '200':
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  preferences:
+                    $ref: '#/components/schemas/UserPreferences'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ── Health ────────────────────────────────────────────────────────────────
+  /api/v1/health:
+    get:
+      tags: [Health]
+      summary: Liveness probe (v1)
+      description: Returns 200 if the process is running. Does not check dependencies.
+      operationId: healthV1
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/v1/ready:
+    get:
+      tags: [Health]
+      summary: Readiness probe (v1)
+      description: |
+        Returns 200 only when both the PostgreSQL database and Stellar Horizon
+        are reachable. Returns 503 if either dependency is down.
+      operationId: readyV1
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyResponse'
+        '503':
+          description: One or more dependencies are unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyResponse'
+
+  /api/v2/health:
+    get:
+      tags: [Health]
+      summary: Liveness probe (v2)
+      description: Same as v1 but adds `uptime` and `apiVersion` fields.
+      operationId: healthV2
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/HealthResponse'
+                  - type: object
+                    properties:
+                      uptime:
+                        type: number
+                        description: Process uptime in seconds
+                      apiVersion:
+                        type: string
+                        example: v2
+
+  /api/v2/ready:
+    get:
+      tags: [Health]
+      summary: Readiness probe (v2)
+      operationId: readyV2
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ReadyResponse'
+                  - type: object
+                    properties:
+                      apiVersion:
+                        type: string
+                        example: v2
+        '503':
+          description: One or more dependencies are unavailable
+
+  # ── Stats ─────────────────────────────────────────────────────────────────
+  /api/v1/stats/groups:
+    get:
+      tags: [Stats]
+      summary: Platform-wide group statistics
+      description: |
+        Returns aggregated group statistics for the landing page.
+        Sourced from the indexed ContractEvent database; cached 5 minutes in Redis.
+      operationId: statsGroups
+      responses:
+        '200':
+          description: Group overview statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupsOverviewStats'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── Recommendations ───────────────────────────────────────────────────────
+  /api/v1/recommendations/{userId}:
+    get:
+      tags: [Recommendations]
+      summary: Get group recommendations for a user (v1)
+      description: |
+        Uses A/B testing to select between content-based and collaborative
+        filtering algorithms. Bucket A → content-based; Bucket B → collaborative.
+      operationId: recommendationsV1
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recommendations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationsResponse'
+
+  /api/v2/recommendations/{userId}:
+    get:
+      tags: [Recommendations]
+      summary: Get group recommendations for a user (v2)
+      description: Always uses collaborative filtering; returns richer metadata.
+      operationId: recommendationsV2
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recommendations
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/RecommendationsResponse'
+                  - type: object
+                    properties:
+                      apiVersion:
+                        type: string
+                        example: v2
+
+  /api/v1/preferences:
+    post:
+      tags: [Recommendations]
+      summary: Set user group preferences
+      description: Stores user preference data used by the recommendation engine.
+      operationId: setPreferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferenceInput'
+      responses:
+        '200':
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ── Search ────────────────────────────────────────────────────────────────
+  /api/v1/search:
+    get:
+      tags: [Search]
+      summary: Global full-text search
+      operationId: search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query string
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/search/autocomplete:
+    get:
+      tags: [Search]
+      summary: Autocomplete suggestions
+      operationId: searchAutocomplete
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Autocomplete suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutocompleteResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ── Analytics ─────────────────────────────────────────────────────────────
+  /api/v1/analytics/platform:
+    get:
+      tags: [Analytics]
+      summary: Platform statistics for a date
+      operationId: analyticsPlatform
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Target date (defaults to today)
+      responses:
+        '200':
+          description: Platform statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformStats'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/analytics/platform/trends:
+    get:
+      tags: [Analytics]
+      summary: Platform statistics trends over a date range
+      operationId: analyticsPlatformTrends
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 30
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Platform trends
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformTrends'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/analytics/users/{userId}:
+    get:
+      tags: [Analytics]
+      summary: User-specific analytics
+      operationId: analyticsUser
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: User analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStats'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/analytics/groups/{groupId}:
+    get:
+      tags: [Analytics]
+      summary: Group-specific analytics
+      operationId: analyticsGroup
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Group analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupStats'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/analytics/events:
+    get:
+      tags: [Analytics]
+      summary: Analytics event statistics
+      operationId: analyticsEventsGet
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Event statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AnalyticsEventStat'
+    post:
+      tags: [Analytics]
+      summary: Record an analytics event
+      operationId: analyticsEventsPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyticsEventInput'
+      responses:
+        '201':
+          description: Event recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/analytics/reports:
+    get:
+      tags: [Analytics]
+      summary: List analytics reports
+      operationId: analyticsReportsGet
+      parameters:
+        - name: reportType
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Reports list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  reports:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AnalyticsReport'
+    post:
+      tags: [Analytics]
+      summary: Generate an analytics report
+      operationId: analyticsReportsPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyticsReportInput'
+      responses:
+        '201':
+          description: Report generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsReport'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/analytics/cache/stats:
+    get:
+      tags: [Analytics]
+      summary: Analytics cache statistics
+      operationId: analyticsCacheStats
+      responses:
+        '200':
+          description: Cache statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheStats'
+
+  /api/v1/analytics/cache/clear:
+    post:
+      tags: [Analytics]
+      summary: Clear analytics cache
+      operationId: analyticsCacheClear
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pattern:
+                  type: string
+                  description: Redis key pattern to clear (default "*")
+                  example: "analytics:platform:*"
+      responses:
+        '200':
+          description: Cache cleared
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  # ── Contract Events ───────────────────────────────────────────────────────
+  /api/v1/events:
+    get:
+      tags: [Events]
+      summary: Query indexed contract events
+      operationId: eventsGet
+      parameters:
+        - name: contractId
+          in: query
+          schema:
+            type: string
+        - name: eventType
+          in: query
+          schema:
+            type: string
+            enum: [GroupCreated, MemberJoined, ContributionMade, PayoutExecuted, GroupCompleted, GroupStatusChanged]
+        - name: startLedger
+          in: query
+          schema:
+            type: integer
+        - name: endLedger
+          in: query
+          schema:
+            type: integer
+        - name: startTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Paginated contract events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventsPage'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/events/stats:
+    get:
+      tags: [Events]
+      summary: Contract event statistics
+      operationId: eventsStats
+      parameters:
+        - name: contractId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventStats'
+
+  # ── Export ────────────────────────────────────────────────────────────────
+  /api/v1/export:
+    post:
+      tags: [Export]
+      summary: Create a data export job
+      operationId: exportCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, email, format]
+              properties:
+                userId:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                format:
+                  type: string
+                  enum: [CSV, JSON]
+      responses:
+        '202':
+          description: Export job created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/export/{jobId}:
+    get:
+      tags: [Export]
+      summary: Get export job status
+      operationId: exportStatus
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Export job details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportJob'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/export/{jobId}/download:
+    get:
+      tags: [Export]
+      summary: Get download URL for a completed export
+      operationId: exportDownload
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Download URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+        '400':
+          description: Job not completed yet
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/members/{address}/export.csv:
+    get:
+      tags: [Export]
+      summary: Stream member contribution/payout history as CSV
+      description: |
+        Streams a CSV file containing all contributions and payouts for the
+        given Stellar address. Suitable for tax and accounting purposes.
+      operationId: memberExportCsv
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Stellar wallet address
+      responses:
+        '200':
+          description: CSV file stream
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+  # ── Backup ────────────────────────────────────────────────────────────────
+  /api/v1/backup:
+    get:
+      tags: [Backup]
+      summary: List all backup jobs
+      operationId: backupList
+      responses:
+        '200':
+          description: List of backup jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BackupJob'
+    post:
+      tags: [Backup]
+      summary: Trigger a manual backup
+      operationId: backupTrigger
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                type:
+                  type: string
+                  enum: [full, incremental]
+      responses:
+        '202':
+          description: Backup job created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupJob'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/backup/{jobId}:
+    get:
+      tags: [Backup]
+      summary: Get a specific backup job
+      operationId: backupGet
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Backup job details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupJob'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/backup/restore:
+    post:
+      tags: [Backup]
+      summary: Restore from a backup
+      description: Restores from a specific job ID, or from the latest backup if no jobId is provided.
+      operationId: backupRestore
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                jobId:
+                  type: string
+                  description: Specific backup job ID to restore from (omit for latest)
+      responses:
+        '200':
+          description: Restore result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestoreResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/backup/alerts:
+    get:
+      tags: [Backup]
+      summary: List backup alerts
+      operationId: backupAlerts
+      parameters:
+        - name: unacknowledgedOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Backup alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BackupAlert'
+
+  /api/v1/backup/alerts/{alertId}/acknowledge:
+    post:
+      tags: [Backup]
+      summary: Acknowledge a backup alert
+      operationId: backupAlertAcknowledge
+      parameters:
+        - name: alertId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Alert acknowledged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  acknowledged:
+                    type: boolean
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── Members ───────────────────────────────────────────────────────────────
+  /api/members/{address}/reputation:
+    get:
+      tags: [User]
+      summary: Get member reputation score
+      operationId: memberReputation
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Stellar wallet address
+      responses:
+        '200':
+          description: Member reputation data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberReputation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── Groups (v2) ───────────────────────────────────────────────────────────
+  /api/v2/groups/{groupId}/invite:
+    post:
+      tags: [Recommendations]
+      summary: Send a group invitation email
+      operationId: groupInvite
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '201':
+          description: Invitation sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invitationId:
+                    type: string
+                  status:
+                    type: string
+                    example: sent
+                  joinLink:
+                    type: string
+                    format: uri
+                  apiVersion:
+                    type: string
+                    example: v2
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── Notifications ─────────────────────────────────────────────────────────
+  /api/v1/notifications/preferences/{userId}:
+    get:
+      tags: [Notifications]
+      summary: Get notification preferences for a user
+      operationId: notifPrefsGet
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreferences'
+    put:
+      tags: [Notifications]
+      summary: Update notification preferences
+      operationId: notifPrefsUpdate
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferencesUpdate'
+      responses:
+        '200':
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  preferences:
+                    $ref: '#/components/schemas/NotificationPreferences'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/notifications/preferences/stats:
+    get:
+      tags: [Notifications]
+      summary: Aggregate notification preference statistics
+      operationId: notifPrefsStats
+      responses:
+        '200':
+          description: Preference statistics
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/v1/notifications/device-token:
+    post:
+      tags: [Notifications]
+      summary: Register a device token for push notifications
+      operationId: notifDeviceTokenRegister
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, deviceToken, platform]
+              properties:
+                userId:
+                  type: string
+                deviceToken:
+                  type: string
+                platform:
+                  type: string
+                  enum: [ios, android, web]
+      responses:
+        '201':
+          description: Device token registered
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/notifications/device-token/{userId}/{deviceToken}:
+    delete:
+      tags: [Notifications]
+      summary: Unregister a device token
+      operationId: notifDeviceTokenDelete
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deviceToken
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Device token unregistered
+
+  /api/v1/notifications/send-email:
+    post:
+      tags: [Notifications]
+      summary: Send an email notification
+      operationId: notifSendEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to, templateId, templateData]
+              properties:
+                userId:
+                  type: string
+                to:
+                  type: string
+                  format: email
+                templateId:
+                  type: string
+                templateData:
+                  type: object
+                subject:
+                  type: string
+      responses:
+        '202':
+          description: Email sent
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: User has disabled this notification type
+
+  /api/v1/notifications/send-push:
+    post:
+      tags: [Notifications]
+      summary: Send a push notification
+      operationId: notifSendPush
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deviceToken, templateId, templateData]
+              properties:
+                userId:
+                  type: string
+                deviceToken:
+                  type: string
+                templateId:
+                  type: string
+                templateData:
+                  type: object
+                title:
+                  type: string
+                body:
+                  type: string
+      responses:
+        '202':
+          description: Push notification sent
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/notifications/queue:
+    post:
+      tags: [Notifications]
+      summary: Queue a notification for later delivery
+      operationId: notifQueue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, templateKey, recipient, templateData, notificationType]
+              properties:
+                userId:
+                  type: string
+                templateKey:
+                  type: string
+                recipient:
+                  type: string
+                templateData:
+                  type: object
+                notificationType:
+                  type: string
+                  enum: [email, push, web_push]
+                priority:
+                  type: integer
+                  default: 0
+                scheduledFor:
+                  type: string
+                  format: date-time
+      responses:
+        '202':
+          description: Notification queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  queueId:
+                    type: string
+
+  /api/v1/notifications/process-queue:
+    post:
+      tags: [Notifications]
+      summary: Process queued notifications
+      operationId: notifProcessQueue
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                batchSize:
+                  type: integer
+                  default: 100
+      responses:
+        '200':
+          description: Queue processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  processedCount:
+                    type: integer
+
+  /api/v1/notifications/history/{userId}:
+    get:
+      tags: [Notifications]
+      summary: Get notification history for a user
+      operationId: notifHistory
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Notification history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                  count:
+                    type: integer
+                  notifications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NotificationRecord'
+
+  /api/v1/notifications/stats:
+    get:
+      tags: [Notifications]
+      summary: Notification service statistics
+      operationId: notifStats
+      responses:
+        '200':
+          description: Notification statistics
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/v1/notifications/templates:
+    get:
+      tags: [Notifications]
+      summary: List all active notification templates
+      operationId: notifTemplatesList
+      responses:
+        '200':
+          description: Templates list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  templates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NotificationTemplate'
+    post:
+      tags: [Notifications]
+      summary: Create a notification template (admin only)
+      operationId: notifTemplatesCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationTemplateInput'
+      responses:
+        '201':
+          description: Template created
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/notifications/templates/{templateKey}:
+    get:
+      tags: [Notifications]
+      summary: Get a specific notification template
+      operationId: notifTemplatesGet
+      parameters:
+        - name: templateKey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Template
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationTemplate'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Notifications]
+      summary: Update a notification template (admin only)
+      operationId: notifTemplatesUpdate
+      parameters:
+        - name: templateKey
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subject:
+                  type: string
+                htmlContent:
+                  type: string
+                textContent:
+                  type: string
+                active:
+                  type: boolean
+      responses:
+        '200':
+          description: Template updated
+
+  /api/v1/notifications/vapid-public-key:
+    get:
+      tags: [Notifications]
+      summary: Get VAPID public key for web push subscriptions
+      operationId: notifVapidKey
+      responses:
+        '200':
+          description: VAPID public key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  publicKey:
+                    type: string
+        '503':
+          description: Web push not configured
+
+  /api/v1/notifications/subscribe:
+    post:
+      tags: [Notifications]
+      summary: Register a browser push subscription
+      operationId: notifSubscribe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, subscription]
+              properties:
+                userId:
+                  type: string
+                subscription:
+                  $ref: '#/components/schemas/WebPushSubscription'
+      responses:
+        '201':
+          description: Subscription registered
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          description: Web push not configured
+    delete:
+      tags: [Notifications]
+      summary: Remove a browser push subscription
+      operationId: notifUnsubscribe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint]
+              properties:
+                endpoint:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Subscription removed
+
+  /api/v1/notifications/unsubscribe/{token}:
+    post:
+      tags: [Notifications]
+      summary: One-click unsubscribe via token (email link)
+      operationId: notifOneClickUnsubscribe
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Unsubscribed (returns HTML page)
+          content:
+            text/html:
+              schema:
+                type: string
+        '400':
+          description: Invalid token
+
+  /api/v1/notifications/resubscribe/{userId}:
+    post:
+      tags: [Notifications]
+      summary: Re-subscribe a user to notifications
+      operationId: notifResubscribe
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User resubscribed
+
+  /api/v1/notifications/health:
+    get:
+      tags: [Notifications]
+      summary: Notification service health check
+      operationId: notifHealth
+      responses:
+        '200':
+          description: Notification service health
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotifHealthResponse'
+
+  # ── Webhooks ──────────────────────────────────────────────────────────────
+  /api/webhooks:
+    post:
+      tags: [Webhooks]
+      summary: Register a new webhook
+      operationId: webhookCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookInput'
+      responses:
+        '201':
+          description: Webhook created (includes generated secret)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      tags: [Webhooks]
+      summary: List webhooks for a user
+      operationId: webhookList
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Webhooks list (secrets masked)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WebhookSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/webhooks/{id}:
+    get:
+      tags: [Webhooks]
+      summary: Get a specific webhook
+      operationId: webhookGet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Webhook details (secret masked)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSummary'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Webhooks]
+      summary: Update a webhook
+      operationId: webhookUpdate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookUpdate'
+      responses:
+        '200':
+          description: Webhook updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Webhooks]
+      summary: Delete a webhook
+      operationId: webhookDelete
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Webhook deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── Cache ─────────────────────────────────────────────────────────────────
+  /api/cache/stats:
+    get:
+      tags: [Cache]
+      summary: Cache hit/miss statistics
+      operationId: cacheStats
+      responses:
+        '200':
+          description: Cache statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheStats'
+
+  # ── CSP ───────────────────────────────────────────────────────────────────
+  /api/csp-report:
+    post:
+      tags: [Health]
+      summary: CSP violation reporting endpoint
+      description: Receives Content-Security-Policy violation reports from browsers.
+      operationId: cspReport
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+          application/csp-report:
+            schema:
+              type: object
+      responses:
+        '204':
+          description: Report received
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT issued by POST /api/auth/verify
+
+  parameters:
+    walletAddress:
+      name: walletAddress
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Stellar public key (G... address)
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Authenticated but not authorised for this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        version:
+          type: string
+          example: v1
+        responseTimeMs:
+          type: number
+        dependencies:
+          type: object
+          properties:
+            database:
+              type: object
+              properties:
+                up:
+                  type: boolean
+            horizon:
+              type: object
+              properties:
+                up:
+                  type: boolean
+
+    ReadyResponse:
+      allOf:
+        - $ref: '#/components/schemas/HealthResponse'
+        - type: object
+          properties:
+            status:
+              type: string
+              enum: [ready, not_ready]
+
+    UserProfile:
+      type: object
+      properties:
+        walletAddress:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    UserPreferences:
+      type: object
+      properties:
+        userId:
+          type: string
+        emailNotifications:
+          type: boolean
+        pushNotifications:
+          type: boolean
+        contributionReminders:
+          type: boolean
+        groupUpdates:
+          type: boolean
+        payoutNotifications:
+          type: boolean
+        emailFrequency:
+          type: string
+          enum: [immediate, daily, weekly, never]
+
+    UserPreferencesUpdate:
+      type: object
+      properties:
+        emailNotifications:
+          type: boolean
+        pushNotifications:
+          type: boolean
+        contributionReminders:
+          type: boolean
+        groupUpdates:
+          type: boolean
+        payoutNotifications:
+          type: boolean
+        emailFrequency:
+          type: string
+          enum: [immediate, daily, weekly, never]
+
+    UserPreferenceInput:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        minContribution:
+          type: number
+        maxContribution:
+          type: number
+
+    GroupsOverviewStats:
+      type: object
+      properties:
+        totalGroups:
+          type: integer
+        activeGroups:
+          type: integer
+        totalMembers:
+          type: integer
+        totalContributed:
+          type: string
+          description: Total XLM contributed across all groups (as string to avoid precision loss)
+
+    RecommendationsResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+        bucket:
+          type: string
+          enum: [A, B]
+        algorithm:
+          type: string
+          enum: [content, collaborative]
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupSummary'
+
+    GroupSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        contributionAmount:
+          type: number
+        cycleDuration:
+          type: integer
+          description: Cycle duration in seconds
+        maxMembers:
+          type: integer
+        currentMembers:
+          type: integer
+        status:
+          type: string
+          enum: [Pending, Active, Paused, Completed, Cancelled]
+        tags:
+          type: array
+          items:
+            type: string
+
+    SearchResults:
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupSummary'
+        total:
+          type: integer
+
+    AutocompleteResults:
+      type: object
+      properties:
+        suggestions:
+          type: array
+          items:
+            type: string
+
+    PlatformStats:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        totalGroups:
+          type: integer
+        activeGroups:
+          type: integer
+        totalUsers:
+          type: integer
+        totalContributions:
+          type: integer
+        totalPayouts:
+          type: integer
+
+    PlatformTrends:
+      type: object
+      properties:
+        startDate:
+          type: string
+        endDate:
+          type: string
+        dataPoints:
+          type: integer
+        trends:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlatformStats'
+
+    UserStats:
+      type: object
+      properties:
+        userId:
+          type: string
+        date:
+          type: string
+          format: date
+        groupsJoined:
+          type: integer
+        totalContributed:
+          type: number
+        totalReceived:
+          type: number
+
+    GroupStats:
+      type: object
+      properties:
+        groupId:
+          type: string
+        date:
+          type: string
+          format: date
+        memberCount:
+          type: integer
+        currentCycle:
+          type: integer
+        totalContributed:
+          type: number
+
+    AnalyticsEventStat:
+      type: object
+      properties:
+        eventType:
+          type: string
+        eventName:
+          type: string
+        count:
+          type: integer
+        lastOccurred:
+          type: string
+          format: date-time
+
+    AnalyticsEventInput:
+      type: object
+      required: [eventType, eventName]
+      properties:
+        eventType:
+          type: string
+        eventName:
+          type: string
+        userId:
+          type: string
+        groupId:
+          type: string
+        eventData:
+          type: object
+        sessionId:
+          type: string
+
+    AnalyticsReport:
+      type: object
+      properties:
+        id:
+          type: string
+        reportType:
+          type: string
+        reportName:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        generatedBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    AnalyticsReportInput:
+      type: object
+      required: [reportType, reportName, startDate, endDate]
+      properties:
+        reportType:
+          type: string
+        reportName:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        generatedBy:
+          type: string
+
+    CacheStats:
+      type: object
+      properties:
+        hits:
+          type: integer
+        misses:
+          type: integer
+        hitRate:
+          type: number
+          format: float
+        keys:
+          type: integer
+
+    ContractEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        contractId:
+          type: string
+        eventType:
+          type: string
+          enum: [GroupCreated, MemberJoined, ContributionMade, PayoutExecuted, GroupCompleted, GroupStatusChanged]
+        ledger:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        data:
+          type: object
+
+    EventsPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractEvent'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    EventStats:
+      type: object
+      properties:
+        totalEvents:
+          type: integer
+        eventTypeBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              count:
+                type: integer
+
+    ExportJob:
+      type: object
+      properties:
+        jobId:
+          type: string
+        userId:
+          type: string
+        email:
+          type: string
+          format: email
+        format:
+          type: string
+          enum: [CSV, JSON]
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        fileUrl:
+          type: string
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+
+    BackupJob:
+      type: object
+      properties:
+        jobId:
+          type: string
+        type:
+          type: string
+          enum: [full, incremental]
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        sizeBytes:
+          type: integer
+
+    RestoreResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        jobId:
+          type: string
+        restoredAt:
+          type: string
+          format: date-time
+        message:
+          type: string
+
+    BackupAlert:
+      type: object
+      properties:
+        alertId:
+          type: string
+        severity:
+          type: string
+          enum: [warning, critical]
+        message:
+          type: string
+        acknowledged:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    MemberReputation:
+      type: object
+      properties:
+        address:
+          type: string
+        score:
+          type: number
+          format: float
+        totalContributions:
+          type: integer
+        missedContributions:
+          type: integer
+        groupsCompleted:
+          type: integer
+
+    NotificationPreferences:
+      type: object
+      properties:
+        userId:
+          type: string
+        emailNotifications:
+          type: boolean
+        pushNotifications:
+          type: boolean
+        contributionReminders:
+          type: boolean
+        groupUpdates:
+          type: boolean
+        payoutNotifications:
+          type: boolean
+        emailFrequency:
+          type: string
+          enum: [immediate, daily, weekly, never]
+
+    NotificationPreferencesUpdate:
+      type: object
+      properties:
+        emailNotifications:
+          type: boolean
+        pushNotifications:
+          type: boolean
+        contributionReminders:
+          type: boolean
+        groupUpdates:
+          type: boolean
+        payoutNotifications:
+          type: boolean
+        emailFrequency:
+          type: string
+          enum: [immediate, daily, weekly, never]
+
+    NotificationRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        type:
+          type: string
+        templateKey:
+          type: string
+        status:
+          type: string
+          enum: [queued, sent, failed]
+        sentAt:
+          type: string
+          format: date-time
+
+    NotificationTemplate:
+      type: object
+      properties:
+        templateKey:
+          type: string
+        templateName:
+          type: string
+        templateType:
+          type: string
+          enum: [email, push, web_push]
+        subject:
+          type: string
+        htmlContent:
+          type: string
+        textContent:
+          type: string
+        placeholders:
+          type: array
+          items:
+            type: string
+        active:
+          type: boolean
+
+    NotificationTemplateInput:
+      type: object
+      required: [templateKey, templateName, templateType, htmlContent, textContent]
+      properties:
+        templateKey:
+          type: string
+        templateName:
+          type: string
+        templateType:
+          type: string
+          enum: [email, push, web_push]
+        subject:
+          type: string
+        htmlContent:
+          type: string
+        textContent:
+          type: string
+        placeholders:
+          type: array
+          items:
+            type: string
+
+    WebPushSubscription:
+      type: object
+      required: [endpoint, keys]
+      properties:
+        endpoint:
+          type: string
+          format: uri
+        keys:
+          type: object
+          required: [p256dh, auth]
+          properties:
+            p256dh:
+              type: string
+            auth:
+              type: string
+
+    NotifHealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        timestamp:
+          type: string
+          format: date-time
+        providers:
+          type: object
+          properties:
+            email:
+              type: boolean
+            push:
+              type: array
+              items:
+                type: string
+            webPush:
+              type: boolean
+
+    WebhookInput:
+      type: object
+      required: [userId, url, events]
+      properties:
+        userId:
+          type: string
+        groupId:
+          type: string
+          description: Optional — scope webhook to a specific group
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+          example: [GroupCreated, ContributionMade, PayoutExecuted]
+        secret:
+          type: string
+          description: HMAC-SHA256 signing secret (auto-generated if omitted)
+        description:
+          type: string
+
+    Webhook:
+      allOf:
+        - $ref: '#/components/schemas/WebhookInput'
+        - type: object
+          properties:
+            id:
+              type: string
+            isActive:
+              type: boolean
+            createdAt:
+              type: string
+              format: date-time
+
+    WebhookSummary:
+      allOf:
+        - $ref: '#/components/schemas/Webhook'
+      description: Same as Webhook but with `secret` omitted for security
+
+    WebhookUpdate:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+        description:
+          type: string
