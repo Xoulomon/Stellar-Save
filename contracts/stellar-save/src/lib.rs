@@ -52,7 +52,10 @@ mod multi_token_tests;
 mod mutation_tests;
 pub mod search;
 mod upgrade_tests;
+mod escrow_property_tests;
 mod fuzz_tests;
+mod governance_property_tests;
+mod insurance_property_tests;
 mod property_tests;
 
 // Re-export for convenience
