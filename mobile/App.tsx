@@ -1,23 +1,19 @@
 import { StatusBar } from 'expo-status-bar';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { AuthGate } from './src/auth/AuthGate';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { RootNavigator } from './src/navigation';
+import { initSentry } from './src/lib/sentry';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 30_000,
-      retry: 2,
-    },
-  },
-});
+void initSentry();
 
 export default function App() {
   return (
-    <AuthGate>
-      <StatusBar style="light" />
-      <RootNavigator />
-    </AuthGate>
+    <ErrorBoundary>
+      <AuthGate>
+        <StatusBar style="light" />
+        <RootNavigator />
+      </AuthGate>
+    </ErrorBoundary>
   );
 }

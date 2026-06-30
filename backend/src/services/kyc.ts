@@ -9,6 +9,7 @@ import * as crypto from 'crypto';
 import { logger } from '../logger';
 import { prisma } from '../prisma_client';
 import { config } from '../config';
+import { fetchWithCorrelationId } from '../lib/http';
 
 export type KycStatus = 'pending' | 'approved' | 'rejected' | 'expired';
 
@@ -31,7 +32,7 @@ export async function submitKyc(opts: KycSubmitOpts): Promise<KycStatusResult> {
   const providerUrl = (config as any).kyc?.providerUrl ?? process.env['KYC_PROVIDER_URL'] ?? 'https://sandbox.kyc-provider.example.com';
 
   // POST to provider — only send fields, never store raw docs locally
-  const res = await fetch(`${providerUrl}/kyc`, {
+  const res = await fetchWithCorrelationId(`${providerUrl}/kyc`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ account: walletAddress, fields }),
@@ -72,7 +73,7 @@ export async function pollAndUpdateStatus(userId: string): Promise<KycStatusResu
   if (!record || !record.kycProviderId) return getKycStatus(userId);
 
   const providerUrl = (config as any).kyc?.providerUrl ?? process.env['KYC_PROVIDER_URL'] ?? 'https://sandbox.kyc-provider.example.com';
-  const res = await fetch(`${providerUrl}/kyc/${encodeURIComponent(record.kycProviderId)}`);
+  const res = await fetchWithCorrelationId(`${providerUrl}/kyc/${encodeURIComponent(record.kycProviderId)}`);
   if (!res.ok) {
     logger.warn('[kyc] status poll failed', { userId, status: res.status });
     return getKycStatus(userId);

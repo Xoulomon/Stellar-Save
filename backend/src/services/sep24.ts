@@ -9,6 +9,7 @@
 
 import { logger } from '../logger';
 import { prisma } from '../prisma_client';
+import { fetchWithCorrelationId } from '../lib/http';
 
 export interface Sep24InitOpts {
   anchorDomain: string;
@@ -45,7 +46,7 @@ export interface RampTransactionRecord {
 
 async function fetchToml(anchorDomain: string): Promise<Record<string, string>> {
   const url = `https://${anchorDomain}/.well-known/stellar.toml`;
-  const res = await fetch(url);
+  const res = await fetchWithCorrelationId(url);
   if (!res.ok) throw new Error(`Failed to fetch TOML from ${url}: ${res.status}`);
   const text = await res.text();
   const result: Record<string, string> = {};
@@ -64,7 +65,7 @@ export async function sep10Auth(anchorDomain: string, stellarAccount: string): P
   const toml = await fetchToml(anchorDomain);
   const authServer = toml['AUTH_SERVER'] ?? `https://${anchorDomain}/auth`;
 
-  const challengeRes = await fetch(`${authServer}?account=${encodeURIComponent(stellarAccount)}`);
+  const challengeRes = await fetchWithCorrelationId(`${authServer}?account=${encodeURIComponent(stellarAccount)}`);
   if (!challengeRes.ok) throw new Error(`SEP-10 challenge failed: ${challengeRes.status}`);
   const { transaction: challengeXdr } = (await challengeRes.json()) as { transaction: string };
 
@@ -102,7 +103,7 @@ async function initiate(type: 'deposit' | 'withdraw', opts: Sep24InitOpts): Prom
     ? `${transferServer}/transactions/deposit/interactive`
     : `${transferServer}/transactions/withdraw/interactive`;
 
-  const res = await fetch(endpoint, {
+  const res = await fetchWithCorrelationId(endpoint, {
     method: 'POST',
     headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/x-www-form-urlencoded' },
     body: form.toString(),

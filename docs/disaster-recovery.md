@@ -96,6 +96,9 @@ gh workflow run disaster-recovery.yml
 ## Backup & Restore
 
 Backups are managed by `BackupService` and `RecoveryService` in the backend.
+Restore verification is handled by `BackupRestoreDrill`, which restores the
+latest full backup into an ephemeral target on a schedule and records
+pass/fail status plus duration metrics.
 
 List restore points:
 ```bash
@@ -111,6 +114,13 @@ curl -X POST http://localhost:3001/api/v1/recovery/restore-latest \
 # Specific job
 curl -X POST http://localhost:3001/api/v1/recovery/restore \
   -H 'Content-Type: application/json' -d '{"jobId":"<id>"}'
+```
+
+Trigger or inspect restore drills:
+```bash
+curl -X POST http://localhost:3001/api/v1/backup/drills/run
+curl http://localhost:3001/api/v1/backup/drills
+curl http://localhost:3001/api/v1/backup/drills/alerts
 ```
 
 ## Contract Rollback

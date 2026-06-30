@@ -24,6 +24,7 @@ import { BackupService, S3HttpClient } from './backup_service';
 import { BackupScheduler } from './backup_scheduler';
 import { RecoveryService } from './recovery_service';
 import { BackupMonitor } from './backup_monitor';
+import { BackupRestoreDrill } from './backup_restore_drill';
 import { ContractEventIndexer } from './contract_event_indexer';
 import { WebPushService } from './web_push_service';
 import { versionMiddleware } from './versioning';
@@ -32,7 +33,7 @@ import { FeedbackService } from './feedback_service';
 import { createV2Router } from './routes/v2';
 import { metricsMiddleware, metricsHandler } from './metrics';
 import { requestLogger } from './logger';
-import { disconnectPrisma } from './prisma_client';
+import { disconnectPrisma, prisma } from './prisma_client';
 import { createRateLimiterMiddleware, createAuthRateLimiterMiddleware } from './rate_limiter';
 import { createTieredRateLimiter, configureTier, setEndpointCost } from './redis_rate_limiter';
 import { createQuotaReporterRouter } from './routes/quota_reporter';
@@ -185,6 +186,12 @@ const recoveryService = new RecoveryService(backupService, s3Client);
 const backupMonitor = new BackupMonitor(backupService, {
   alertWebhookUrl: config.backup.alertWebhookUrl,
 });
+const backupRestoreDrill = new BackupRestoreDrill(backupService, s3Client, {
+  checkIntervalMs: config.backup.drillIntervalMs,
+  maxRestoreDurationMs: config.backup.drillMaxDurationMs,
+  alertWebhookUrl: config.backup.alertWebhookUrl,
+});
+const feedbackService = new FeedbackService(prisma);
 
 const adminService = new AdminService();
 
@@ -200,6 +207,10 @@ const eventIndexer = new ContractEventIndexer(
 if (config.backup.enabled) {
   backupScheduler.start();
   backupMonitor.start();
+}
+
+if (config.backup.drillEnabled) {
+  backupRestoreDrill.start();
 }
 
 // Start the contract event indexer
@@ -225,7 +236,17 @@ if (config.keeper.enabled) {
   startKeeperJob(config.keeper.schedule, config.indexer.contractId, config.stellar.rpcUrl);
 }
 
-const services = { engine, exportService, backupService, backupScheduler, recoveryService, backupMonitor, eventIndexer };
+const services = {
+  engine,
+  exportService,
+  backupService,
+  backupScheduler,
+  recoveryService,
+  backupMonitor,
+  backupRestoreDrill,
+  eventIndexer,
+  feedbackService,
+};
 
 // ── Auth routes (public — no JWT required) ───────────────────────────────────
 app.use('/api/auth', createAuthRouter());
@@ -370,4 +391,4 @@ process.on('SIGTERM', () => {
   disconnectPrisma().catch(() => {});
 });
 
-export { app }; 
+export { app };

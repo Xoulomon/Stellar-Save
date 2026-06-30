@@ -91,6 +91,9 @@ const envSchema = z.object({
     .default('30')
     .transform(Number),
   BACKUP_ALERT_WEBHOOK_URL: z.string().url().optional().or(z.literal('')),
+  BACKUP_DRILL_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+  BACKUP_DRILL_INTERVAL_MS: z.string().regex(/^\d+$/).default(String(24 * 60 * 60 * 1000)).transform(Number),
+  BACKUP_DRILL_MAX_DURATION_MS: z.string().regex(/^\d+$/).default(String(5 * 60 * 1000)).transform(Number),
 
   // ── AWS ───────────────────────────────────────────────────────────────────
   AWS_REGION: z.string().default('us-east-1'),
@@ -293,6 +296,9 @@ export const config = {
     bucket: env.BACKUP_S3_BUCKET,
     retentionDays: env.BACKUP_RETENTION_DAYS,
     alertWebhookUrl: env.BACKUP_ALERT_WEBHOOK_URL || undefined,
+    drillEnabled: env.BACKUP_DRILL_ENABLED,
+    drillIntervalMs: env.BACKUP_DRILL_INTERVAL_MS,
+    drillMaxDurationMs: env.BACKUP_DRILL_MAX_DURATION_MS,
   },
 
   aws: {

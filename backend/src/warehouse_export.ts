@@ -37,6 +37,7 @@
 import { PrismaClient } from './generated/prisma/client';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { logger } from './logger';
+import { fetchWithCorrelationId } from './lib/http';
 
 const WATERMARK_KEY = 'warehouse_export_watermark';
 
@@ -219,13 +220,15 @@ export class WarehouseExportPipeline {
     logger.error(message);
     if (!this.alertWebhook) return;
     try {
-      await fetch(this.alertWebhook, {
+      await fetchWithCorrelationId(this.alertWebhook, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: message }),
       });
     } catch (err) {
-      logger.error('[warehouse] Failed to send alert webhook', err);
+      logger.error('[warehouse] Failed to send alert webhook', {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 

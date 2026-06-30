@@ -20,6 +20,8 @@ pnpm ios          # run in iOS simulator (requires Xcode)
 pnpm android      # run in Android emulator (requires Android Studio)
 ```
 
+For crash reporting, set `EXPO_PUBLIC_SENTRY_DSN` in the Expo environment.
+
 ## Project structure
 
 ```

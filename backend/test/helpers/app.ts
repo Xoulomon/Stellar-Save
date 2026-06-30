@@ -15,9 +15,11 @@ import { BackupService, S3HttpClient } from '../src/backup_service';
 import { BackupScheduler } from '../src/backup_scheduler';
 import { RecoveryService } from '../src/recovery_service';
 import { BackupMonitor } from '../src/backup_monitor';
+import { BackupRestoreDrill } from '../src/backup_restore_drill';
 import { ContractEventIndexer } from '../src/contract_event_indexer';
 import { WebPushService } from '../src/web_push_service';
 import { EmailService } from '../src/email_service';
+import { FeedbackService } from '../src/feedback_service';
 import { createV1Router } from '../src/routes/v1';
 import { getMemberReputation } from '../src/reputation_service';
 import { Group, UserInteraction } from '../src/models';
@@ -47,7 +49,12 @@ export function buildApp() {
   const backupScheduler = new BackupScheduler(backupService);
   const recoveryService = new RecoveryService(backupService, s3Client);
   const backupMonitor = new BackupMonitor(backupService, {});
+  const backupRestoreDrill = new BackupRestoreDrill(backupService, s3Client, {
+    checkIntervalMs: 24 * 60 * 60 * 1000,
+    maxRestoreDurationMs: 5 * 60 * 1000,
+  });
   const webPushService = new WebPushService();
+  const feedbackService = new FeedbackService(prisma);
   const eventIndexer = new ContractEventIndexer(
     'https://horizon-testnet.stellar.org',
     'CA_TEST',
@@ -63,8 +70,10 @@ export function buildApp() {
     backupScheduler,
     recoveryService,
     backupMonitor,
+    backupRestoreDrill,
     eventIndexer,
     analyticsService,
+    feedbackService,
   };
 
   // /api/groups — mock data (no DB)

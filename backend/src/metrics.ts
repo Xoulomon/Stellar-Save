@@ -20,6 +20,27 @@ export const backupJobsTotal = new Counter({
   registers: [registry],
 });
 
+export const backupRestoreDrillsTotal = new Counter({
+  name: 'backup_restore_drills_total',
+  help: 'Total backup restore drill runs',
+  labelNames: ['status'],
+  registers: [registry],
+});
+
+export const backupRestoreDrillDuration = new Histogram({
+  name: 'backup_restore_drill_duration_seconds',
+  help: 'Duration of backup restore drills in seconds',
+  labelNames: ['status'],
+  buckets: [0.5, 1, 2, 5, 10, 30, 60, 120],
+  registers: [registry],
+});
+
+export const backupRestoreLastSuccessfulTimestamp = new Gauge({
+  name: 'stellar_save_last_successful_backup_restore_timestamp',
+  help: 'Unix timestamp of the last successful restore drill',
+  registers: [registry],
+});
+
 export const exportJobsTotal = new Counter({
   name: 'export_jobs_total',
   help: 'Total export jobs created',

@@ -8,6 +8,7 @@ import { BackupService, S3HttpClient } from '../backup_service';
 import { BackupScheduler } from '../backup_scheduler';
 import { RecoveryService } from '../recovery_service';
 import { BackupMonitor } from '../backup_monitor';
+import { BackupRestoreDrill } from '../backup_restore_drill';
 import { ContractEventIndexer } from '../contract_event_indexer';
 import { AnalyticsService } from '../analytics_service';
 import { FeedbackService } from '../feedback_service';
@@ -30,6 +31,7 @@ export interface V1Services {
   backupScheduler: BackupScheduler;
   recoveryService: RecoveryService;
   backupMonitor: BackupMonitor;
+  backupRestoreDrill: BackupRestoreDrill;
   eventIndexer: ContractEventIndexer;
   analyticsService: AnalyticsService;
   feedbackService: FeedbackService;
@@ -44,6 +46,7 @@ export function createV1Router(services: V1Services): Router {
     backupScheduler,
     recoveryService,
     backupMonitor,
+    backupRestoreDrill,
     eventIndexer,
     analyticsService,
     feedbackService,
@@ -223,6 +226,24 @@ export function createV1Router(services: V1Services): Router {
     } catch (err: unknown) {
       res.status(400).json({ error: err instanceof Error ? err.message : String(err) });
     }
+  });
+
+  router.get('/backup/drills', (_req, res) => res.json(backupRestoreDrill.listRuns()));
+
+  router.get('/backup/drills/alerts', (req, res) => {
+    const unacknowledgedOnly = req.query.unacknowledgedOnly === 'true';
+    res.json(backupRestoreDrill.listAlerts(unacknowledgedOnly));
+  });
+
+  router.post('/backup/drills/alerts/:alertId/acknowledge', (req, res) => {
+    const ok = backupRestoreDrill.acknowledge(req.params.alertId);
+    if (!ok) return res.status(404).json({ error: 'Alert not found' });
+    res.json({ acknowledged: true });
+  });
+
+  router.post('/backup/drills/run', async (_req, res) => {
+    const run = await backupRestoreDrill.runDrill();
+    res.status(202).json(run);
   });
 
   // Contract Event Indexer Endpoints

@@ -6,6 +6,7 @@
 
 import { logger } from '../logger';
 import { prisma } from '../prisma_client';
+import { fetchWithCorrelationId } from '../lib/http';
 
 export interface Sep31QuoteOpts {
   anchorDomain: string;
@@ -47,7 +48,7 @@ export interface Sep31StatusResult {
 
 async function fetchToml(anchorDomain: string): Promise<Record<string, string>> {
   const url = `https://${anchorDomain}/.well-known/stellar.toml`;
-  const res = await fetch(url);
+  const res = await fetchWithCorrelationId(url);
   if (!res.ok) throw new Error(`Failed to fetch TOML from ${url}: ${res.status}`);
   const text = await res.text();
   const result: Record<string, string> = {};
@@ -69,7 +70,7 @@ async function getDirectPaymentServer(anchorDomain: string): Promise<string> {
  */
 export async function validateComplianceFields(anchorDomain: string, fields: Record<string, string>): Promise<void> {
   const server = await getDirectPaymentServer(anchorDomain);
-  const res = await fetch(`${server}/info`);
+  const res = await fetchWithCorrelationId(`${server}/info`);
   if (!res.ok) throw new Error(`SEP-31 /info failed: ${res.status}`);
 
   const body = (await res.json()) as { receive?: Record<string, { fields?: Record<string, { optional?: boolean }> }> };
@@ -96,7 +97,7 @@ export async function getQuote(opts: Sep31QuoteOpts): Promise<Sep31Quote> {
   const { anchorDomain, sendAsset, receiveAsset, amount } = opts;
   const server = await getDirectPaymentServer(anchorDomain);
   const url = `${server}/rate?send_asset=${encodeURIComponent(sendAsset)}&receive_asset=${encodeURIComponent(receiveAsset)}&amount=${encodeURIComponent(amount)}`;
-  const res = await fetch(url);
+  const res = await fetchWithCorrelationId(url);
   if (!res.ok) throw new Error(`SEP-31 rate quote failed: ${res.status}`);
   const body = (await res.json()) as { rate?: string; fee?: string; expires_at?: string };
   return {
@@ -115,7 +116,7 @@ export async function sendPayment(opts: Sep31SendOpts): Promise<Sep31SendResult>
   await validateComplianceFields(anchorDomain, fields);
 
   const server = await getDirectPaymentServer(anchorDomain);
-  const res = await fetch(`${server}/transactions`, {
+  const res = await fetchWithCorrelationId(`${server}/transactions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -166,7 +167,7 @@ export async function getPaymentStatus(anchorDomain: string, id: string): Promis
   if (!record.anchorTxId) return { id, status: record.status };
 
   const server = await getDirectPaymentServer(anchorDomain);
-  const res = await fetch(`${server}/transaction/${encodeURIComponent(record.anchorTxId)}`);
+  const res = await fetchWithCorrelationId(`${server}/transaction/${encodeURIComponent(record.anchorTxId)}`);
   if (!res.ok) {
     logger.warn('[sep31] status poll failed', { id, status: res.status });
     return { id, status: record.status };

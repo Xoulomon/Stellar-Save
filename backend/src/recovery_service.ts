@@ -8,21 +8,35 @@ export interface RecoveryResult {
   restoredAt: number;
   recordCount: number;
   checksum: string;
+  restoreDurationMs: number;
+}
+
+export interface RestoreTarget {
+  applyFull(payload: Record<string, unknown>): Promise<void>;
+  applyIncremental(baseJobId: string, delta: Record<string, unknown>): Promise<void>;
+}
+
+class NoopRestoreTarget implements RestoreTarget {
+  async applyFull(_payload: Record<string, unknown>): Promise<void> {}
+  async applyIncremental(_baseJobId: string, _delta: Record<string, unknown>): Promise<void> {}
 }
 
 export class RecoveryService {
   private service: BackupService;
   private s3: S3Client;
   private bucket: string;
+  private target: RestoreTarget;
 
-  constructor(service: BackupService, s3Client: S3Client) {
+  constructor(service: BackupService, s3Client: S3Client, target: RestoreTarget = new NoopRestoreTarget()) {
     this.service = service;
     this.s3 = s3Client;
     this.bucket = config.backup.bucket;
+    this.target = target;
   }
 
   /** Restore from a specific backup job */
   async restore(jobId: string): Promise<RecoveryResult> {
+    const startedAt = Date.now();
     const job = this.service.getJob(jobId);
     if (!job) throw new Error(`Backup job not found: ${jobId}`);
     if (job.status !== 'completed') throw new Error(`Backup job ${jobId} is not completed (status: ${job.status})`);
@@ -40,13 +54,19 @@ export class RecoveryService {
 
     // For incremental backups, apply on top of the base full backup
     if (job.type === 'incremental' && job.baseBackupId) {
-      await this.applyIncremental(job.baseBackupId, payload);
+      await this.target.applyIncremental(job.baseBackupId, payload);
     } else {
-      await this.applyFull(payload);
+      await this.target.applyFull(payload);
     }
 
     const recordCount = this.countRecords(payload);
-    return { jobId, restoredAt: Date.now(), recordCount, checksum: actualChecksum };
+    return {
+      jobId,
+      restoredAt: Date.now(),
+      recordCount,
+      checksum: actualChecksum,
+      restoreDurationMs: Date.now() - startedAt,
+    };
   }
 
   /** Restore the latest completed backup */
@@ -59,17 +79,6 @@ export class RecoveryService {
   /** List available restore points */
   listRestorePoints(): BackupJob[] {
     return this.service.listJobs().filter(j => j.status === 'completed');
-  }
-
-  private async applyFull(payload: Record<string, unknown>): Promise<void> {
-    // In production: write payload.data to the database/store
-    console.log('[RecoveryService] Applying full restore, timestamp:', payload.timestamp);
-  }
-
-  private async applyIncremental(baseJobId: string, delta: Record<string, unknown>): Promise<void> {
-    // First restore the base, then apply the delta
-    await this.restore(baseJobId);
-    console.log('[RecoveryService] Applying incremental delta on top of base:', baseJobId, 'timestamp:', delta.timestamp);
   }
 
   private countRecords(payload: Record<string, unknown>): number {

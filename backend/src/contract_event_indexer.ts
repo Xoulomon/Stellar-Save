@@ -4,6 +4,7 @@ import { WebPushService } from './web_push_service';
 import { eventsIndexedTotal, sorobanRpcCallsTotal } from './metrics';
 import { GroupStateCache, isStateMutatingEvent } from './lib/cache';
 import { CONTRACT_EVENT_TOPICS } from '../../packages/events-schema/generated/events';
+import { fetchWithCorrelationId } from './lib/http';
 
 // Typed topic constants — must exist in the canonical schema
 const PAYOUT_EVENT_TYPES: string[] = ['payout_executed'];
@@ -149,7 +150,7 @@ export class ContractEventIndexer {
           url.searchParams.set('order', 'asc');
           url.searchParams.set('limit', String(PAGE_LIMIT));
 
-          const response = await fetch(url.toString());
+          const response = await fetchWithCorrelationId(url.toString());
           sorobanRpcCallsTotal.inc({ method: 'getEvents', status: response.ok ? 'success' : 'error' });
           if (!response.ok) {
             throw new Error(`HTTP ${response.status} from ${url}`);

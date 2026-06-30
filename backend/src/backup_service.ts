@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { BackupJob, BackupType, BackupStatus } from './models';
 import { config } from './config';
+import { backupJobsTotal } from './metrics';
 
 export interface S3Client {
   putObject(params: { Bucket: string; Key: string; Body: Buffer; ContentType: string }): Promise<void>;
@@ -47,7 +48,7 @@ export class S3HttpClient implements S3Client {
   async putObject({ Bucket, Key, Body, ContentType }: { Bucket: string; Key: string; Body: Buffer; ContentType: string }): Promise<void> {
     const url = `https://${Bucket}.s3.${this.region}.amazonaws.com/${Key}`;
     const headers = this.sign('PUT', Key, Body, ContentType);
-    const res = await fetch(url, { method: 'PUT', headers, body: Body });
+    const res = await fetch(url, { method: 'PUT', headers, body: Body as unknown as BodyInit });
     if (!res.ok) throw new Error(`S3 putObject failed: ${res.status} ${await res.text()}`);
   }
 
@@ -194,9 +195,11 @@ export class BackupService {
       job.s3Key = s3Key;
       job.sizeBytes = body.length;
       job.checksum = checksum;
+      backupJobsTotal.inc({ type: job.type, status: 'success' });
     } catch (err: unknown) {
       job.status = 'failed';
       job.error = err instanceof Error ? err.message : String(err);
+      backupJobsTotal.inc({ type: job.type, status: 'failure' });
     }
   }
 

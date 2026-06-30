@@ -92,6 +92,28 @@ groups:
           description: "Last successful backup was {{ $value | humanizeDuration }} ago."
           runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/backup-failure.md"
 
+      - alert: RestoreDrillFailure
+        expr: |
+          increase(backup_restore_drills_total{app="stellar-save-backend",status="failed"}[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backup restore drill failed"
+          description: "A scheduled restore drill failed in the last hour. Verify checksum integrity and the restore target."
+          runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/backup-failure.md"
+
+      - alert: NoRecentRestoreDrill
+        expr: |
+          time() - stellar_save_last_successful_backup_restore_timestamp > 172800
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No successful restore drill in 48 hours"
+          description: "The latest restore drill is stale. A verified restore path is no longer recent."
+          runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/backup-failure.md"
+
 - name: stellar-save-costs
   interval: 5m
   rules:
