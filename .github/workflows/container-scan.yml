@@ -250,18 +250,17 @@ jobs:
 
       # Policy gate — fail build if CVEs at or above FAIL_ON_SEVERITY exist
       - name: CVE policy gate — backend
+        env:
+          GATE_SEVERITY: ${{ env.FAIL_ON_SEVERITY }}
         run: |
-          SEVERITY="${{ env.FAIL_ON_SEVERITY }}"
+          SEVERITY="${GATE_SEVERITY}"
           echo "Policy: fail on severity >= ${SEVERITY}"
 
-          # Map severity to numeric level for comparison
-          declare -A SEV_LEVEL=([LOW]=1 [MEDIUM]=2 [HIGH]=3 [CRITICAL]=4)
-          THRESHOLD=${SEV_LEVEL[$SEVERITY]}
-
-          COUNT=$(python3 - <<'PYEOF'
-          import json, sys
+          COUNT=$(python3 - <<PYEOF
+          import json, sys, os
           threshold_map = {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
-          threshold = threshold_map.get("$SEVERITY", 3)
+          severity = os.environ.get("GATE_SEVERITY", "HIGH")
+          threshold = threshold_map.get(severity, 3)
           with open("trivy-backend.json") as f:
               data = json.load(f)
           total = 0
@@ -280,7 +279,7 @@ jobs:
             echo ""
             echo "❌ Build blocked: ${COUNT} CVE(s) at severity ${SEVERITY} or above detected in backend image."
             echo "   To accept a specific CVE, add it to .github/trivy-ignore.txt with justification."
-            echo "   See SECURITY.md#vulnerability-exception-process for the full exception workflow."
+            echo "   See docs/vulnerability-exception-process.md for the full exception workflow."
             exit 1
           fi
           echo "✅ No CVEs at or above ${SEVERITY} — backend image passed policy gate."
@@ -354,14 +353,17 @@ jobs:
           retention-days: 30
 
       - name: CVE policy gate — frontend
+        env:
+          GATE_SEVERITY: ${{ env.FAIL_ON_SEVERITY }}
         run: |
-          SEVERITY="${{ env.FAIL_ON_SEVERITY }}"
+          SEVERITY="${GATE_SEVERITY}"
           echo "Policy: fail on severity >= ${SEVERITY}"
 
-          COUNT=$(python3 - <<'PYEOF'
-          import json, sys
+          COUNT=$(python3 - <<PYEOF
+          import json, sys, os
           threshold_map = {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
-          threshold = threshold_map.get("$SEVERITY", 3)
+          severity = os.environ.get("GATE_SEVERITY", "HIGH")
+          threshold = threshold_map.get(severity, 3)
           with open("trivy-frontend.json") as f:
               data = json.load(f)
           total = 0
@@ -380,7 +382,7 @@ jobs:
             echo ""
             echo "❌ Build blocked: ${COUNT} CVE(s) at severity ${SEVERITY} or above detected in frontend image."
             echo "   To accept a specific CVE, add it to .github/trivy-ignore.txt with justification."
-            echo "   See SECURITY.md#vulnerability-exception-process for the full exception workflow."
+            echo "   See docs/vulnerability-exception-process.md for the full exception workflow."
             exit 1
           fi
           echo "✅ No CVEs at or above ${SEVERITY} — frontend image passed policy gate."
@@ -426,27 +428,13 @@ jobs:
           upload-artifact-retention: 90
 
       # Attach SBOM to release if this is a release event
-      - name: Attach SBOM to release — backend
+      - name: Attach SBOMs to release — backend
         if: github.event_name == 'release'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: sbom-backend-cyclonedx.json
-          asset_name: sbom-backend-cyclonedx.json
-          asset_content_type: application/json
-
-      - name: Attach SPDX SBOM to release — backend
-        if: github.event_name == 'release'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: sbom-backend-spdx.json
-          asset_name: sbom-backend-spdx.json
-          asset_content_type: application/json
+          files: |
+            sbom-backend-cyclonedx.json
+            sbom-backend-spdx.json
 
       # Install cosign and sign the SBOM attestation into the registry
       - name: Install cosign
@@ -503,27 +491,13 @@ jobs:
           upload-artifact: true
           upload-artifact-retention: 90
 
-      - name: Attach SBOM to release — frontend
+      - name: Attach SBOMs to release — frontend
         if: github.event_name == 'release'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: sbom-frontend-cyclonedx.json
-          asset_name: sbom-frontend-cyclonedx.json
-          asset_content_type: application/json
-
-      - name: Attach SPDX SBOM to release — frontend
-        if: github.event_name == 'release'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: sbom-frontend-spdx.json
-          asset_name: sbom-frontend-spdx.json
-          asset_content_type: application/json
+          files: |
+            sbom-frontend-cyclonedx.json
+            sbom-frontend-spdx.json
 
       - name: Install cosign
         uses: sigstore/cosign-installer@v3.7.0
