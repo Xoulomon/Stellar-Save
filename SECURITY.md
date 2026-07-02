@@ -4,72 +4,97 @@
 
 | Version | Supported |
 |---------|-----------|
-| main    | ✅        |
-| develop | ✅        |
-| others  | ❌        |
+| `main` (latest) | ✅ Active |
+| Older releases | ❌ No security patches |
+
+We currently provide security fixes only for the most recent version on `main`.
+
+---
 
 ## Reporting a Vulnerability
 
-**Do not open a public GitHub issue for security vulnerabilities.**
+**Please do not open a public GitHub issue for security vulnerabilities.**
 
-Report vulnerabilities via [GitHub Private Security Advisories](https://github.com/Xoulomon/Stellar-Save/security/advisories/new).
+To report a security vulnerability, open a [GitHub Security Advisory](https://github.com/Xoulomon/Stellar-Save/security/advisories/new) (private by default) or email the maintainer directly at the address on the GitHub profile.
 
-Include:
-- Description and impact
-- Steps to reproduce
-- Affected component (contract, frontend, backend)
-- Suggested fix (optional)
+Include in your report:
+- A clear description of the vulnerability and its potential impact
+- Steps to reproduce or a proof-of-concept
+- Affected component(s) and version(s)
+- Any suggested mitigations (optional)
 
-You will receive an acknowledgment within **48 hours** and a resolution timeline within **7 days**.
+We aim to acknowledge reports within **48 hours** and provide an initial assessment within **5 business days**.
 
-## Automated Security Scanning
+---
 
-This repository runs the following checks on every PR and push:
+## Container Image Security
 
-| Tool | Scope | Trigger |
-|------|-------|---------|
-| **Semgrep** | SAST — Rust & TypeScript | Push / PR / Weekly |
-| **CodeQL** | SAST — JavaScript/TypeScript | Push / PR / Weekly |
-| **Snyk** | Dependency CVEs (npm + Cargo) | Push / PR / Weekly |
-| **Dependabot** | Automated dependency updates | Weekly |
-| **cargo-audit** | Rust advisory database | Push / PR |
-| **npm audit** | Node advisory database | Push / PR |
-| **Gitleaks** | Secret detection | Push / PR |
+All production container images (backend and frontend) are scanned on every push, pull request, and weekly schedule using [Trivy](https://github.com/aquasecurity/trivy).
 
-### Security Gate
+### CVE Policy
 
-PRs targeting `main` or `develop` are **blocked** from merging if any **critical** or **high** severity finding is detected. Findings are visible in the repository's [Security tab](../../security/code-scanning).
+| Severity | Default behaviour |
+|----------|------------------|
+| **CRITICAL** | Blocks the build immediately |
+| **HIGH** | Blocks the build immediately |
+| **MEDIUM** | Reported, does not block |
+| **LOW** | Reported, does not block |
 
-## Secrets Management
+The blocking threshold is configurable via `workflow_dispatch` input (`fail_on_severity`). The weekly scheduled scan always uses `HIGH` as the minimum blocking threshold.
 
-- Never commit secrets, private keys, or mnemonics
-- Use GitHub Actions secrets for CI credentials (`SNYK_TOKEN`, `SEMGREP_APP_TOKEN`)
-- `.env` files are git-ignored; use `.env.example` as a template
-- Stellar private keys must never appear in source code or logs
+Unfixed CVEs (no upstream patch available) are excluded from the policy gate by default (`--ignore-unfixed`) but are still reported in the Security tab for tracking.
 
-## Smart Contract Security
+### SBOM Artifacts
 
-The Soroban contract implements the following protections:
+A Software Bill of Materials (SBOM) is generated for every image on every non-PR build using [Syft](https://github.com/anchore/syft):
 
-- **Reentrancy guard** on `transfer_payout()`
-- **Admin-only** pause/unpause and configuration
-- **Rate limiting** on group creation and joins
-- **Atomic storage** updates to prevent partial state
-- **Overflow checks** enabled in release profile (`overflow-checks = true`)
-- **Panic = abort** to prevent unwinding exploits
+- **Format**: CycloneDX JSON and SPDX JSON
+- **Location**: GitHub Actions workflow artifacts (90-day retention) and attached to each GitHub Release
+- **Attestation**: SBOM is cryptographically attested to the image digest via [cosign](https://github.com/sigstore/cosign) using keyless signing (Sigstore)
 
-See [docs/threat-model.md](docs/threat-model.md) for the full threat model.
+To verify an SBOM attestation:
+```bash
+cosign verify-attestation \
+  --type cyclonedx \
+  ghcr.io/xoulomon/stellar-save/backend:<tag>
+```
 
-## Dependency Policy
+### Scan Results
 
-- Pin exact versions in `Cargo.toml` and `package.json`
-- Review Dependabot PRs weekly; merge security patches within **48 hours**
-- Run `cargo audit` and `npm audit` locally before releasing
+- **SARIF reports** are uploaded to the [GitHub Security / Code Scanning tab](../../security/code-scanning) after every scan.
+- A **PR comment** summarising pass/fail and CVE counts is posted automatically on pull requests.
+- A **weekly security report issue** is updated every Monday (see issues labelled `security-report`).
 
-## Incident Response
+---
 
-1. Maintainer confirms and assesses severity
-2. Patch developed on a private branch
-3. Coordinated disclosure after patch is ready
-4. Release published with security advisory
-5. CVE requested if applicable
+## Vulnerability Exception Process {#vulnerability-exception-process}
+
+When a blocking CVE cannot be immediately fixed (e.g. no upstream patch, base image not yet updated), an exception can be requested through the formal process documented in [`docs/vulnerability-exception-process.md`](docs/vulnerability-exception-process.md).
+
+**Summary:**
+1. Open a [Vulnerability Exception issue](.github/ISSUE_TEMPLATE/vulnerability-exception.md) with full CVE details and a reachability analysis.
+2. Get the required approvals (1 maintainer for HIGH; 2 maintainers for CRITICAL).
+3. Add the CVE to [`.github/trivy-ignore.txt`](.github/trivy-ignore.txt) with an expiry date (max 90 days) and a reference to the approved issue.
+4. The exception expires automatically — the build will re-block if not renewed or remediated.
+
+---
+
+## Dependency Security
+
+- Rust dependencies are audited via `cargo audit` in the CI pipeline.
+- Frontend npm dependencies are scanned via `npm audit` in the CI pipeline.
+- Dependabot is configured to automatically raise PRs for outdated dependencies.
+
+---
+
+## Infrastructure Security
+
+- All Stellar Soroban smart contract interactions require explicit wallet authorisation — no funds can move without the member's signature.
+- No private keys are stored in this repository. Deployment uses Stellar CLI key management.
+- Testnet and mainnet deployments are isolated environments.
+
+---
+
+## Acknowledgements
+
+We appreciate responsible disclosure from the security community. Researchers who responsibly disclose valid vulnerabilities will be acknowledged in release notes (with their permission).

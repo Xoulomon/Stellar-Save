@@ -1,0 +1,17 @@
+# Trivy vulnerability ignore list
+# =================================
+# Format: <CVE-ID> [exp:<YYYY-MM-DD>] [# justification]
+#
+# Rules:
+#   - Each accepted CVE MUST have a justification comment on the same line.
+#   - Each accepted CVE MUST have an expiry date (exp:) no more than 90 days out.
+#   - The exception MUST be approved via the vulnerability exception process
+#     documented in docs/vulnerability-exception-process.md before being added here.
+#   - The PR adding this entry must reference the approved exception issue number.
+#   - Expired entries are treated as active CVEs and will re-block the build.
+#
+# Example (do not uncomment without a real approval):
+# CVE-2023-XXXXX exp:2025-09-30 # [EXCEPTION-42] No fix available in alpine:3.19; not reachable from app code path; mitigated by network policy
+#
+# ── Active exceptions ─────────────────────────────────────────────────────────
+# (none — all CVEs at HIGH/CRITICAL must be fixed or explicitly accepted here)
