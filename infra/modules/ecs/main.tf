@@ -38,6 +38,26 @@ resource "aws_iam_role_policy_attachment" "task_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# Grant permission to read database credentials from Secrets Manager
+data "aws_iam_policy_document" "secrets_access" {
+  count = var.db_secret_arn != "" ? 1 : 0
+
+  statement {
+    sid = "ReadDatabaseSecret"
+    actions = [
+      "secretsmanager:GetSecretValue"
+    ]
+    resources = [var.db_secret_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "secrets_access" {
+  count  = var.db_secret_arn != "" ? 1 : 0
+  name   = "secrets-access"
+  role   = aws_iam_role.task_execution.id
+  policy = data.aws_iam_policy_document.secrets_access[0].json
+}
+
 # ── CloudWatch Log Group ──────────────────────────────────────────────────────
 resource "aws_cloudwatch_log_group" "backend" {
   name              = "/ecs/${local.name_prefix}"
@@ -65,6 +85,30 @@ resource "aws_ecs_task_definition" "backend" {
     }]
 
     environment = [for k, v in var.environment_variables : { name = k, value = v }]
+
+    # Fetch database credentials from Secrets Manager at runtime
+    secrets = var.db_secret_arn != "" ? [
+      {
+        name      = "DB_USERNAME"
+        valueFrom = "${var.db_secret_arn}:username::"
+      },
+      {
+        name      = "DB_PASSWORD"
+        valueFrom = "${var.db_secret_arn}:password::"
+      },
+      {
+        name      = "DB_HOST"
+        valueFrom = "${var.db_secret_arn}:host::"
+      },
+      {
+        name      = "DB_PORT"
+        valueFrom = "${var.db_secret_arn}:port::"
+      },
+      {
+        name      = "DB_NAME"
+        valueFrom = "${var.db_secret_arn}:dbname::"
+      }
+    ] : []
 
     logConfiguration = {
       logDriver = "awslogs"

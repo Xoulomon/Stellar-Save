@@ -5,6 +5,7 @@ import { randomBytes } from 'crypto';
 import { notificationService } from '../notification_service';
 import { prisma } from '../prisma_client';
 import { logger } from '../logger';
+import { config } from '../config';
 
 /**
  * Transforms a v1 response shape into v2 shape.
@@ -89,7 +90,7 @@ export function createV2Router(services: V1Services): Router {
         },
       });
 
-      const frontendUrl = process.env.FRONTEND_URL || 'https://stellar-save.com';
+      const frontendUrl = config.urls.frontend;
       const joinLink = `${frontendUrl}/groups/join?token=${joinToken}`;
 
       const groupName = `Group ${groupId}`; // TODO: fetch actual group name if available

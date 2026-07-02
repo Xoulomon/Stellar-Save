@@ -1,0 +1,41 @@
+<!-- 
+  Android Deep Linking Configuration
+  
+  Add these intent-filter blocks to your MainActivity in:
+  frontend/android/app/src/main/AndroidManifest.xml
+  
+  Place inside the <activity> tag for MainActivity
+-->
+
+<!-- App Links (verified HTTPS links) -->
+<intent-filter android:autoVerify="true">
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    
+    <!-- Main domain -->
+    <data 
+        android:scheme="https"
+        android:host="stellarsave.app"
+        android:pathPrefix="/join" />
+    
+    <!-- Subdomain -->
+    <data 
+        android:scheme="https"
+        android:host="app.stellarsave.app"
+        android:pathPrefix="/join" />
+        
+    <!-- App download fallback -->
+    <data 
+        android:scheme="https"
+        android:host="stellarsave.app"
+        android:pathPrefix="/app" />
+</intent-filter>
+
+<!-- Custom scheme fallback (for testing and SMS links) -->
+<intent-filter>
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="stellarsave" />
+</intent-filter>

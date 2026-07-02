@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  postgres-test:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: stellar_save_test
+    ports:
+      - '5433:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U test -d stellar_save_test']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # SEP-24 Anchor Sandbox for fiat ramp integration tests
+  # This is a mock anchor server that implements SEP-10 and SEP-24 protocols
+  sep24-sandbox:
+    build:
+      context: ../
+      dockerfile: test/Dockerfile.sep24-sandbox
+    ports:
+      - '8545:8545'
+    environment:
+      NODE_ENV: test
+      PORT: 8545
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:8545/.well-known/stellar.toml']
+      interval: 5s
+      timeout: 5s
+      retries: 10

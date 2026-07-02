@@ -61,6 +61,26 @@ export function AppLayout({
 
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      {/* Skip-to-content link — visible only when focused, for keyboard/AT users */}
+      <a
+        href="#main-content"
+        style={{
+          position: "absolute",
+          top: -9999,
+          left: 8,
+          zIndex: 9999,
+          padding: "8px 16px",
+          background: "#1976d2",
+          color: "#fff",
+          fontWeight: 600,
+          borderRadius: 4,
+          textDecoration: "none",
+        }}
+        onFocus={(e) => { e.currentTarget.style.top = "8px"; }}
+        onBlur={(e) => { e.currentTarget.style.top = "-9999px"; }}
+      >
+        Skip to main content
+      </a>
       <AppBar position="sticky" color="transparent" elevation={0}>
         <Toolbar
           sx={{
@@ -111,6 +131,8 @@ export function AppLayout({
       </AppBar>
 
       <Container
+        component="main"
+        id="main-content"
         maxWidth="lg"
         sx={{
           width: "100%",

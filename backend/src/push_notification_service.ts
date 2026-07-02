@@ -1,4 +1,8 @@
+import https from 'https';
+import jwt from 'jsonwebtoken';
 import { logger } from './logger';
+import { deviceTokenService } from './device_token_service';
+import { config } from './config';
 
 /**
  * Abstract interface for push notification providers
@@ -62,6 +66,82 @@ export class FirebaseProvider implements PushNotificationProvider {
       logger.error('Firebase send failed', { error: String(error) });
       throw error;
     }
+  }
+}
+
+/**
+ * Apple Push Notification service (APNs) Provider
+ * Uses HTTP/2 + JWT authentication
+ */
+export class ApnsProvider implements PushNotificationProvider {
+  private keyId: string;
+  private teamId: string;
+  private privateKey: string;
+  private bundleId: string;
+  private production: boolean;
+
+  constructor(keyId: string, teamId: string, privateKey: string, bundleId: string, production = false) {
+    this.keyId = keyId;
+    this.teamId = teamId;
+    this.privateKey = privateKey;
+    this.bundleId = bundleId;
+    this.production = production;
+  }
+
+  private getJwtToken(): string {
+    return jwt.sign({}, this.privateKey, {
+      algorithm: 'ES256',
+      keyid: this.keyId,
+      issuer: this.teamId,
+      expiresIn: 3600,
+    });
+  }
+
+  async send(
+    deviceToken: string,
+    title: string,
+    body: string,
+    data?: Record<string, string>
+  ): Promise<string> {
+    const host = this.production ? 'api.push.apple.com' : 'api.sandbox.push.apple.com';
+    const payload = JSON.stringify({
+      aps: { alert: { title, body }, sound: 'default' },
+      ...(data || {}),
+    });
+    const token = this.getJwtToken();
+
+    return new Promise((resolve, reject) => {
+      const options: https.RequestOptions = {
+        hostname: host,
+        port: 443,
+        path: `/3/device/${deviceToken}`,
+        method: 'POST',
+        headers: {
+          'apns-topic': this.bundleId,
+          authorization: `bearer ${token}`,
+          'content-type': 'application/json',
+          'content-length': Buffer.byteLength(payload),
+        },
+      };
+
+      const req = https.request(options, (res) => {
+        let responseBody = '';
+        res.on('data', (chunk) => (responseBody += chunk));
+        res.on('end', () => {
+          if (res.statusCode === 200) {
+            resolve(res.headers['apns-id'] as string || 'apns-ok');
+          } else {
+            const err: any = new Error(`APNs error: ${responseBody}`);
+            err.statusCode = res.statusCode;
+            reject(err);
+          }
+        });
+      });
+
+      req.on('error', reject);
+      req.write(payload);
+      req.end();
+    });
   }
 }
 
@@ -133,19 +213,16 @@ export class PushNotificationService {
 
   constructor() {
     this.setupProviders();
-    this.defaultProvider = process.env.PUSH_PROVIDER || 'firebase';
+    this.defaultProvider = config.push.provider;
   }
 
-  /**
-   * Initialize configured push providers
-   */
   private setupProviders(): void {
     // Firebase provider
-    if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_SERVICE_ACCOUNT) {
+    if (config.push.firebase.projectId && config.push.firebase.serviceAccount) {
       try {
         const firebase = new FirebaseProvider(
-          process.env.FIREBASE_PROJECT_ID,
-          process.env.FIREBASE_SERVICE_ACCOUNT
+          config.push.firebase.projectId,
+          config.push.firebase.serviceAccount
         );
         this.providers.set('firebase', firebase);
         logger.info('Firebase provider initialized');
@@ -155,16 +232,33 @@ export class PushNotificationService {
     }
 
     // OneSignal provider
-    if (process.env.ONESIGNAL_APP_ID && process.env.ONESIGNAL_API_KEY) {
+    if (config.push.onesignal.appId && config.push.onesignal.apiKey) {
       try {
         const oneSignal = new OneSignalProvider(
-          process.env.ONESIGNAL_APP_ID,
-          process.env.ONESIGNAL_API_KEY
+          config.push.onesignal.appId,
+          config.push.onesignal.apiKey
         );
         this.providers.set('onesignal', oneSignal);
         logger.info('OneSignal provider initialized');
       } catch (error) {
         logger.error('Failed to initialize OneSignal provider', { error: String(error) });
+      }
+    }
+
+    // APNs provider
+    if (config.apns.keyId && config.apns.teamId && config.apns.key && config.apns.bundleId) {
+      try {
+        const apns = new ApnsProvider(
+          config.apns.keyId,
+          config.apns.teamId,
+          config.apns.key.replace(/\\n/g, '\n'),
+          config.apns.bundleId,
+          config.nodeEnv === 'production'
+        );
+        this.providers.set('apns', apns);
+        logger.info('APNs provider initialized');
+      } catch (error) {
+        logger.error('Failed to initialize APNs provider', { error: String(error) });
       }
     }
 
@@ -223,6 +317,42 @@ export class PushNotificationService {
    */
   isProviderAvailable(providerName: string): boolean {
     return this.providers.has(providerName);
+  }
+
+  /**
+   * Send to all mobile device tokens for a user, routing iOS to APNs and Android to Firebase.
+   * Prunes invalid tokens on provider rejection.
+   */
+  async sendToUserMobile(
+    userId: string,
+    title: string,
+    body: string,
+    data?: Record<string, string>
+  ): Promise<void> {
+    const tokens = await deviceTokenService.getTokensForUser(userId);
+    if (tokens.length === 0) return;
+
+    await Promise.allSettled(
+      tokens.map(async ({ token, platform }) => {
+        const providerName = platform === 'ios' ? 'apns' : 'firebase';
+        const provider = this.providers.get(providerName);
+        if (!provider) {
+          logger.warn(`No provider for platform ${platform}`);
+          return;
+        }
+        try {
+          await provider.send(token, title, body, data);
+        } catch (err: any) {
+          // 410 (APNs Gone) or 404 (FCM invalid) => prune token
+          if (err.statusCode === 410 || err.statusCode === 404) {
+            await deviceTokenService.markTokenInvalid(token);
+            logger.info('Pruned invalid mobile token', { platform });
+          } else {
+            logger.error('Mobile push failed', { platform, error: String(err) });
+          }
+        }
+      })
+    );
   }
 }
 

@@ -96,6 +96,80 @@
         "expr": "total_estimated_monthly_cost_usd{app=\"stellar-save-backend\"}",
         "legendFormat": "{{component}}"
       }]
+    },
+
+    { "id": 100, "title": "── AWS Cost Explorer & Compute Optimizer ──", "type": "text", "gridPos": { "x": 0, "y": 20, "w": 24, "h": 1 }, "options": { "content": "", "mode": "markdown" } },
+
+    {
+      "id": 9,
+      "title": "AWS Spend by Service (Last 30 Days)",
+      "type": "piechart",
+      "gridPos": { "x": 0, "y": 21, "w": 10, "h": 9 },
+      "options": { "legend": { "displayMode": "table", "placement": "right" } },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "targets": [{
+        "expr": "aws_cost_by_service_usd{app=\"stellar-save-backend\"}",
+        "legendFormat": "{{service}}"
+      }]
+    },
+    {
+      "id": 10,
+      "title": "AWS Monthly Forecast (USD)",
+      "type": "stat",
+      "gridPos": { "x": 10, "y": 21, "w": 7, "h": 4 },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 30 }, { "color": "red", "value": 60 }] } } },
+      "targets": [{
+        "expr": "aws_cost_forecast_usd{app=\"stellar-save-backend\"}",
+        "legendFormat": "Forecast"
+      }]
+    },
+    {
+      "id": 11,
+      "title": "Optimization Savings Available (USD/month)",
+      "type": "stat",
+      "gridPos": { "x": 10, "y": 25, "w": 7, "h": 5 },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 5 }, { "color": "orange", "value": 20 }] } } },
+      "targets": [{
+        "expr": "sum(aws_optimization_savings_usd{app=\"stellar-save-backend\"})",
+        "legendFormat": "Est. Savings"
+      }]
+    },
+    {
+      "id": 12,
+      "title": "Open Recommendations by Finding",
+      "type": "bargauge",
+      "gridPos": { "x": 17, "y": 21, "w": 7, "h": 9 },
+      "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "none", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 3 }, { "color": "red", "value": 10 }] } } },
+      "targets": [{
+        "expr": "aws_recommendation_count{app=\"stellar-save-backend\"}",
+        "legendFormat": "{{finding}}"
+      }]
+    },
+    {
+      "id": 13,
+      "title": "AWS Cost Spikes Detected",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 30, "w": 8, "h": 4 },
+      "options": { "colorMode": "background", "graphMode": "area", "reduceOptions": { "calcs": ["sum"] } },
+      "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] } } },
+      "targets": [{
+        "expr": "increase(aws_cost_spike_total{app=\"stellar-save-backend\"}[30d])",
+        "legendFormat": "{{service}}"
+      }]
+    },
+    {
+      "id": 14,
+      "title": "AWS Cost by Service — Trend",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 30, "w": 16, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "targets": [{
+        "expr": "aws_cost_by_service_usd{app=\"stellar-save-backend\"}",
+        "legendFormat": "{{service}}"
+      }]
     }
   ]
 }

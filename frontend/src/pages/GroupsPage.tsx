@@ -5,6 +5,7 @@ import { AppCard, AppLayout } from '../ui';
 import { GroupList } from '../components/GroupList';
 import { Button } from '../components/Button';
 import { useGroups } from '../hooks/useGroups';
+import { StaleDataBanner } from '../components/StaleDataBanner';
 import { ROUTES } from '../routing/constants';
 
 /**
@@ -32,7 +33,7 @@ export default function GroupsPage() {
     [setParams],
   );
 
-  const { groups, isLoading, error, refresh } = useGroups({
+  const { groups, isLoading, error, refresh, isStale, fromCache } = useGroups({
     initialFilters: { search, minAmount, maxAmount },
   });
 
@@ -59,6 +60,8 @@ export default function GroupsPage() {
       <AppCard>
         <Stack spacing={2}>
           <Typography variant="h2">Savings Groups</Typography>
+
+          <StaleDataBanner isStale={isStale} fromCache={fromCache} onRefresh={refresh} />
 
           {error && (
             <Stack direction="row" spacing={1} alignItems="center">

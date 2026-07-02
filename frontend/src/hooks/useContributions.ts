@@ -1,34 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchGroup } from '../utils/groupApi';
+import { queryKeys } from '../lib/queryKeys';
+import { STALE_TIME } from '../lib/queryClient';
 import type { GroupContribution, GroupCycle } from '../utils/groupApi';
-
-interface CacheEntry {
-  contributions: GroupContribution[];
-  currentCycle: GroupCycle | null;
-  fetchedAt: number;
-}
-
-const CACHE_TTL_MS = 60_000; // 1 minute
-const AUTO_REFRESH_MS = 30_000; // default auto-refresh
-const cache = new Map<string, CacheEntry>();
-
-function getFromCache(groupId: string): CacheEntry | null {
-  const entry = cache.get(groupId);
-  if (!entry) return null;
-  if (Date.now() - entry.fetchedAt > CACHE_TTL_MS) {
-    cache.delete(groupId);
-    return null;
-  }
-  return entry;
-}
-
-function setInCache(groupId: string, contributions: GroupContribution[], currentCycle: GroupCycle | null) {
-  cache.set(groupId, {
-    contributions,
-    currentCycle,
-    fetchedAt: Date.now(),
-  });
-}
 
 export interface ContributionStatusSummary {
   totalContributions: number;
@@ -53,95 +28,52 @@ export interface UseContributionsReturn {
   refresh: () => void;
 }
 
+interface ContributionData {
+  contributions: GroupContribution[];
+  currentCycle: GroupCycle | null;
+}
+
+/**
+ * Fetches contribution status for a group.
+ *
+ * staleTime: 0 — contribution status (has a member paid this cycle?) must
+ * always be fresh. React Query will refetch in the background on every
+ * mount and window focus to avoid showing stale payment state.
+ */
 export function useContributions(
   groupId: string | null | undefined,
   options: UseContributionsOptions = {},
 ): UseContributionsReturn {
-  const { autoRefresh = true, refreshInterval = AUTO_REFRESH_MS } = options;
+  const { refreshInterval } = options;
+  const queryClient = useQueryClient();
 
-  const [contributions, setContributions] = useState<GroupContribution[]>([]);
-  const [currentCycle, setCurrentCycle] = useState<GroupCycle | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchIdRef = useRef(0);
-
-  const load = useCallback(
-    async (id: string, bust = false) => {
-      const fetchId = ++fetchIdRef.current;
-
-      if (!bust) {
-        const cached = getFromCache(id);
-        if (cached) {
-          setContributions(cached.contributions);
-          setCurrentCycle(cached.currentCycle);
-          setError(null);
-          return;
-        }
-      }
-
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const data = await fetchGroup(id);
-
-        if (fetchId !== fetchIdRef.current) return;
-
-        if (!data) {
-          setContributions([]);
-          setCurrentCycle(null);
-          setError('Group not found.');
-        } else {
-          const contributionsData = data.contributions ?? [];
-          const currentCycleData = data.currentCycle ?? null;
-          setInCache(id, contributionsData, currentCycleData);
-          setContributions(contributionsData);
-          setCurrentCycle(currentCycleData);
-        }
-      } catch (err) {
-        if (fetchId !== fetchIdRef.current) return;
-
-        setContributions([]);
-        setCurrentCycle(null);
-        setError(
-          err instanceof Error && err.message
-            ? err.message
-            : 'Failed to load contributions. Please try again.',
-        );
-      } finally {
-        if (fetchId === fetchIdRef.current) {
-          setIsLoading(false);
-        }
-      }
+  const { data, isLoading, error } = useQuery<ContributionData, Error>({
+    queryKey: queryKeys.contributions.byGroup(groupId ?? ''),
+    queryFn: async () => {
+      const group = await fetchGroup(groupId!);
+      if (!group) throw new Error('Group not found.');
+      return {
+        contributions: group.contributions ?? [],
+        currentCycle: group.currentCycle ?? null,
+      };
     },
-    [],
-  );
+    enabled: Boolean(groupId),
+    // staleTime: 0 — contribution status must always be fresh
+    staleTime: STALE_TIME.CONTRIBUTION_STATUS,
+    refetchOnWindowFocus: true,
+    ...(refreshInterval ? { refetchInterval: refreshInterval } : {}),
+  });
 
-  useEffect(() => {
-    if (!groupId) {
-      setContributions([]);
-      setCurrentCycle(null);
-      setError(null);
-      setIsLoading(false);
-      return;
-    }
-    void load(groupId);
-  }, [groupId, load]);
-
-  useEffect(() => {
-    if (!autoRefresh || !groupId) return;
-
-    const id = setInterval(() => {
-      void load(groupId, true);
-    }, refreshInterval);
-
-    return () => clearInterval(id);
-  }, [autoRefresh, groupId, load, refreshInterval]);
+  const contributions = data?.contributions ?? [];
+  const currentCycle = data?.currentCycle ?? null;
 
   const refresh = useCallback(() => {
-    if (groupId) void load(groupId, true);
-  }, [groupId, load]);
+    if (groupId) {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.contributions.byGroup(groupId),
+      });
+    }
+  }, [groupId, queryClient]);
 
   const status = useMemo<ContributionStatusSummary>(() => {
     const totalContributions = contributions.length;
@@ -149,33 +81,19 @@ export function useContributions(
     const pendingCount = contributions.filter((c) => c.status === 'pending').length;
     const failedCount = contributions.filter((c) => c.status === 'failed').length;
     const totalAmount = contributions.reduce((sum, c) => sum + (c.amount ?? 0), 0);
+    const lastContributionDate =
+      contributions
+        .map((c) => c.timestamp)
+        .filter((d): d is Date => d != null)
+        .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
 
-    const lastContributionDate = contributions
-      .map((c) => c.timestamp)
-      .filter((d): d is Date => d !== undefined && d !== null)
-      .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
-
-    return {
-      totalContributions,
-      completedCount,
-      pendingCount,
-      failedCount,
-      totalAmount,
-      lastContributionDate,
-    };
+    return { totalContributions, completedCount, pendingCount, failedCount, totalAmount, lastContributionDate };
   }, [contributions]);
 
-  return {
-    contributions,
-    currentCycle,
-    status,
-    isLoading,
-    error,
-    refresh,
-  };
+  return { contributions, currentCycle, status, isLoading, error: error?.message ?? null, refresh };
 }
 
-// Utilities (for tests/client cache control)
-export function clearContributionsCache(): void {
-  cache.clear();
+// Keep backward-compat export for tests
+export function clearContributionsCache() {
+  // no-op — React Query manages its own cache
 }

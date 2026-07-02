@@ -1,11 +1,8 @@
-import { Group, Member, Transaction, UserInteraction } from '../models';
+import { Group, Member, Transaction } from '../models';
 import { RecommendationEngine } from '../recommendation';
-import { ABTestingFramework } from '../ab_testing';
-
 import { mockGroups, mockMembers, mockTransactions, mockInteractions } from '../mock_data';
 
 const engine = new RecommendationEngine(mockGroups, mockInteractions);
-const abTest  = new ABTestingFramework();
 
 // ── Resolvers ─────────────────────────────────────────────────────────────────
 
@@ -27,10 +24,8 @@ export const resolvers = {
       mockTransactions.find(t => t.id === id) ?? null,
 
     recommendations: (_: unknown, { userId }: { userId: string }) => {
-      const bucket = abTest.getBucket(userId);
-      const algorithm = bucket === 'A' ? 'content' : 'collaborative';
-      const recommendations = engine.getRecommendations(userId, algorithm as 'content' | 'collaborative');
-      return { userId, bucket, algorithm, recommendations };
+      const recommendations = engine.getRecommendations(userId, 'collaborative');
+      return { userId, algorithm: 'collaborative', recommendations };
     },
 
     search: (_: unknown, { query }: { query: string }) => {
@@ -62,9 +57,16 @@ export const resolvers = {
 
   Member: {
     groups: (member: Member) => mockGroups.filter(g => member.groupIds.includes(g.id)),
+    transactions: (member: Member) => mockTransactions.filter(t => t.memberAddress === member.address),
   },
 
-  Recommendation: {
-    group: (rec: { groupId: string }) => mockGroups.find(g => g.id === rec.groupId) ?? null,
+  Transaction: {
+    group:  (tx: Transaction) => mockGroups.find(g => g.id === tx.groupId)  ?? null,
+    member: (tx: Transaction) => mockMembers.find(m => m.address === tx.memberAddress) ?? null,
+  },
+
+  RecommendationResult: {
+    groups: (result: { recommendations: string[] }) =>
+      mockGroups.filter(g => result.recommendations.includes(g.id)),
   },
 };

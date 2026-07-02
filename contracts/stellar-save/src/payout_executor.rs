@@ -703,6 +703,61 @@ fn apply_missed_contribution_penalties(
     Ok(())
 }
 
+/// Applies penalties to all members who missed their contribution in the given cycle.
+///
+/// Iterates over all group members, checks if each one contributed in `cycle`, and
+/// calls `apply_penalty` for those who did not. The penalty amount is added to the
+/// cycle pool total so the payout recipient receives it.
+///
+/// This function is a no-op when `group.penalty_enabled` is false or
+/// `group.penalty_amount` is zero.
+fn apply_missed_contribution_penalties(
+    env: &Env,
+    group_id: u64,
+    cycle: u32,
+    group: &Group,
+) -> Result<(), StellarSaveError> {
+    let members_key = StorageKeyBuilder::group_members(group_id);
+    let members: soroban_sdk::Vec<Address> = env
+        .storage()
+        .persistent()
+        .get(&members_key)
+        .ok_or(StellarSaveError::GroupNotFound)?;
+
+    for member in members.iter() {
+        let contrib_key = StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
+        if !env.storage().persistent().has(&contrib_key) {
+            // Member missed this cycle — apply penalty
+            let penalty_key = StorageKeyBuilder::member_penalty_total(group_id, member.clone());
+            let current_total: i128 = env.storage().persistent().get(&penalty_key).unwrap_or(0);
+            let new_total = current_total
+                .checked_add(group.penalty_amount)
+                .ok_or(StellarSaveError::Overflow)?;
+            env.storage().persistent().set(&penalty_key, &new_total);
+
+            // Add penalty to the cycle pool so the payout recipient benefits
+            let pool_key = StorageKeyBuilder::contribution_cycle_total(group_id, cycle);
+            let current_pool: i128 = env.storage().persistent().get(&pool_key).unwrap_or(0);
+            let new_pool = current_pool
+                .checked_add(group.penalty_amount)
+                .ok_or(StellarSaveError::Overflow)?;
+            env.storage().persistent().set(&pool_key, &new_pool);
+
+            let timestamp = env.ledger().timestamp();
+            EventEmitter::emit_penalty_applied(
+                env,
+                group_id,
+                member,
+                group.penalty_amount,
+                cycle,
+                timestamp,
+            );
+        }
+    }
+
+    Ok(())
+}
+
 /// Executes a payout for the specified group.
 ///
 /// This is the main entry point for payout execution. It orchestrates all the steps
@@ -753,16 +808,17 @@ fn apply_missed_contribution_penalties(
 /// Validates Requirements 9.1, 9.2, 9.3, 9.4, 9.5, 10.6, 10.7, and orchestrates all
 /// other requirements through helper functions.
 pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
-    // Reentrancy protection - prevent recursive payout calls
+    // Reentrancy protection — use temporary storage (10x cheaper than persistent).
+    // Temporary entries are scoped to the current transaction and auto-cleared.
     let reentrancy_key = StorageKeyBuilder::reentrancy_guard();
-    let guard_value: u64 = env.storage().persistent().get(&reentrancy_key).unwrap_or(0);
-
+    let guard_value: u64 = env.storage().temporary().get(&reentrancy_key).unwrap_or(0);
+    
     if guard_value != 0 {
         return Err(StellarSaveError::InternalError);
     }
 
     // Set reentrancy protection flag
-    env.storage().persistent().set(&reentrancy_key, &1);
+    env.storage().temporary().set(&reentrancy_key, &1);
 
     // Step 1: Load group from storage
     let group_key = StorageKeyBuilder::group_data(group_id);
@@ -771,6 +827,15 @@ pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
         .persistent()
         .get(&group_key)
         .ok_or(StellarSaveError::GroupNotFound)?;
+
+    // Reentrancy protection - reject if a payout is already in progress for this group
+    if group.payout_in_progress {
+        return Err(StellarSaveError::ReentrancyDetected);
+    }
+
+    // Set per-group reentrancy guard
+    group.payout_in_progress = true;
+    env.storage().persistent().set(&group_key, &group);
 
     // Step 2: Validate group status is Active
     // Only Active groups can process payouts
@@ -863,9 +928,9 @@ pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
     // Step 13: Advance to the next cycle or mark group as complete
     advance_cycle_or_complete(&env, &mut group)?;
 
-    // Clear reentrancy protection flag
-    let reentrancy_key = StorageKeyBuilder::reentrancy_guard();
-    env.storage().persistent().set(&reentrancy_key, &0);
+    // Clear per-group reentrancy guard
+    group.payout_in_progress = false;
+    env.storage().persistent().set(&group_key, &group);
 
     // Payout execution completed successfully
     Ok(())
@@ -1846,5 +1911,24 @@ mod tests {
         let penalty_key = StorageKeyBuilder::member_penalty_total(group_id, member.clone());
         let total: i128 = env.storage().persistent().get(&penalty_key).unwrap_or(0);
         assert_eq!(total, 0);
+    }
+
+    #[test]
+    fn test_execute_payout_reentrancy_detected() {
+        let env = Env::default();
+        let group_id = 1u64;
+
+        // Create a minimal group with payout_in_progress = true
+        let creator = Address::generate(&env);
+        let mut group = Group::new_with_penalty(
+            group_id, creator, 1_000_000, 3600, 2, 2, 0, 0, false, 0,
+        );
+        group.payout_in_progress = true;
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_data(group_id), &group);
+
+        let result = execute_payout(env, group_id);
+        assert_eq!(result, Err(StellarSaveError::ReentrancyDetected));
     }
 }

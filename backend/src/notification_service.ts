@@ -1,8 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-import * as sgMail from '@sendgrid/mail';
-import { logger } from './logger';
-
-const prisma = new PrismaClient();
+import { prisma } from './prisma_client';
+import { config } from './config';
 
 /**
  * Notification Service
@@ -16,18 +13,17 @@ export class NotificationService {
   private notificationProvidersEnabled: boolean;
 
   constructor() {
-    this.sendgridApiKey = process.env.SENDGRID_API_KEY || '';
-    this.firebaseProjectId = process.env.FIREBASE_PROJECT_ID;
+    this.sendgridApiKey = config.sendgrid.apiKey;
+    this.firebaseProjectId = config.push.firebase.projectId;
     this.notificationProvidersEnabled = !!this.sendgridApiKey || !!this.firebaseProjectId;
 
     if (this.sendgridApiKey) {
       sgMail.setApiKey(this.sendgridApiKey);
     }
 
-    // Load Firebase service account if configured
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    if (config.push.firebase.serviceAccount) {
       try {
-        this.firebaseServiceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+        this.firebaseServiceAccount = JSON.parse(config.push.firebase.serviceAccount);
       } catch (e) {
         logger.error('Failed to parse FIREBASE_SERVICE_ACCOUNT', e);
       }
@@ -66,11 +62,11 @@ export class NotificationService {
 
       const msg = {
         to,
-        from: process.env.SENDGRID_FROM_EMAIL || 'noreply@stellar-save.com',
+        from: config.sendgrid.fromEmail,
         subject: finalSubject,
         html: htmlContent,
         text: textContent,
-        replyTo: process.env.SENDGRID_REPLY_TO || 'support@stellar-save.com',
+        replyTo: config.sendgrid.replyTo,
       };
 
       const response = await sgMail.send(msg);

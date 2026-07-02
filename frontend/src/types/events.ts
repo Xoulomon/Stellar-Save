@@ -1,59 +1,52 @@
-// events.ts
-// TypeScript definitions for StellarSave smart contract events
+// Re-exports from the canonical event schema.
+// DO NOT add event type definitions here — edit packages/events-schema/schema.json
+// and run: node packages/events-schema/codegen.js
+export type {
+  ContractEvent,
+  ContractEventTopic,
+  GroupCreatedEvent,
+  MemberJoinedEvent,
+  MemberLeftEvent,
+  MemberRemovedEvent,
+  ContributionMadeEvent,
+  PayoutExecutedEvent,
+  ContributionMissedEvent,
+  GroupCompletedEvent,
+  GroupStatusChangedEvent,
+  GracePeriodContributionEvent,
+  GroupMetadataUpdatedEvent,
+  ContractPausedEvent,
+  ContractUnpausedEvent,
+  CycleAdvancedEvent,
+  GroupPausedEvent,
+  GroupUnpausedEvent,
+  ContributionVerifiedEvent,
+  ContributionAmountProposedEvent,
+  ContributionAmountChangedEvent,
+  PenaltyAppliedEvent,
+  PenaltyRecoveredEvent,
+  MilestoneReachedEvent,
+  MemberInvitedEvent,
+  InvitationRevokedEvent,
+  GroupsMergedEvent,
+  RewardClaimedEvent,
+  GroupArchivedEvent,
+  AutoContributionExecutedEvent,
+  AutoContributionFailedEvent,
+  GroupRatedEvent,
+  FeePaidEvent,
+  RefundIssuedEvent,
+  MemberReferredEvent,
+} from '../../../packages/events-schema/generated/events';
+export { CONTRACT_EVENT_TOPICS } from '../../../packages/events-schema/generated/events';
 
-export interface GroupCreatedEvent {
-  type: 'GroupCreated';
-  groupId: bigint;
-  creator: string;
-  contributionAmount: bigint;
-  cycleDuration: bigint;
-  maxMembers: number;
-  createdAt: bigint;
-}
+// Legacy alias kept for backward compatibility
+export type AppEvent = ContractEvent;
+export type EventType = ContractEventTopic;
 
-export interface MemberJoinedEvent {
-  type: 'MemberJoined';
-  groupId: bigint;
-  member: string;
-  memberCount: number;
-  joinedAt: bigint;
-}
-
-export interface ContributionMadeEvent {
-  type: 'ContributionMade';
-  groupId: bigint;
-  contributor: string;
-  amount: bigint;
-  cycle: number;
-  cycleTotal: bigint;
-  contributedAt: bigint;
-}
-
-export interface PayoutExecutedEvent {
-  type: 'PayoutExecuted';
-  groupId: bigint;
-  recipient: string;
-  amount: bigint;
-  cycle: number;
-  executedAt: bigint;
-}
-
-export interface GroupPausedEvent {
-  type: 'GroupPaused';
-  groupId: bigint;
-  pausedAt: bigint;
-}
-
-export type AppEvent =
-  | GroupCreatedEvent
-  | MemberJoinedEvent
-  | ContributionMadeEvent
-  | PayoutExecutedEvent
-  | GroupPausedEvent;
-
-export type EventType = AppEvent['type'];
+import type { ContractEvent, ContractEventTopic } from '../../../packages/events-schema/generated/events';
 
 export interface EventFilter {
-  types?: EventType[];
+  types?: ContractEventTopic[];
   groupIds?: bigint[];
 }

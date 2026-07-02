@@ -1,0 +1,52 @@
+name: Mutation Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    paths:
+      - 'contracts/**'
+
+jobs:
+  mutation-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-mutants
+        run: cargo install cargo-mutants
+
+      - name: Run mutation testing
+        working-directory: ./contracts
+        run: |
+          cargo mutants \
+            --file-pattern '**/*.rs' \
+            --output-json mutants-report.json \
+            --minimum-score 75
+
+      - name: Check mutation score & report survivors
+        working-directory: ./contracts
+        run: |
+          SCORE=$(jq -r '.score' mutants-report.json)
+          echo "Mutation Score: $SCORE%"
+
+          if (( $(echo "$SCORE < 75" | bc -l) )); then
+            echo "❌ Mutation score below threshold: $SCORE% (minimum 75%)"
+            echo ""
+            echo "Surviving mutants:"
+            jq -r '.survivors[] | "  • \(.file):\(.line) → \(.function)"' mutants-report.json
+            echo ""
+            echo "Please address these mutants or raise the score in mutants.toml"
+            exit 1
+          else
+            echo "✅ Mutation score passed: $SCORE%"
+          fi

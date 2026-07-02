@@ -23,8 +23,30 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
     swRegistration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
     console.info('[SW] Service worker registered:', swRegistration.scope);
 
-    // Listen for messages from the SW (e.g. navigation requests)
+    // Listen for messages from the SW (e.g. navigation requests, version updates)
     navigator.serviceWorker.addEventListener('message', handleSwMessage);
+
+    // When a new SW is found, ask it to activate immediately once installed so
+    // repeat visitors pick up the latest cached assets without a manual refresh.
+    swRegistration.addEventListener('updatefound', () => {
+      const installing = swRegistration?.installing;
+      if (!installing) return;
+      installing.addEventListener('statechange', () => {
+        if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+          // A previous SW controls the page → a new version is waiting.
+          installing.postMessage({ type: 'SKIP_WAITING' });
+        }
+      });
+    });
+
+    // When the active SW changes, reload once so the new version controls the
+    // page. Guarded to avoid reload loops.
+    let hasReloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hasReloaded) return;
+      hasReloaded = true;
+      window.location.reload();
+    });
 
     return swRegistration;
   } catch (err) {
@@ -54,7 +76,16 @@ export async function postToServiceWorker(message: Record<string, unknown>): Pro
 // The SW sends { type: 'NAVIGATE', url } when a notification is clicked and
 // an existing window is found. We use the History API to navigate in-place.
 function handleSwMessage(event: MessageEvent): void {
-  if (!event.data || event.data.type !== 'NAVIGATE') return;
+  if (!event.data) return;
+
+  // A new SW version activated and purged stale caches. The controllerchange
+  // listener handles the reload; we just log here for observability.
+  if (event.data.type === 'SW_UPDATED') {
+    console.info('[SW] New version active:', event.data.version);
+    return;
+  }
+
+  if (event.data.type !== 'NAVIGATE') return;
 
   const url: string = event.data.url;
   if (url && window.location.pathname !== url) {

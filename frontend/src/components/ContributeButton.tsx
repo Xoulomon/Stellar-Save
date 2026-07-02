@@ -146,7 +146,7 @@ export function ContributeButton({
       {state === "failed" && error && (
         <div className="mt-3 p-3 rounded-xl border bg-red-50 border-red-200 flex items-start justify-between">
           <p className="text-sm font-medium text-red-700">{error}</p>
-          <button onClick={reset} className="text-sm text-red-700 hover:opacity-70 ml-2">✕</button>
+          <button onClick={reset} className="text-sm text-red-700 hover:opacity-70 ml-2" aria-label="Dismiss error">✕</button>
         </div>
       )}
 

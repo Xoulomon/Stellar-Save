@@ -1,5 +1,19 @@
 use soroban_sdk::{contracttype, Address};
 
+/// Current storage schema version for migration compatibility.
+/// 
+/// This version number should be incremented whenever breaking changes
+/// are made to the storage layout that require data migration.
+pub const STORAGE_VERSION: u32 = 2;
+
+/// Storage key structure for efficient data access in the Stellar-Save contract.
+///
+/// This module defines a consistent key naming convention for all contract data,
+/// enabling efficient storage and retrieval operations. Keys are designed to:
+/// - Provide fast lookups for specific data types
+/// - Support range queries where needed
+/// - Maintain clear separation between different data categories
+/// - Enable efficient iteration over related records
 // Storage key structure for efficient data access in the Stellar-Save contract.
 //
 // This module defines a consistent key naming convention for all contract data,
@@ -47,6 +61,9 @@ pub enum UserKey {
 
     /// Tracks the last ledger timestamp a specific user joined a group.
     LastGroupJoin(Address),
+
+    /// Tracks all group IDs a user is a member of.
+    MemberGroups(Address),
 }
 
 /// Storage keys for group-related data.
@@ -180,6 +197,10 @@ pub enum ContributionKey {
     /// Tracks whether a member's contribution proof has been verified for a cycle.
     ProofVerified(u64, u32, Address),
 
+    /// Reminder emitted flag: CONTRIB_REMINDER_{group_id}_{cycle}_{address}
+    /// Tracks whether a contribution-due reminder has been emitted for a member.
+    ReminderEmitted(u64, u32, Address),
+
     /// Pending amount change: CONTRIB_PENDING_AMOUNT_{group_id}
     /// Stores a proposed new contribution amount awaiting approval.
     PendingAmountChange(u64),
@@ -274,6 +295,9 @@ pub enum CounterKey {
     /// Tracks if the contract is paused by admin.
     EmergencyPause,
 
+    /// Storage schema version: COUNTER_STORAGE_VERSION
+    /// Tracks the current storage schema version for migration compatibility.
+    StorageVersion,
     /// Allowed tokens list: COUNTER_ALLOWED_TOKENS
     /// Stores the optional admin-managed allowlist of permitted token addresses.
     AllowedTokens,
@@ -444,7 +468,7 @@ impl StorageKeyBuilder {
         cycle: u32,
         address: Address,
     ) -> StorageKey {
-        StorageKey::Contribution(ContributionKey::ProofVerified(group_id, cycle, address))
+        StorageKey::Contribution(ContributionKey::ReminderEmitted(group_id, cycle, address))
     }
 
     /// Creates a key for a pending contribution amount change proposal.
@@ -546,6 +570,11 @@ impl StorageKeyBuilder {
         StorageKey::Counter(CounterKey::EmergencyPause)
     }
 
+    /// Creates a key for the storage schema version.
+    pub fn storage_version() -> StorageKey {
+        StorageKey::Counter(CounterKey::StorageVersion)
+    }
+
     /// Creates a key for the deadline extension of a specific group cycle.
     pub fn deadline_extension(group_id: u64, cycle: u32) -> StorageKey {
         StorageKey::Counter(CounterKey::DeadlineExtension(group_id, cycle))
@@ -574,6 +603,11 @@ impl StorageKeyBuilder {
     /// Creates a key storing the timestamp of a user's last group join action.
     pub fn user_last_join(user: Address) -> StorageKey {
         StorageKey::User(UserKey::LastGroupJoin(user))
+    }
+
+    /// Creates a key storing a user's joined groups list.
+    pub fn user_member_groups(user: Address) -> StorageKey {
+        StorageKey::User(UserKey::MemberGroups(user))
     }
 }
 
@@ -663,6 +697,7 @@ pub mod key_prefixes {
 /// - `COUNTER_GROUP_BALANCE_{id}`: Current balance for a group
 /// - `COUNTER_GROUP_PAID_OUT_{id}`: Total paid out for a group
 /// - `COUNTER_EMERGENCY_PAUSE`: Global pause flag
+/// - `COUNTER_STORAGE_VERSION`: Storage schema version for migrations
 ///
 /// ## User Storage (UserKey)
 /// - `USER_LAST_CREATION_{address}`: Last group creation timestamp
@@ -1016,5 +1051,21 @@ mod tests {
         assert_eq!(key_prefixes::CONTRIB, "CONTRIB");
         assert_eq!(key_prefixes::PAYOUT, "PAYOUT");
         assert_eq!(key_prefixes::COUNTER, "COUNTER");
+    }
+
+    #[test]
+    fn test_storage_version_key() {
+        let version_key = StorageKeyBuilder::storage_version();
+
+        match version_key {
+            StorageKey::Counter(CounterKey::StorageVersion) => {}
+            _ => panic!("Wrong key type"),
+        }
+    }
+
+    #[test]
+    fn test_storage_version_constant() {
+        assert_eq!(STORAGE_VERSION, 2);
+        assert!(STORAGE_VERSION > 0, "Storage version should be positive");
     }
 }

@@ -100,8 +100,8 @@ pub fn profile_contribute_ops() -> (u32, u32) {
     let ops_before: u32 =
           2  // load group ×2 (contribute + validate_contribution_amount)
         + 1  // has member_profile
-        + 1  // read reentrancy guard
-        + 2  // write reentrancy guard (set 1, set 0)
+        + 1  // read reentrancy guard (persistent — expensive)
+        + 2  // write reentrancy guard (set 1, set 0) (persistent — expensive)
         + 1  // load token config
         + 1  // has individual contrib
         + 1  // write individual contrib
@@ -115,8 +115,8 @@ pub fn profile_contribute_ops() -> (u32, u32) {
     let ops_after: u32 =
           1  // load group ×1 (amount validated from in-memory copy)
         + 1  // has member_profile
-        + 1  // read reentrancy guard
-        + 2  // write reentrancy guard (set 1, set 0)
+        // reentrancy guard: now uses temporary storage (0.1 cost units each)
+        // counted as 0 persistent ops here; see cost_units below
         + 1  // load token config
         + 1  // has individual contrib
         + 1  // write individual contrib
@@ -125,6 +125,7 @@ pub fn profile_contribute_ops() -> (u32, u32) {
         + 2  // read+write group balance
         + 2; // read+write streak
              // cycle_total for event: 0 (returned from record_contribution)
+             // join_group status check: 0 (reads group.status in-memory, not storage)
 
     (ops_before, ops_after)
 }
@@ -217,12 +218,12 @@ mod tests {
         );
         // Verify the exact counts match our analysis
         assert_eq!(before, 19, "before: expected 19 ops");
-        assert_eq!(after, 17, "after: expected 17 ops");
-        // Verify ≥10% reduction
+        assert_eq!(after, 13, "after: expected 13 persistent ops (reentrancy guard moved to temporary storage)");
+        // Verify ≥30% reduction
         let reduction_pct = ((before - after) * 100) / before;
         assert!(
-            reduction_pct >= 10,
-            "Expected ≥10% reduction, got {}%",
+            reduction_pct >= 30,
+            "Expected ≥30% reduction, got {}%",
             reduction_pct
         );
     }

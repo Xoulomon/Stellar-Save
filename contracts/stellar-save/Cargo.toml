@@ -1,5 +1,6 @@
 [package]
 name = "stellar-save"
+<<<<<<< HEAD
 description = "Rotational savings and credit association (ROSCA) on Stellar"
 edition = "2021"
 license = "MIT"
@@ -8,12 +9,21 @@ publish = false
 
 [package.metadata.stellar]
 cargo_inherit = true 
+=======
+description = "Rotational Savings and Credit Association (ROSCA) on Stellar Soroban"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+version.workspace = true
+>>>>>>> 46b7416 (feat: implement bug bounty program and vulnerability disclosure)
 
 [lib]
 crate-type = ["cdylib"]
 doctest = false
 
 [dependencies]
+<<<<<<< HEAD
 soroban-sdk = "23.0.3"
 
 [dev-dependencies]
@@ -24,3 +34,24 @@ ed25519-dalek = { version = "2", features = ["rand_core"] }
 [features]
 # Enable coverage instrumentation (used by cargo-tarpaulin / cargo-llvm-cov)
 coverage = []
+
+# ── Distributed tracing ───────────────────────────────────────────────────────
+# Full OpenTelemetry distributed tracing is NOT feasible *inside* the wasm
+# contract: Soroban guest code runs in a sandboxed, no_std-style host with no
+# clock, network, or thread-locals, so it cannot emit OTLP spans or propagate a
+# W3C traceparent. Distributed tracing for contract execution is therefore done
+# HOST-SIDE: the backend/indexer wrap every contract simulate/invoke RPC call in
+# an OpenTelemetry span (see backend/src/lib/soroban.ts -> withClient(fn, op)),
+# carrying the contract function name and the active trace context to the node.
+#
+# This `host-tracing` feature is a placeholder for OPTIONAL lightweight tracing
+# in the *native* (testutils / off-chain simulation) build only — it is never
+# enabled for the wasm `cdylib` target, so it cannot bloat or break on-chain
+# builds. See docs/distributed-tracing.md for the full architecture.
+host-tracing = []
+=======
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+>>>>>>> 46b7416 (feat: implement bug bounty program and vulnerability disclosure)

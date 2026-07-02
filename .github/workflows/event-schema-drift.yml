@@ -1,0 +1,41 @@
+name: Event Schema Drift Check
+
+on:
+  push:
+    paths:
+      - 'packages/events-schema/schema.json'
+      - 'packages/events-schema/generated/**'
+      - 'packages/events-schema/codegen.js'
+  pull_request:
+    paths:
+      - 'packages/events-schema/schema.json'
+      - 'packages/events-schema/generated/**'
+      - 'packages/events-schema/codegen.js'
+      - 'frontend/src/types/events.ts'
+      - 'backend/src/contract_event_indexer.ts'
+      - 'contracts/stellar-save/src/events.rs'
+
+jobs:
+  check-event-schema-drift:
+    name: Event schema / codegen drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Regenerate types from schema
+        run: node packages/events-schema/codegen.js
+
+      - name: Fail if generated types differ from committed
+        run: |
+          if ! git diff --exit-code packages/events-schema/generated/events.ts; then
+            echo ""
+            echo "❌ packages/events-schema/generated/events.ts is out of sync with schema.json"
+            echo "   Run: node packages/events-schema/codegen.js"
+            echo "   Then commit the updated generated file."
+            exit 1
+          fi
+          echo "✅ Generated types match schema."

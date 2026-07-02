@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        test: [api, frontend, contract]
+        test: [api, frontend, contract, keeper, event-streaming]
     
     steps:
       - uses: actions/checkout@v4

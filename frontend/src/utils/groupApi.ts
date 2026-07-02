@@ -15,6 +15,8 @@ export interface GroupData {
   cycle_duration: number;
   max_members: number;
   min_members: number;
+  insuranceEnabled: boolean;
+  insurancePremiumRate: number;
 }
 
 export async function createGroup(data: GroupData): Promise<string> {

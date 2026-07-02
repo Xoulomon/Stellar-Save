@@ -63,12 +63,48 @@ When intentional UI changes are made:
 3. Click **Approve** for expected changes.
 4. The PR check turns green and the new screenshots become the baseline.
 
+## Mobile visual regression
+
+Mobile baselines are captured in `frontend/src/test/visual/mobile.spec.ts`.
+Each screen is snapshotted in both light and dark mode across six device profiles:
+
+| Project name | Device |
+|---|---|
+| `desktop-1280` | Desktop Chrome 1280x720 |
+| `mobile-pixel5` | Pixel 5 (393x851) |
+| `mobile-pixel7` | Pixel 7 (412x915) |
+| `mobile-iphone14` | iPhone 14 (390x844) |
+| `mobile-iphone14-pro-max` | iPhone 14 Pro Max (430x932) |
+| `tablet-ipad-pro` | iPad Pro 11 (834x1194) |
+
+Percy groups all device snapshots under the same snapshot name so you can
+compare layouts side by side in the review UI.
+
+### Updating mobile baselines
+
+1. Make your intentional UI change and open a PR.
+2. The Percy check will show diffs for every affected device/mode combination.
+3. Open the Percy build link from the PR checks.
+4. Review each diff image - Percy shows a before/after overlay.
+5. Click **Approve** for each expected change. The check turns green and the
+   new screenshots become the baseline.
+
+Only reviewers with write access to the Percy project can approve baselines.
+Approvals are tracked per-build in the Percy audit log.
+
+### Adding new mobile snapshots
+
+Add a `test()` block in `frontend/src/test/visual/mobile.spec.ts` and use
+`snapshotBothModes(page, 'Unique snapshot name')` to capture light and dark
+variants automatically. The name must be globally unique across both spec files.
+
 ## Configuration
 
 | File | Purpose |
 |---|---|
-| `frontend/playwright.visual.config.ts` | Playwright config for visual tests (uses `vite preview` on port 4173) |
-| `frontend/src/test/visual/visual.spec.ts` | Percy snapshot test suite |
+| `frontend/playwright.visual.config.ts` | Playwright config; defines device project matrix |
+| `frontend/src/test/visual/visual.spec.ts` | Desktop Percy snapshot suite |
+| `frontend/src/test/visual/mobile.spec.ts` | Mobile/tablet Percy snapshot suite |
 | `.github/workflows/visual-regression.yml` | CI workflow |
 
 ## Diff thresholds

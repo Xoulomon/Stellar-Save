@@ -45,6 +45,7 @@ model NotificationPreference {
   groupUpdates           Boolean  @default(true)
   payoutNotifications    Boolean  @default(true)
   emailFrequency         String   @default("immediate") // immediate, daily, weekly, never
+  locale                 String   @default("en")        // BCP-47 locale tag e.g. en, fr, yo
   unsubscribeToken       String   @unique @default(cuid())
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
@@ -239,6 +240,8 @@ model IndexedTransaction {
   @@index([ledgerSeq])
   @@index([sourceAccount])
   @@index([createdAt])
+}
+
 // ========== WEB PUSH SUBSCRIPTION MODELS ==========
 
 model PushSubscription {
@@ -250,6 +253,18 @@ model PushSubscription {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// ========== SOROBAN EVENT CURSOR ==========
+
+model SorobanEventCursor {
+  id         String   @id @default("singleton")
+  contractId String   @unique
+  lastLedger Int      @default(0)
+  lastCursor String   @default("")
+  updatedAt  DateTime @updatedAt
+
+  @@index([contractId])
 }
 
 // ========== WEBHOOK MODELS (Issue #559) ==========
@@ -290,6 +305,70 @@ model AuditLog {
   @@index([createdAt])
 }
 
+// ========== EVENT-SOURCING AUDIT LOG (Issue #1 — tamper-evident hash chain) ==========
+
+model AuditEventLog {
+  id           String   @id
+  /// Who performed the action (wallet address, admin ID, or system)
+  actor        String
+  /// Verb e.g. "group.create", "POST /api/v1/groups/:id/contribute"
+  action       String
+  /// Model/domain noun e.g. "Group", "ContractEvent"
+  resourceType String
+  /// Primary key / contract ID of the affected record
+  resourceId   String?
+  /// JSON snapshot of relevant fields before the change (null for creates)
+  before       Json?
+  /// JSON snapshot of relevant fields after the change (null for deletes)
+  after        Json?
+  /// Arbitrary extra context (IP, user-agent, path, …)
+  metadata     Json?
+  /// Hash of the previous entry in the chain (genesis = 64 zeros)
+  prevHash     String
+  /// SHA-256( id | prevHash | actor | action | resourceType | resourceId | before | after | createdAt )
+  hash         String   @unique
+  createdAt    DateTime
+
+  @@index([actor])
+  @@index([action])
+  @@index([resourceType])
+  @@index([resourceId])
+  @@index([createdAt])
+}
+
+// ========== PRIVACY / GDPR MODELS (Issue #1107) ==========
+
+model PrivacyRequest {
+  id            String    @id @default(cuid())
+  walletAddress String
+  requestType   String    // 'export' | 'deletion'
+  status        String    @default("pending") // pending | processing | completed | failed
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([walletAddress])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ========== AUTH SESSION MODELS (Issue #1106) ==========
+
+model RefreshToken {
+  id            String    @id @default(cuid())
+  tokenHash     String    @unique          // SHA-256 of the raw token
+  walletAddress String
+  familyId      String                     // all tokens in one login chain share a familyId
+  used          Boolean   @default(false)  // true once rotated (reuse = theft)
+  revokedAt     DateTime?                  // set on revocation; null = still valid
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+
+  @@index([walletAddress])
+  @@index([familyId])
+  @@index([expiresAt])
+}
+
 // ========== REPUTATION MODELS (Issue #800) ==========
 
 model MemberReputation {
@@ -303,4 +382,129 @@ model MemberReputation {
 
   @@index([address])
   @@index([score])
+}
+
+// ========== MOBILE DEVICE TOKEN MODELS (Issue #1027) ==========
+
+model MobileDeviceToken {
+  id          String    @id @default(cuid())
+  userId      String
+  token       String    @unique
+  platform    String    // 'ios' | 'android'
+  isValid     Boolean   @default(true)
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([token])
+  @@index([isValid])
+}
+
+// ========== FRAUD DETECTION MODELS (Issue #1028) ==========
+
+model FraudFlag {
+  id          String    @id @default(cuid())
+  entityType  String    // 'account' | 'group'
+  entityId    String
+  riskScore   Float
+  reasons     String[]
+  status      String    @default("pending") // pending | reviewed | dismissed
+  evidence    Json
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([entityType, entityId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ========== API KEY MODELS (Issue #1030) ==========
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  keyHash     String    @unique
+  keyPrefix   String
+  userId      String
+  name        String
+  tier        String    @default("free")
+  rateLimit   Int       @default(100)
+  isActive    Boolean   @default(true)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([keyHash])
+  @@index([isActive])
+}
+
+model ApiKeyUsage {
+  id         String   @id @default(cuid())
+  keyId      String
+  endpoint   String
+  method     String
+  statusCode Int
+  createdAt  DateTime @default(now())
+
+  @@index([keyId])
+  @@index([createdAt])
+}
+
+// ========== KYC MODELS (Issue #1024) ==========
+
+model KycRecord {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  walletAddress  String
+  status         String    @default("pending") // pending | approved | rejected | expired
+  kycProviderId  String?
+  submittedAt    DateTime  @default(now())
+  reviewedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([walletAddress])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model KycStatusEvent {
+  id         String   @id @default(cuid())
+  userId     String
+  oldStatus  String
+  newStatus  String
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ========== FIAT RAMP MODELS (Issue #1023) ==========
+
+model RampTransaction {
+  id             String   @id @default(cuid())
+  userId         String
+  type           String   // deposit | withdraw
+  anchorDomain   String
+  stellarAccount String
+  assetCode      String
+  assetIssuer    String?
+  amount         String?
+  anchorId       String?
+  status         String   // pending_user_transfer_start | pending_anchor | pending_stellar | pending_external | completed | refunded | expired | error
+  interactiveUrl String?
+  moreInfoUrl    String?
+  startedAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([anchorId])
+  @@index([status])
+  @@index([startedAt])
+  @@index([createdAt])
 }

@@ -102,6 +102,18 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     [],
   );
 
+  const signMessage = useCallback(
+    async (message: string, opts?: { address?: string }) => {
+      const kit = StellarWalletsKit as unknown as Record<string, unknown>;
+      if (typeof kit.signMessage === 'function') {
+        const result = await (kit.signMessage as (msg: string, o?: { address?: string }) => Promise<{ signedMessage?: string; signature?: string }>)(message, opts);
+        return result.signedMessage ?? result.signature ?? '';
+      }
+      throw new Error('Message signing is not supported by the current wallet.');
+    },
+    [],
+  );
+
   const value: WalletContextValue = {
     wallets,
     selectedWalletId,
@@ -116,6 +128,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     switchWallet,
     switchAccount,
     signTransaction,
+    signMessage,
   };
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;

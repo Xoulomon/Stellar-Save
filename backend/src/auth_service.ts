@@ -1,13 +1,18 @@
+import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
-import { Keypair, Networks, Transaction, FeeBumpTransaction } from '@stellar/stellar-sdk';
+import { Keypair } from '@stellar/stellar-sdk';
 import * as redisClient from './redis';
+import { prisma } from './prisma_client';
+import { config } from './config';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'stellar-save-jwt-secret-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
-const CHALLENGE_TTL_SECONDS = 300; // 5 minutes
+const JWT_SECRET = config.auth.jwtSecret;
+const ACCESS_TOKEN_TTL = config.auth.accessTokenTtl;   // e.g. '15m'
+const REFRESH_TOKEN_TTL_DAYS = config.auth.refreshTokenTtlDays; // e.g. 30
+const CHALLENGE_TTL_SECONDS = 300;
+const USED_NONCE_TTL_SECONDS = CHALLENGE_TTL_SECONDS + 60;
 
 export interface JwtPayload {
-  sub: string; // wallet address
+  sub: string;   // wallet address
   iat: number;
   exp: number;
 }
@@ -16,35 +21,25 @@ export interface AuthenticatedUser {
   walletAddress: string;
 }
 
-/**
- * Generates a cryptographically random challenge nonce for a wallet address.
- * Stored in Redis with a 5-minute TTL to prevent replay attacks.
- */
+// ── Challenge / signature ─────────────────────────────────────────────────────
+
 export async function generateChallenge(walletAddress: string): Promise<string> {
-  // Validate it looks like a Stellar public key (G...)
   try {
     Keypair.fromPublicKey(walletAddress);
   } catch {
     throw new Error('Invalid Stellar wallet address');
   }
 
-  const nonce = require('crypto').randomBytes(32).toString('hex');
+  const nonce = crypto.randomBytes(32).toString('hex');
   const challengeKey = `auth:challenge:${walletAddress}`;
-  const message = `Sign this message to authenticate with Stellar Save.\n\nWallet: ${walletAddress}\nNonce: ${nonce}\nTimestamp: ${Date.now()}`;
+  const timestamp = Date.now();
+  const message =
+    `Sign this message to authenticate with Stellar Save.\n\nWallet: ${walletAddress}\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
 
-  await redisClient.set(challengeKey, { nonce, message }, CHALLENGE_TTL_SECONDS);
-
+  await redisClient.set(challengeKey, { nonce, message, timestamp }, CHALLENGE_TTL_SECONDS);
   return message;
 }
 
-/**
- * Verifies a Stellar transaction-based signature against the stored challenge.
- * The client signs the challenge message using their Stellar keypair and submits
- * the signed XDR transaction envelope. We verify the signature matches the wallet.
- *
- * Stellar wallets sign arbitrary messages by wrapping them in a transaction envelope.
- * We verify the signature on the transaction matches the claimed wallet address.
- */
 export async function verifySignature(
   walletAddress: string,
   signedMessage: string,
@@ -53,47 +48,144 @@ export async function verifySignature(
   const challengeKey = `auth:challenge:${walletAddress}`;
   const stored = await redisClient.get(challengeKey);
 
-  if (!stored) {
-    throw new Error('Challenge not found or expired. Request a new challenge.');
-  }
+  if (!stored) throw new Error('Challenge not found or expired. Request a new challenge.');
 
-  if (stored.message !== signedMessage) {
-    throw new Error('Challenge message mismatch.');
-  }
+  await redisClient.del(challengeKey);
+
+  if (stored.message !== signedMessage) throw new Error('Challenge message mismatch.');
+
+  const ageMs = Date.now() - stored.timestamp;
+  if (ageMs > CHALLENGE_TTL_SECONDS * 1000) throw new Error('Challenge has expired.');
+
+  const usedNonceKey = `auth:used_nonce:${stored.nonce}`;
+  if (await redisClient.get(usedNonceKey)) throw new Error('Challenge nonce has already been used.');
 
   try {
-    // Verify the Ed25519 signature using Stellar SDK
     const keypair = Keypair.fromPublicKey(walletAddress);
-    const messageBuffer = Buffer.from(signedMessage, 'utf8');
-    const signatureBuffer = Buffer.from(signature, 'base64');
-
-    const isValid = keypair.verify(messageBuffer, signatureBuffer);
+    const isValid = keypair.verify(
+      Buffer.from(signedMessage, 'utf8'),
+      Buffer.from(signature, 'base64'),
+    );
 
     if (isValid) {
-      // Consume the challenge — one-time use only
-      await redisClient.del(challengeKey);
+      await redisClient.set(usedNonceKey, true, USED_NONCE_TTL_SECONDS);
     }
-
     return isValid;
   } catch {
     return false;
   }
 }
 
-/**
- * Issues a signed JWT with the wallet address as the subject.
- */
+// ── Access token ──────────────────────────────────────────────────────────────
+
 export function issueJwt(walletAddress: string): string {
   return jwt.sign(
     { sub: walletAddress },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
+    { expiresIn: ACCESS_TOKEN_TTL } as jwt.SignOptions,
   );
 }
 
-/**
- * Verifies and decodes a JWT, returning the payload.
- */
 export function verifyJwt(token: string): JwtPayload {
   return jwt.verify(token, JWT_SECRET) as JwtPayload;
+}
+
+// ── Refresh-token helpers ─────────────────────────────────────────────────────
+
+function hashToken(raw: string): string {
+  return crypto.createHash('sha256').update(raw).digest('hex');
+}
+
+function tokenExpiresAt(): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + REFRESH_TOKEN_TTL_DAYS);
+  return d;
+}
+
+/**
+ * Issue a new refresh token (DB row) and return the raw secret value.
+ * Caller must deliver the raw value to the client; only the hash is stored.
+ */
+export async function issueRefreshToken(
+  walletAddress: string,
+  familyId?: string,
+): Promise<string> {
+  const raw = crypto.randomBytes(40).toString('hex');
+  const family = familyId ?? crypto.randomUUID();
+
+  await prisma.refreshToken.create({
+    data: {
+      tokenHash: hashToken(raw),
+      walletAddress,
+      familyId: family,
+      expiresAt: tokenExpiresAt(),
+    },
+  });
+
+  return raw;
+}
+
+/**
+ * Rotate a refresh token:
+ * 1. Look up the current token; verify it is valid.
+ * 2. If the token was already used → reuse detected → revoke entire family.
+ * 3. Mark current token as used and create a replacement token.
+ *
+ * Returns new { accessToken, refreshToken } on success.
+ * Throws on any failure (expired, revoked, reuse).
+ */
+export async function rotateRefreshToken(
+  rawToken: string,
+): Promise<{ accessToken: string; refreshToken: string }> {
+  const hash = hashToken(rawToken);
+  const record = await prisma.refreshToken.findUnique({ where: { tokenHash: hash } });
+
+  if (!record) throw new Error('Invalid refresh token.');
+  if (record.revokedAt) throw new Error('Refresh token has been revoked.');
+  if (record.expiresAt < new Date()) throw new Error('Refresh token has expired.');
+
+  if (record.used) {
+    // Reuse detected — revoke entire family immediately
+    await revokeFamilyTokens(record.familyId);
+    throw new Error('Refresh token reuse detected. All sessions invalidated.');
+  }
+
+  // Mark current token consumed and issue a new one in the same family
+  await prisma.refreshToken.update({ where: { tokenHash: hash }, data: { used: true } });
+
+  const newRaw = await issueRefreshToken(record.walletAddress, record.familyId);
+  const accessToken = issueJwt(record.walletAddress);
+
+  return { accessToken, refreshToken: newRaw };
+}
+
+/**
+ * Revoke all active tokens in a session family.
+ * Called on reuse detection or explicit logout-one.
+ */
+async function revokeFamilyTokens(familyId: string): Promise<void> {
+  await prisma.refreshToken.updateMany({
+    where: { familyId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+}
+
+/**
+ * Revoke all refresh tokens for a wallet address ("log out everywhere").
+ */
+export async function revokeAllSessions(walletAddress: string): Promise<void> {
+  await prisma.refreshToken.updateMany({
+    where: { walletAddress, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+}
+
+/**
+ * Revoke the single session family containing the given raw token.
+ * Used for "log out this device".
+ */
+export async function revokeSession(rawToken: string): Promise<void> {
+  const hash = hashToken(rawToken);
+  const record = await prisma.refreshToken.findUnique({ where: { tokenHash: hash } });
+  if (record) await revokeFamilyTokens(record.familyId);
 }

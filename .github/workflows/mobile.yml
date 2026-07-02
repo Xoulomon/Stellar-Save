@@ -1,0 +1,249 @@
+name: Mobile CI/CD
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/mobile.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/mobile.yml'
+
+env:
+  NODE_VERSION: '20'
+  JAVA_VERSION: '17'
+  XCODE_VERSION: '15.0'
+
+jobs:
+  # ══════════════════════════════════════════════════════════════════════════
+  # Lint and Type Check
+  # ══════════════════════════════════════════════════════════════════════════
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Type check
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # Unit Tests
+  # ══════════════════════════════════════════════════════════════════════════
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: frontend
+        run: npm test -- --run
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: ./frontend/coverage/coverage-final.json
+          flags: mobile
+          fail_ci_if_error: false
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # Build Web Assets
+  # ══════════════════════════════════════════════════════════════════════════
+  build-web:
+    name: Build Web Assets
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, test]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: frontend/dist
+          retention-days: 7
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # Android Build & Test
+  # ══════════════════════════════════════════════════════════════════════════
+  android-build:
+    name: Android Build
+    runs-on: ubuntu-latest
+    needs: build-web
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'gradle'
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Download web build
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: frontend/dist
+
+      - name: Sync Capacitor
+        working-directory: frontend
+        run: npx cap sync android
+
+      - name: Run Android Lint
+        working-directory: frontend/android
+        run: ./gradlew lintDebug
+
+      - name: Build Android Debug APK
+        working-directory: frontend/android
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: frontend/android/app/build/outputs/apk/debug/*.apk
+          retention-days: 7
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # iOS Build & Test
+  # ══════════════════════════════════════════════════════════════════════════
+  ios-build:
+    name: iOS Build
+    runs-on: macos-14
+    needs: build-web
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Download web build
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: frontend/dist
+
+      - name: Sync Capacitor
+        working-directory: frontend
+        run: npx cap sync ios
+
+      - name: Install CocoaPods
+        working-directory: frontend/ios/App
+        run: pod install
+
+      - name: Build iOS
+        working-directory: frontend/ios
+        run: |
+          xcodebuild -workspace App/App.xcworkspace \
+                     -scheme App \
+                     -configuration Debug \
+                     -destination 'platform=iOS Simulator,name=iPhone 15 Pro' \
+                     build \
+                     CODE_SIGNING_ALLOWED=NO
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # Summary
+  # ══════════════════════════════════════════════════════════════════════════
+  mobile-ci-summary:
+    name: Mobile CI Summary
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, test, android-build, ios-build]
+    if: always()
+    
+    steps:
+      - name: Check job results
+        run: |
+          echo "Lint & Type Check: ${{ needs.lint-and-typecheck.result }}"
+          echo "Tests: ${{ needs.test.result }}"
+          echo "Android Build: ${{ needs.android-build.result }}"
+          echo "iOS Build: ${{ needs.ios-build.result }}"
+          
+          if [ "${{ needs.lint-and-typecheck.result }}" != "success" ] || \
+             [ "${{ needs.test.result }}" != "success" ] || \
+             [ "${{ needs.android-build.result }}" != "success" ] || \
+             [ "${{ needs.ios-build.result }}" != "success" ]; then
+            echo "One or more jobs failed"
+            exit 1
+          fi

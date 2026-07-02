@@ -105,6 +105,10 @@ export interface UseGroupsReturn {
   error: string | null;
   /** Whether any non-default filter is active */
   hasActiveFilters: boolean;
+  /** Whether the data is from cache and potentially stale */
+  isStale?: boolean;
+  /** Whether the data is being served from offline cache */
+  fromCache?: boolean;
   /** Update one or more filter fields; resets to page 1 */
   setFilters: (patch: Partial<GroupFilters>) => void;
   /** Reset all filters to defaults */

@@ -5,19 +5,7 @@
  * Updated incrementally as contribution events are indexed.
  */
 
-let _prisma: any = null;
-function getPrisma(): any {
-  if (!_prisma) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { PrismaClient } = require('./generated/prisma/client');
-      _prisma = new PrismaClient();
-    } catch {
-      // Prisma client not generated yet
-    }
-  }
-  return _prisma;
-}
+import { prisma } from './prisma_client';
 
 export interface ReputationRecord {
   address: string;
@@ -32,11 +20,6 @@ export interface ReputationRecord {
  * Returns a default record (score 0, no history) if not found.
  */
 export async function getMemberReputation(address: string): Promise<ReputationRecord> {
-  const prisma = getPrisma();
-  if (!prisma) {
-    return { address, score: 0, totalContributions: 0, onTimeContributions: 0, updatedAt: new Date().toISOString() };
-  }
-
   const record = await prisma.memberReputation.findUnique({ where: { address } });
   if (!record) {
     return { address, score: 0, totalContributions: 0, onTimeContributions: 0, updatedAt: new Date().toISOString() };
@@ -57,9 +40,6 @@ export async function getMemberReputation(address: string): Promise<ReputationRe
  * @param onTime   Whether the contribution was on time
  */
 export async function recordContribution(address: string, onTime: boolean): Promise<void> {
-  const prisma = getPrisma();
-  if (!prisma) return;
-
   const existing = await prisma.memberReputation.findUnique({ where: { address } });
 
   const totalContributions = (existing?.totalContributions ?? 0) + 1;

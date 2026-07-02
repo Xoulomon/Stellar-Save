@@ -2,44 +2,54 @@ import { Router } from 'express';
 import { format as fastCsvFormat } from 'fast-csv';
 
 import { RecommendationEngine } from '../recommendation';
-import { ABTestingFramework } from '../ab_testing';
 import { EmailService } from '../email_service';
 import { ExportService } from '../export_service';
 import { BackupService, S3HttpClient } from '../backup_service';
 import { BackupScheduler } from '../backup_scheduler';
 import { RecoveryService } from '../recovery_service';
 import { BackupMonitor } from '../backup_monitor';
+import { BackupRestoreDrill } from '../backup_restore_drill';
 import { ContractEventIndexer } from '../contract_event_indexer';
 import { AnalyticsService } from '../analytics_service';
+import { FeedbackService } from '../feedback_service';
 import { createAnalyticsMiddlewareStack, createAnalyticsCacheMiddleware } from '../analytics_middleware';
 import { Group, UserInteraction, UserPreference } from '../models';
 import { createNotificationRouter } from './notifications';
+import { createSseRouter } from './sse';
+import { createInsuranceRouter } from './insurance';
+import { createGovernanceRouter } from './governance';
+import { adminAuthMiddleware } from '../auth_middleware';
+import { fraudDetectionService } from '../fraud_detection_service';
+import { apiKeyService } from '../api_key_service';
+import { apiKeyAuthMiddleware, recordApiUsage } from '../api_key_rate_limiter';
 
 // ── Shared service instances (passed in from app) ────────────────────────────
 export interface V1Services {
   engine: RecommendationEngine;
-  abTest: ABTestingFramework;
   exportService: ExportService;
   backupService: BackupService;
   backupScheduler: BackupScheduler;
   recoveryService: RecoveryService;
   backupMonitor: BackupMonitor;
+  backupRestoreDrill: BackupRestoreDrill;
   eventIndexer: ContractEventIndexer;
   analyticsService: AnalyticsService;
+  feedbackService: FeedbackService;
 }
 
 export function createV1Router(services: V1Services): Router {
   const router = Router();
   const {
     engine,
-    abTest,
     exportService,
     backupService,
     backupScheduler,
     recoveryService,
     backupMonitor,
+    backupRestoreDrill,
     eventIndexer,
     analyticsService,
+    feedbackService,
   } = services;
 
   // Setup analytics middleware
@@ -67,6 +77,15 @@ export function createV1Router(services: V1Services): Router {
 
   // Notifications (web push subscriptions, preferences, templates)
   router.use('/notifications', createNotificationRouter());
+
+  // SSE event stream (Issue #1011)
+  router.use('/events', createSseRouter(eventIndexer));
+
+  // Insurance pool (Issue #1012)
+  router.use('/groups/:groupId/insurance', createInsuranceRouter());
+
+  // Governance proposals (Issue #1013)
+  router.use('/governance', createGovernanceRouter());
 
   // Search
   router.get('/search', async (req, res) => {
@@ -104,10 +123,8 @@ export function createV1Router(services: V1Services): Router {
   // Recommendations
   router.get('/recommendations/:userId', (req, res) => {
     const { userId } = req.params;
-    const bucket = abTest.getBucket(userId);
-    const algorithm = bucket === 'A' ? 'content' : 'collaborative';
-    const recommendations = engine.getRecommendations(userId, algorithm);
-    res.json({ userId, bucket, algorithm, recommendations });
+    const recommendations = engine.getRecommendations(userId, 'collaborative');
+    res.json({ userId, algorithm: 'collaborative', recommendations });
   });
 
   // Health
@@ -209,6 +226,24 @@ export function createV1Router(services: V1Services): Router {
     } catch (err: unknown) {
       res.status(400).json({ error: err instanceof Error ? err.message : String(err) });
     }
+  });
+
+  router.get('/backup/drills', (_req, res) => res.json(backupRestoreDrill.listRuns()));
+
+  router.get('/backup/drills/alerts', (req, res) => {
+    const unacknowledgedOnly = req.query.unacknowledgedOnly === 'true';
+    res.json(backupRestoreDrill.listAlerts(unacknowledgedOnly));
+  });
+
+  router.post('/backup/drills/alerts/:alertId/acknowledge', (req, res) => {
+    const ok = backupRestoreDrill.acknowledge(req.params.alertId);
+    if (!ok) return res.status(404).json({ error: 'Alert not found' });
+    res.json({ acknowledged: true });
+  });
+
+  router.post('/backup/drills/run', async (_req, res) => {
+    const run = await backupRestoreDrill.runDrill();
+    res.status(202).json(run);
   });
 
   // Contract Event Indexer Endpoints
@@ -543,6 +578,141 @@ export function createV1Router(services: V1Services): Router {
     }
 
     csvStream.end();
+  });
+
+  // ── Admin Reconciliation (Issue #3) ──────────────────────────────────────
+  router.get('/admin/reconciliation/status', adminAuthMiddleware, async (_req, res) => {
+    try {
+      const { getReconciliationService } = await import('../reconciliation_service');
+      const svc = getReconciliationService();
+      if (!svc) return res.status(503).json({ error: 'Reconciliation service not started' });
+      res.json({ message: 'Use POST /admin/reconciliation/run to trigger a run or check Prometheus metrics.' });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to get reconciliation status' });
+    }
+  });
+
+  router.post('/admin/reconciliation/run', adminAuthMiddleware, async (_req, res) => {
+    try {
+      const { getReconciliationService, initReconciliationService } = await import('../reconciliation_service');
+      const svc = getReconciliationService() ?? initReconciliationService();
+      const result = await svc.run();
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: 'Reconciliation run failed', detail: String(err) });
+    }
+  });
+
+  // ── Admin Fraud Detection (Issue #1028) ──────────────────────────────────
+  router.get('/admin/fraud/flags', adminAuthMiddleware, async (req, res) => {
+    const { status } = req.query;
+    try {
+      const flags = await fraudDetectionService.getFlags(status as string | undefined);
+      res.json({ flags });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch fraud flags' });
+    }
+  });
+
+  router.patch('/admin/fraud/flags/:id', adminAuthMiddleware, async (req: any, res) => {
+    const { id } = req.params;
+    const { status } = req.body as { status?: string };
+    if (!status) return res.status(400).json({ error: 'status is required' });
+    try {
+      const flag = await fraudDetectionService.reviewFlag(id, status, req.adminId || 'admin');
+      res.json({ flag });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update fraud flag' });
+    }
+  });
+
+  router.post('/admin/fraud/scan', adminAuthMiddleware, async (_req, res) => {
+    try {
+      const results = await fraudDetectionService.runScan();
+      res.json({ flagged: results.length, results });
+    } catch (error) {
+      res.status(500).json({ error: 'Fraud scan failed' });
+    }
+  });
+
+  // ── API Key Management (Issue #1030) ──────────────────────────────────────
+
+  // POST /api/v1/api-keys — Create a new API key
+  router.post('/api-keys', async (req: any, res: any) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ error: 'userId is required' });
+
+      const { key, info } = await apiKeyService.generateKey(userId, req.body.name || 'API Key', req.body.tier || 'free');
+      res.status(201).json({ key, info: { ...info, keyPrefix: info.keyPrefix } });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to generate API key' });
+    }
+  });
+
+  // GET /api/v1/api-keys — List API keys for authenticated user
+  router.get('/api-keys', apiKeyAuthMiddleware, async (req: any, res: any) => {
+    try {
+      const keys = await apiKeyService.getKeysForUser(req.apiKey.userId);
+      res.json({ keys });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch API keys' });
+    }
+  });
+
+  // DELETE /api/v1/api-keys/:keyId — Revoke an API key
+  router.delete('/api-keys/:keyId', apiKeyAuthMiddleware, async (req: any, res: any) => {
+    try {
+      const { keyId } = req.params;
+      await apiKeyService.revokeKey(keyId);
+      res.json({ message: 'API key revoked' });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to revoke API key' });
+    }
+  });
+
+  // GET /api/v1/api-keys/:keyId/usage — Get usage stats for a key
+  router.get('/api-keys/:keyId/usage', apiKeyAuthMiddleware, async (req: any, res: any) => {
+    try {
+      const { keyId } = req.params;
+      const stats = await apiKeyService.getUsageStats(keyId, parseInt(req.query.hours as string) || 24);
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch usage stats' });
+    }
+  });
+
+  // ── Public API Endpoints (Issue #1030) ────────────────────────────────────
+
+  // GET /api/v1/public/groups — Public list of groups
+  router.get('/public/groups', apiKeyAuthMiddleware, async (req: any, res: any) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const groups = await (eventIndexer as any).prisma.contractEvent.findMany({
+        where: { eventType: 'GroupCreated' },
+        orderBy: { timestamp: 'desc' },
+        take: limit,
+        skip: offset,
+      });
+
+      await recordApiUsage(req, res);
+      res.json({ count: groups.length, limit, offset, groups });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch groups' });
+    }
+  });
+
+  // GET /api/v1/public/stats — Public platform statistics
+  router.get('/public/stats', apiKeyAuthMiddleware, async (req: any, res: any) => {
+    try {
+      const stats = await analyticsService.getGroupsOverviewStats();
+      await recordApiUsage(req, res);
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch statistics' });
+    }
   });
 
   return router;

@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreateGroupForm } from '../components/CreateGroupForm';
 import { useWallet } from '../hooks/useWallet';
+import { updateInsuranceSettings } from '../utils/insuranceApi';
 import type { GroupData } from '../utils/groupApi';
 
 const CreateGroupPage: React.FC = () => {
   const { activeAddress } = useWallet();
   const navigate = useNavigate();
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txStatus, setTxStatus] = useState<string>('');
 
@@ -18,29 +19,26 @@ const CreateGroupPage: React.FC = () => {
     }
 
     setIsSubmitting(true);
-    setTxStatus("Submitting transaction to Stellar...");
+    setTxStatus("Submitting transaction to Stellar…");
 
     try {
       // TODO: Replace with actual Soroban contract call
       console.log("Creating group with data:", data);
-      
-      // Example contract call (you'll implement this later):
-      // const result = await createGroup({
-      //   name: data.name,
-      //   description: data.description,
-      //   contributionAmount: BigInt(data.contributionAmount),
-      //   cycleDuration: BigInt(data.cycleDuration),
-      //   maxMembers: Number(data.maxMembers),
-      //   minMembers: Number(data.minMembers),
-      // });
+
+      // Simulate a group ID returned from the contract
+      const mockGroupId = `group-${Date.now()}`;
+
+      // Persist insurance settings if enabled
+      if (data.insuranceEnabled) {
+        setTxStatus("Configuring insurance pool…");
+        await updateInsuranceSettings(mockGroupId, {
+          enabled: true,
+          premiumRate: data.insurancePremiumRate / 100,
+        });
+      }
 
       setTxStatus("✅ Group created successfully!");
-      
-      // Redirect to dashboard after short delay
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 2500);
-
+      setTimeout(() => navigate('/dashboard'), 2500);
     } catch (error) {
       console.error("Failed to create group:", error);
       setTxStatus("❌ Failed to create group. Please try again.");
@@ -49,9 +47,7 @@ const CreateGroupPage: React.FC = () => {
     }
   };
 
-  const handleCancel = () => {
-    navigate('/dashboard');
-  };
+  const handleCancel = () => navigate('/dashboard');
 
   return (
     <div className="create-group-page">

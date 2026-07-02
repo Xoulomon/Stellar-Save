@@ -1,0 +1,18 @@
+
+> @stellar-save/sdk@0.1.0 build /workspaces/Stellar-Save/packages/sdk
+> tsc --project tsconfig.json
+
+src/client.ts(40,49): error TS2304: Cannot find name 'RequestInit'.
+src/client.ts(53,23): error TS2304: Cannot find name 'fetch'.
+src/client.ts(69,38): error TS2304: Cannot find name 'URLSearchParams'.
+src/client.ts(119,14): error TS2591: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+src/client.ts(120,18): error TS2591: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+src/client.ts(121,16): error TS2591: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+src/contract.ts(51,31): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/rpcBatchCache.ts(69,36): error TS2304: Cannot find name 'setTimeout'.
+src/rpcBatchCache.ts(83,22): error TS2304: Cannot find name 'setTimeout'.
+src/rpcBatchCache.ts(89,23): error TS2304: Cannot find name 'clearTimeout'.
+src/rpcBatchCache.ts(149,1): error TS2304: Cannot find name 'setInterval'.
+ ELIFECYCLE  Command failed with exit code 2.
+ WARN   Local package.json exists, but node_modules missing, did you mean to install?

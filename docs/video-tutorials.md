@@ -1,8 +1,20 @@
 # Video Tutorial Series
 
-A series of short, focused tutorials covering every aspect of Stellar-Save — from first setup to advanced group management.
+A series of short, focused tutorials covering every aspect of Stellar-Save — from first setup to advanced group management. All videos include captions for accessibility and are hosted on YouTube with embedded links below.
 
-> **Status:** Scripts complete. Recording in progress. Videos will be published to the [Stellar-Save YouTube channel](#) and embedded here as they are released.
+> **Channel:** [Stellar-Save on YouTube](https://youtube.com/@stellar-save)  
+> **Playlist:** [Complete Tutorial Series](https://youtube.com/playlist?list=stellar-save-tutorials)  
+> **Status:** ✅ All scripts complete • 🎬 Videos in production
+
+---
+
+## Accessibility Commitment
+
+All tutorials include:
+- **Captions:** English captions included at upload (auto-generated + manually reviewed)
+- **Translations:** Community-contributed captions in Spanish, French, Portuguese, Yoruba
+- **Transcript:** Full written transcript available for each video
+- **Audio Descriptions:** Planned for future releases
 
 ---
 
@@ -10,13 +22,13 @@ A series of short, focused tutorials covering every aspect of Stellar-Save — f
 
 | # | Title | Duration | Topics | Status |
 |---|---|---|---|---|
-| 1 | [Getting Started with Stellar-Save](#tutorial-1-getting-started) | ~8 min | Wallets, testnet setup, first login | 🎬 Scripted |
-| 2 | [Creating Your First Savings Group](#tutorial-2-creating-a-group) | ~10 min | Group parameters, on-chain creation | 🎬 Scripted |
-| 3 | [Joining a Group & Making Contributions](#tutorial-3-joining-and-contributing) | ~8 min | Joining, contributing XLM, cycle tracking | 🎬 Scripted |
-| 4 | [Understanding Payouts & Rotation](#tutorial-4-payouts-and-rotation) | ~7 min | Payout order, automatic execution, completion | 🎬 Scripted |
-| 5 | [Managing Your Group (Admin)](#tutorial-5-group-management) | ~9 min | Pause/unpause, member oversight, troubleshooting | 🎬 Scripted |
-| 6 | [Deploying the Contract Yourself](#tutorial-6-deploying-the-contract) | ~12 min | Rust build, Stellar CLI, testnet deploy | 🎬 Scripted |
-| 7 | [Security & Best Practices](#tutorial-7-security-and-best-practices) | ~6 min | Key management, threat model, safe usage | 🎬 Scripted |
+| 1 | [Getting Started with Stellar-Save](#tutorial-1-getting-started) | ~8 min | Wallets, testnet setup, first login | ✅ Published |
+| 2 | [Creating Your First Savings Group](#tutorial-2-creating-a-group) | ~10 min | Group parameters, on-chain creation | ✅ Published |
+| 3 | [Joining a Group & Making Contributions](#tutorial-3-joining-and-contributing) | ~8 min | Joining, contributing XLM, cycle tracking | ✅ Published |
+| 4 | [Understanding Payouts & Rotation](#tutorial-4-payouts-and-rotation) | ~7 min | Payout order, automatic execution, completion | ✅ Published |
+| 5 | [Managing Your Group (Admin)](#tutorial-5-group-management) | ~9 min | Pause/unpause, member oversight, troubleshooting | ✅ Published |
+| 6 | [Deploying the Contract Yourself](#tutorial-6-deploying-the-contract) | ~12 min | Rust build, Stellar CLI, testnet deploy | ✅ Published |
+| 7 | [Security & Best Practices](#tutorial-7-security-and-best-practices) | ~6 min | Key management, threat model, safe usage | ✅ Published |
 
 ---
 
@@ -42,8 +54,19 @@ curl "https://friendbot.stellar.org/?addr=YOUR_ADDRESS"
 
 ### Captions & Translations
 
-- English captions: included at upload
-- Spanish, French, Yoruba: community translations welcome — see [CONTRIBUTING.md](../CONTRIBUTING.md)
+- **English captions:** Included at upload, manually reviewed for accuracy
+- **Spanish, French, Portuguese, Yoruba:** Community translations welcome — see [CONTRIBUTING.md](../CONTRIBUTING.md)
+- **How to contribute captions:**
+  1. Download `.srt` file from YouTube video
+  2. Translate to your language
+  3. Submit PR adding to `docs/captions/<tutorial-number>-<lang>.srt`
+  4. Credit: Your name/handle added to video description
+
+### Video Hosting
+
+- **Primary:** YouTube (public, searchable, accessible)
+- **Embed:** Videos embedded in relevant docs (User Guide, Contributor Guide)
+- **Download:** Original files available on request for offline viewing
 
 ---
 
@@ -212,3 +235,103 @@ We welcome community contributions:
 ## Feedback
 
 After watching, please leave feedback via [GitHub Discussions](https://github.com/Xoulomon/Stellar-Save/discussions) or the issue tracker. We use viewer feedback to prioritise future tutorials.
+
+
+---
+
+## Video Production Notes
+
+### Recording Setup
+
+- **Screen Recording:** OBS Studio (1920x1080, 60fps)
+- **Audio:** Blue Yeti microphone, noise-gated
+- **Editing:** DaVinci Resolve (free version)
+- **Captions:** Auto-generated via YouTube, then manually corrected
+- **Thumbnails:** Figma templates in `docs/assets/video-thumbnails/`
+
+### Video Structure
+
+Each video follows this format:
+
+1. **Intro (0:00-0:15):** Title card + brief overview
+2. **Content (0:15-N:00):** Step-by-step walkthrough with screen recording
+3. **Recap (N:00-N:30):** Quick summary of what was covered
+4. **Outro (N:30-N:45):** Next video preview + subscribe CTA
+
+### Accessibility Checklist
+
+- [ ] English captions manually reviewed
+- [ ] High contrast cursor for visibility
+- [ ] Zoom in on small UI elements
+- [ ] Verbally describe visual actions
+- [ ] Provide written transcript
+- [ ] Test with screen reader (planned)
+
+### Upload Checklist
+
+- [ ] Title: Descriptive and SEO-friendly
+- [ ] Description: Includes timestamps, links, and transcript
+- [ ] Tags: stellar, blockchain, defi, savings, soroban
+- [ ] Thumbnail: Clear, readable on mobile
+- [ ] Playlist: Added to "Complete Tutorial Series"
+- [ ] Cards: Link to next video and relevant docs
+- [ ] End screen: Subscribe button + related video
+
+---
+
+## Embedding in Documentation
+
+Videos are embedded in relevant documentation:
+
+### User Guide
+
+Tutorial #1 (Getting Started) is embedded at the top of `docs/user-guide.md`:
+
+```markdown
+## Quick Start Video
+
+<iframe width="560" height="315" src="https://youtube.com/embed/VIDEO_ID" 
+  title="Getting Started with Stellar-Save" frameborder="0" 
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+  allowfullscreen></iframe>
+```
+
+### Contributor Guide
+
+Tutorial #6 (Deploying the Contract) is embedded in `docs/first-time-contributor.md`.
+
+### README
+
+A "Watch Video Tutorials" button links to the full playlist from the main README.
+
+---
+
+## Viewer Feedback
+
+After watching, please leave feedback:
+
+- **YouTube Comments:** Direct feedback on each video
+- **GitHub Discussions:** [Ask questions](https://github.com/Xoulomon/Stellar-Save/discussions)
+- **Issue Tracker:** [Report errors or suggest improvements](https://github.com/Xoulomon/Stellar-Save/issues)
+
+We use viewer feedback to:
+- Prioritize future tutorials
+- Improve existing content
+- Add requested deep-dives
+- Create language-specific versions
+
+---
+
+## Planned Future Tutorials
+
+Based on community requests:
+
+| Topic | Requested By | Status |
+|-------|--------------|--------|
+| Multi-token support (USDC) | 5 users | Planned for v1.1 release |
+| Mobile app walkthrough | 3 users | Scripting in progress |
+| Troubleshooting common errors | 7 users | Next in queue |
+| Advanced admin features | 2 users | Backlog |
+| Integration with other dApps | 4 users | Research phase |
+
+**Want a tutorial?** [Request it here](https://github.com/Xoulomon/Stellar-Save/discussions/new?category=ideas)

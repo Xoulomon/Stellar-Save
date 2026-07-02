@@ -96,6 +96,20 @@ export const createGroupFormSchema = z.object({
       },
       `Minimum members must be at least ${MIN_MEMBERS}`,
     ),
+
+  // Insurance pool (Issue #1012)
+  insuranceEnabled: z.boolean().default(false),
+  insurancePremiumRate: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val) return true;
+        const n = parseFloat(val);
+        return !isNaN(n) && n >= 0 && n <= 100;
+      },
+      'Premium must be between 0 and 100 %',
+    ),
 });
 
 /**
@@ -130,6 +144,8 @@ export const groupDataSchema = z.object({
     .int()
     .min(MIN_MEMBERS, `Minimum members must be at least ${MIN_MEMBERS}`)
     .default(MIN_MEMBERS),
+  insuranceEnabled: z.boolean().default(false),
+  insurancePremiumRate: z.number().min(0).max(100).default(5),
 });
 
 export type CreateGroupFormData = z.infer<typeof createGroupFormSchema>;
@@ -270,11 +286,15 @@ export function validateFormStep(
  * Validate and convert form data to contract-ready format
  */
 export function validateAndTransformFormData(
-  formData: Record<string, string>,
+  formData: Record<string, string | boolean>,
 ): { success: false; errors: Record<string, string> } | { success: true; data: GroupData } {
   try {
+    const stringData = Object.fromEntries(
+      Object.entries(formData).filter(([, v]) => typeof v === 'string'),
+    ) as Record<string, string>;
+
     // First validate raw form data
-    const validated = createGroupFormSchema.parse(formData);
+    const validated = createGroupFormSchema.parse(stringData);
 
     // Then transform to GroupData format
     const contribution = Math.round(parseFloat(validated.contributionAmount) * STROOPS_PER_XLM);
@@ -287,6 +307,10 @@ export function validateAndTransformFormData(
       cycle_duration: parseInt(validated.cycleDuration, 10),
       max_members: parseInt(validated.maxMembers, 10),
       min_members: parseInt(validated.minMembers, 10),
+      insuranceEnabled: Boolean(formData['insuranceEnabled']),
+      insurancePremiumRate: formData['insurancePremiumRate']
+        ? parseFloat(String(formData['insurancePremiumRate']))
+        : 5,
     };
 
     // Validate final format

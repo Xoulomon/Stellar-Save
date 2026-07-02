@@ -32,6 +32,16 @@
         cursor: pointer;
       }
       button:hover { background: #4f46e5; }
+      .links { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
+      .links a {
+        color: #a5b4fc;
+        text-decoration: none;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+      }
+      .links a:hover { background: #1e293b; }
     </style>
   </head>
   <body>
@@ -40,7 +50,14 @@
         d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
     </svg>
     <h1>You're offline</h1>
-    <p>No internet connection. Check your network and try again.</p>
+    <p>
+      No internet connection. You can still browse pages you've already visited
+      in read-only mode. Saving and contributions resume once you're back online.
+    </p>
+    <div class="links">
+      <a href="/dashboard">Dashboard</a>
+      <a href="/groups">Groups</a>
+    </div>
     <button onclick="location.reload()">Try again</button>
   </body>
 </html>

@@ -376,15 +376,17 @@ export default function ProfilePage() {
 
         <AppCard>
           {/* Tab Headers */}
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, overflowX: 'auto' }}>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, overflowX: 'auto' }} role="tablist" aria-label="Profile sections">
             <Box sx={{ display: 'flex', gap: 0, minWidth: 'max-content' }}>
               {TABS.map((tab) => (
                 <Box
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   role="tab"
+                  id={`tab-${tab.id}`}
                   aria-selected={activeTab === tab.id}
-                  tabIndex={0}
+                  aria-controls={`profile-panel-${tab.id}`}
+                  tabIndex={activeTab === tab.id ? 0 : -1}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveTab(tab.id); }}
                   sx={{
                     px: { xs: 2, sm: 3 },
@@ -415,7 +417,7 @@ export default function ProfilePage() {
           {/* Tab Content */}
           <Box>
             {activeTab === 'overview' && (
-              <Stack spacing={3}>
+              <Stack spacing={3} role="tabpanel" id={`profile-panel-overview`} aria-labelledby="tab-overview">
                 {profileLoading ? (
                   <Typography color="text.secondary">Loading profile data…</Typography>
                 ) : profile ? (
@@ -474,7 +476,7 @@ export default function ProfilePage() {
             )}
 
             {activeTab === 'history' && (
-              <Stack spacing={2}>
+              <Stack spacing={2} role="tabpanel" id="profile-panel-history" aria-labelledby="tab-history">
                 <Typography variant="h3">Transaction History</Typography>
                 <TransactionTable
                   transactions={transactions}
@@ -485,15 +487,25 @@ export default function ProfilePage() {
             )}
 
             {activeTab === 'settings' && (
-              <ProfileSettings
-                displayName={displayName}
-                onSave={handleSaveSettings}
-              />
+              <Box role="tabpanel" id="profile-panel-settings" aria-labelledby="tab-settings">
+                <ProfileSettings
+                  displayName={displayName}
+                  onSave={handleSaveSettings}
+                />
+              </Box>
             )}
 
-            {activeTab === 'notifications' && <NotificationPreferences />}
+            {activeTab === 'notifications' && (
+              <Box role="tabpanel" id="profile-panel-notifications" aria-labelledby="tab-notifications">
+                <NotificationPreferences />
+              </Box>
+            )}
 
-            {activeTab === 'security' && <SecuritySettings />}
+            {activeTab === 'security' && (
+              <Box role="tabpanel" id="profile-panel-security" aria-labelledby="tab-security">
+                <SecuritySettings />
+              </Box>
+            )}
           </Box>
         </AppCard>
       </Stack>

@@ -3,6 +3,7 @@ import { BackupService, S3Client } from '../backup_service';
 import { BackupScheduler } from '../backup_scheduler';
 import { RecoveryService } from '../recovery_service';
 import { BackupMonitor } from '../backup_monitor';
+import { BackupRestoreDrill } from '../backup_restore_drill';
 
 // ── Inline test harness (matches existing test files) ────────────────────────
 let _currentBeforeEach: (() => void) | null = null;
@@ -303,5 +304,35 @@ describe('BackupMonitor', () => {
     monitor.acknowledge(alerts[0].id);
     const unacked = monitor.getAlerts(true);
     expect(unacked.every((a: any) => !a.acknowledged)).toBeTruthy();
+  });
+});
+
+// ── BackupRestoreDrill tests ────────────────────────────────────────────────
+describe('BackupRestoreDrill', () => {
+  let service: BackupService;
+  let drill: BackupRestoreDrill;
+
+  beforeEach(() => {
+    const s3 = makeMockS3();
+    service = new BackupService(s3);
+    drill = new BackupRestoreDrill(service, s3, {
+      checkIntervalMs: 999_999,
+      maxRestoreDurationMs: 5_000,
+    });
+  });
+
+  test('runDrill passes when the latest backup restores cleanly', async () => {
+    const job = await service.createBackup('full');
+    await new Promise(r => setTimeout(r, 50));
+    const run = await drill.runDrill();
+    expect(run.status).toBe('passed');
+    expect(run.backupJobId).toBe(job.id);
+    expect(drill.listRuns().length).toBeGreaterThan(0);
+  });
+
+  test('runDrill records a failure when no backup exists', async () => {
+    const run = await drill.runDrill();
+    expect(run.status).toBe('failed');
+    expect(drill.listAlerts().length).toBeGreaterThan(0);
   });
 });

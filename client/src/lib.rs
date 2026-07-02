@@ -2,6 +2,8 @@
 //!
 //! Provides `HorizonService` for querying accounts, balances, and transactions.
 
+pub mod webhook_retry;
+
 use anyhow::{Context, Result};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};

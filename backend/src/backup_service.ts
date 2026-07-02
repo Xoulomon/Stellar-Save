@@ -1,5 +1,7 @@
 import crypto from 'crypto';
 import { BackupJob, BackupType, BackupStatus } from './models';
+import { config } from './config';
+import { backupJobsTotal } from './metrics';
 
 export interface S3Client {
   putObject(params: { Bucket: string; Key: string; Body: Buffer; ContentType: string }): Promise<void>;
@@ -16,10 +18,10 @@ export class S3HttpClient implements S3Client {
   private secretAccessKey: string;
 
   constructor() {
-    this.region = process.env.AWS_REGION || 'us-east-1';
-    this.bucket = process.env.BACKUP_S3_BUCKET || '';
-    this.accessKeyId = process.env.AWS_ACCESS_KEY_ID || '';
-    this.secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || '';
+    this.region = config.aws.region;
+    this.bucket = config.backup.bucket;
+    this.accessKeyId = config.aws.accessKeyId;
+    this.secretAccessKey = config.aws.secretAccessKey;
   }
 
   private sign(method: string, key: string, body: Buffer, contentType: string): Record<string, string> {
@@ -46,7 +48,7 @@ export class S3HttpClient implements S3Client {
   async putObject({ Bucket, Key, Body, ContentType }: { Bucket: string; Key: string; Body: Buffer; ContentType: string }): Promise<void> {
     const url = `https://${Bucket}.s3.${this.region}.amazonaws.com/${Key}`;
     const headers = this.sign('PUT', Key, Body, ContentType);
-    const res = await fetch(url, { method: 'PUT', headers, body: Body });
+    const res = await fetch(url, { method: 'PUT', headers, body: Body as unknown as BodyInit });
     if (!res.ok) throw new Error(`S3 putObject failed: ${res.status} ${await res.text()}`);
   }
 
@@ -140,8 +142,8 @@ export class BackupService {
 
   constructor(s3Client?: S3Client) {
     this.s3 = s3Client ?? new S3HttpClient();
-    this.bucket = process.env.BACKUP_S3_BUCKET || 'stellar-save-backups';
-    this.retentionDays = parseInt(process.env.BACKUP_RETENTION_DAYS || '30', 10);
+    this.bucket = config.backup.bucket;
+    this.retentionDays = config.backup.retentionDays;
   }
 
   /** Collect all application data to back up */
@@ -193,9 +195,11 @@ export class BackupService {
       job.s3Key = s3Key;
       job.sizeBytes = body.length;
       job.checksum = checksum;
+      backupJobsTotal.inc({ type: job.type, status: 'success' });
     } catch (err: unknown) {
       job.status = 'failed';
       job.error = err instanceof Error ? err.message : String(err);
+      backupJobsTotal.inc({ type: job.type, status: 'failure' });
     }
   }
 

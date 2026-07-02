@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { BackupService } from './backup_service';
 import { BackupAlert } from './models';
+import { fetchWithCorrelationId } from './lib/http';
 
 export interface MonitorConfig {
   maxBackupAgeMs: number;       // alert if latest backup is older than this (default: 25h)
@@ -82,7 +83,7 @@ export class BackupMonitor {
   private async sendWebhook(alert: BackupAlert): Promise<void> {
     if (!this.config.alertWebhookUrl) return;
     try {
-      await fetch(this.config.alertWebhookUrl, {
+      await fetchWithCorrelationId(this.config.alertWebhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(alert),

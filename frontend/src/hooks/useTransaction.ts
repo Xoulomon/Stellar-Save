@@ -2,9 +2,13 @@
  * useTransaction.ts
  *
  * React hook for handling Stellar/Soroban transaction submission and tracking.
+ * Manages the full lifecycle of a single in-flight transaction.
  *
- * Exposes: { state, txHash, error, execute }
+ * Exposes: { state, txHash, error, execute, reset }
  * States: 'idle' | 'pending' | 'confirmed' | 'failed'
+ *
+ * Note: This hook is unrelated to useTransactions — useTransactions fetches
+ * transaction history (a list), while this hook manages a single tx lifecycle.
  */
 
 import { useState, useCallback } from 'react';

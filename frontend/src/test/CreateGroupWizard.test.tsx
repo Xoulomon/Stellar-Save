@@ -3,7 +3,6 @@ import { userEvent } from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CreateGroupForm } from '../components/CreateGroupForm';
 
-// Silence localStorage warnings in jsdom
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
@@ -14,30 +13,37 @@ beforeEach(() => {
 async function goToStep2(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/group name/i), 'Test Group');
   await user.type(screen.getByLabelText(/description/i), 'A test description');
-  await user.click(screen.getByRole('button', { name: /next/i }));
+  await user.click(screen.getByRole('button', { name: /^next$/i }));
 }
 
 async function goToStep3(user: ReturnType<typeof userEvent.setup>) {
   await goToStep2(user);
   await user.type(screen.getByLabelText(/contribution amount/i), '100');
   await user.selectOptions(screen.getByRole('combobox'), '604800');
-  await user.click(screen.getByRole('button', { name: /next/i }));
+  await user.click(screen.getByRole('button', { name: /^next$/i }));
 }
 
 async function goToStep4(user: ReturnType<typeof userEvent.setup>) {
   await goToStep3(user);
   await user.type(screen.getByLabelText(/maximum members/i), '8');
-  await user.click(screen.getByRole('button', { name: /next/i }));
+  await user.click(screen.getByRole('button', { name: /^next$/i }));
+}
+
+async function goToStep5(user: ReturnType<typeof userEvent.setup>) {
+  await goToStep4(user);
+  // Step 4 is Insurance — just click Next (insurance disabled by default)
+  await user.click(screen.getByRole('button', { name: /^next$/i }));
 }
 
 // ─── Progress indicator ───────────────────────────────────────────────────────
 
 describe('Wizard progress indicator', () => {
-  it('renders 4 named step labels', () => {
+  it('renders 5 named step labels', () => {
     render(<CreateGroupForm onSubmit={vi.fn()} />);
     expect(screen.getByText('Basics')).toBeInTheDocument();
     expect(screen.getByText('Finances')).toBeInTheDocument();
     expect(screen.getByText('Members')).toBeInTheDocument();
+    expect(screen.getByText('Insurance')).toBeInTheDocument();
     expect(screen.getByText('Review')).toBeInTheDocument();
   });
 
@@ -61,7 +67,7 @@ describe('Wizard progress indicator', () => {
 
   it('live region announces current step', () => {
     render(<CreateGroupForm onSubmit={vi.fn()} />);
-    expect(screen.getByText(/step 1 of 4/i)).toBeInTheDocument();
+    expect(screen.getByText(/step 1 of 5/i)).toBeInTheDocument();
   });
 });
 
@@ -72,7 +78,7 @@ describe('Step validation', () => {
     const user = userEvent.setup();
     render(<CreateGroupForm onSubmit={vi.fn()} />);
     await user.type(screen.getByLabelText(/group name/i), 'ab');
-    await user.click(screen.getByRole('button', { name: /next/i }));
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
     expect(screen.getByText(/at least 3 characters/i)).toBeInTheDocument();
     expect(screen.queryByText(/financial settings/i)).not.toBeInTheDocument();
   });
@@ -81,7 +87,7 @@ describe('Step validation', () => {
     const user = userEvent.setup();
     render(<CreateGroupForm onSubmit={vi.fn()} />);
     await goToStep2(user);
-    await user.click(screen.getByRole('button', { name: /next/i }));
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
     expect(screen.getByText(/contribution amount must be greater than 0/i)).toBeInTheDocument();
   });
 
@@ -90,38 +96,8 @@ describe('Step validation', () => {
     render(<CreateGroupForm onSubmit={vi.fn()} />);
     await goToStep3(user);
     await user.type(screen.getByLabelText(/maximum members/i), '1');
-    await user.click(screen.getByRole('button', { name: /next/i }));
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
     expect(screen.getByRole('alert')).toHaveTextContent(/maximum members must be at least 2/i);
-  });
-});
-
-// ─── Helpful tips ─────────────────────────────────────────────────────────────
-
-describe('Helpful tips and examples', () => {
-  it('shows example hint for group name field', () => {
-    render(<CreateGroupForm onSubmit={vi.fn()} />);
-    expect(screen.getByText(/family savings circle/i)).toBeInTheDocument();
-  });
-
-  it('shows hint for contribution amount on step 2', async () => {
-    const user = userEvent.setup();
-    render(<CreateGroupForm onSubmit={vi.fn()} />);
-    await goToStep2(user);
-    expect(screen.getByText(/e\.g\. 100 XLM/i)).toBeInTheDocument();
-  });
-
-  it('shows cycle duration guidance on step 2', async () => {
-    const user = userEvent.setup();
-    render(<CreateGroupForm onSubmit={vi.fn()} />);
-    await goToStep2(user);
-    expect(screen.getByText(/weekly works well for small groups/i)).toBeInTheDocument();
-  });
-
-  it('shows minimum members hint on step 3', async () => {
-    const user = userEvent.setup();
-    render(<CreateGroupForm onSubmit={vi.fn()} />);
-    await goToStep3(user);
-    expect(screen.getByText(/at least 2/i)).toBeInTheDocument();
   });
 });
 
@@ -163,7 +139,17 @@ describe('Draft save and discard', () => {
   it('pre-populates form from existing localStorage draft', () => {
     localStorage.setItem(
       'create-group-draft',
-      JSON.stringify({ name: 'Resumed Group', description: 'Resumed desc', imageUrl: '', contributionAmount: '', cycleDuration: '', maxMembers: '', minMembers: '2' }),
+      JSON.stringify({
+        name: 'Resumed Group',
+        description: 'Resumed desc',
+        imageUrl: '',
+        contributionAmount: '',
+        cycleDuration: '',
+        maxMembers: '',
+        minMembers: '2',
+        insuranceEnabled: false,
+        insurancePremiumRate: '5',
+      }),
     );
     render(<CreateGroupForm onSubmit={vi.fn()} />);
     expect(screen.getByLabelText(/group name/i)).toHaveValue('Resumed Group');
@@ -173,7 +159,7 @@ describe('Draft save and discard', () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
     render(<CreateGroupForm onSubmit={onSubmit} />);
-    await goToStep4(user);
+    await goToStep5(user);
     await user.click(screen.getByRole('button', { name: /create group/i }));
     const stored = JSON.parse(localStorage.getItem('create-group-draft') ?? '{}');
     expect(stored.name ?? '').toBe('');

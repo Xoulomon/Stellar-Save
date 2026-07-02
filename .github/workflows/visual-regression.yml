@@ -38,10 +38,14 @@ jobs:
       - name: Build frontend
         run: npm run build
 
-      - name: Run Percy visual snapshots
+      - name: Run Percy visual snapshots (desktop + mobile)
         run: npm run test:visual:ci
         env:
           PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
+          # Run all device projects defined in playwright.visual.config.ts.
+          # Percy groups snapshots by name so desktop/mobile diffs appear side
+          # by side in the review UI. Any unintended change on any viewport
+          # blocks the Percy check until a reviewer approves it.
 
       - name: Upload Playwright artifacts on failure
         if: failure()
@@ -50,3 +54,13 @@ jobs:
           name: visual-test-results
           path: frontend/test-results/
           retention-days: 7
+
+      - name: Upload mobile diff screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-mobile-diffs
+          path: |
+            frontend/test-results/**/*-diff.png
+            frontend/test-results/**/*-actual.png
+          retention-days: 14

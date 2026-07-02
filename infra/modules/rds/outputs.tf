@@ -15,6 +15,11 @@ output "db_instance_id" {
   value       = aws_db_instance.this.id
 }
 
+output "db_instance_arn" {
+  description = "RDS instance ARN (required as the source for cross-region read replicas)"
+  value       = aws_db_instance.this.arn
+}
+
 output "security_group_id" {
   description = "Security group ID attached to the RDS instance"
   value       = aws_security_group.rds.id

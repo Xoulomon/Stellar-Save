@@ -32,14 +32,23 @@ jobs:
       - name: Extract release notes for this tag
         id: notes
         run: |
-          # Pull the section for the current tag from CHANGELOG.md
           TAG="${GITHUB_REF_NAME}"
-          NOTES=$(awk "/^## \[?${TAG#v}\]?|^## ${TAG}/{found=1; next} found && /^## /{exit} found{print}" CHANGELOG.md)
-          if [ -z "$NOTES" ]; then
-            NOTES="See [CHANGELOG.md](CHANGELOG.md) for details."
+          VER="${TAG#v}"
+
+          # Pull auto-generated changelog section for this tag
+          GENERATED=$(awk "/^## \[?${VER}\]?|^## ${TAG}/{found=1; next} found && /^## /{exit} found{print}" CHANGELOG.md)
+          if [ -z "$GENERATED" ]; then
+            GENERATED="See [CHANGELOG.md](CHANGELOG.md) for details."
           fi
-          # Write to file to avoid quoting issues
-          echo "$NOTES" > release_notes.md
+
+          # Prepend human-readable highlights if the file exists
+          HIGHLIGHTS_FILE="docs/releases/${TAG}.md"
+          if [ -f "$HIGHLIGHTS_FILE" ]; then
+            { cat "$HIGHLIGHTS_FILE"; echo; echo "---"; echo; echo "## Full Changelog"; echo; echo "$GENERATED"; } > release_notes.md
+          else
+            echo "$GENERATED" > release_notes.md
+          fi
+
           cat release_notes.md
 
       - name: Create GitHub Release
@@ -47,15 +56,16 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            const tag = context.ref.replace('refs/tags/', '');
             const notes = fs.readFileSync('release_notes.md', 'utf8');
             await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: context.ref.replace('refs/tags/', ''),
-              name: context.ref.replace('refs/tags/', ''),
+              tag_name: tag,
+              name: tag,
               body: notes,
               draft: false,
-              prerelease: context.ref.includes('-rc') || context.ref.includes('-beta'),
+              prerelease: tag.includes('-rc') || tag.includes('-beta'),
             });
 
       - name: Commit updated CHANGELOG.md

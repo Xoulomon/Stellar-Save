@@ -75,3 +75,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "db_secret_arn" {
+  description = "ARN of the Secrets Manager secret containing database credentials"
+  type        = string
+  default     = ""
+}
