@@ -1,5 +1,6 @@
 # Smoke suite — runs critical flows in sequence
-# A failure in any flow fails the entire suite deterministically.
+# A failure in any flow fails the entire suite determin istically.
+# Exit status 1 is returned on any assertion failure → CI fails the build.
 appId: com.stellarsave.app
 ---
 # ── Onboarding ────────────────────────────────────────────────────────────────
@@ -24,6 +25,8 @@ appId: com.stellarsave.app
     text: "Create New Wallet"
 - assertVisible:
     id: "create-wallet-screen"
+- assertVisible:
+    text: "Create New Wallet"
 - back
 - back
 
@@ -70,3 +73,9 @@ appId: com.stellarsave.app
     id: "dashboard-tab"
 - assertVisible:
     id: "dashboard-screen"
+
+# ── Final assertion — critical flow checkpoint ───────────────────────────────
+# If we reach here, all critical UI flows are intact.
+# Any assertVisible failure above will exit with status 1 → CI fails.
+- assertVisible:
+    id: "dashboard-tab"
