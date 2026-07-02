@@ -52,6 +52,12 @@ mod upgrade_tests;
 mod chaos_tests;
 mod fuzz_tests;
 mod property_tests;
+#[cfg(test)]
+mod escrow_property_tests;
+#[cfg(test)]
+mod governance_property_tests;
+#[cfg(test)]
+mod insurance_property_tests;
 mod tests;
 
 // ── Re-exports ────────────────────────────────────────────────────────────────
