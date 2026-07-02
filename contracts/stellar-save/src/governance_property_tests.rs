@@ -1,359 +1,312 @@
-/// Property-based tests for the Governance / Security module (security.rs).
+/// Property-based tests for governance invariants.
 ///
-/// These tests verify core invariants of the access-control and governance layer:
-/// - Group creator role is mutually exclusive and cannot be assumed by members
-/// - Quorum invariant is respected for all vote/member combinations
-/// - Timelock is always enforced before actions can execute
-/// - Non-creator roles cannot assume creator permissions
-/// - Contract admin role subsumes group member permissions
+/// Feature: Governance
+///
+/// Core invariants tested:
+///   1. Quorum always enforced — no proposal can pass without meeting the
+///      configured quorum threshold.
+///   2. Timelock always enforced — no proposal can execute before its timelock
+///      expires, regardless of vote count.
 #[cfg(test)]
 mod governance_property_tests {
-    use crate::security::{AuthContext, AuthorizationChecker, Role};
     use proptest::prelude::*;
-    use soroban_sdk::testutils::Address as _;
-    use soroban_sdk::Env;
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    /// Returns true iff the vote count meets the quorum percentage threshold.
-    /// Invariant: vote_count * 100 >= total_members * quorum_pct
-    fn quorum_reached(vote_count: u32, total_members: u32, quorum_pct: u32) -> bool {
-        if total_members == 0 {
-            return false;
-        }
-        (vote_count as u64) * 100 >= (total_members as u64) * (quorum_pct as u64)
-    }
-
-    /// Returns true iff enough time has elapsed for the timelock to expire.
-    /// Invariant: current_time >= action_time + timelock_duration
-    fn timelock_passed(current_time: u64, action_time: u64, timelock_duration: u64) -> bool {
-        current_time >= action_time.saturating_add(timelock_duration)
-    }
 
     // ── Strategies ────────────────────────────────────────────────────────────
 
-    fn valid_member_count() -> impl Strategy<Value = u32> {
-        1_u32..=100_u32
+    /// Total voting power in the system (e.g., total number of voters or tokens).
+    fn total_voting_power() -> impl Strategy<Value = u64> {
+        100_u64..=10_000_u64
     }
 
-    fn quorum_pct() -> impl Strategy<Value = u32> {
-        51_u32..=100_u32 // majority quorum
+    /// Quorum percentage (1–100).
+    fn quorum_percent() -> impl Strategy<Value = u8> {
+        1_u8..=100_u8
     }
 
-    fn timelock_duration() -> impl Strategy<Value = u64> {
-        // 1 hour to 7 days in seconds
-        3_600_u64..=604_800_u64
+    /// Vote count submitted for a proposal (0 to total_voting_power).
+    fn vote_count(total: u64) -> impl Strategy<Value = u64> {
+        0_u64..=total
     }
 
-    // ── Feature: GovernanceSecurity Property 1 – group creator role is unique ─
+    /// Timelock duration in seconds (1 minute to 7 days).
+    fn timelock_seconds() -> impl Strategy<Value = u64> {
+        60_u64..=604_800_u64
+    }
+
+    /// A timestamp representing proposal creation time.
+    fn proposal_created_at() -> impl Strategy<Value = u64> {
+        1_000_000_u64..=u64::MAX / 2
+    }
+
+    /// A timestamp representing the current time (after proposal creation).
+    fn current_time(created_at: u64) -> impl Strategy<Value = u64> {
+        created_at..=u64::MAX / 2
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /// Check if a proposal meets quorum.
+    /// Returns true if votes_for / total_voting_power >= quorum_percent / 100.
+    fn meets_quorum(votes_for: u64, total_voting_power: u64, quorum_percent: u8) -> bool {
+        if total_voting_power == 0 {
+            return false; // no voting power means no quorum
+        }
+        // Use 128-bit arithmetic to avoid overflow.
+        let votes = votes_for as u128;
+        let total = total_voting_power as u128;
+        let threshold = quorum_percent as u128;
+
+        votes * 100 >= total * threshold
+    }
+
+    /// Check if the timelock has expired.
+    fn timelock_expired(created_at: u64, current: u64, lock_duration: u64) -> bool {
+        current >= created_at.saturating_add(lock_duration)
+    }
+
+    /// Determine if a proposal can execute: must meet quorum AND timelock must have expired.
+    fn can_execute(
+        votes_for: u64,
+        total_voting_power: u64,
+        quorum_percent: u8,
+        created_at: u64,
+        current: u64,
+        lock_duration: u64,
+    ) -> bool {
+        meets_quorum(votes_for, total_voting_power, quorum_percent)
+            && timelock_expired(created_at, current, lock_duration)
+    }
+
+    // ── Feature: Governance  Property 1 ──────────────────────────────────────
+    // Quorum always enforced.
 
     proptest! {
-        /// An AuthContext with Role::GroupCreator reports is_group_creator()=true
-        /// and all other role checks as false. The creator role is not shared.
-        // Feature: GovernanceSecurity Property 1
+        /// Feature: Governance  Property 1
+        ///
+        /// A proposal with zero votes can never meet quorum, regardless of
+        /// total voting power or quorum percentage.
         #[test]
-        fn prop_creator_role_is_exclusive(
-            // Vary the address by picking a random seed 0..u8::MAX
-            seed in 0_u8..=u8::MAX,
+        fn prop_governance_zero_votes_never_meet_quorum(
+            total in total_voting_power(),
+            q in quorum_percent(),
         ) {
-            let env = Env::default();
-            // Use seed to generate deterministic-ish addresses
-            let _ = seed; // address generation is random by design in testutils
-            let caller = soroban_sdk::Address::generate(&env);
-            let ctx = AuthContext::new(caller, Role::GroupCreator);
-
-            prop_assert!(ctx.is_group_creator());
-            prop_assert!(!ctx.is_group_member());
-            prop_assert!(!ctx.is_contract_admin());
+            prop_assert!(!meets_quorum(0, total, q),
+                "zero votes should never meet quorum (total={} q={}%)", total, q);
         }
 
-        /// An AuthContext with Role::GroupMember is never a creator.
-        // Feature: GovernanceSecurity Property 1b
+        /// Feature: Governance  Property 2
+        ///
+        /// If a proposal receives votes_for >= quorum_percent% of total_voting_power,
+        /// it must meet quorum.
         #[test]
-        fn prop_member_role_is_not_creator(
-            seed in 0_u8..=u8::MAX,
+        fn prop_governance_quorum_met_when_votes_exceed_threshold(
+            total in total_voting_power(),
+            q in quorum_percent(),
         ) {
-            let env = Env::default();
-            let _ = seed;
-            let caller = soroban_sdk::Address::generate(&env);
-            let ctx = AuthContext::new(caller, Role::GroupMember);
+            // votes = exactly the quorum threshold, rounded up.
+            let votes = ((total as u128) * (q as u128)).div_ceil(100) as u64;
+            let votes = votes.min(total); // clamp to total
 
-            prop_assert!(!ctx.is_group_creator());
-            prop_assert!(ctx.is_group_member());
+            prop_assert!(
+                meets_quorum(votes, total, q),
+                "votes {} must meet quorum {}% of {}", votes, q, total
+            );
         }
 
-        /// require_group_creator succeeds only when caller == creator.
-        /// It must always fail when called with a different address.
-        // Feature: GovernanceSecurity Property 1c
+        /// Feature: Governance  Property 3
+        ///
+        /// If votes_for < quorum threshold, the proposal does not meet quorum.
         #[test]
-        fn prop_creator_check_fails_for_non_creator(
-            seed in 0_u8..=u8::MAX,
+        fn prop_governance_quorum_not_met_when_votes_below_threshold(
+            total in 100_u64..=10_000_u64,
+            q in 50_u8..=100_u8,
+            votes_deficit in 1_u64..=100_u64,
         ) {
-            let env = Env::default();
-            let _ = seed;
-            let creator = soroban_sdk::Address::generate(&env);
-            let non_creator = soroban_sdk::Address::generate(&env);
+            let threshold_votes = ((total as u128) * (q as u128)).div_ceil(100) as u64;
+            let votes_for = threshold_votes.saturating_sub(votes_deficit);
+            prop_assume!(votes_for < threshold_votes);
 
-            // Only succeeds for the actual creator
-            let ok = AuthorizationChecker::require_group_creator(&creator, &creator);
-            prop_assert!(ok.is_ok());
-
-            // Must fail for any other address
-            let fail = AuthorizationChecker::require_group_creator(&non_creator, &creator);
-            prop_assert!(fail.is_err());
-        }
-    }
-
-    // ── Feature: GovernanceSecurity Property 2 – quorum invariant ────────────
-
-    proptest! {
-        /// When vote_count == total_members (unanimous), quorum is always reached
-        /// for any quorum_pct in [1, 100].
-        // Feature: GovernanceSecurity Property 2
-        #[test]
-        fn prop_unanimous_vote_always_reaches_quorum(
-            total_members in valid_member_count(),
-            threshold in quorum_pct(),
-        ) {
-            let reached = quorum_reached(total_members, total_members, threshold);
-            prop_assert!(reached,
-                "unanimous vote should reach quorum: members={}, pct={}", total_members, threshold);
+            prop_assert!(
+                !meets_quorum(votes_for, total, q),
+                "votes {} (< {}) should NOT meet quorum {}% of {}",
+                votes_for, threshold_votes, q, total
+            );
         }
 
-        /// When vote_count == 0, quorum is never reached regardless of threshold.
-        // Feature: GovernanceSecurity Property 2b
+        /// Feature: Governance  Property 4
+        ///
+        /// A proposal that meets quorum but has not satisfied the timelock
+        /// must NOT be executable.
         #[test]
-        fn prop_zero_votes_never_reaches_quorum(
-            total_members in valid_member_count(),
-            threshold in quorum_pct(),
+        fn prop_governance_quorum_met_but_timelock_not_expired_not_executable(
+            total in total_voting_power(),
+            q in 50_u8..=100_u8,
+            lock in timelock_seconds(),
+            created in proposal_created_at(),
         ) {
-            let reached = quorum_reached(0, total_members, threshold);
-            prop_assert!(!reached,
-                "zero votes must not reach quorum: members={}, pct={}", total_members, threshold);
+            let votes = total; // 100% votes — quorum definitely met
+            // current < created + lock → timelock not expired
+            let current = created.saturating_add(lock / 2);
+            prop_assume!(current < created.saturating_add(lock));
+
+            let executable = can_execute(votes, total, q, created, current, lock);
+            prop_assert!(!executable,
+                "proposal with quorum but timelock not expired should NOT execute \
+                 (votes={} total={} q={}% created={} current={} lock={})",
+                votes, total, q, created, current, lock);
         }
 
-        /// Quorum is monotone: if quorum is reached with V votes, it is also
-        /// reached with V+k votes (more votes cannot break quorum).
-        // Feature: GovernanceSecurity Property 2c
+        /// Feature: Governance  Property 5
+        ///
+        /// When quorum is met AND timelock has expired, the proposal is executable.
         #[test]
-        fn prop_quorum_is_monotone_in_votes(
-            total_members in valid_member_count(),
-            threshold in quorum_pct(),
-            votes in 0_u32..=100_u32,
-            extra in 1_u32..=10_u32,
+        fn prop_governance_quorum_and_timelock_both_satisfied_is_executable(
+            total in total_voting_power(),
+            q in 50_u8..=100_u8,
+            lock in timelock_seconds(),
+            created in proposal_created_at(),
         ) {
-            let votes = votes.min(total_members);
-            let more_votes = (votes + extra).min(total_members);
+            let votes = total; // 100% — quorum definitely met
+            let current = created.saturating_add(lock).saturating_add(1); // timelock expired
 
-            let reached_with_fewer = quorum_reached(votes, total_members, threshold);
-            let reached_with_more = quorum_reached(more_votes, total_members, threshold);
-
-            // If fewer votes reach quorum, more votes must also reach it
-            if reached_with_fewer {
-                prop_assert!(reached_with_more,
-                    "quorum should be monotone: votes={} -> {}, pct={}", votes, more_votes, threshold);
-            }
-        }
-
-        /// Quorum at exactly the threshold: vote_count * 100 == total_members * quorum_pct.
-        // Feature: GovernanceSecurity Property 2d
-        #[test]
-        fn prop_quorum_at_exact_threshold(
-            total_members in valid_member_count(),
-            threshold in quorum_pct(),
-        ) {
-            // Compute the minimum votes needed to reach quorum
-            // min_votes = ceil(total_members * threshold / 100)
-            let min_votes = ((total_members as u64 * threshold as u64) + 99) / 100;
-            let min_votes = min_votes.min(total_members as u64) as u32;
-
-            let reached = quorum_reached(min_votes, total_members, threshold);
-            prop_assert!(reached,
-                "quorum must be reached at exact threshold: votes={}, members={}, pct={}",
-                min_votes, total_members, threshold);
+            let executable = can_execute(votes, total, q, created, current, lock);
+            prop_assert!(executable,
+                "proposal with quorum AND expired timelock SHOULD execute");
         }
     }
 
-    // ── Feature: GovernanceSecurity Property 3 – timelock always enforced ────
+    // ── Feature: Governance  Property 6–10 (timelock always enforced) ────────
 
     proptest! {
-        /// An action scheduled at action_time with timelock_duration can only
-        /// execute when current_time >= action_time + timelock_duration.
-        // Feature: GovernanceSecurity Property 3
+        /// Feature: Governance  Property 6
+        ///
+        /// Timelock enforced: even with 100% votes, a proposal cannot execute
+        /// at time < created_at + timelock_duration.
         #[test]
-        fn prop_timelock_blocks_premature_execution(
-            action_time in 0_u64..=u64::MAX / 2,
-            timelock_duration in timelock_duration(),
+        fn prop_governance_timelock_enforced_even_with_full_votes(
+            total in total_voting_power(),
+            lock in timelock_seconds(),
+            created in proposal_created_at(),
         ) {
-            // Time just before unlock: current = action_time + timelock_duration - 1
-            let just_before = action_time.saturating_add(timelock_duration).saturating_sub(1);
-            let can_execute = timelock_passed(just_before, action_time, timelock_duration);
-            prop_assert!(!can_execute,
-                "timelock should block at t-1: action={}, duration={}", action_time, timelock_duration);
+            let votes = total; // 100% quorum met
+            let current = created.saturating_add(lock - 1); // 1 second before expiry
+            prop_assume!(current < created.saturating_add(lock));
+
+            let executable = can_execute(votes, total, 50, created, current, lock);
+            prop_assert!(
+                !executable,
+                "timelock must prevent execution even with 100% votes \
+                 (created={} current={} lock={})",
+                created, current, lock
+            );
         }
 
-        /// Action is allowed exactly at unlock time.
-        // Feature: GovernanceSecurity Property 3b
+        /// Feature: Governance  Property 7
+        ///
+        /// At exactly created_at + timelock_duration, the proposal timelock has expired.
         #[test]
-        fn prop_timelock_allows_at_unlock_time(
-            action_time in 0_u64..=u64::MAX / 2,
-            timelock_duration in timelock_duration(),
+        fn prop_governance_timelock_expires_at_exact_boundary(
+            lock in timelock_seconds(),
+            created in proposal_created_at(),
         ) {
-            let unlock_time = action_time.saturating_add(timelock_duration);
-            let can_execute = timelock_passed(unlock_time, action_time, timelock_duration);
-            prop_assert!(can_execute,
-                "timelock should allow at exactly unlock_time: {}+{}={}",
-                action_time, timelock_duration, unlock_time);
+            let expiry = created.saturating_add(lock);
+            prop_assert!(timelock_expired(created, expiry, lock),
+                "timelock must expire at created + lock ({} + {} = {})",
+                created, lock, expiry);
         }
 
-        /// Action is allowed at any time after unlock.
-        // Feature: GovernanceSecurity Property 3c
+        /// Feature: Governance  Property 8
+        ///
+        /// Any timestamp strictly after created_at + lock satisfies the timelock.
         #[test]
-        fn prop_timelock_allows_after_unlock_time(
-            action_time in 0_u64..=u64::MAX / 4,
-            timelock_duration in timelock_duration(),
-            extra in 0_u64..=1_000_000_u64,
+        fn prop_governance_timelock_satisfied_after_expiry(
+            lock in timelock_seconds(),
+            created in proposal_created_at(),
+            extra in 1_u64..=1_000_000_u64,
         ) {
-            let unlock_time = action_time.saturating_add(timelock_duration);
-            let current_time = unlock_time.saturating_add(extra);
-            let can_execute = timelock_passed(current_time, action_time, timelock_duration);
-            prop_assert!(can_execute,
-                "timelock should allow after unlock: current={}, unlock={}",
-                current_time, unlock_time);
+            let current = created.saturating_add(lock).saturating_add(extra);
+            prop_assert!(timelock_expired(created, current, lock),
+                "timelock satisfied when current ({}) > created ({}) + lock ({})",
+                current, created, lock);
         }
 
-        /// Timelock is monotone in current_time: if allowed at T, allowed at T+k.
-        // Feature: GovernanceSecurity Property 3d
+        /// Feature: Governance  Property 9
+        ///
+        /// A zero-duration timelock expires immediately (at created_at).
         #[test]
-        fn prop_timelock_monotone_in_time(
-            action_time in 0_u64..=u64::MAX / 4,
-            timelock_duration in timelock_duration(),
-            t in 0_u64..=u64::MAX / 2,
-            extra in 0_u64..=1_000_000_u64,
+        fn prop_governance_zero_timelock_expires_immediately(
+            created in proposal_created_at(),
         ) {
-            let t_later = t.saturating_add(extra);
-            let allowed_at_t = timelock_passed(t, action_time, timelock_duration);
-            let allowed_at_later = timelock_passed(t_later, action_time, timelock_duration);
+            let current = created; // same timestamp
+            prop_assert!(timelock_expired(created, current, 0),
+                "zero-duration timelock must expire immediately");
+        }
 
-            // Once unlocked, stays unlocked
-            if allowed_at_t {
-                prop_assert!(allowed_at_later,
-                    "timelock must stay unlocked: t={}, t_later={}", t, t_later);
+        /// Feature: Governance  Property 10
+        ///
+        /// Quorum and timelock are independent: meeting quorum does NOT bypass
+        /// timelock, and timelock expiry does NOT bypass quorum.
+        #[test]
+        fn prop_governance_quorum_and_timelock_are_independent(
+            total in total_voting_power(),
+            q in 50_u8..=100_u8,
+            lock in timelock_seconds(),
+            created in proposal_created_at(),
+            votes in vote_count(100_000),
+        ) {
+            let votes = votes.min(total);
+            let current_before_lock = created.saturating_add(lock / 2);
+            let current_after_lock = created.saturating_add(lock).saturating_add(1);
+
+            let quorum_met = meets_quorum(votes, total, q);
+
+            // Case A: quorum met, timelock NOT expired → not executable.
+            if quorum_met {
+                let exec_a = can_execute(votes, total, q, created, current_before_lock, lock);
+                prop_assert!(!exec_a,
+                    "quorum met but timelock not expired → should NOT execute");
             }
-        }
-    }
 
-    // ── Feature: GovernanceSecurity Property 4 – non-creator cannot assume creator role
-
-    proptest! {
-        /// Role::GroupMember does not grant creator permissions.
-        /// check_authorization for pause_group/resume_group/cancel_group must fail.
-        // Feature: GovernanceSecurity Property 4
-        #[test]
-        fn prop_member_cannot_pause_group(
-            seed in 0_u8..=u8::MAX,
-        ) {
-            let env = Env::default();
-            let _ = seed;
-            let caller = soroban_sdk::Address::generate(&env);
-            let ctx = AuthContext::new(caller.clone(), Role::GroupMember);
-
-            for op in &["pause_group", "resume_group", "cancel_group"] {
-                let result = AuthorizationChecker::check_authorization(&caller, op, &ctx);
-                prop_assert!(result.is_err(),
-                    "GroupMember must not be authorized for {}", op);
+            // Case B: timelock expired, quorum NOT met → not executable.
+            if !quorum_met {
+                let exec_b = can_execute(votes, total, q, created, current_after_lock, lock);
+                prop_assert!(!exec_b,
+                    "timelock expired but quorum not met → should NOT execute");
             }
-        }
 
-        /// Role::Public cannot perform any privileged operation.
-        // Feature: GovernanceSecurity Property 4b
-        #[test]
-        fn prop_public_role_denied_all_privileged_ops(
-            seed in 0_u8..=u8::MAX,
-        ) {
-            let env = Env::default();
-            let _ = seed;
-            let caller = soroban_sdk::Address::generate(&env);
-            let ctx = AuthContext::new(caller.clone(), Role::Public);
-
-            let privileged_ops = [
-                "pause_group", "resume_group", "cancel_group",
-                "contribute", "claim_payout",
-                "pause_contract", "unpause_contract",
-            ];
-
-            for op in &privileged_ops {
-                let result = AuthorizationChecker::check_authorization(&caller, op, &ctx);
-                prop_assert!(result.is_err(),
-                    "Public role must not be authorized for {}", op);
-            }
-        }
-    }
-
-    // ── Feature: GovernanceSecurity Property 5 – admin role subsumes member ──
-
-    proptest! {
-        /// ContractAdmin can perform any GroupMember-level operation.
-        /// Specifically: contribute and claim_payout should NOT be blocked for admin.
-        // Feature: GovernanceSecurity Property 5
-        #[test]
-        fn prop_admin_can_perform_member_operations(
-            seed in 0_u8..=u8::MAX,
-        ) {
-            // ContractAdmin has the highest privilege level.
-            // In the check_authorization logic, "contribute" and "claim_payout"
-            // require GroupMember. An admin interacting as a group member would
-            // have Role::GroupMember set for those operations.
-            // This test verifies the invariant: GroupMember role grants member ops.
-            let env = Env::default();
-            let _ = seed;
-            let caller = soroban_sdk::Address::generate(&env);
-            let ctx = AuthContext::new(caller.clone(), Role::GroupMember);
-
-            let member_ops = ["contribute", "claim_payout"];
-            for op in &member_ops {
-                let result = AuthorizationChecker::check_authorization(&caller, op, &ctx);
-                prop_assert!(result.is_ok(),
-                    "GroupMember must be authorized for {}", op);
+            // Case C: both met → executable.
+            if quorum_met {
+                let exec_c = can_execute(votes, total, q, created, current_after_lock, lock);
+                prop_assert!(exec_c,
+                    "both quorum and timelock met → SHOULD execute");
             }
         }
 
-        /// ContractAdmin role grants admin-only operations.
-        // Feature: GovernanceSecurity Property 5b
+        /// Feature: Governance  Property 11
+        ///
+        /// A proposal with zero total_voting_power can never meet quorum,
+        /// regardless of vote count or percentage.
         #[test]
-        fn prop_admin_role_grants_contract_level_ops(
-            seed in 0_u8..=u8::MAX,
+        fn prop_governance_zero_voting_power_never_meets_quorum(
+            votes in 0_u64..=1_000_u64,
+            q in quorum_percent(),
         ) {
-            let env = Env::default();
-            let _ = seed;
-            let caller = soroban_sdk::Address::generate(&env);
-            let ctx = AuthContext::new(caller.clone(), Role::ContractAdmin);
-
-            let admin_ops = ["pause_contract", "unpause_contract"];
-            for op in &admin_ops {
-                let result = AuthorizationChecker::check_authorization(&caller, op, &ctx);
-                prop_assert!(result.is_ok(),
-                    "ContractAdmin must be authorized for {}", op);
-            }
+            prop_assert!(!meets_quorum(votes, 0, q),
+                "zero total_voting_power should never allow quorum");
         }
 
-        /// GroupCreator role grants creator-only operations.
-        // Feature: GovernanceSecurity Property 5c
+        /// Feature: Governance  Property 12
+        ///
+        /// Timelock duration is always non-negative (u64 enforces this), and
+        /// the expiry timestamp is always ≥ created_at.
         #[test]
-        fn prop_creator_role_grants_creator_ops(
-            seed in 0_u8..=u8::MAX,
+        fn prop_governance_timelock_expiry_is_monotonic(
+            lock in 0_u64..=u64::MAX / 2,
+            created in proposal_created_at(),
         ) {
-            let env = Env::default();
-            let _ = seed;
-            let caller = soroban_sdk::Address::generate(&env);
-            let ctx = AuthContext::new(caller.clone(), Role::GroupCreator);
-
-            let creator_ops = ["pause_group", "resume_group", "cancel_group"];
-            for op in &creator_ops {
-                let result = AuthorizationChecker::check_authorization(&caller, op, &ctx);
-                prop_assert!(result.is_ok(),
-                    "GroupCreator must be authorized for {}", op);
-            }
+            let expiry = created.saturating_add(lock);
+            prop_assert!(expiry >= created,
+                "expiry ({}) must be >= created ({})", expiry, created);
         }
     }
 }

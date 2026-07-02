@@ -1,0 +1,69 @@
+# Contribute flow — navigate to a group and submit a contribution
+appId: com.stellarsave.app
+---
+# Precondition: user is a member of at least one active group
+- launchApp
+
+# Step 1: Dashboard is visible
+- assertVisible:
+    id: "dashboard-screen"
+
+# Step 2: Tap on an active group
+- tapOn:
+    id: "active-group-card-0"
+- assertVisible:
+    id: "group-detail-screen"
+
+# Step 3: Contribution CTA is visible
+- assertVisible:
+    id: "contribute-button"
+- assertVisible:
+    text: "Contribute"
+
+# Step 4: Tap contribute
+- tapOn:
+    id: "contribute-button"
+
+# Step 5: Contribution flow screen
+- assertVisible:
+    id: "contribution-flow-screen"
+- assertVisible:
+    text: "Make Contribution"
+
+# Step 6: Verify pre-filled amount matches group config
+- assertVisible:
+    id: "contribution-amount-display"
+- assertVisible:
+    text: "100 XLM"
+
+# Step 7: Tap submit contribution
+- tapOn:
+    id: "submit-contribution-button"
+
+# Step 8: Transaction confirmation modal
+- assertVisible:
+    id: "transaction-confirm-modal"
+- assertVisible:
+    text: "Confirm Contribution"
+- assertVisible:
+    text: "100 XLM"
+
+# Step 9: Confirm the transaction
+- tapOn:
+    id: "confirm-transaction-button"
+
+# Step 10: Success modal
+- assertVisible:
+    id: "contribution-success-modal"
+- assertVisible:
+    text: "Contribution Successful"
+
+# Step 11: Dismiss success and return to group detail
+- tapOn:
+    id: "close-success-modal-button"
+- assertVisible:
+    id: "group-detail-screen"
+
+# Step 12: Cycle progress should reflect the contribution
+- assertVisible:
+    id: "cycle-progress-bar"

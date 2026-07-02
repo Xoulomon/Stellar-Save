@@ -15,8 +15,10 @@ import {
 import { AppLayout } from '../ui';
 import { UserStats } from '../components/UserStats';
 import { StreakDisplay } from '../components/StreakDisplay';
+import { BadgeGallery } from '../components/BadgeGallery';
 import { Spinner } from '../components/Spinner';
 import { useMemberProfile } from '../hooks/useMemberProfile';
+import { useMemberBadges } from '../hooks/useMemberBadges';
 import { useClipboard } from '../hooks/useClipboard';
 
 function ReputationBadge({ score }: { score: number }) {
@@ -39,6 +41,7 @@ function ReputationBadge({ score }: { score: number }) {
 export default function MemberProfilePage() {
   const { address } = useParams<{ address: string }>();
   const { profile, isLoading, error } = useMemberProfile(address);
+  const { badges, isLoading: badgesLoading, error: badgesError } = useMemberBadges(address);
   const { copy, copied } = useClipboard();
 
   const profileUrl = `${window.location.origin}/members/${address ?? ''}`;
@@ -160,6 +163,16 @@ export default function MemberProfilePage() {
             <StreakDisplay
               currentStreak={profile.currentStreak}
               longestStreak={profile.longestStreak}
+            />
+          </Paper>
+
+          {/* ── Badge Gallery ── */}
+          <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+            <BadgeGallery
+              badges={badges}
+              isLoading={badgesLoading}
+              error={badgesError}
+              walletAddress={address}
             />
           </Paper>
         </Stack>

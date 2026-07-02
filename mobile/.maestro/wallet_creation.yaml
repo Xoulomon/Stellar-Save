@@ -1,0 +1,76 @@
+# Wallet creation flow — create new wallet, backup seed phrase, confirm
+appId: com.stellarsave.app
+---
+# Step 1: Launch app
+- launchApp:
+    clearState: true
+
+# Step 2: Navigate to wallet setup
+- tapOn:
+    id: "get-started-button"
+- assertVisible:
+    id: "wallet-connect-screen"
+
+# Step 3: Tap "Create New Wallet"
+- tapOn:
+    text: "Create New Wallet"
+
+# Step 4: Wallet creation screen
+- assertVisible:
+    id: "create-wallet-screen"
+- assertVisible:
+    text: "Create New Wallet"
+
+# Step 5: Tap Generate Seed Phrase
+- tapOn:
+    id: "generate-seed-phrase-button"
+
+# Step 6: Seed phrase backup screen
+- assertVisible:
+    id: "seed-phrase-screen"
+- assertVisible:
+    text: "Back Up Your Seed Phrase"
+- assertVisible:
+    text: "Never share your seed phrase"
+
+# Step 7: Seed phrase words are displayed (12 words)
+- assertVisible:
+    id: "seed-word-1"
+- assertVisible:
+    id: "seed-word-12"
+
+# Step 8: Check the backup confirmation checkbox
+- tapOn:
+    id: "backup-confirmed-checkbox"
+
+# Step 9: Proceed to confirmation
+- tapOn:
+    id: "i-have-backed-up-button"
+
+# Step 10: Verify seed phrase confirmation screen
+- assertVisible:
+    id: "confirm-seed-screen"
+- assertVisible:
+    text: "Verify Your Seed Phrase"
+
+# Step 11: Enter first seed word to verify
+- tapOn:
+    id: "seed-verify-input-1"
+- inputText:
+    text: "word1"
+
+# Step 12: Submit verification
+- tapOn:
+    id: "verify-seed-button"
+
+# Step 13: Wallet created successfully
+- assertVisible:
+    id: "wallet-created-success"
+- assertVisible:
+    text: "Wallet Created!"
+
+# Step 14: Navigate to dashboard
+- tapOn:
+    id: "go-to-dashboard-button"
+- assertVisible:
+    id: "dashboard-screen"

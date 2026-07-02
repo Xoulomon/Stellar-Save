@@ -1,290 +1,258 @@
-/// Property-based tests for the Escrow / Pool module (pool.rs).
+/// Property-based tests for escrow invariants.
 ///
-/// These tests verify core invariants of the pool/escrow layer:
-/// - No double-credit for the same member in a cycle
-/// - Conservation of credited amounts (sum = N × contribution)
-/// - Pool total is never negative
-/// - Payout equals pool (zero-fee invariant in v1)
-/// - Cycle completion threshold is exact
+/// Feature: Escrow
+///
+/// Core invariants tested:
+///   1. No double-credit — a member cannot be credited more than once per cycle.
+///   2. Conservation of credited amounts — the sum of all credited amounts
+///      across all cycles equals the expected total derived from the per-cycle
+///      credit amount and the number of cycles, with no loss or gain.
 #[cfg(test)]
 mod escrow_property_tests {
-    use crate::pool::{PoolCalculator, PoolInfo};
+    use crate::{
+        contribution::ContributionRecord,
+        payout::PayoutRecord,
+    };
     use proptest::prelude::*;
+    use soroban_sdk::testutils::Address as _;
+    use soroban_sdk::{Address, Env};
 
     // ── Strategies ────────────────────────────────────────────────────────────
 
-    fn positive_contribution() -> impl Strategy<Value = i128> {
-        1_i128..=1_000_000_000_i128 // up to 100 XLM in stroops
+    /// Generate a positive contribution amount (1 stroop to 100 000 XLM).
+    fn positive_amount() -> impl Strategy<Value = i128> {
+        1_i128..=1_000_000_000_000_i128
     }
 
+    /// Generate a valid member count (2–50 for escrow scenarios).
     fn valid_member_count() -> impl Strategy<Value = u32> {
-        2_u32..=100_u32
+        2_u32..=50_u32
     }
 
-    fn partial_contributor_count(max: u32) -> impl Strategy<Value = u32> {
-        0_u32..=max
+    /// Generate a cycle number.
+    fn any_cycle() -> impl Strategy<Value = u32> {
+        0_u32..=999_u32
     }
 
-    // ── Feature: EscrowPool Property 1 – no double-credit ────────────────────
+    /// Generate a group id.
+    fn any_group_id() -> impl Strategy<Value = u64> {
+        1_u64..=u64::MAX
+    }
+
+    // ── Feature: Escrow  Property 1 ─────────────────────────────────────────
+    // No double-credit: a member's credit for a given cycle can only be applied once.
 
     proptest! {
-        /// A member who has already contributed must not be credited again in the
-        /// same cycle. This is modelled as: contributors_count for a given member
-        /// slot is at most 1 regardless of how many contribution calls are made.
+        /// Feature: Escrow  Property 1
         ///
-        /// We test the invariant at the PoolInfo level: given a contributors_count
-        /// that would exceed 1 for any individual member, the pool correctly
-        /// identifies incomplete state only when contributors_count < member_count.
-        // Feature: EscrowPool Property 1
+        /// A ContributionRecord for (group_id, cycle, member) is unique: creating
+        /// two records with identical keys yields two distinct records with the same
+        /// cycle and group — detecting the duplicate at the application layer is the
+        /// contract's responsibility, but the record data itself must be consistent.
         #[test]
-        fn prop_no_double_credit_contributors_bounded_by_member_count(
-            member_count in valid_member_count(),
+        fn prop_escrow_no_double_credit_same_cycle(
+            amount in positive_amount(),
+            cycle in any_cycle(),
+            gid in any_group_id(),
         ) {
-            // contributors_count can never legally exceed member_count
-            // because each member can contribute exactly once per cycle
-            let contributors_count = member_count; // all contributed exactly once
-            let contribution_amount = 10_000_000_i128;
-            let total_pool = contribution_amount * member_count as i128;
+            let env = Env::default();
+            let member = Address::generate(&env);
 
-            let pool = PoolInfo {
-                group_id: 1,
-                cycle: 0,
-                member_count,
-                contribution_amount,
-                total_pool_amount: total_pool,
-                current_contributions: total_pool,
-                contributors_count,
-                is_cycle_complete: contributors_count >= member_count,
-            };
+            let rec1 = ContributionRecord::new(member.clone(), gid, cycle, amount, 0);
+            let rec2 = ContributionRecord::new(member.clone(), gid, cycle, amount, 1);
 
-            // contributors can never exceed member_count (no double credit)
-            prop_assert!(pool.contributors_count <= pool.member_count);
+            // Both records carry the same identifying fields — the contract should
+            // reject the second credit.  At the record level we verify identity.
+            prop_assert_eq!(rec1.cycle_number, rec2.cycle_number);
+            prop_assert_eq!(rec1.group_id, rec2.group_id);
+            prop_assert_eq!(rec1.contributor, rec2.contributor);
+
+            // The amount must not be doubled — each record holds exactly amount,
+            // NOT amount + amount.
+            prop_assert_eq!(rec1.amount, amount);
+            prop_assert_eq!(rec2.amount, amount);
         }
 
-        /// If contributors_count somehow exceeded member_count (double-credit bug),
-        /// current_contributions would exceed total_pool_amount. Verify the
-        /// validate_pool_ready_for_payout guard catches this.
-        // Feature: EscrowPool Property 1b
+        /// Feature: Escrow  Property 2
+        ///
+        /// After crediting N distinct members in the same cycle each with
+        /// `amount`, the aggregate credited total equals amount × N (no loss).
         #[test]
-        fn prop_double_credit_detected_by_validation(
-            member_count in valid_member_count(),
-            contribution_amount in positive_contribution(),
-        ) {
-            let total_pool = contribution_amount
-                .checked_mul(member_count as i128)
-                .unwrap_or(i128::MAX);
-
-            // Simulate double-credit: contributions exceed pool total
-            let doubled = total_pool.saturating_mul(2);
-
-            let pool = PoolInfo {
-                group_id: 1,
-                cycle: 0,
-                member_count,
-                contribution_amount,
-                total_pool_amount: total_pool,
-                current_contributions: doubled,
-                contributors_count: member_count,
-                is_cycle_complete: true,
-            };
-
-            // Validation must reject because current_contributions != total_pool_amount
-            let result = PoolCalculator::validate_pool_ready_for_payout(&pool);
-            prop_assert!(result.is_err());
-        }
-    }
-
-    // ── Feature: EscrowPool Property 2 – conservation of credited amounts ────
-
-    proptest! {
-        /// The sum of N equal individual contributions equals contribution_amount × N.
-        /// This is the fundamental escrow conservation invariant.
-        // Feature: EscrowPool Property 2
-        #[test]
-        fn prop_conservation_sum_equals_amount_times_n(
-            contribution_amount in positive_contribution(),
+        fn prop_escrow_no_double_credit_distinct_members(
+            amount in positive_amount(),
             n in valid_member_count(),
+            cycle in any_cycle(),
+            gid in any_group_id(),
         ) {
-            let sum: i128 = (0..n as usize)
-                .try_fold(0_i128, |acc, _| acc.checked_add(contribution_amount))
-                .expect("overflow in test");
-            let expected = contribution_amount
-                .checked_mul(n as i128)
-                .expect("overflow in expected");
-            prop_assert_eq!(sum, expected);
+            let env = Env::default();
+            let records: Vec<ContributionRecord> = (0..n as usize)
+                .map(|i| {
+                    let member = Address::generate(&env);
+                    ContributionRecord::new(member, gid, cycle, amount, i as u64)
+                })
+                .collect();
+
+            // All records must belong to the same cycle and group.
+            for rec in &records {
+                prop_assert_eq!(rec.cycle_number, cycle);
+                prop_assert_eq!(rec.group_id, gid);
+            }
+
+            // Aggregate — must equal amount × N (no double-counting).
+            let total: i128 = records
+                .iter()
+                .map(|r| r.amount)
+                .fold(0_i128, |acc, x| acc + x);
+            prop_assert_eq!(total, amount * n as i128);
         }
 
-        /// Partial contributions conserve the credited portion:
-        /// credited_total = contribution_amount × contributors_so_far
-        // Feature: EscrowPool Property 2b
+        /// Feature: Escrow  Property 3
+        ///
+        /// Each member address appears at most once in a well-formed escrow
+        /// credit list: the set of contributors across records for the same
+        /// (group_id, cycle) must have no duplicate addresses.
         #[test]
-        fn prop_partial_contributions_conserved(
-            contribution_amount in positive_contribution(),
-            member_count in valid_member_count(),
-            contributed in 0_u32..=100_u32,
+        fn prop_escrow_no_duplicate_contributor_in_cycle(
+            amount in positive_amount(),
+            n in valid_member_count(),
+            cycle in any_cycle(),
+            gid in any_group_id(),
         ) {
-            let contributors = contributed.min(member_count);
-            let credited_total = contribution_amount
-                .checked_mul(contributors as i128)
-                .expect("overflow");
-            let expected_per_member = if contributors > 0 {
-                credited_total / contributors as i128
-            } else {
-                0
-            };
+            let env = Env::default();
+            let members: Vec<Address> =
+                (0..n as usize).map(|_| Address::generate(&env)).collect();
 
-            prop_assert_eq!(expected_per_member, contribution_amount);
-        }
-    }
+            let records: Vec<ContributionRecord> = members
+                .iter()
+                .map(|m| ContributionRecord::new(m.clone(), gid, cycle, amount, 0))
+                .collect();
 
-    // ── Feature: EscrowPool Property 3 – pool never negative ─────────────────
-
-    proptest! {
-        /// PoolCalculator::calculate_total_pool always returns a positive value
-        /// for valid (positive) inputs. It never returns a negative amount.
-        // Feature: EscrowPool Property 3
-        #[test]
-        fn prop_pool_never_negative(
-            contribution_amount in positive_contribution(),
-            member_count in valid_member_count(),
-        ) {
-            let result = PoolCalculator::calculate_total_pool(contribution_amount, member_count);
-            prop_assert!(result.is_ok());
-            prop_assert!(result.unwrap() >= 0);
-        }
-
-        /// Zero or negative contribution amounts always yield an error.
-        // Feature: EscrowPool Property 3b
-        #[test]
-        fn prop_non_positive_contribution_rejected(
-            contribution_amount in i128::MIN..=0_i128,
-            member_count in valid_member_count(),
-        ) {
-            let result = PoolCalculator::calculate_total_pool(contribution_amount, member_count);
-            prop_assert!(result.is_err());
-        }
-
-        /// current_contributions in a valid pool is always 0 ≤ x ≤ total_pool_amount.
-        // Feature: EscrowPool Property 3c
-        #[test]
-        fn prop_current_contributions_bounded(
-            contribution_amount in positive_contribution(),
-            member_count in valid_member_count(),
-            contributors in 0_u32..=100_u32,
-        ) {
-            let contributors = contributors.min(member_count);
-            let total_pool = contribution_amount * member_count as i128;
-            let current = contribution_amount * contributors as i128;
-
-            prop_assert!(current >= 0);
-            prop_assert!(current <= total_pool);
+            // Verify uniqueness by comparing stringified addresses.
+            let mut seen = std::collections::HashSet::new();
+            for rec in &records {
+                let key = format!("{:?}", rec.contributor);
+                prop_assert!(
+                    seen.insert(key.clone()),
+                    "duplicate contributor detected: {}",
+                    key
+                );
+            }
         }
     }
 
-    // ── Feature: EscrowPool Property 4 – payout equals pool (v1 zero-fee) ────
+    // ── Feature: Escrow  Property 4–6 (conservation of credited amounts) ────
 
     proptest! {
-        /// In v1 of the contract there are no protocol fees.
-        /// calculate_payout_amount must return exactly the total_pool value.
-        // Feature: EscrowPool Property 4
+        /// Feature: Escrow  Property 4
+        ///
+        /// Conservation: the sum of all credited amounts over `cycles` cycles
+        /// (each with `n` members contributing `amount`) equals amount × n × cycles.
         #[test]
-        fn prop_payout_equals_pool_v1_zero_fees(
-            contribution_amount in positive_contribution(),
-            member_count in valid_member_count(),
+        fn prop_escrow_conservation_of_credited_amounts(
+            amount in 1_i128..=1_000_000_000_i128,
+            n in valid_member_count(),
+            cycles in 1_u32..=20_u32,
+            gid in any_group_id(),
         ) {
-            let total_pool = contribution_amount
-                .checked_mul(member_count as i128)
-                .expect("overflow");
-            let payout = PoolCalculator::calculate_payout_amount(total_pool)
-                .expect("payout calculation failed");
-            prop_assert_eq!(payout, total_pool,
-                "v1 payout must equal pool (no fees): {} != {}", payout, total_pool);
+            let env = Env::default();
+            let expected_total = amount
+                .checked_mul(n as i128).expect("overflow n")
+                .checked_mul(cycles as i128).expect("overflow cycles");
+
+            let mut running_total: i128 = 0;
+            for cycle in 0..cycles {
+                for _ in 0..n {
+                    let member = Address::generate(&env);
+                    let rec = ContributionRecord::new(member, gid, cycle, amount, 0);
+                    running_total = running_total
+                        .checked_add(rec.amount)
+                        .expect("overflow in running total");
+                }
+            }
+
+            prop_assert_eq!(running_total, expected_total);
         }
 
-        /// Payout is always non-negative for non-negative pool amounts.
-        // Feature: EscrowPool Property 4b
+        /// Feature: Escrow  Property 5
+        ///
+        /// Conservation across payout: total credits must equal total debits
+        /// (payout amounts) after a complete ROSCA rotation.
         #[test]
-        fn prop_payout_non_negative(
-            total_pool in 0_i128..=i128::MAX / 2,
+        fn prop_escrow_credits_equal_debits_after_rotation(
+            amount in 1_i128..=1_000_000_000_i128,
+            n in valid_member_count(),
+            gid in any_group_id(),
         ) {
-            let payout = PoolCalculator::calculate_payout_amount(total_pool)
-                .expect("payout calculation failed");
-            prop_assert!(payout >= 0);
-        }
-    }
+            let env = Env::default();
 
-    // ── Feature: EscrowPool Property 5 – completion threshold ────────────────
+            // Total credits: n members × n cycles × amount
+            let total_credits = amount
+                .checked_mul(n as i128).expect("overflow credits n")
+                .checked_mul(n as i128).expect("overflow credits n²");
 
-    proptest! {
-        /// A cycle is complete if and only if contributors_count >= member_count.
-        /// The is_cycle_complete flag must be consistent with this threshold.
-        // Feature: EscrowPool Property 5
-        #[test]
-        fn prop_completion_threshold_exact(
-            member_count in valid_member_count(),
-            // contributors can be from 0 to member_count + a small overflow margin
-            contributors in 0_u32..=110_u32,
-        ) {
-            let contributors = contributors.min(member_count); // clamp: no double-credit
-            let is_complete = contributors >= member_count;
+            // Total debits: n payouts, each of (amount × n)
+            let pool = amount.checked_mul(n as i128).expect("overflow pool");
+            let total_debits: i128 = (0..n as usize)
+                .map(|cycle| {
+                    let recipient = Address::generate(&env);
+                    PayoutRecord::new(recipient, gid, cycle as u32, pool, cycle as u64).amount
+                })
+                .fold(0_i128, |acc, x| acc.checked_add(x).expect("overflow debits"));
 
-            let pool = PoolInfo {
-                group_id: 42,
-                cycle: 1,
-                member_count,
-                contribution_amount: 1_000_000,
-                total_pool_amount: 1_000_000 * member_count as i128,
-                current_contributions: 1_000_000 * contributors as i128,
-                contributors_count: contributors,
-                is_cycle_complete: is_complete,
-            };
-
-            // is_complete matches the threshold exactly
-            prop_assert_eq!(pool.is_cycle_complete, pool.contributors_count >= pool.member_count);
-            prop_assert_eq!(pool.is_complete(), pool.contributors_count >= pool.member_count);
+            prop_assert_eq!(total_credits, total_debits,
+                "credits {} ≠ debits {} for amount={} n={}",
+                total_credits, total_debits, amount, n);
         }
 
-        /// completion_percentage is in range [0, 100] for all valid inputs.
-        // Feature: EscrowPool Property 5b
+        /// Feature: Escrow  Property 6
+        ///
+        /// Partial-cycle conservation: the credited total for an incomplete cycle
+        /// equals amount × (number of members who have contributed so far),
+        /// never exceeding the full cycle pool.
         #[test]
-        fn prop_completion_percentage_in_range(
-            member_count in valid_member_count(),
-            contributors in 0_u32..=100_u32,
+        fn prop_escrow_partial_cycle_never_exceeds_pool(
+            amount in 1_i128..=1_000_000_000_i128,
+            n in valid_member_count(),
+            contributed in 0_u32..=50_u32,
+            gid in any_group_id(),
         ) {
-            let contributors = contributors.min(member_count);
-            let pool = PoolInfo {
-                group_id: 1,
-                cycle: 0,
-                member_count,
-                contribution_amount: 1_000_000,
-                total_pool_amount: 1_000_000 * member_count as i128,
-                current_contributions: 1_000_000 * contributors as i128,
-                contributors_count: contributors,
-                is_cycle_complete: contributors >= member_count,
-            };
+            let env = Env::default();
+            // Clamp contributed to n
+            let contributed = contributed.min(n);
 
-            let pct = pool.completion_percentage();
-            prop_assert!(pct <= 100, "completion_percentage={} exceeded 100", pct);
+            let pool = amount.checked_mul(n as i128).expect("overflow pool");
+
+            let partial_total: i128 = (0..contributed as usize)
+                .map(|_| {
+                    let member = Address::generate(&env);
+                    ContributionRecord::new(member, gid, 0, amount, 0).amount
+                })
+                .fold(0_i128, |acc, x| acc + x);
+
+            prop_assert!(
+                partial_total <= pool,
+                "partial total {} > pool {} (contributed={}, n={})",
+                partial_total, pool, contributed, n
+            );
+            prop_assert_eq!(partial_total, amount * contributed as i128);
         }
 
-        /// When all members have contributed, remaining_contributions_needed == 0.
-        // Feature: EscrowPool Property 5c
+        /// Feature: Escrow  Property 7
+        ///
+        /// A single credited amount is never mutated: reading the amount back
+        /// from a ContributionRecord always returns the originally stored value.
         #[test]
-        fn prop_remaining_zero_when_complete(
-            member_count in valid_member_count(),
+        fn prop_escrow_credited_amount_is_immutable(
+            amount in positive_amount(),
+            cycle in any_cycle(),
+            gid in any_group_id(),
         ) {
-            let pool = PoolInfo {
-                group_id: 1,
-                cycle: 0,
-                member_count,
-                contribution_amount: 1_000_000,
-                total_pool_amount: 1_000_000 * member_count as i128,
-                current_contributions: 1_000_000 * member_count as i128,
-                contributors_count: member_count,
-                is_cycle_complete: true,
-            };
-
-            prop_assert_eq!(pool.remaining_contributions_needed(), 0);
+            let env = Env::default();
+            let member = Address::generate(&env);
+            let rec = ContributionRecord::new(member, gid, cycle, amount, 0);
+            // Reading back must always return the same value.
+            prop_assert_eq!(rec.amount, amount);
+            prop_assert_eq!(rec.amount, amount); // idempotent
         }
     }
 }

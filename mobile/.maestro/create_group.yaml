@@ -1,0 +1,84 @@
+# Create Group flow — fill out group creation form and confirm
+appId: com.stellarsave.app
+---
+# Precondition: user is authenticated (wallet connected)
+- launchApp
+
+# Step 1: Confirm dashboard is visible
+- assertVisible:
+    id: "dashboard-screen"
+
+# Step 2: Tap create group button
+- tapOn:
+    id: "create-group-fab"
+
+# Step 3: Create group form appears
+- assertVisible:
+    id: "create-group-screen"
+- assertVisible:
+    text: "Create Savings Group"
+
+# Step 4: Enter group name
+- tapOn:
+    id: "group-name-input"
+- clearText
+- inputText:
+    text: "Lagos Ajo Circle"
+
+# Step 5: Set contribution amount
+- tapOn:
+    id: "contribution-amount-input"
+- clearText
+- inputText:
+    text: "100"
+
+# Step 6: Select cycle duration (monthly)
+- tapOn:
+    id: "cycle-duration-picker"
+- tapOn:
+    text: "Monthly"
+
+# Step 7: Set max members
+- tapOn:
+    id: "max-members-input"
+- clearText
+- inputText:
+    text: "10"
+
+# Step 8: Enter group description
+- tapOn:
+    id: "group-description-input"
+- inputText:
+    text: "Community savings circle for Lagos members"
+
+# Step 9: Scroll to review and submit
+- scrollUntilVisible:
+    id: "create-group-submit-button"
+- tapOn:
+    id: "create-group-submit-button"
+
+# Step 10: Confirmation modal appears
+- assertVisible:
+    id: "transaction-confirm-modal"
+- assertVisible:
+    text: "Lagos Ajo Circle"
+- assertVisible:
+    text: "100 XLM"
+
+# Step 11: Confirm transaction
+- tapOn:
+    id: "confirm-transaction-button"
+
+# Step 12: Success state
+- assertVisible:
+    id: "group-created-success"
+- assertVisible:
+    text: "Group Created!"
+
+# Step 13: Navigate to the new group detail page
+- tapOn:
+    id: "view-group-button"
+- assertVisible:
+    id: "group-detail-screen"
+- assertVisible:
+    text: "Lagos Ajo Circle"

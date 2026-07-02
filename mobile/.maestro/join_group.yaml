@@ -1,0 +1,59 @@
+# Join Group flow — browse groups, join, confirm membership
+appId: com.stellarsave.app
+---
+# Precondition: user is authenticated
+- launchApp
+
+# Step 1: Navigate to Browse Groups
+- tapOn:
+    id: "browse-groups-tab"
+- assertVisible:
+    id: "browse-groups-screen"
+
+# Step 2: Search for a group
+- tapOn:
+    id: "group-search-input"
+- inputText:
+    text: "Lagos"
+- assertVisible:
+    text: "Lagos Ajo Circle"
+
+# Step 3: Open the group preview card
+- tapOn:
+    text: "Lagos Ajo Circle"
+- assertVisible:
+    id: "group-preview-screen"
+- assertVisible:
+    text: "Lagos Ajo Circle"
+- assertVisible:
+    text: "100 XLM"
+
+# Step 4: Tap Join Group
+- tapOn:
+    id: "join-group-button"
+
+# Step 5: Join confirmation modal
+- assertVisible:
+    id: "join-confirm-modal"
+- assertVisible:
+    text: "Join Lagos Ajo Circle?"
+
+# Step 6: Confirm joining
+- tapOn:
+    id: "confirm-join-button"
+
+# Step 7: Membership confirmed
+- assertVisible:
+    id: "join-success-message"
+- assertVisible:
+    text: "You've joined"
+
+# Step 8: Navigate to group detail
+- tapOn:
+    id: "view-group-detail-button"
+- assertVisible:
+    id: "group-detail-screen"
+
+# Step 9: Membership badge is shown
+- assertVisible:
+    id: "member-badge"
