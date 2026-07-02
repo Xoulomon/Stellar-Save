@@ -1,21 +1,18 @@
 import { Client } from '@elastic/elasticsearch';
 import { Group, Member, Transaction } from './models';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import { config } from './config';
 
 export class SearchService {
   private client: Client;
   private isConnected: boolean = false;
 
   constructor() {
-    const node = process.env.ELASTICSEARCH_NODE || 'http://localhost:9200';
     this.client = new Client({
-      node,
+      node: config.elasticsearch.node,
       auth: {
-        username: process.env.ELASTICSEARCH_USERNAME || 'elastic',
-        password: process.env.ELASTICSEARCH_PASSWORD || 'changeme'
-      }
+        username: config.elasticsearch.username,
+        password: config.elasticsearch.password,
+      },
     });
   }
 

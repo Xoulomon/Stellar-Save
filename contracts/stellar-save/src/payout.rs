@@ -4,15 +4,27 @@ use crate::storage::StorageKeyBuilder;
 use soroban_sdk::{contracttype, Address, Env};
 
 /// Determines how the payout recipient is selected each cycle.
+///
+/// Stored in [`crate::group::Group::payout_order`] and evaluated at payout
+/// execution time. The default is [`PayoutOrder::Sequential`].
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PayoutOrder {
-    /// Members receive payouts in the fixed order assigned at group start (default).
+    /// Members receive payouts in the fixed order they joined the group (default).
+    ///
+    /// The recipient for cycle `N` is the member at index `N` in the
+    /// `GROUP_MEMBERS_{id}` storage list. This order is immutable once the
+    /// group is activated.
     Sequential,
-    /// Recipient is chosen randomly each cycle using ledger entropy.
+    /// Recipient is chosen pseudo-randomly each cycle using ledger entropy.
+    ///
+    /// Uses the current ledger sequence number as a seed. Not cryptographically
+    /// secure — do not use for high-value groups where manipulation is a concern.
     Random,
     /// Each cycle, the member who submits the highest bid wins the payout.
-    /// Bids are denominated in stroops and must be ≥ 0.
+    ///
+    /// Bids are denominated in stroops and must be ≥ 0. The winning bid amount
+    /// is deducted from the payout and redistributed to the other members.
     Bid,
 }
 
@@ -78,8 +90,10 @@ impl PayoutRecord {
         }
     }
 
-    /// Validates that the payout record is sound.
-    /// Returns true if all constraints are met.
+    /// Validates that the payout record is internally consistent.
+    ///
+    /// Returns `true` when `amount > 0`. A payout record with a zero or
+    /// negative amount indicates data corruption and must never be persisted.
     pub fn validate(&self) -> bool {
         self.amount > 0
     }
@@ -104,13 +118,21 @@ impl PayoutRecord {
     /// Checks if this payout belongs to a specific group.
     ///
     /// # Arguments
-    /// * `group_id` - The group ID to check
+    /// * `group_id` - The group ID to check against `self.group_id`
     pub fn belongs_to_group(&self, group_id: u64) -> bool {
         self.group_id == group_id
     }
 
-    /// Returns the payout amount in XLM (converted from stroops).
-    /// Note: This is a helper for display purposes; actual amount is in stroops.
+    /// Returns the payout amount converted from stroops to whole XLM units.
+    ///
+    /// This is a display helper only — all on-chain arithmetic uses stroops.
+    /// Fractional XLM is truncated (integer division by 10 000 000).
+    ///
+    /// # Example
+    /// ```
+    /// // 50_000_000 stroops → 5 XLM
+    /// assert_eq!(payout.amount_in_xlm(), 5);
+    /// ```
     pub fn amount_in_xlm(&self) -> i128 {
         self.amount / 10_000_000
     }

@@ -32,7 +32,13 @@
      -d '{"type":"full"}'
    ```
 
-5. Acknowledge the alert once resolved:
+5. Validate the restore path:
+   ```bash
+   curl -X POST http://localhost:3001/api/v1/backup/drills/run
+   curl http://localhost:3001/api/v1/backup/drills
+   ```
+
+6. Acknowledge the alert once resolved:
    ```bash
    curl -X POST http://localhost:3001/api/v1/backup/alerts/<alertId>/acknowledge
    ```
@@ -43,6 +49,7 @@ If no successful backup in 24h:
 1. Follow steps above to restore backup functionality.
 2. Verify the last known-good backup is accessible before making any data changes.
 3. Escalate to the data team if the last backup is > 48h old.
+4. Check the latest restore drill output for a checksum or RTO regression.
 
 ## Post-Incident
 

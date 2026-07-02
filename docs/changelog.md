@@ -58,13 +58,28 @@ Pushing a version tag triggers `.github/workflows/changelog.yml`:
 
 1. Generates / updates `CHANGELOG.md`
 2. Extracts the section for the new tag
-3. Creates a GitHub Release with those notes
-4. Commits the updated `CHANGELOG.md` back to `main`
+3. Prepends human-readable highlights from `docs/releases/<tag>.md` (if present)
+4. Creates a GitHub Release combining highlights + generated changelog
+5. Commits the updated `CHANGELOG.md` back to `main`
 
 ```bash
+# Optional: write highlights before tagging
+cp docs/release-notes-template.md docs/releases/v1.1.0.md
+# Edit docs/releases/v1.1.0.md with your highlights
+git add docs/releases/v1.1.0.md && git commit -m "docs: add highlights for v1.1.0"
+
 git tag v1.1.0
 git push origin v1.1.0
 ```
+
+### Human-readable highlights
+
+Before tagging a release, copy `docs/release-notes-template.md` to `docs/releases/vX.Y.Z.md` and fill in:
+
+- **Highlights** — 3–5 bullet points describing user-visible changes in plain language
+- **Upgrade notes** — any migration steps, env-var changes, or breaking-change remediation
+
+If no highlights file exists the release notes fall back to the raw generated changelog.
 
 ## Commit enforcement
 

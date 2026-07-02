@@ -22,7 +22,7 @@ export const Navbar: React.FC = () => {
     <nav className="navbar">
       <div className="navbar-container">
         <div className="navbar-brand">
-          <Link to="/">StellarSave</Link>
+          <Link to="/" aria-label="Stellar Save home">StellarSave</Link>
         </div>
         <div className="navbar-links">
           <Link to="/dashboard" className="nav-link">Dashboard</Link>

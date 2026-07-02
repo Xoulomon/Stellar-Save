@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './prisma_client';
 import crypto from 'crypto';
 import { logger } from './logger';
-
-const prisma = new PrismaClient();
 
 /**
  * User Preference Manager Service

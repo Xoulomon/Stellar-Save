@@ -76,6 +76,15 @@ const TransactionTable: React.FC<Props> = ({
               key={tx.id}
               onClick={() => onRowClick(tx)}
               className="border-b border-gray-800 hover:bg-gray-800 cursor-pointer transition-colors"
+              tabIndex={0}
+              role="button"
+              aria-label={`Transaction ${tx.type} ${tx.amount} ${tx.assetCode} on ${new Date(tx.createdAt).toLocaleDateString()}`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onRowClick(tx);
+                }
+              }}
             >
               <td className="p-6 text-sm text-gray-300">
                 {new Date(tx.createdAt).toLocaleDateString()}

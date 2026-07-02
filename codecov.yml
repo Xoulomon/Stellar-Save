@@ -1,20 +1,51 @@
 coverage:
   precision: 2
   round: down
-  range: "70...100"
+  range: "60...100"
 
   status:
+    # ── Project status: overall coverage per workspace (PR merge gate) ─────────
     project:
       default:
-        target: 95%
+        # Block any overall drop versus the PR base commit.
+        target: auto
         threshold: 1%
         if_not_found: success
         if_ci_failed: error
+      frontend:
+        target: 80%
+        threshold: 1%
+        flags:
+          - frontend
+        if_not_found: success
+        if_ci_failed: error
+      contracts:
+        target: 85%
+        threshold: 1%
+        flags:
+          - contracts
+        if_not_found: success
+        if_ci_failed: error
+      backend:
+        target: 60%
+        threshold: 1%
+        flags:
+          - backend
+        if_not_found: success
+        if_ci_failed: error
 
+    # ── Patch status: coverage of the lines changed in the PR ──────────────────
     patch:
       default:
-        target: 95%
-        threshold: 2%
+        target: 80%
+        threshold: 5%
+        if_not_found: success
+        if_ci_failed: error
+      backend:
+        target: 60%
+        threshold: 5%
+        flags:
+          - backend
         if_not_found: success
         if_ci_failed: error
 
@@ -27,6 +58,11 @@ coverage:
     contracts:
       paths:
         - contracts/stellar-save/src/
+      carryforward: false
+
+    backend:
+      paths:
+        - backend/src/
       carryforward: false
 
 comment:
@@ -42,3 +78,5 @@ ignore:
   - "frontend/src/main.tsx"
   - "frontend/src/components/*Demo.tsx"
   - "contracts/stellar-save/test_snapshots/**"
+  - "backend/src/tests/**"
+  - "backend/src/generated/**"

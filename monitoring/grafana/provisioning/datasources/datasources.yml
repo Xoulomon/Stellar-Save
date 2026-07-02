@@ -1,0 +1,28 @@
+apiVersion: 1
+
+# Auto-provisioned Grafana datasources for the Stellar-Save observability stack.
+
+datasources:
+  # Metrics (existing Prometheus stack).
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+
+  # Distributed traces. Grafana queries Jaeger directly for the
+  # "trace latency by service / endpoint" dashboard and trace lookups by ID.
+  - name: Jaeger
+    uid: jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    editable: true
+    jsonData:
+      # Link a trace's spans back to Prometheus metrics where possible.
+      tracesToMetrics:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true

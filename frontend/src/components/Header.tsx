@@ -34,6 +34,7 @@ import StarIcon from '@mui/icons-material/Star';
 import { ROUTES } from '../routing/constants';
 import { WalletButton } from './WalletButton';
 import { useThemeMode } from '../context/ThemeContext';
+import { OfflineIndicator } from './OfflineIndicator';
 
 const DRAWER_WIDTH = 260;
 
@@ -41,6 +42,8 @@ const NAV_LINKS = [
   { label: 'Groups', href: ROUTES.GROUPS },
   { label: 'Dashboard', href: ROUTES.DASHBOARD },
   { label: 'Profile', href: ROUTES.PROFILE },
+  { label: 'Buy Crypto', href: ROUTES.DEPOSIT },
+  { label: 'Sell Crypto', href: ROUTES.WITHDRAW },
 ];
 
 export default function Header() {
@@ -194,6 +197,9 @@ export default function Header() {
 
           {/* Spacer */}
           <Box sx={{ flex: 1 }} />
+
+          {/* Offline indicator */}
+          <OfflineIndicator />
 
           {/* Theme toggle — desktop */}
           {!isMobile && (

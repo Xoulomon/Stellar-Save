@@ -33,6 +33,10 @@ export { useTheme } from './useTheme';
 export type { ThemeMode } from './useTheme';
 export { usePayouts } from './usePayouts';
 
+export { useRamp, useRampTransactionPoller } from './useRamp';
+export { useKycStatus } from './useKyc';
+export { useBackendAuth } from './useBackendAuth';
+
 export { useEventService } from './useEventService';
 export type { UseEventServiceReturn } from './useEventService';
 
@@ -44,3 +48,5 @@ export type {
   UseActivityFeedReturn,
 } from './useActivityFeed';
 export { useDiscoveryFeed } from './useDiscoveryFeed';
+
+export { useOfflineSyncInit, useSyncStatus, useIsOnline, useQueueAction } from './useOfflineSync';

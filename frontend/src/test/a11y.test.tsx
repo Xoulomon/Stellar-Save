@@ -17,7 +17,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi } from 'vitest';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { MemoryRouter } from 'react-router-dom';
 import { WalletContext } from '../wallet/WalletProvider';
@@ -45,7 +44,7 @@ const idleWallet: WalletContextValue = {
   wallets: [], selectedWalletId: 'freighter', status: 'idle',
   activeAddress: null, network: null, connectedAccounts: [], error: null,
   refreshWallets: vi.fn(), connect: vi.fn(), disconnect: vi.fn(),
-  switchWallet: vi.fn(), switchAccount: vi.fn(),
+  switchWallet: vi.fn(), switchAccount: vi.fn(), signTransaction: vi.fn(),
 };
 
 const connectedWallet: WalletContextValue = {

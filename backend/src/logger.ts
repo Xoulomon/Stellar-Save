@@ -1,12 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 import winston from 'winston';
 import 'winston-daily-rotate-file';
+import { config } from './config';
+import { attachCorrelationId, getCorrelationId, runWithRequestContext } from './lib/requestContext';
 
 // ── Winston logger with JSON formatter and daily log rotation ─────────────────
 
 const jsonFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.SSSZ' }),
   winston.format.errors({ stack: true }),
+  winston.format((info) => {
+    info['@timestamp'] = info.timestamp;
+    const correlationId = getCorrelationId();
+    if (correlationId && info.correlation_id === undefined) {
+      info.correlation_id = correlationId;
+    }
+    return info;
+  })(),
   winston.format.json()
 );
 
@@ -28,7 +38,7 @@ const transports: winston.transport[] = [
 ];
 
 export const winstonLogger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: config.logging.level,
   defaultMeta: { service: 'stellar-save-backend' },
   transports,
 });
@@ -42,16 +52,48 @@ export const logger = {
   error: (msg: string, fields?: Record<string, unknown>) => winstonLogger.error(msg, fields),
 };
 
-// ── Lazy Prisma import to avoid circular deps and missing generated client ────
+let consoleBridgeInstalled = false;
+
+function formatConsoleArg(value: unknown): string {
+  if (value instanceof Error) return value.stack || value.message;
+  if (typeof value === 'string') return value;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function installConsoleBridge(): void {
+  if (consoleBridgeInstalled) return;
+  consoleBridgeInstalled = true;
+
+  const bridge = (level: LogLevel) => (...args: unknown[]) => {
+    const [first, ...rest] = args;
+    const message = [first, ...rest].map(formatConsoleArg).join(' ');
+    winstonLogger.log(level, message);
+  };
+
+  console.log = bridge('info');
+  console.info = bridge('info');
+  console.warn = bridge('warn');
+  console.error = bridge('error');
+  console.debug = bridge('debug');
+}
+
+if (config.nodeEnv !== 'test') {
+  installConsoleBridge();
+}
+
+// ── Lazy prisma import — avoids circular dep (logger ← prisma_client ← logger) ─
 let _prisma: any = null;
-function getPrisma(): any {
+async function getPrisma(): Promise<any> {
   if (!_prisma) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { PrismaClient } = require('./generated/prisma/client');
-      _prisma = new PrismaClient();
+      const { prisma } = await import('./prisma_client');
+      _prisma = prisma;
     } catch {
-      // Prisma client not generated yet (no DB); audit logging silently skipped
+      // prisma_client unavailable; audit logging silently skipped
     }
   }
   return _prisma;
@@ -71,39 +113,49 @@ function extractWallet(req: Request): string | null {
  */
 export function requestLogger(req: Request, res: Response, next: NextFunction): void {
   const start = Date.now();
+  const correlationId = attachCorrelationId(req, res);
 
-  res.on('finish', () => {
-    const durationMs = Date.now() - start;
-    const walletAddress = extractWallet(req);
-
-    logger.info('http request', {
+  runWithRequestContext(
+    {
+      correlationId,
       method: req.method,
       path: req.path,
-      status_code: res.statusCode,
-      duration_ms: durationMs,
-      wallet_address: walletAddress,
-      user_agent: req.headers['user-agent'],
-      ip: req.ip,
-    });
+    },
+    () => {
+      res.on('finish', () => {
+        const durationMs = Date.now() - start;
+        const walletAddress = extractWallet(req);
 
-    // Persist to audit_logs table (non-blocking)
-    try {
-      const prisma = getPrisma();
-      if (prisma) {
-        prisma.auditLog.create({
-          data: {
-            walletAddress,
-            method: req.method,
-            path: req.path,
-            statusCode: res.statusCode,
-            durationMs,
-            ipAddress: req.ip || null,
-            userAgent: req.headers['user-agent'] || null,
-          },
+        logger.info('http request', {
+          correlation_id: correlationId,
+          method: req.method,
+          path: req.path,
+          status_code: res.statusCode,
+          duration_ms: durationMs,
+          wallet_address: walletAddress,
+          user_agent: req.headers['user-agent'],
+          ip: req.ip,
+        });
+
+        // Persist to audit_logs table (non-blocking)
+        getPrisma().then((prisma) => {
+          if (prisma) {
+            prisma.auditLog.create({
+              data: {
+                walletAddress,
+                method: req.method,
+                path: req.path,
+                statusCode: res.statusCode,
+                durationMs,
+                ipAddress: req.ip || null,
+                userAgent: req.headers['user-agent'] || null,
+              },
+            }).catch(() => {/* non-blocking */});
+          }
         }).catch(() => {/* non-blocking */});
-      }
-    } catch {/* non-blocking */}
-  });
+      });
 
-  next();
+      next();
+    }
+  );
 }

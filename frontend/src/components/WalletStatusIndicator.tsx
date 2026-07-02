@@ -13,6 +13,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import WifiIcon from '@mui/icons-material/Wifi';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
+import InfoIcon from '@mui/icons-material/Info';
 import { useWallet } from '../hooks/useWallet';
 import { useClipboard } from '../hooks/useClipboard';
 
@@ -114,9 +115,9 @@ export function WalletStatusIndicator() {
         </Typography>
         {error && (
           <Tooltip title={error}>
-            <Typography variant="caption" color="error" sx={{ cursor: 'help' }}>
-              ?
-            </Typography>
+            <IconButton size="small" aria-label={`Connection error: ${error}`}>
+              <InfoIcon sx={{ fontSize: 16 }} />
+            </IconButton>
           </Tooltip>
         )}
       </Box>

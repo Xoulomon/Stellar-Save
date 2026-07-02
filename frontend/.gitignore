@@ -23,3 +23,23 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Capacitor / Mobile
+ios/App/Pods
+ios/App/Podfile.lock
+ios/App/App.xcworkspace
+ios/App/build
+android/app/build
+android/build
+android/.gradle
+android/local.properties
+android/app/release.keystore
+*.keystore
+*.p12
+*.mobileprovision
+.fastlane/
+
+# Ruby (Fastlane)
+.bundle/
+vendor/bundle/
+.ruby-version

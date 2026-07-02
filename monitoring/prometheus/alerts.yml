@@ -92,6 +92,28 @@ groups:
           description: "Last successful backup was {{ $value | humanizeDuration }} ago."
           runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/backup-failure.md"
 
+      - alert: RestoreDrillFailure
+        expr: |
+          increase(backup_restore_drills_total{app="stellar-save-backend",status="failed"}[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backup restore drill failed"
+          description: "A scheduled restore drill failed in the last hour. Verify checksum integrity and the restore target."
+          runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/backup-failure.md"
+
+      - alert: NoRecentRestoreDrill
+        expr: |
+          time() - stellar_save_last_successful_backup_restore_timestamp > 172800
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No successful restore drill in 48 hours"
+          description: "The latest restore drill is stale. A verified restore path is no longer recent."
+          runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/backup-failure.md"
+
 - name: stellar-save-costs
   interval: 5m
   rules:
@@ -158,3 +180,85 @@ groups:
       annotations:
         summary: "Stellar mainnet fees > 10 XLM in 1 hour"
         description: "{{ $value | humanize }} XLM in fees last hour. Check for runaway transactions."
+
+- name: stellar-save-on-chain
+  interval: 60s
+  rules:
+
+    # ── Large payout ──────────────────────────────────────────────────────────
+    - alert: OnChainLargePayout
+      expr: on_chain_large_payout_xlm > 0
+      for: 0m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Large on-chain payout detected"
+        description: "A payout of {{ $value | humanize }} XLM was detected. Verify manually."
+        runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-large-payout.md"
+
+    # ── Alert fire rate ───────────────────────────────────────────────────────
+    - alert: OnChainErrorSpikeCritical
+      expr: |
+        increase(on_chain_alerts_total{alert_type="ERROR_SPIKE",severity="critical"}[5m]) > 0
+      for: 0m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Critical on-chain error spike"
+        description: "Contract error spike breached critical threshold. Circuit breaker recommended."
+        runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-error-spike.md"
+
+    - alert: OnChainErrorSpikeWarning
+      expr: |
+        increase(on_chain_alerts_total{alert_type="ERROR_SPIKE",severity="warning"}[5m]) > 0
+      for: 0m
+      labels:
+        severity: warning
+      annotations:
+        summary: "On-chain error spike (warning)"
+        description: "Elevated contract error rate detected."
+        runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-error-spike.md"
+
+    - alert: OnChainPayoutSpike
+      expr: |
+        increase(on_chain_alerts_total{alert_type="PAYOUT_SPIKE"}[5m]) > 0
+      for: 0m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Abnormal payout frequency detected"
+        description: "Payout count exceeded spike threshold in the monitoring window."
+        runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-payout-spike.md"
+
+    - alert: OnChainRepeatedReverts
+      expr: |
+        increase(on_chain_alerts_total{alert_type="REPEATED_REVERT"}[5m]) > 0
+      for: 0m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Repeated contract reverts detected"
+        description: "Multiple transaction reverts observed. Check contract state."
+        runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-reverts.md"
+
+    - alert: OnChainAdminAction
+      expr: |
+        increase(on_chain_alerts_total{alert_type="ADMIN_ACTION"}[5m]) > 0
+      for: 0m
+      labels:
+        severity: warning
+      annotations:
+        summary: "On-chain admin action detected"
+        description: "A pause/unpause or admin call was observed on-chain. Verify it was intentional."
+        runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-admin-action.md"
+
+    # ── Monitor liveness ──────────────────────────────────────────────────────
+    - alert: OnChainMonitorStale
+      expr: time() - on_chain_monitor_last_run_timestamp_seconds > 300
+      for: 0m
+      labels:
+        severity: critical
+      annotations:
+        summary: "On-chain monitor has not run in > 5 minutes"
+        description: "The on-chain anomaly monitor appears to be down or hung."
+        runbook: "https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-monitor-stale.md"

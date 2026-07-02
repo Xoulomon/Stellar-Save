@@ -22,11 +22,15 @@ terraform {
 provider "aws" {
   region = var.aws_region
 
+  # Default tags applied to every resource — satisfies the cost-allocation
+  # tagging standard. Module-specific tags (Service) are merged on top.
   default_tags {
     tags = {
-      Project   = "stellar-save"
-      ManagedBy = "terraform"
-      Env       = "staging"
+      Project     = "stellar-save"
+      Environment = "staging"
+      ManagedBy   = "terraform"
+      CostCenter  = "engineering"
+      Owner       = "platform-team"
     }
   }
 }

@@ -104,8 +104,16 @@
   color: rgba(255, 255, 255, 0.87);
 }
 
-.search-bar-suggestion-item:hover {
+.search-bar-suggestion-item:hover,
+.search-bar-suggestion-item--active {
   background-color: rgba(100, 108, 255, 0.15);
+}
+
+@media (prefers-color-scheme: light) {
+  .search-bar-suggestion-item:hover,
+  .search-bar-suggestion-item--active {
+    background-color: rgba(100, 108, 255, 0.08);
+  }
 }
 
 @media (prefers-color-scheme: light) {

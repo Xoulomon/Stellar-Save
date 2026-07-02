@@ -80,6 +80,42 @@
         "expr": "sum(rate(export_jobs_total{app=\"stellar-save-backend\"}[5m])) by (format)",
         "legendFormat": "{{format}}"
       }]
+    },
+    {
+      "id": 8,
+      "title": "Restore Drill Outcomes",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(backup_restore_drills_total{app=\"stellar-save-backend\",status=\"passed\"}[1h]))",
+          "legendFormat": "passed/h"
+        },
+        {
+          "expr": "sum(rate(backup_restore_drills_total{app=\"stellar-save-backend\",status=\"failed\"}[1h]))",
+          "legendFormat": "failed/h"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Restore Drill Duration P95 (s)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum(rate(backup_restore_drill_duration_seconds_bucket{app=\"stellar-save-backend\"}[5m])) by (le, status))",
+        "legendFormat": "p95 {{status}}"
+      }]
+    },
+    {
+      "id": 10,
+      "title": "Last Successful Restore Drill",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 32, "w": 6, "h": 6 },
+      "targets": [{
+        "expr": "stellar_save_last_successful_backup_restore_timestamp{app=\"stellar-save-backend\"}",
+        "legendFormat": "restore ts"
+      }]
     }
   ]
 }

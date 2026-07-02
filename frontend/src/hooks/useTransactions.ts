@@ -1,3 +1,14 @@
+/**
+ * useTransactions.ts
+ *
+ * React hook that returns a paginated list of past transactions for the current user.
+ * Currently uses mock data; will be replaced with real Stellar Horizon API calls.
+ *
+ * Exposes: { transactions, isLoading }
+ * Note: This hook is unrelated to useTransaction — it fetches transaction history,
+ * not the lifecycle state of a single in-flight transaction.
+ */
+
 import { useState, useEffect } from 'react';
 import type { Transaction } from '../types/transaction';
 

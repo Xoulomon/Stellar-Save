@@ -1,0 +1,18 @@
+[package]
+name = "stellar-save-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+stellar-save = { path = ".." }
+soroban-sdk = "23.0.3"
+arbitrary = { version = "1", features = ["derive"] }
+
+# Prevent this library from being built unless it is a fuzz target
+[profile.release]
+debug = true

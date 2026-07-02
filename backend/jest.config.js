@@ -7,6 +7,17 @@ module.exports = {
     '!src/generated/**',
     '!src/tests/**',
   ],
+  coverageDirectory: 'coverage',
+  // Minimum coverage gate for the backend workspace (see docs/test-coverage.md).
+  // Conservative baseline; raise as backend test coverage grows.
+  coverageThreshold: {
+    global: {
+      lines: 60,
+      functions: 60,
+      branches: 50,
+      statements: 60,
+    },
+  },
   setupFilesAfterEnv: [],
   moduleFileExtensions: ['ts', 'js'],
   transform: {

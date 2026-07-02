@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
 import * as crypto from 'crypto';
-import { PrismaClient } from '../generated/prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../prisma_client';
+import { fetchWithCorrelationId } from '../lib/http';
 
 export function createWebhookRouter(): Router {
   const router = Router();
@@ -144,7 +143,7 @@ export async function deliverWebhookEvent(
         .digest('hex');
 
       try {
-        const res = await fetch(webhook.url, {
+        const res = await fetchWithCorrelationId(webhook.url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

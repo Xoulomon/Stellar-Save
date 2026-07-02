@@ -1,0 +1,52 @@
+# OpenTelemetry Collector configuration for Stellar-Save distributed tracing.
+#
+# Pipeline: receive OTLP from every service (backend, indexer, frontend browser)
+# -> batch + sample -> export to Jaeger over OTLP.
+#
+# This is the centralised trace ingestion point. All services set
+# OTEL_EXPORTER_OTLP_ENDPOINT (or VITE_OTEL_EXPORTER_OTLP_ENDPOINT) to this
+# collector (http://localhost:4318 from the host).
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        # CORS so the browser (frontend OTLP/HTTP exporter) can post spans.
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - "http://localhost:*"
+            - "https://*.stellar-save.com"
+
+processors:
+  # Bound memory so a trace spike can't OOM the collector.
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+  batch:
+    timeout: 2s
+    send_batch_size: 512
+  # Second sampling tier (defence-in-depth on top of per-service head sampling).
+  # Honour upstream decisions and keep ~100% of what services already sampled;
+  # lower SAMPLING_PERCENTAGE here to shed more load at the collector if needed.
+  probabilistic_sampler:
+    sampling_percentage: 100
+
+exporters:
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+  # Helpful for local debugging; comment out in production.
+  debug:
+    verbosity: basic
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, probabilistic_sampler, batch]
+      exporters: [otlp/jaeger, debug]

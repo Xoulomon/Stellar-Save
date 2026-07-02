@@ -1,30 +1,28 @@
 import React, { useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, Stack, CircularProgress, Alert } from '@mui/material';
 import { Button } from '../components/Button';
 import { useWallet } from '../hooks/useWallet';
 import { buildRoute } from '../routing/constants';
 
 /**
- * JoinViaInvite — handles /join?groupId=<id> invite links.
- * Reads the groupId query param, prompts the user to join, and
+ * JoinViaInvite — handles /join/:inviteCode invite links.
+ * Reads the inviteCode path param, prompts the user to join, and
  * calls join_group on confirmation.
  */
 const JoinViaInvite: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const { inviteCode } = useParams<{ inviteCode: string }>();
   const navigate = useNavigate();
   const { activeAddress, status: walletStatus } = useWallet();
-
-  const groupId = searchParams.get('groupId');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
 
-  if (!groupId) {
+  if (!inviteCode) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', p: 3 }}>
-        <Alert severity="error">Invalid invite link — no group ID found.</Alert>
+        <Alert severity="error">Invalid invite link — no invite code found.</Alert>
       </Box>
     );
   }
@@ -40,10 +38,14 @@ const JoinViaInvite: React.FC = () => {
 
     try {
       // TODO: replace with real contract call once contractClient is wired up
-      // await joinGroup({ groupId: Number(groupId), member: activeAddress });
+      // The invite code should be decoded to get the actual groupId
+      // await joinGroup({ inviteCode, member: activeAddress });
       await new Promise((resolve) => setTimeout(resolve, 1500));
       setJoined(true);
-      setTimeout(() => navigate(buildRoute.groupDetail(groupId)), 1500);
+      
+      // Navigate to the group detail page
+      // In production, you'd get the groupId from the backend after decoding inviteCode
+      setTimeout(() => navigate('/groups'), 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to join group. Please try again.');
     } finally {
@@ -80,7 +82,10 @@ const JoinViaInvite: React.FC = () => {
           You've been invited!
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Join savings group <strong>{groupId}</strong> on Stellar Save.
+          Join a savings group on Stellar Save.
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+          Invite code: {inviteCode}
         </Typography>
       </Stack>
 
@@ -88,7 +93,7 @@ const JoinViaInvite: React.FC = () => {
 
       {joined ? (
         <Alert severity="success" sx={{ width: '100%', maxWidth: 400 }}>
-          Joined successfully! Redirecting to group…
+          Joined successfully! Redirecting to your groups…
         </Alert>
       ) : (
         <Stack direction="row" spacing={2}>

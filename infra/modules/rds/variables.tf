@@ -72,3 +72,19 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "rotation_days" {
+  description = "Number of days between automatic credential rotations"
+  type        = number
+  default     = 30
+  validation {
+    condition     = var.rotation_days >= 1 && var.rotation_days <= 365
+    error_message = "rotation_days must be between 1 and 365."
+  }
+}
+
+variable "aws_region" {
+  description = "AWS region for Secrets Manager endpoint"
+  type        = string
+  default     = "us-east-1"
+}

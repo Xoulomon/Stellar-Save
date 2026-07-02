@@ -1,0 +1,70 @@
+# Fastfile for iOS builds
+default_platform(:ios)
+
+platform :ios do
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    # Ensure we're on the latest code
+    ensure_git_status_clean
+    
+    # Increment build number
+    increment_build_number(
+      xcodeproj: "App/App.xcodeproj"
+    )
+    
+    # Get provisioning profiles
+    match(
+      type: "appstore",
+      readonly: true
+    )
+    
+    # Build the app
+    build_app(
+      workspace: "App/App.xcworkspace",
+      scheme: "App",
+      export_method: "app-store",
+      export_options: {
+        provisioningProfiles: {
+          "com.stellarsave.app" => "match AppStore com.stellarsave.app"
+        }
+      }
+    )
+    
+    # Upload to TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      distribute_external: false,
+      notify_external_testers: false
+    )
+    
+    # Commit version bump
+    commit_version_bump(
+      message: "chore: bump iOS build number",
+      xcodeproj: "App/App.xcodeproj"
+    )
+    
+    # Tag the build
+    add_git_tag(
+      grouping: "ios",
+      prefix: "ios/v",
+      build_number: get_build_number(xcodeproj: "App/App.xcodeproj")
+    )
+  end
+
+  desc "Run tests"
+  lane :test do
+    run_tests(
+      workspace: "App/App.xcworkspace",
+      scheme: "App",
+      devices: ["iPhone 15 Pro"]
+    )
+  end
+
+  desc "Setup code signing with match"
+  lane :setup_signing do
+    match(
+      type: "appstore",
+      readonly: false
+    )
+  end
+end

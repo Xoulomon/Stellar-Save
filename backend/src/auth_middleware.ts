@@ -1,9 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyJwt } from './auth_service';
+import { config } from './config';
 
 // ── Admin auth (existing) ─────────────────────────────────────────────────────
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET || 'super-secret-admin-key';
+const ADMIN_SECRET = config.admin.secret;
 
 export interface AuthenticatedRequest extends Request {
   adminId?: string;

@@ -20,6 +20,7 @@ import {
 import { Button } from './Button';
 import { formatAddress } from '../utils/formatAddress';
 import { formatAmount } from '../utils/formatAmount';
+import { getExplorerTxUrl } from '../utils/explorerUrl';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -193,24 +194,26 @@ function ReviewStep({ tx, onEdit, onNext }: ReviewStepProps) {
       {/* Addresses */}
       {(tx.from || tx.to) && (
         <Box>
-          <Box
-            component="button"
-            onClick={() => setShowAdvanced((v) => !v)}
-            sx={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'text.secondary', fontSize: '0.8rem', display: 'flex',
-              alignItems: 'center', gap: 0.5, p: 0, mb: 1,
-              '&:hover': { color: 'primary.main' },
-            }}
-            aria-expanded={showAdvanced}
-          >
+      <Box
+        component="button"
+        onClick={() => setShowAdvanced((v) => !v)}
+        sx={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'text.secondary', fontSize: '0.8rem', display: 'flex',
+          alignItems: 'center', gap: 0.5, p: 0, mb: 1,
+          '&:hover': { color: 'primary.main' },
+        }}
+        aria-expanded={showAdvanced}
+        aria-controls="tx-advanced-details"
+        aria-label={showAdvanced ? 'Hide transaction details' : 'Show transaction details'}
+      >
             <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"
               style={{ transform: showAdvanced ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
             {showAdvanced ? 'Hide' : 'Show'} transaction details
           </Box>
-          <Collapse in={showAdvanced}>
+          <Collapse in={showAdvanced} id="tx-advanced-details">
             <Box sx={{ bgcolor: 'action.hover', borderRadius: 2, p: 2 }}>
               <Stack spacing={1}>
                 {tx.from && <DetailRow label="From" value={formatAddress(tx.from, { prefixChars: 8, suffixChars: 6 })} mono />}
@@ -342,7 +345,7 @@ function SuccessStep({ txHash, tx, onClose }: SuccessStepProps) {
 
       <Box
         component="a"
-        href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
+        href={getExplorerTxUrl(txHash)}
         target="_blank"
         rel="noopener noreferrer"
         sx={{ color: 'primary.main', fontSize: '0.875rem', '&:hover': { textDecoration: 'underline' } }}

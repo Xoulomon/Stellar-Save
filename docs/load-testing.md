@@ -89,6 +89,39 @@ The workflow (`.github/workflows/load-testing.yml`) runs automatically on every 
 
 k6 JSON summaries are uploaded as workflow artifacts (`k6-results-*`) and retained for 7 days.
 
+### Keeper / relayer
+
+| Metric | Threshold | Notes |
+|---|---|---|
+| `keeper_payout_trigger_duration` p95 | < 800 ms | Single payout trigger |
+| `keeper_payout_trigger_duration` p99 | < 2 000 ms | |
+| `keeper_batch_payout_duration` p95 | < 1 500 ms | Batch payout call |
+| `keeper_error_rate` | < 1% (load), < 5% (stress) | |
+| `keeper_payout_ops` | > 50 total | Throughput floor |
+
+### Event streaming (WebSocket / SSE)
+
+| Metric | Threshold | Notes |
+|---|---|---|
+| `sse_first_event_latency_ms` p95 | < 500 ms | SSE stream open + first event |
+| `ws_message_latency_ms` p95 | < 300 ms | WebSocket message round-trip |
+| `stream_connection_setup_ms` p95 | < 200 ms | Connection handshake |
+| `stream_error_rate` | < 1% (load), < 5% (stress) | |
+| `stream_events_received` | > 10 total | Events actually delivered |
+
+### Breaking points (stress findings)
+
+Run `k6 run --env SCENARIO=stress tests/load/keeper.test.js` and
+`k6 run --env SCENARIO=stress tests/load/event-streaming.test.js` to find
+where each service saturates. Document the VU count and dominant error type in
+this table after each stress run:
+
+| Service | Saturation VU count | Dominant failure | Last tested |
+|---|---|---|---|
+| Keeper / relayer | TBD | TBD | - |
+| SSE gateway | TBD | TBD | - |
+| WebSocket gateway | TBD | TBD | - |
+
 ## Adding new tests
 
 1. Create `tests/load/my-feature.test.js`

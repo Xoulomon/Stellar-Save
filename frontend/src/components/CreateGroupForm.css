@@ -220,3 +220,70 @@
     border-color: #e5e7eb;
   }
 }
+
+/* ── Insurance step (Issue #1012) ─────────────────────────────────────────── */
+
+.form-step-description {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0 0 1.5rem;
+  line-height: 1.6;
+}
+
+.insurance-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border: 1px solid #333;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  gap: 1rem;
+}
+
+.insurance-toggle-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.insurance-toggle {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: #646cff;
+  cursor: pointer;
+}
+
+.insurance-cost-preview {
+  margin-top: 1rem;
+  padding: 0.875rem 1rem;
+  background-color: rgba(100, 108, 255, 0.08);
+  border: 1px solid rgba(100, 108, 255, 0.25);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
+}
+
+.insurance-cost-preview strong {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+@media (prefers-color-scheme: light) {
+  .form-step-description {
+    color: rgba(0, 0, 0, 0.55);
+  }
+  .insurance-toggle-label {
+    color: rgba(0, 0, 0, 0.87);
+  }
+  .insurance-toggle-row {
+    border-color: #e5e7eb;
+  }
+  .insurance-cost-preview {
+    color: rgba(0, 0, 0, 0.65);
+  }
+  .insurance-cost-preview strong {
+    color: rgba(0, 0, 0, 0.87);
+  }
+}

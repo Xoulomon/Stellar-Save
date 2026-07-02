@@ -5,8 +5,81 @@ on:
     # Run daily at 08:00 UTC
     - cron: '0 8 * * *'
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'infra/**'
 
 jobs:
+  tag-compliance:
+    name: Terraform Tag Compliance
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.7"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+        continue-on-error: true  # allow offline/dry-run without real credentials
+
+      - name: Generate plan JSON — staging
+        working-directory: infra/envs/staging
+        run: |
+          terraform init -input=false -reconfigure \
+            -backend-config="bucket=stellar-save-terraform-state" \
+            -backend-config="key=staging/terraform.tfstate" \
+            -backend-config="region=us-east-1" 2>/dev/null || \
+          terraform init -input=false -backend=false 2>/dev/null || true
+          terraform plan -input=false -out=plan.tfplan \
+            -var="monthly_budget_usd=100" \
+            -var='budget_alert_emails=[]' 2>/dev/null || true
+          terraform show -json plan.tfplan > ../../../staging-plan.json 2>/dev/null || echo '{}' > ../../../staging-plan.json
+          rm -f plan.tfplan
+        continue-on-error: true
+
+      - name: Check tags — staging
+        run: |
+          PLAN_JSON=staging-plan.json bash scripts/check-tags.sh || {
+            echo "::error::Staging plan has resources missing required cost-allocation tags. See docs/tagging-standard.md"
+            exit 1
+          }
+
+      - name: Generate plan JSON — production
+        working-directory: infra/envs/production
+        run: |
+          terraform init -input=false -backend=false 2>/dev/null || true
+          terraform plan -input=false -out=plan.tfplan \
+            -var="monthly_budget_usd=500" \
+            -var='budget_alert_emails=[]' \
+            -var="acm_certificate_arn=arn:aws:acm:us-east-1:000000000000:certificate/placeholder" \
+            -var="listener_arn=arn:aws:elasticloadbalancing:us-east-1:000000000000:listener/placeholder" \
+            2>/dev/null || true
+          terraform show -json plan.tfplan > ../../../production-plan.json 2>/dev/null || echo '{}' > ../../../production-plan.json
+          rm -f plan.tfplan
+        continue-on-error: true
+
+      - name: Check tags — production
+        run: |
+          PLAN_JSON=production-plan.json bash scripts/check-tags.sh || {
+            echo "::error::Production plan has resources missing required cost-allocation tags. See docs/tagging-standard.md"
+            exit 1
+          }
+
+      - name: Cleanup plan files
+        if: always()
+        run: rm -f staging-plan.json production-plan.json
+
   cost-report:
     name: Generate Cost Report
     runs-on: ubuntu-latest

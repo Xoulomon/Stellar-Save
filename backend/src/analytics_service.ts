@@ -1,6 +1,31 @@
 import * as redis from './redis';
 //import type { PrismaClient } from '@prisma/client';
 
+export interface GroupCycleStats {
+  cycleNumber: number;
+  cycleDate: Date;
+  memberCount: number;
+  totalContributions: number;
+  totalContributionAmount: number;
+  totalPayoutsDistributed: number;
+  successRate: number;
+  averageContributionSize: number;
+  newMembersCount: number;
+  churnCount: number;
+}
+
+export interface SorobanSyncOptions {
+  contractId?: string;
+  lookbackHours?: number;
+  limit?: number;
+}
+
+export interface SorobanSyncResult {
+  scanned: number;
+  indexed: number;
+  skipped: number;
+}
+
 export interface AnalyticsOptions {
   startDate?: Date;
   endDate?: Date;
@@ -47,6 +72,7 @@ export interface GroupStats {
   averageContributionSize: number;
   newMembersCount: number;
   churnCount: number;
+  cycleStats?: GroupCycleStats[];
 }
 
 /**
@@ -204,6 +230,8 @@ export class AnalyticsService {
 
       if (!metrics) return null;
 
+      const cycleStats = await this.getGroupCycleStats(groupId);
+
       const stats: GroupStats = {
         groupId,
         memberCount: metrics.memberCount,
@@ -214,6 +242,7 @@ export class AnalyticsService {
         averageContributionSize: Number(metrics.averageContributionSize),
         newMembersCount: metrics.newMembersCount,
         churnCount: metrics.churnCount,
+        cycleStats,
       };
 
       // Cache the result
@@ -221,6 +250,46 @@ export class AnalyticsService {
       return stats;
     } catch (error) {
       console.error('Error fetching group stats:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get cycle-by-cycle stats for a group.
+   */
+  async getGroupCycleStats(groupId: string, options?: AnalyticsOptions): Promise<GroupCycleStats[]> {
+    try {
+      const metrics = await this.prisma.groupMetrics.findMany({
+        where: {
+          groupId,
+          ...(options?.startDate || options?.endDate
+            ? {
+                date: {
+                  gte: options?.startDate,
+                  lte: options?.endDate,
+                },
+              }
+            : {}),
+        },
+        orderBy: { date: 'asc' },
+        take: options?.limit,
+        skip: options?.offset,
+      });
+
+      return metrics.map((metric: any, index: number) => ({
+        cycleNumber: index + 1,
+        cycleDate: metric.date,
+        memberCount: metric.memberCount,
+        totalContributions: metric.totalContributions,
+        totalContributionAmount: Number(metric.totalContributionAmount),
+        totalPayoutsDistributed: Number(metric.totalPayoutsDistributed),
+        successRate: Number(metric.successRate),
+        averageContributionSize: Number(metric.averageContributionSize),
+        newMembersCount: metric.newMembersCount,
+        churnCount: metric.churnCount,
+      }));
+    } catch (error) {
+      console.error('Error fetching group cycle stats:', error);
       throw error;
     }
   }
@@ -355,6 +424,111 @@ export class AnalyticsService {
       console.error('Error recording analytics event:', error);
       // Don't throw - analytics tracking should never break the app
     }
+  }
+
+  /**
+   * Index raw Soroban contract events into AnalyticsEvent rows.
+   *
+   * This keeps analytics aggregation in sync when the contract indexer
+   * discovers ContributionEvent and PayoutEvent data.
+   */
+  async syncSorobanEvents(options: SorobanSyncOptions = {}): Promise<SorobanSyncResult> {
+    const lookbackHours = options.lookbackHours ?? 24;
+    const since = new Date(Date.now() - lookbackHours * 60 * 60 * 1000);
+
+    const events = await this.prisma.contractEvent.findMany({
+      where: {
+        ...(options.contractId ? { contractId: options.contractId } : {}),
+        timestamp: { gte: since },
+      },
+      orderBy: { timestamp: 'asc' },
+      take: options.limit,
+    });
+
+    let indexed = 0;
+    let skipped = 0;
+
+    for (const event of events) {
+      const normalized = this.normalizeSorobanEvent(event);
+
+      if (!normalized) {
+        skipped++;
+        continue;
+      }
+
+      const existing = await this.prisma.analyticsEvent.findFirst({
+        where: { eventName: normalized.eventName },
+      });
+
+      if (existing) {
+        skipped++;
+        continue;
+      }
+
+      await this.prisma.analyticsEvent.create({
+        data: normalized,
+      });
+
+      indexed++;
+    }
+
+    return { scanned: events.length, indexed, skipped };
+  }
+
+  /**
+   * Re-sync the latest Soroban events and refresh daily analytics.
+   */
+  async resyncSorobanAnalytics(options: SorobanSyncOptions = {}): Promise<SorobanSyncResult> {
+    const syncResult = await this.syncSorobanEvents(options);
+
+    const aggregator = new (await import('./analytics_aggregator')).AnalyticsAggregator(this.prisma);
+    await aggregator.runAggregation();
+
+    return syncResult;
+  }
+
+  private normalizeSorobanEvent(event: any):
+    | {
+        eventType: string;
+        eventName: string;
+        userId?: string;
+        groupId?: string;
+        eventData?: Record<string, any>;
+        sessionId?: string;
+      }
+    | null {
+    const rawType = String(event.eventType || '').toLowerCase();
+    const rawData = (event.data as Record<string, any>) || {};
+    const topicString = JSON.stringify(event.topics || []).toLowerCase();
+    const payloadString = JSON.stringify(rawData).toLowerCase();
+    const isContribution = rawType.includes('contribution') || topicString.includes('contribution') || payloadString.includes('contribution');
+    const isPayout = rawType.includes('payout') || topicString.includes('payout') || payloadString.includes('payout');
+
+    if (!isContribution && !isPayout) {
+      return null;
+    }
+
+    const amount = Number(rawData.amount ?? rawData.contribution_amount ?? rawData.payout_amount ?? 0);
+    const userId = rawData.userId ?? rawData.memberId ?? rawData.member_address ?? event.txHash;
+    const groupId = rawData.groupId ?? rawData.group_id ?? event.contractId;
+
+    return {
+      eventType: 'transaction',
+      eventName: `soroban_${isContribution ? 'contribution' : 'payout'}_${event.id}`,
+      userId,
+      groupId,
+      sessionId: rawData.sessionId ?? undefined,
+      eventData: {
+        type: isContribution ? 'contribution' : 'payout',
+        amount,
+        ledgerSeq: event.ledgerSeq,
+        txHash: event.txHash,
+        contractEventId: event.id,
+        contractId: event.contractId,
+        rawEventType: event.eventType,
+        ...rawData,
+      },
+    };
   }
 
   /**

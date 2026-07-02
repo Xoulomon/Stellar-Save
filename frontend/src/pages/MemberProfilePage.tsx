@@ -16,10 +16,7 @@ import { AppLayout } from '../ui';
 import { UserStats } from '../components/UserStats';
 import { StreakDisplay } from '../components/StreakDisplay';
 import { Spinner } from '../components/Spinner';
-import { BadgeGallery } from '../components/BadgeGallery';
 import { useMemberProfile } from '../hooks/useMemberProfile';
-import { useMemberBadges } from '../hooks/useMemberBadges';
-import type { MemberBadge } from '../hooks/useMemberBadges';
 import { useClipboard } from '../hooks/useClipboard';
 
 function ReputationBadge({ score }: { score: number }) {
@@ -42,17 +39,11 @@ function ReputationBadge({ score }: { score: number }) {
 export default function MemberProfilePage() {
   const { address } = useParams<{ address: string }>();
   const { profile, isLoading, error } = useMemberProfile(address);
-  const { badges, isLoading: badgesLoading, error: badgesError } = useMemberBadges(address);
   const { copy, copied } = useClipboard();
 
   const profileUrl = `${window.location.origin}/members/${address ?? ''}`;
 
   const handleShare = () => copy(profileUrl);
-
-  const handleShareBadge = (badge: MemberBadge) => {
-    const badgeUrl = `${profileUrl}#badge-${badge.type}`;
-    copy(badgeUrl);
-  };
 
   const initials = profile
     ? profile.displayName.slice(0, 2).toUpperCase()
@@ -170,34 +161,6 @@ export default function MemberProfilePage() {
               currentStreak={profile.currentStreak}
               longestStreak={profile.longestStreak}
             />
-          </Paper>
-
-          {/* ── Soulbound Badges ── */}
-          <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-              <Typography variant="subtitle2" fontWeight="bold">
-                Soulbound Badges
-              </Typography>
-              {badges.length > 0 && (
-                <Typography variant="caption" color="text.secondary">
-                  {badges.length} badge{badges.length !== 1 ? 's' : ''} earned
-                </Typography>
-              )}
-            </Stack>
-            <Divider sx={{ mb: 2 }} />
-            {badgesLoading && (
-              <Box sx={{ py: 4, textAlign: 'center' }}>
-                <Spinner size="sm" />
-              </Box>
-            )}
-            {badgesError && (
-              <Alert severity="error" sx={{ mb: 1 }}>
-                {badgesError}
-              </Alert>
-            )}
-            {!badgesLoading && !badgesError && (
-              <BadgeGallery badges={badges} onShare={handleShareBadge} />
-            )}
           </Paper>
         </Stack>
       )}

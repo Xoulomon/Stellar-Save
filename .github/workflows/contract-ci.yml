@@ -38,6 +38,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
+
+      - name: Audit contract dependencies
+        run: cargo audit --file Cargo.lock
+
       - name: Build contracts
         run: cargo build --workspace --target wasm32-unknown-unknown --release
 
@@ -46,3 +52,32 @@ jobs:
 
       - name: Clippy (deny warnings)
         run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Check contract WASM size
+        id: size_check
+        run: |
+          WASM=target/wasm32-unknown-unknown/release/stellar_save.wasm
+          SIZE=$(wc -c < "$WASM")
+          LIMIT=$((60 * 1024))
+          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
+          echo "Contract size: $SIZE bytes (limit: $LIMIT bytes)"
+          if [ "$SIZE" -gt "$LIMIT" ]; then
+            echo "ERROR: Contract size $SIZE bytes exceeds 60KB limit ($LIMIT bytes)"
+            exit 1
+          fi
+
+      - name: Post contract size as PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const size = ${{ steps.size_check.outputs.size }};
+            const limit = 60 * 1024;
+            const pct = ((size / limit) * 100).toFixed(1);
+            const status = size <= limit ? '✅ Within limit' : '❌ Exceeds limit';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Contract Size Report\n| | |\n|---|---|\n| **Size** | ${size} bytes |\n| **Limit** | ${limit} bytes (60 KB) |\n| **Usage** | ${pct}% |\n| **Status** | ${status} |`
+            });

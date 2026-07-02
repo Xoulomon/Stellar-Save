@@ -3,29 +3,46 @@ import { Box, Typography, Button, Stack, Paper, Dialog, DialogTitle, DialogConte
 import AddIcon from '@mui/icons-material/Add';
 import PaymentIcon from '@mui/icons-material/Payment';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '../Toast/useToast';
+import { ROUTES } from '../../routing/constants';
 
-type ActionId = 'join' | 'contribute' | 'withdraw';
+type ActionId = 'join' | 'contribute' | 'deposit' | 'withdraw';
 
 const ACTIONS = [
   { id: 'join' as ActionId, label: 'Join New Group', icon: <AddIcon />, color: 'primary', dialogTitle: 'Join a Group', placeholder: 'Group ID or invite code' },
   { id: 'contribute' as ActionId, label: 'Make Contribution', icon: <PaymentIcon />, color: 'secondary', dialogTitle: 'Make a Contribution', placeholder: 'Amount in XLM' },
-  { id: 'withdraw' as ActionId, label: 'Withdraw Funds', icon: <AccountBalanceIcon />, color: 'warning', dialogTitle: 'Withdraw Funds', placeholder: 'Amount in XLM' },
+  { id: 'deposit' as ActionId, label: 'Buy Crypto', icon: <AccountBalanceIcon />, color: 'success', dialogTitle: 'Buy Crypto', placeholder: 'Amount in USD' },
+  { id: 'withdraw' as ActionId, label: 'Sell Crypto', icon: <AccountBalanceIcon />, color: 'warning', dialogTitle: 'Sell Crypto', placeholder: 'Amount in USD' },
 ];
 
 const SUCCESS_MSG: Record<ActionId, string> = {
   join: 'Group join request submitted!',
   contribute: 'Contribution submitted successfully!',
-  withdraw: 'Withdrawal request submitted!',
+  deposit: 'Redirecting to buy crypto...',
+  withdraw: 'Redirecting to sell crypto...',
 };
 
 export const QuickActionSidebar: React.FC = () => {
   const { addToast } = useToast();
+  const navigate = useNavigate();
   const [activeAction, setActiveAction] = useState<ActionId | null>(null);
   const [value, setValue] = useState('');
 
   const handleConfirm = () => {
     if (!activeAction) return;
+    if (activeAction === 'deposit') {
+      navigate(ROUTES.DEPOSIT);
+      setActiveAction(null);
+      setValue('');
+      return;
+    }
+    if (activeAction === 'withdraw') {
+      navigate(ROUTES.WITHDRAW);
+      setActiveAction(null);
+      setValue('');
+      return;
+    }
     addToast({ message: SUCCESS_MSG[activeAction], type: 'success', duration: 4000 });
     setActiveAction(null);
     setValue('');

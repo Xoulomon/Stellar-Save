@@ -26,10 +26,18 @@ export default defineConfig({
     timeout: 120_000,
   },
   projects: [
-    { name: 'chromium-desktop', use: { ...devices['Desktop Chrome'] } },
-    {
-      name: 'chromium-mobile',
-      use: { ...devices['Pixel 5'] },
-    },
+    // Desktop baseline
+    { name: 'desktop-1280', use: { ...devices['Desktop Chrome'] } },
+
+    // Mobile — Android
+    { name: 'mobile-pixel5', use: { ...devices['Pixel 5'] } },
+    { name: 'mobile-pixel7', use: { ...devices['Pixel 7'] } },
+
+    // Mobile — iOS
+    { name: 'mobile-iphone14', use: { ...devices['iPhone 14'] } },
+    { name: 'mobile-iphone14-pro-max', use: { ...devices['iPhone 14 Pro Max'] } },
+
+    // Tablet
+    { name: 'tablet-ipad-pro', use: { ...devices['iPad Pro 11'] } },
   ],
 });

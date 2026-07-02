@@ -22,6 +22,26 @@ terraform {
 provider "aws" {
   region = var.aws_region
 
+  # Default tags applied to every resource — satisfies the cost-allocation
+  # tagging standard. Module-specific tags (Service) are merged on top.
+  default_tags {
+    tags = {
+      Project     = "stellar-save"
+      Environment = "production"
+      ManagedBy   = "terraform"
+      CostCenter  = "engineering"
+      Owner       = "platform-team"
+    }
+  }
+}
+
+# Secondary region provider for cross-region read replica and DR resources.
+# Defaults to the same value as the primary region when multi-region is disabled,
+# so plans remain valid for single-region deploys.
+provider "aws" {
+  alias  = "secondary"
+  region = var.secondary_aws_region
+
   default_tags {
     tags = {
       Project   = "stellar-save"

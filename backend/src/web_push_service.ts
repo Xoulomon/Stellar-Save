@@ -1,6 +1,7 @@
 import webpush from 'web-push';
 import { PrismaClient } from './generated/prisma/client';
 import { logger } from './logger';
+import { config } from './config';
 
 export interface WebPushSubscriptionInput {
   endpoint: string;
@@ -24,9 +25,9 @@ export class WebPushService {
   constructor() {
     this.prisma = new (PrismaClient as any)();
 
-    const publicKey = process.env.VAPID_PUBLIC_KEY;
-    const privateKey = process.env.VAPID_PRIVATE_KEY;
-    const subject = process.env.VAPID_SUBJECT || 'mailto:noreply@stellar-save.com';
+    const publicKey = config.vapid.publicKey;
+    const privateKey = config.vapid.privateKey;
+    const subject = config.vapid.subject;
 
     if (!publicKey || !privateKey) {
       logger.warn('VAPID keys not configured — web push disabled. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY.');
@@ -40,7 +41,7 @@ export class WebPushService {
   }
 
   getVapidPublicKey(): string {
-    return process.env.VAPID_PUBLIC_KEY || '';
+    return config.vapid.publicKey;
   }
 
   isEnabled(): boolean {

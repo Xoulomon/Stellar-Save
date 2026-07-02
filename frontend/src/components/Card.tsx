@@ -10,6 +10,7 @@ interface CardProps {
   children: React.ReactNode;
   className?: string;
   onClick?: () => void;
+  ariaLabel?: string;
 }
 
 export function Card({
@@ -20,6 +21,7 @@ export function Card({
   children,
   className = "",
   onClick,
+  ariaLabel,
 }: CardProps) {
   const classes = [
     "card",
@@ -30,8 +32,22 @@ export function Card({
     .filter(Boolean)
     .join(" ");
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (onClick && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
-    <div className={classes} onClick={onClick}>
+    <div
+      className={classes}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={handleKeyDown}
+      aria-label={onClick ? ariaLabel : undefined}
+    >
       {header && <div className="card-header">{header}</div>}
       <div className="card-body">{children}</div>
       {footer && <div className="card-footer">{footer}</div>}

@@ -268,13 +268,30 @@ chore: update soroban-sdk to 23.0.3
 
 ## Testing Requirements
 
-### Smart contract (Rust)
+### Running the Full Test Suite Locally
+
+Before opening a PR, run all tests to ensure nothing is broken:
+
+```bash
+# Run all tests (contract + frontend)
+./scripts/test.sh
+
+# Or run individually:
+# Contract tests
+cargo test --workspace
+
+# Frontend tests
+cd frontend && npm test run
+```
+
+### Smart Contract Tests (Rust)
 
 All new public functions must have tests covering:
 - The happy path
 - Expected error cases (use `assert_eq!(result, Err(ContractError::...))`)
+- Edge cases (boundary values, empty inputs, etc.)
 
-Run the full test suite before opening a PR:
+**Run contract tests:**
 
 ```bash
 # All contracts
@@ -283,18 +300,69 @@ cargo test --workspace
 # Stellar-save contract only
 cargo test -p stellar-save
 
-# With stdout output
+# With stdout output (see println! output)
 cargo test -- --nocapture
+
+# Single test
+cargo test test_contribute_success
+
+# With backtrace on failure
+RUST_BACKTRACE=1 cargo test
 
 # With coverage (requires cargo-tarpaulin)
 cargo tarpaulin --config contracts/stellar-save/tarpaulin.toml
 ```
 
-Test snapshots live in `contracts/stellar-save/test_snapshots/`. Update them if your change intentionally affects output.
+**Test structure:**
 
-### Frontend (TypeScript)
+```rust
+#[test]
+fn test_contribute_success() {
+    let env = Env::default();
+    let contract = create_contract(&env);
+    
+    // Setup
+    let group_id = contract.create_group(1000, 30, 100);
+    let member = Address::random(&env);
+    contract.join_group(group_id, member.clone(), None);
+    
+    // Execute
+    let result = contract.contribute(group_id, member.clone(), 1000);
+    
+    // Assert
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_contribute_insufficient_balance() {
+    let env = Env::default();
+    let contract = create_contract(&env);
+    
+    // Setup
+    let group_id = contract.create_group(1000, 30, 100);
+    let member = Address::random(&env);
+    contract.join_group(group_id, member.clone(), None);
+    
+    // Execute & Assert
+    let result = contract.contribute(group_id, member.clone(), 500);
+    assert_eq!(result, Err(ContractError::InsufficientBalance));
+}
+```
+
+**Test snapshots:**
+
+Test snapshots live in `contracts/stellar-save/test_snapshots/`. Update them if your change intentionally affects output:
+
+```bash
+# Update snapshots
+cargo test -- --nocapture --test-threads=1 -- --exact test_name
+```
+
+### Frontend Tests (TypeScript)
 
 Add tests for new utility functions and hooks. Component tests are encouraged.
+
+**Run frontend tests:**
 
 ```bash
 cd frontend
@@ -303,41 +371,165 @@ cd frontend
 npm test
 
 # Single run (CI)
-npm test run
+npm run test:run
 
 # With coverage
 npm run test:coverage
 
-# Accessibility checks are included via jest-axe / vitest-axe
+# Accessibility checks (jest-axe / vitest-axe)
+npm run test:a11y
+
+# Visual regression tests (Percy)
+npm run test:visual
+
+# Mutation testing (Stryker)
+npm run test:mutation
 ```
 
-Test files live alongside source files as `*.test.ts` / `*.test.tsx`. Setup is in `src/test/setup.ts`.
+**Test structure:**
 
-### General rules
+```typescript
+import { describe, it, expect } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { useContractCall } from './useContractCall';
 
-- Do not reduce overall test coverage — PRs that delete tests without replacement will be rejected
-- If you find a bug, write a failing test that reproduces it before fixing it
-- CI must be green before requesting review
+describe('useContractCall', () => {
+  it('should fetch group data successfully', async () => {
+    const { result } = renderHook(() => useContractCall('get_group', [123]));
+    
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+    
+    expect(result.current.data).toBeDefined();
+  });
+
+  it('should handle errors gracefully', async () => {
+    const { result } = renderHook(() => useContractCall('invalid_method', []));
+    
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+    
+    expect(result.current.error).toBeDefined();
+  });
+});
+```
+
+**Test files location:**
+
+Test files live alongside source files:
+- `src/hooks/useContractCall.ts` → `src/hooks/useContractCall.test.ts`
+- `src/components/GroupCard.tsx` → `src/components/GroupCard.test.tsx`
+
+Setup is in `src/test/setup.ts`.
+
+### Backend Tests (if applicable)
+
+```bash
+# Run backend tests
+npm test src/tests/indexer.test.ts
+
+# With coverage
+npm test -- --coverage
+```
+
+### General Testing Rules
+
+- ✅ Do not reduce overall test coverage — PRs that delete tests without replacement will be rejected
+- ✅ If you find a bug, write a failing test that reproduces it before fixing it
+- ✅ CI must be green before requesting review
+- ✅ Aim for >80% code coverage on new code
+- ✅ Test both success and failure paths
+- ✅ Use descriptive test names: `test_contribute_with_insufficient_balance` not `test_1`
+
+### CI/CD Pipeline
+
+All tests run automatically on:
+- **Pull requests** — must pass before merge
+- **Push to main** — must pass before deployment
+- **Scheduled** — nightly runs for extended test suites
+
+View CI status in GitHub Actions tab.
 
 ---
 
 ## Pull Request Process
 
+### Branch Naming Conventions
+
+Always branch from `main` and use descriptive names following this format:
+
+```
+<type>/<description>
+```
+
+| Type | Use for | Example |
+|---|---|---|
+| `feat/` | New feature | `feat/penalty-mechanism` |
+| `fix/` | Bug fix | `fix/wallet-timeout` |
+| `docs/` | Documentation | `docs/contributing-guide` |
+| `refactor/` | Code restructuring | `refactor/storage-layout` |
+| `test/` | Tests only | `test/payout-edge-cases` |
+| `perf/` | Performance | `perf/gas-optimization` |
+| `chore/` | Tooling, deps | `chore/update-soroban-sdk` |
+
+**Example workflow:**
+
+```bash
+# Create and switch to new branch
+git checkout main && git pull origin main
+git checkout -b feat/penalty-mechanism
+
+# Make changes, commit, push
+git add .
+git commit -m "feat(contract): implement penalty for missed contributions"
+git push -u origin feat/penalty-mechanism
+```
+
+### PR Title Format
+
+Follow Conventional Commits format:
+
+```
+<type>(<scope>): <description>
+```
+
+**Examples:**
+- `feat(contract): implement penalty for missed contributions`
+- `fix(frontend): resolve wallet connection timeout on mobile`
+- `docs: expand contributing guide with development workflow`
+- `test(contract): add fuzz tests for contribution overflow`
+
+### PR Description Template
+
+Fill in all sections:
+
+```markdown
+## Description
+Brief summary of changes
+
+## Type of Change
+- [ ] New feature
+- [ ] Bug fix
+- [ ] Documentation
+- [ ] Performance improvement
+- [ ] Breaking change
+
+## How to Test
+Step-by-step instructions to verify the changes
+
+## Checklist
+- [ ] Tests pass locally
+- [ ] Code follows style guidelines
+- [ ] Documentation updated
+- [ ] No breaking changes (or documented)
+```
+
+### PR Process Steps
+
 1. **Open an issue first** for non-trivial changes — discuss the approach before investing time coding
-2. **Branch from `main`** — never commit directly to `main`
-
-   ```bash
-   git checkout main && git pull origin main
-   git checkout -b feat/your-feature-name
-   ```
-
-   Branch naming conventions:
-   - `feat/description` — new feature
-   - `fix/description` — bug fix
-   - `docs/description` — documentation
-   - `refactor/description` — refactoring
-   - `test/description` — tests only
-
+2. **Create a branch** from `main` using naming conventions above
 3. **Keep PRs focused** — one feature or fix per PR; avoid bundling unrelated changes
 4. **Fill in the PR template** completely — describe what changed, why, and how to test it
 5. **Ensure CI passes** — all checks must be green before requesting review
@@ -345,14 +537,19 @@ Test files live alongside source files as `*.test.ts` / `*.test.tsx`. Setup is i
 7. **Address review comments** — push follow-up commits to the same branch; do not force-push after review has started
 8. **Squash on merge** — maintainers squash commits when merging to keep history clean
 
-### PR title format
+### Code Review Guidelines
 
-Follow the same Conventional Commits format as commit messages:
+**For reviewers:**
+- Check that tests are comprehensive
+- Verify code follows style guidelines
+- Ensure commit messages are clear
+- Test locally if possible
 
-```
-feat(contract): implement penalty for missed contributions
-fix(frontend): resolve wallet connection timeout on mobile
-```
+**For authors:**
+- Respond to all comments
+- Push fixes as new commits (don't amend)
+- Request re-review after addressing feedback
+- Be respectful and collaborative
 
 ---
 
@@ -366,7 +563,67 @@ Stellar-Save participates in **Drips Wave** — a contributor funding program. F
 | `medium` | 150 | Helper functions, validation logic, moderate features |
 | `high` | 200 | Core features, complex integrations, security enhancements |
 
-See [docs/wave-guide.md](docs/wave-guide.md) for how to claim and earn funding.
+### How to Claim a Wave-Ready Issue
+
+1. **Find an issue** labeled `wave-ready` on [GitHub Issues](https://github.com/Xoulomon/Stellar-Save/issues?q=label%3Awave-ready)
+2. **Comment on the issue** to claim it:
+   ```
+   I'd like to work on this issue. I'll submit a PR by [date].
+   ```
+3. **Create a branch** following naming conventions (see [Branch Naming Conventions](#branch-naming-conventions))
+4. **Work on the issue** — follow all coding standards and testing requirements
+5. **Open a PR** with a clear description and link to the issue
+6. **Get reviewed** — address feedback from maintainers
+7. **Merge** — once approved, your PR will be merged
+8. **Claim funding** — follow instructions in [docs/wave-guide.md](docs/wave-guide.md)
+
+### Wave-Ready Issue Categories
+
+**Trivial (100 points)** — Good for first-time contributors
+- Documentation improvements
+- Simple test additions
+- Minor UI/UX fixes
+- Code comment improvements
+- Example code
+
+**Medium (150 points)** — Intermediate difficulty
+- Helper functions and utilities
+- Validation logic
+- Moderate feature additions
+- Performance improvements
+- Bug fixes with moderate complexity
+
+**High (200 points)** — Advanced contributors
+- Core feature implementations
+- Complex integrations
+- Security enhancements
+- Major refactoring
+- Performance optimizations
+
+### Tips for Wave-Ready Issues
+
+- ✅ Start with `trivial` issues to get familiar with the codebase
+- ✅ Read the issue description carefully — it contains specific requirements
+- ✅ Ask questions in the issue comments if anything is unclear
+- ✅ Follow all coding standards and testing requirements
+- ✅ Write clear commit messages and PR descriptions
+- ✅ Be responsive to review feedback
+- ✅ One issue per PR — don't bundle multiple issues
+
+### Funding Process
+
+After your PR is merged:
+
+1. Verify your PR is merged to `main`
+2. Follow the instructions in [docs/wave-guide.md](docs/wave-guide.md)
+3. Submit your claim with:
+   - GitHub username
+   - PR link
+   - Issue number
+   - Points claimed
+4. Receive funding via Drips protocol
+
+See [docs/wave-guide.md](docs/wave-guide.md) for detailed funding instructions.
 
 ---
 

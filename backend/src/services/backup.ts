@@ -6,6 +6,7 @@ import {
   ListObjectsV2Command,
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
+import { config } from '../config';
 
 export interface BackupResult {
   key: string;
@@ -37,14 +38,14 @@ export class BackupService {
     this.s3 =
       s3Client ??
       new S3Client({
-        region: process.env.AWS_REGION || 'us-east-1',
+        region: config.aws.region,
         credentials: {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+          accessKeyId: config.aws.accessKeyId,
+          secretAccessKey: config.aws.secretAccessKey,
         },
       });
-    this.bucket = process.env.BACKUP_S3_BUCKET || 'stellar-save-backups';
-    this.retentionDays = parseInt(process.env.BACKUP_RETENTION_DAYS || '30', 10);
+    this.bucket = config.backup.bucket;
+    this.retentionDays = config.backup.retentionDays;
   }
 
   /**
@@ -102,9 +103,9 @@ export class BackupService {
    */
   private pgDump(): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const databaseUrl = process.env.DATABASE_URL;
+      const databaseUrl = config.database.url;
       if (!databaseUrl) {
-        return reject(new Error('DATABASE_URL is not set'));
+        return reject(new Error('database.url is not configured'));
       }
 
       const chunks: Buffer[] = [];
