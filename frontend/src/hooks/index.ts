@@ -50,3 +50,7 @@ export type {
 export { useDiscoveryFeed } from './useDiscoveryFeed';
 
 export { useOfflineSyncInit, useSyncStatus, useIsOnline, useQueueAction } from './useOfflineSync';
+
+// Badge system exports
+export { useMemberBadges } from './useMemberBadges';
+export type { MemberBadge, BadgeType, UseMemberBadgesReturn } from './useMemberBadges';
