@@ -48,6 +48,68 @@ step_interval_seconds = 300  # wait between steps
 | `canary_monitor.sh` | Run health probes, write metrics, exit 1 on breach |
 | `canary_rollback.sh` | Set canary weight to 0, restore stable routing |
 | `canary_promote.sh` | Step through weights, promote canary to stable |
+| `canary_smoke_tests.sh` | Automated smoke-test suite — gates every promotion step |
+
+## Smoke-test gate
+
+`scripts/canary_smoke_tests.sh` is the automated quality gate that **must pass
+before any promotion step proceeds**. It is invoked automatically by
+`canary_promote.sh` twice per step: once before setting the new traffic weight
+and once after the health-check interval. Any failure immediately triggers
+`canary_rollback.sh`.
+
+### What the smoke tests cover
+
+| Suite | Tests |
+|---|---|
+| **Network & RPC reachability** | Soroban RPC endpoint responds |
+| **Contract existence** | Canary contract is deployed on-chain |
+| **Critical read-only calls** | `get_group`, `get_total_groups`, `list_groups`, `is_complete` |
+| **Write-path calls** (testnet) | `create_group` creates a group, `get_group` reads it back |
+| **Backend API health** | `GET /health`, `GET /api/groups`, `GET /api/v1/groups` |
+
+### Running smoke tests manually
+
+```bash
+# Minimal: just contract checks
+STELLAR_NETWORK=testnet \
+STELLAR_RPC_URL=https://soroban-testnet.stellar.org \
+CANARY_CONTRACT_ID=<canary-contract-id> \
+bash scripts/canary_smoke_tests.sh
+
+# With backend API checks
+STELLAR_NETWORK=testnet \
+STELLAR_RPC_URL=https://soroban-testnet.stellar.org \
+CANARY_CONTRACT_ID=<canary-contract-id> \
+BACKEND_URL=https://api-canary.stellar-save.app \
+bash scripts/canary_smoke_tests.sh
+
+# Auto-rollback on failure
+STELLAR_NETWORK=testnet \
+STELLAR_RPC_URL=https://soroban-testnet.stellar.org \
+CANARY_CONTRACT_ID=<canary-contract-id> \
+ROLLBACK_ON_FAIL=true \
+bash scripts/canary_smoke_tests.sh
+```
+
+### Rollback trigger
+
+Automatic rollback fires from the smoke-test suite when any of the following
+conditions is detected:
+
+- Contract does not exist on-chain (fatal — aborts immediately)
+- A critical read-only call panics or produces an unexpected response
+- `create_group` causes a fatal contract error on testnet
+- Backend `/health` endpoint returns a non-2xx response (when `BACKEND_URL` is set)
+
+A failed smoke test at **any promotion step** stops promotion and calls
+`canary_rollback.sh` with `ROLLBACK_REASON=smoke_tests_failed_at_<weight>_percent`.
+The canary weight is set back to 0 and all traffic returns to the stable
+contract.
+
+This is in addition to the existing `canary_monitor.sh` health-check gate (error
+rate thresholds and consecutive-failure counters), which continues to run at each
+step alongside the smoke tests.
 
 ## Workflows
 

@@ -27,6 +27,37 @@ echo "  Steps: ${STEPS[*]}"
 echo "  Interval: ${STEP_INTERVAL}s"
 echo "════════════════════════════════════════"
 
+# ─── Pre-promotion smoke-test gate ────────────────────────────────────────────
+# Run the smoke-test suite against the canary before stepping up any traffic.
+# This catches hard failures (contract not found, panics, broken core calls)
+# before we route real users to the canary.
+echo
+echo "── Pre-promotion smoke-test gate ───────────────────────────────────────"
+
+CANARY_ID=$(python3 -c "
+import json
+d = json.load(open('$REGISTRY'))
+print(d.get('canary_contract_id', ''))
+" 2>/dev/null || echo "")
+
+if [ -z "$CANARY_ID" ]; then
+  echo "❌ No canary_contract_id found in registry — cannot run smoke tests." >&2
+  exit 1
+fi
+
+if ! CANARY_CONTRACT_ID="$CANARY_ID" \
+     STELLAR_NETWORK="$STELLAR_NETWORK" \
+     STELLAR_RPC_URL="$STELLAR_RPC_URL" \
+     bash scripts/canary_smoke_tests.sh; then
+  echo
+  echo "🚨 Pre-promotion smoke tests FAILED — promotion aborted."
+  ROLLBACK_REASON="pre_promotion_smoke_tests_failed" \
+    bash scripts/canary_rollback.sh
+  exit 1
+fi
+
+echo "✅ Pre-promotion smoke tests passed."
+
 for WEIGHT in "${STEPS[@]}"; do
   echo
   echo "── Setting canary weight to ${WEIGHT}% ──────────────────────────────────"
@@ -37,6 +68,20 @@ for WEIGHT in "${STEPS[@]}"; do
     sleep "$STEP_INTERVAL"
   fi
 
+  # ── Smoke-test gate at this traffic step ─────────────────────────────────
+  echo "── Smoke tests at ${WEIGHT}% ─────────────────────────────────────────────"
+  if ! CANARY_CONTRACT_ID="$CANARY_ID" \
+       STELLAR_NETWORK="$STELLAR_NETWORK" \
+       STELLAR_RPC_URL="$STELLAR_RPC_URL" \
+       bash scripts/canary_smoke_tests.sh; then
+    echo
+    echo "🚨 Smoke tests failed at ${WEIGHT}% — initiating rollback"
+    ROLLBACK_REASON="smoke_tests_failed_at_${WEIGHT}_percent" \
+      bash scripts/canary_rollback.sh
+    exit 1
+  fi
+
+  # ── Continuous health-check gate ──────────────────────────────────────────
   echo "── Health check at ${WEIGHT}% ────────────────────────────────────────────"
   if ! bash scripts/canary_monitor.sh; then
     echo
