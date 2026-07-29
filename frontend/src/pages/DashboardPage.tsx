@@ -17,7 +17,7 @@ import { GroupStats } from '../components/GroupStats';
 import { GroupTimeline, type TimelineEvent } from '../components/GroupTimeline';
 import { EmptyState } from '../components/EmptyState/EmptyState';
 import { CreateGroupForm } from '../components/CreateGroupForm';
-import { buildRoute } from '../routing/constants';
+
 
 // Form data interface (same as in CreateGroupForm)
 interface FormData {

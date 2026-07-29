@@ -21,7 +21,7 @@ export function SettingsSection({ className = '' }: SettingsSectionProps) {
     console.log('Saving settings:', settings);
   };
 
-  const updateSetting = (key: string, value: any) => {
+  const updateSetting = (key: string, value: string | boolean) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 

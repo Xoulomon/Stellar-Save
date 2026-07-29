@@ -57,9 +57,10 @@ export default function GroupDetailPage() {
   };
 
   const handleContribute = () => {
-    // TODO: Implement contribution logic
+    // TODO: wire up inline contribution flow once ContributeButton callback is confirmed
     console.log('Contribute to group:', groupId);
   };
+  void handleContribute; // retained for upcoming TODO; suppress unused-vars until wired up
 
   const handleJoinGroup = () => {
     // TODO: Implement join group logic

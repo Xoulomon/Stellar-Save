@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Toast types, context, and hook are co-located with the modal provider intentionally */
 import React, { useCallback, useEffect, useRef } from 'react';
 import { createContext, useContext, useState } from 'react';
 

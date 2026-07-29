@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { 
   calculateCycleProgress, 
   calculateCycleProgressFromDeadline,
-  type CycleProgressResult 
 } from '../utils/cycleProgress';
+
 
 // Mock Date for consistent testing
 const FIXED_NOW = new Date('2024-01-15T12:00:00Z');

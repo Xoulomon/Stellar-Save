@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- CYCLE_DURATION_OPTIONS and validateStep are tightly coupled to this form and co-located intentionally */
 import { useState } from "react";
 import { Button } from "./Button";
 import { Input } from "./Input";

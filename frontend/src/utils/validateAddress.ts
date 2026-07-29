@@ -10,7 +10,7 @@
  */
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-const BASE32_PAD = '=';
+// BASE32_PAD ('=') is part of the standard spec but Stellar addresses use no padding;
 
 /**
  * CRC16-XMODEM checksum.
@@ -18,7 +18,7 @@ const BASE32_PAD = '=';
 function crc16(data: Uint8Array): number {
   let crc = 0;
   for (let i = 0; i < data.length; i++) {
-    let byte = data[i];
+    const byte = data[i];
     crc ^= byte << 8;
     for (let j = 0; j < 8; j++) {
       if (crc & 0x8000) {

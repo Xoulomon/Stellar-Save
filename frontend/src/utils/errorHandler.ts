@@ -52,7 +52,7 @@ export function errorHandler(error: unknown): ParsedError {
     };
   }
 
-  const errObj = error as Error & { code?: string; data?: any };
+  const errObj = error as Error & { code?: string; data?: unknown };
 
   // Check known patterns
   for (const [type, patterns] of Object.entries(KNOWN_ERRORS)) {
@@ -129,7 +129,7 @@ function getUserFriendlyError(type: string, err: Error): ParsedError {
   };
 }
 
-function handleStellarCode(err: Error & { code?: string; data?: any }): ParsedError {
+function handleStellarCode(err: Error & { code?: string; data?: unknown }): ParsedError {
   if (!err.code) {
     return {
       message: 'Unknown Stellar SDK error. Please try again.',
@@ -158,7 +158,7 @@ function handleStellarCode(err: Error & { code?: string; data?: any }): ParsedEr
 
 function extractTechnicalDetails(err: Error): Partial<ParsedError> {
   return {
-    code: (err as any).code || undefined
+    code: (err as Error & { code?: string }).code || undefined
   };
 }
 

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Context and provider are intentionally co-located in this file; splitting would add indirection without benefit */
 import {
   createContext,
   useCallback,
@@ -159,6 +160,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- refreshWallets sets state asynchronously (async function), not synchronously; this is correct for initialising wallet list on mount
     void refreshWallets();
   }, [refreshWallets]);
 

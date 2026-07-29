@@ -1,5 +1,9 @@
 import { GroupTimeline, TimelineEvent } from './GroupTimeline';
 
+// Timestamps are computed once at module load, not during render,
+// to satisfy the react-hooks/purity rule (no impure calls in render).
+const NOW = Date.now();
+
 /**
  * Example component demonstrating the GroupTimeline component
  * with various event types and states
@@ -12,7 +16,7 @@ export function GroupTimelineExample() {
       type: 'contribution',
       memberAddress: 'GBRPYHIL2CI3WHOSTIQC4VEHZSOP2YUQMWEA7LHSY5RMQRDFE5GQOSM',
       memberName: 'Alice Johnson',
-      timestamp: new Date(Date.now() - 300000), // 5 minutes ago
+      timestamp: new Date(NOW - 300000), // 5 minutes ago
       amount: 10000, // in stroops (100 XLM)
       transactionHash: '5e0c61d08fcb09ba2a67b7ad...',
       status: 'completed',
@@ -22,7 +26,7 @@ export function GroupTimelineExample() {
       type: 'contribution',
       memberAddress: 'GBTRPUHFLVXRQ2XRFVQJQHWQ6YDTZXZOJG4BKGQP4IOJWMRG3W2YTNC',
       memberName: 'Bob Smith',
-      timestamp: new Date(Date.now() - 600000), // 10 minutes ago
+      timestamp: new Date(NOW - 600000), // 10 minutes ago
       amount: 10000,
       transactionHash: '7a3b1d2c8e9f5a6b...',
       status: 'completed',
@@ -32,7 +36,7 @@ export function GroupTimelineExample() {
       type: 'payout',
       memberAddress: 'GBRPYHIL2CI3WHOSTIQC4VEHZSOP2YUQMWEA7LHSY5RMQRDFE5GQOSM',
       memberName: 'Alice Johnson',
-      timestamp: new Date(Date.now() - 86400000), // 1 day ago
+      timestamp: new Date(NOW - 86400000), // 1 day ago
       amount: 50000, // 500 XLM
       transactionHash: '3c2f8e1a4d7b9c6f...',
       status: 'completed',
@@ -43,14 +47,14 @@ export function GroupTimelineExample() {
       type: 'member_join',
       memberAddress: 'GCX4LVFRYEB7GXYUIBH5ZQVJJKGKZFZFWGZQSXZ7PBHXVW7XQ6LYQSX',
       memberName: 'Charlie Brown',
-      timestamp: new Date(Date.now() - 172800000), // 2 days ago
+      timestamp: new Date(NOW - 172800000), // 2 days ago
     },
     {
       id: 'evt-005',
       type: 'contribution',
       memberAddress: 'GBTRPUHFLVXRQ2XRFVQJQHWQ6YDTZXZOJG4BKGQP4IOJWMRG3W2YTNC',
       memberName: 'Bob Smith',
-      timestamp: new Date(Date.now() - 259200000), // 3 days ago
+      timestamp: new Date(NOW - 259200000), // 3 days ago
       amount: 10000,
       transactionHash: '9f4e2a5c1b8d3g7h...',
       status: 'completed',
@@ -60,14 +64,14 @@ export function GroupTimelineExample() {
       type: 'member_join',
       memberAddress: 'GBTRPUHFLVXRQ2XRFVQJQHWQ6YDTZXZOJG4BKGQP4IOJWMRG3W2YTNC',
       memberName: 'Bob Smith',
-      timestamp: new Date(Date.now() - 345600000), // 4 days ago
+      timestamp: new Date(NOW - 345600000), // 4 days ago
     },
     {
       id: 'evt-007',
       type: 'contribution',
       memberAddress: 'GCX4LVFRYEB7GXYUIBH5ZQVJJKGKZFZFWGZQSXZ7PBHXVW7XQ6LYQSX',
       memberName: 'Charlie Brown',
-      timestamp: new Date(Date.now() - 432000000), // 5 days ago
+      timestamp: new Date(NOW - 432000000), // 5 days ago
       amount: 10000,
       transactionHash: '5d1f3e8a9c2b4g6h...',
       status: 'pending',
@@ -77,7 +81,7 @@ export function GroupTimelineExample() {
       type: 'payout',
       memberAddress: 'GBTRPUHFLVXRQ2XRFVQJQHWQ6YDTZXZOJG4BKGQP4IOJWMRG3W2YTNC',
       memberName: 'Bob Smith',
-      timestamp: new Date(Date.now() - 604800000), // 7 days ago
+      timestamp: new Date(NOW - 604800000), // 7 days ago
       amount: 50000,
       transactionHash: '2e5g8h1j3k5l7m9n...',
       status: 'completed',
@@ -88,14 +92,14 @@ export function GroupTimelineExample() {
       type: 'member_join',
       memberAddress: 'GBRPYHIL2CI3WHOSTIQC4VEHZSOP2YUQMWEA7LHSY5RMQRDFE5GQOSM',
       memberName: 'Alice Johnson',
-      timestamp: new Date(Date.now() - 691200000), // 8 days ago
+      timestamp: new Date(NOW - 691200000), // 8 days ago
     },
     {
       id: 'evt-010',
       type: 'contribution',
       memberAddress: 'GBXY7ZQVJJKGKZFZFWGZQSXZ7PBHXVW7XQ6LYQSXABCDEFGHIJKLMNO',
       memberName: 'Diana',
-      timestamp: new Date(Date.now() - 777600000), // 9 days ago
+      timestamp: new Date(NOW - 777600000), // 9 days ago
       amount: 10000,
       transactionHash: '1a9b2c3d4e5f6g7h...',
       status: 'failed',

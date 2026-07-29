@@ -12,7 +12,7 @@ interface JoinGroupButtonProps {
 }
 
 export function JoinGroupButton({
-  groupId,
+  groupId: _groupId, // used once real contract interaction is wired up (TODO: join_group call)
   maxMembers,
   currentMembers,
   isActive,

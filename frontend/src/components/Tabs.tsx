@@ -80,10 +80,13 @@ export function Tabs({
   };
 
   useEffect(() => {
-    // Ensure active tab is valid
+    // Reset to first enabled tab when the current activeTab is removed from the list.
+    // This setState-in-effect is intentional: it only runs when tabs change externally
+    // (e.g. a tab is dynamically removed), not on every render.
     if (activeTab && !tabs.find(tab => tab.id === activeTab)) {
       const firstEnabledTab = tabs.find(tab => !tab.disabled);
       if (firstEnabledTab && !isControlled) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: correcting stale tab selection when a tab is removed from the tabs prop externally
         setInternalActiveTab(firstEnabledTab.id);
       }
     }

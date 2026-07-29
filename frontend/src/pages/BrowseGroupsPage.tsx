@@ -3,11 +3,12 @@ import { Stack, Typography } from '@mui/material';
 import { AppCard, AppLayout } from '../ui';
 import { GroupCard } from '../components/GroupCard';
 import { GroupFilters } from '../components/GroupFilters';
-import { GroupList } from '../components/GroupList';
+import { GroupList, type Group } from '../components/GroupList';
 import { SearchBar } from '../components/SearchBar';
 import { Button } from '../components/Button';
 import { useGroups } from '../hooks/useGroups';
 import { ROUTES, buildRoute } from '../routing/constants';
+import type { PublicGroup } from '../utils/groupApi';
 import './BrowseGroupsPage.css';
 
 export default function BrowseGroupsPage() {
@@ -70,7 +71,7 @@ export default function BrowseGroupsPage() {
 
               <div aria-busy={isLoading}>
                 <GroupList
-                  groups={groups as any}
+                  groups={groups as Group[]}
                   loading={isLoading}
                   showSearch={false}
                   showSort={false}
@@ -85,22 +86,27 @@ export default function BrowseGroupsPage() {
                   }
                   emptyActionLabel={hasActiveFilters ? 'Clear Filters' : 'Create Group'}
                   onEmptyAction={hasActiveFilters ? clearFilters : handleCreateGroup}
-                  renderGroupItem={(group) => (
-                    <GroupCard
-                      groupId={group.id}
-                      groupName={group.name}
-                      memberCount={group.memberCount ?? 0}
-                      contributionAmount={(group as any).contributionAmount ?? 0}
-                      currency={(group as any).currency ?? 'XLM'}
-                      status={(group as any).status ?? 'active'}
-                      onViewDetails={() => navigate(buildRoute.groupDetail(group.id))}
-                      onJoin={
-                        (group as any).status === 'active' || (group as any).status === 'pending'
-                          ? () => navigate(buildRoute.groupDetail(group.id))
-                          : undefined
-                      }
-                    />
-                  )}
+                  renderGroupItem={(group) => {
+                    // PublicGroup fields beyond the base Group interface are accessed via type assertion;
+                    // GroupCard requires contributionAmount/currency/status which PublicGroup carries.
+                    const pg = group as PublicGroup;
+                    return (
+                      <GroupCard
+                        groupId={pg.id}
+                        groupName={pg.name}
+                        memberCount={pg.memberCount ?? 0}
+                        contributionAmount={pg.contributionAmount ?? 0}
+                        currency={pg.currency ?? 'XLM'}
+                        status={pg.status ?? 'active'}
+                        onViewDetails={() => navigate(buildRoute.groupDetail(pg.id))}
+                        onJoin={
+                          pg.status === 'active' || pg.status === 'pending'
+                            ? () => navigate(buildRoute.groupDetail(pg.id))
+                            : undefined
+                        }
+                      />
+                    );
+                  }}
                 />
               </div>
 

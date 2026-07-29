@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- main.tsx is the app entry point; it intentionally has no exports */
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 

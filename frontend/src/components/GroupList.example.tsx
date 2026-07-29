@@ -43,7 +43,8 @@ const sampleGroups: Group[] = [
 
 export function GroupListExample() {
   const [groups] = useState<Group[]>(sampleGroups);
-  const [loading, setLoading] = useState(false);
+  // setLoading would be used when wiring to a real API call
+  const [_loading, _setLoading] = useState(false);
 
   const handleGroupClick = (group: Group) => {
     console.log('Group clicked:', group);

@@ -45,23 +45,6 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onClose }) => {
   const toastRef = useRef<HTMLDivElement>(null);
   const [isExiting, setIsExiting] = React.useState(false);
 
-  // Auto-dismiss timer
-  useEffect(() => {
-    if (toast.duration && toast.duration > 0) {
-      const timer = setTimeout(() => {
-        handleClose();
-      }, toast.duration);
-
-      return () => clearTimeout(timer);
-    }
-  }, [toast.id, toast.duration]);
-
-  const handleActionClick = () => {
-    if (toast.action) {
-      toast.action.onClick();
-    }
-  };
-
   const handleClose = () => {
     setIsExiting(true);
     setTimeout(() => {
@@ -71,6 +54,24 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onClose }) => {
       }
     }, 300);
   };
+
+  const handleActionClick = () => {
+    if (toast.action) {
+      toast.action.onClick();
+    }
+  };
+
+  // Auto-dismiss timer — handleClose is declared above so it is stable in scope
+  useEffect(() => {
+    if (toast.duration && toast.duration > 0) {
+      const timer = setTimeout(() => {
+        handleClose();
+      }, toast.duration);
+
+      return () => clearTimeout(timer);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- handleClose is intentionally excluded; it only calls setState and onClose which are stable
+  }, [toast.id, toast.duration]);
 
   const getIcon = () => {
     switch (toast.type) {

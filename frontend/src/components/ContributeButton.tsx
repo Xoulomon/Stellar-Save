@@ -282,7 +282,7 @@ function StatusBanner({
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
-async function mockWalletTransaction(amount: number): Promise<string> {
+async function mockWalletTransaction(_amount: number): Promise<string> {
   // Simulates wallet interaction + network submission
   // Replace with actual Freighter/Stellar SDK call
   await new Promise((r) => setTimeout(r, 1500));

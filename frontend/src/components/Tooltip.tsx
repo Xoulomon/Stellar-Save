@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import './Tooltip.css';
 
 type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
@@ -86,6 +86,7 @@ export function Tooltip({
 
   useEffect(() => {
     if (isVisible) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- calculatePosition reads DOM measurements and calls setCoords; this is the correct pattern for positioning a portal after it becomes visible
       calculatePosition();
       window.addEventListener('scroll', calculatePosition, true);
       window.addEventListener('resize', calculatePosition);
@@ -105,7 +106,9 @@ export function Tooltip({
     };
   }, []);
 
-  const tooltipId = useRef(`tooltip-${Math.random().toString(36).substr(2, 9)}`);
+  // useId produces a stable, unique ID per component instance without calling impure Math.random during render
+  const generatedId = useId();
+  const tooltipId = `tooltip-${generatedId.replace(/:/g, "")}`;
 
   const childWithProps = {
     ...children,
@@ -127,7 +130,7 @@ export function Tooltip({
         hideTooltip();
         children.props.onBlur?.(e);
       },
-      'aria-describedby': isVisible ? tooltipId.current : undefined,
+      'aria-describedby': isVisible ? tooltipId : undefined,
     },
   };
 
@@ -140,7 +143,7 @@ export function Tooltip({
       {isVisible && (
         <div
           ref={tooltipRef}
-          id={tooltipId.current}
+          id={tooltipId}
           role="tooltip"
           className={`tooltip tooltip-${position} ${className}`}
           style={{

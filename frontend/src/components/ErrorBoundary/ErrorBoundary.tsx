@@ -29,8 +29,7 @@ export class ErrorBoundary extends React.Component<
     // Log to console and call optional onError handler
     // Keeping logging simple and local to avoid external deps
     // Consumers can override `onError` to forward to a server or Sentry
-    // eslint-disable-next-line no-console
-    console.error("ErrorBoundary caught an error:", error, info);
+        console.error("ErrorBoundary caught an error:", error, info);
     if (this.props.onError) this.props.onError(error, info);
   }
 

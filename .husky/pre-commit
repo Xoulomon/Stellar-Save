@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+# Pre-commit hook: run ESLint on staged frontend TypeScript files.
+# Uses lint-staged (configured in frontend/package.json) so only
+# files being committed are linted — keeping the hook fast.
+#
+# Setup (first time after cloning):
+#   cd frontend && npm ci
+#   npx husky init   # or: npm run prepare (if prepare script added)
+#
+# The hook fails if any staged file has ESLint errors, blocking the commit.
+# Warnings are treated as errors (--max-warnings=0) to keep the bar high.
+
+. "$(dirname -- "$0")/_/husky.sh"
+
+cd frontend && npx lint-staged

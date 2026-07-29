@@ -216,6 +216,7 @@ export function useBalance(options: UseBalanceOptions = {}) {
   // Fetch balance on mount or when address changes
   useEffect(() => {
     if (fetchOnMount && activeAddress) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetchBalance sets state asynchronously via a network call, not synchronously; this is the correct pattern for data fetching on mount
       void fetchBalance();
     }
   }, [activeAddress, fetchOnMount, fetchBalance]);

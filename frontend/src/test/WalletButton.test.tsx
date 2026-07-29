@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { WalletButton } from '../components/WalletButton';
 import * as useWalletHook from '../hooks/useWallet';
+import type { WalletContextValue } from '../wallet/types';
 
 vi.mock('../hooks/useWallet');
 
@@ -12,7 +13,7 @@ describe('WalletButton', () => {
       activeAddress: null,
       connect: vi.fn(),
       disconnect: vi.fn(),
-    } as any);
+    } as WalletContextValue);
 
     render(<WalletButton />);
     expect(screen.getByText('Connect Wallet')).toBeInTheDocument();
@@ -24,7 +25,7 @@ describe('WalletButton', () => {
       activeAddress: 'GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890',
       connect: vi.fn(),
       disconnect: vi.fn(),
-    } as any);
+    } as WalletContextValue);
 
     render(<WalletButton />);
     expect(screen.getByText(/GABCDE...7890/)).toBeInTheDocument();

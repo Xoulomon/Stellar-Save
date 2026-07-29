@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { errorHandler } from '../utils/errorHandler';
 
 function formatAmount(amount: number): string {
   return `${amount} XLM`;
@@ -33,7 +34,7 @@ describe('Utils', () => {
     });
 
     it('handles Stellar SDK codes', () => {
-      const result = errorHandler({ code: 'not_found', message: 'Account not found' } as any);
+      const result = errorHandler(Object.assign(new Error('Account not found'), { code: 'not_found' }));
       expect(result.message).toBe('Account or resource not found.');
       expect(result.code).toBe('not_found');
     });
@@ -68,6 +69,4 @@ describe('Utils', () => {
       expect(msg).toBe('Transaction cancelled. This is safe.');
     });
   });
-});
-
 });

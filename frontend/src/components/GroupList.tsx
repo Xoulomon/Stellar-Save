@@ -14,8 +14,8 @@ export interface Group {
   memberCount?: number;
   createdAt?: Date;
   avatar?: string;
-  [key: string]: any;
-}
+  // Allow arbitrary extra fields from the API without losing type safety on known fields
+  [key: string]: unknown;}
 
 type SortField = 'name' | 'memberCount' | 'createdAt';
 type SortOrder = 'asc' | 'desc';
@@ -89,27 +89,29 @@ export function GroupList({
     const sorted = [...filteredGroups];
 
     sorted.sort((a, b) => {
-      let aValue: any = a[sortConfig.field];
-      let bValue: any = b[sortConfig.field];
+      const aValue: unknown = a[sortConfig.field];
+      const bValue: unknown = b[sortConfig.field];
 
       // Handle undefined values
       if (aValue === undefined) return 1;
       if (bValue === undefined) return -1;
 
       // Handle dates
-      if (aValue instanceof Date && bValue instanceof Date) {
-        aValue = aValue.getTime();
-        bValue = bValue.getTime();
-      }
+      const aComp: number | string = (() => {
+        if (aValue instanceof Date) return aValue.getTime();
+        if (typeof aValue === 'string') return aValue.toLowerCase();
+        if (typeof aValue === 'number') return aValue;
+        return String(aValue).toLowerCase();
+      })();
+      const bComp: number | string = (() => {
+        if (bValue instanceof Date) return bValue.getTime();
+        if (typeof bValue === 'string') return bValue.toLowerCase();
+        if (typeof bValue === 'number') return bValue;
+        return String(bValue).toLowerCase();
+      })();
 
-      // Handle strings (case-insensitive)
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
-      }
-
-      if (aValue < bValue) return sortConfig.order === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.order === 'asc' ? 1 : -1;
+      if (aComp < bComp) return sortConfig.order === 'asc' ? -1 : 1;
+      if (aComp > bComp) return sortConfig.order === 'asc' ? 1 : -1;
       return 0;
     });
 

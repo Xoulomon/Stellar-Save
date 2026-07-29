@@ -1,3 +1,4 @@
+import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -9,14 +10,15 @@ import { fetchGroups } from '../utils/groupApi';
 import type { PublicGroup } from '../utils/groupApi';
 
 vi.mock('../ui', () => ({
-  AppLayout: ({ children, title, subtitle }: any) => (
+  // Partial mock — only the fields used by BrowseGroupsPage are typed here
+  AppLayout: ({ children, title, subtitle }: { children: React.ReactNode; title?: string; subtitle?: string }) => (
     <div>
       {title && <h1>{title}</h1>}
       {subtitle && <p>{subtitle}</p>}
       {children}
     </div>
   ),
-  AppCard: ({ children }: any) => <div>{children}</div>,
+  AppCard: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock('../utils/groupApi', () => ({
