@@ -18,6 +18,7 @@ import {
 } from '../lib/db';
 import type { DetailedGroup } from '../utils/groupApi';
 import type { PublicGroup } from '../types/group';
+import { buildPublicGroup } from '@stellar-save/test-fixtures';
 
 describe('Offline Database', () => {
   beforeEach(async () => {
@@ -69,24 +70,8 @@ describe('Offline Database', () => {
 
     it('should cache and retrieve groups list', async () => {
       const mockGroups: PublicGroup[] = [
-        {
-          id: '1',
-          name: 'Group 1',
-          memberCount: 5,
-          contributionAmount: 100,
-          currency: 'XLM',
-          status: 'active',
-          createdAt: new Date(),
-        },
-        {
-          id: '2',
-          name: 'Group 2',
-          memberCount: 3,
-          contributionAmount: 200,
-          currency: 'XLM',
-          status: 'active',
-          createdAt: new Date(),
-        },
+        buildPublicGroup({ id: '1', name: 'Group 1', memberCount: 5, contributionAmount: 100, status: 'active', createdAt: new Date() }),
+        buildPublicGroup({ id: '2', name: 'Group 2', memberCount: 3, contributionAmount: 200, status: 'active', createdAt: new Date() }),
       ];
 
       await cacheGroupsList(mockGroups);

@@ -3,38 +3,12 @@ import { beforeEach, describe, expect, vi } from 'vitest';
 import { useDiscoveryFeed } from '../hooks/useDiscoveryFeed';
 import * as groupApi from '../utils/groupApi';
 import type { PublicGroup } from '../types/group';
+import { buildPublicGroup } from '@stellar-save/test-fixtures';
 
 const mockGroups: PublicGroup[] = [
-  {
-    id: '1',
-    name: 'Alpha Group',
-    description: 'Community savings',
-    memberCount: 8,
-    contributionAmount: 150,
-    currency: 'XLM',
-    status: 'active',
-    createdAt: new Date('2026-04-01'),
-  },
-  {
-    id: '2',
-    name: 'Budget Builders',
-    description: 'Small monthly contributions',
-    memberCount: 4,
-    contributionAmount: 80,
-    currency: 'XLM',
-    status: 'pending',
-    createdAt: new Date('2026-03-15'),
-  },
-  {
-    id: '3',
-    name: 'Travel Trust',
-    description: 'Saving for the next adventure',
-    memberCount: 12,
-    contributionAmount: 300,
-    currency: 'XLM',
-    status: 'active',
-    createdAt: new Date('2026-02-10'),
-  },
+  buildPublicGroup({ id: '1', name: 'Alpha Group', description: 'Community savings', memberCount: 8, contributionAmount: 150, status: 'active', createdAt: new Date('2026-04-01') }),
+  buildPublicGroup({ id: '2', name: 'Budget Builders', description: 'Small monthly contributions', memberCount: 4, contributionAmount: 80, status: 'pending', createdAt: new Date('2026-03-15') }),
+  buildPublicGroup({ id: '3', name: 'Travel Trust', description: 'Saving for the next adventure', memberCount: 12, contributionAmount: 300, status: 'active', createdAt: new Date('2026-02-10') }),
 ];
 
 afterEach(() => {

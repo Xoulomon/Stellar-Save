@@ -7,25 +7,7 @@ import {
 } from '../hooks/useTransactionExport';
 import { TransactionExportButton } from '../components/TransactionExportButton';
 import type { Transaction } from '../types/transaction';
-
-// ── Fixtures ──────────────────────────────────────────────────────────────────
-
-function makeTx(overrides: Partial<Transaction> = {}): Transaction {
-  return {
-    id: '1',
-    hash: 'abc123',
-    createdAt: '2026-03-15T10:00:00Z',
-    type: 'deposit',
-    amount: '+100',
-    assetCode: 'XLM',
-    from: 'GABC',
-    to: 'GDEF',
-    memo: 'test memo',
-    status: 'success',
-    fee: '0.00001',
-    ...overrides,
-  };
-}
+import { buildSdkTransaction as makeTx } from '@stellar-save/test-fixtures';
 
 const TRANSACTIONS: Transaction[] = [
   makeTx({ id: '1', createdAt: '2026-01-10T00:00:00Z', amount: '+100' }),

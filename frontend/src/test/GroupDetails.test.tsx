@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { GroupDetails } from '../components/GroupDetails';
 import type { GroupInfo, GroupMember, Contribution, CycleInfo } from '../components/GroupDetails';
+import { buildGroupMember } from '@stellar-save/test-fixtures';
 
 const group: GroupInfo = {
   id: 'g1',
@@ -16,21 +17,8 @@ const group: GroupInfo = {
 };
 
 const members: GroupMember[] = [
-  {
-    id: 'm1',
-    address: 'GABCDEFGHIJKLMNOPQRSTUVWXYZ123456',
-    name: 'Alice',
-    joinedAt: new Date('2024-01-01'),
-    totalContributions: 500,
-    isActive: true,
-  },
-  {
-    id: 'm2',
-    address: 'GZYXWVUTSRQPONMLKJIHGFEDCBA654321',
-    joinedAt: new Date('2024-01-02'),
-    totalContributions: 500,
-    isActive: false,
-  },
+  buildGroupMember({ id: 'm1', address: 'GABCDEFGHIJKLMNOPQRSTUVWXYZ123456', name: 'Alice', joinedAt: new Date('2024-01-01'), totalContributions: 500, isActive: true }),
+  buildGroupMember({ id: 'm2', address: 'GZYXWVUTSRQPONMLKJIHGFEDCBA654321', name: undefined, joinedAt: new Date('2024-01-02'), totalContributions: 500, isActive: false }),
 ];
 
 const contributions: Contribution[] = [

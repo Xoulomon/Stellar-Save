@@ -50,6 +50,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@stellar-save/test-fixtures": "workspace:*",
     "@axe-core/playwright": "^4.10.0",
     "@axe-core/react": "^4.11.1",
     "@eslint/js": "^9.39.1",

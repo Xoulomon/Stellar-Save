@@ -2,12 +2,13 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GroupComparison } from '../components/GroupComparison';
 import type { PublicGroup } from '../types/group';
+import { buildPublicGroup } from '@stellar-save/test-fixtures';
 
 const mockGroups: PublicGroup[] = [
-  { id: '1', name: 'Alpha Savers', memberCount: 8, contributionAmount: 100, currency: 'XLM', status: 'active', createdAt: new Date('2024-01-01') },
-  { id: '2', name: 'Beta Circle', memberCount: 5, contributionAmount: 50, currency: 'XLM', status: 'pending', createdAt: new Date('2024-02-01') },
-  { id: '3', name: 'Gamma Fund', memberCount: 10, contributionAmount: 200, currency: 'XLM', status: 'active', createdAt: new Date('2024-03-01') },
-  { id: '4', name: 'Delta Pool', memberCount: 3, contributionAmount: 75, currency: 'XLM', status: 'completed', createdAt: new Date('2024-04-01') },
+  buildPublicGroup({ id: '1', name: 'Alpha Savers', memberCount: 8, contributionAmount: 100, status: 'active', createdAt: new Date('2024-01-01') }),
+  buildPublicGroup({ id: '2', name: 'Beta Circle', memberCount: 5, contributionAmount: 50, status: 'pending', createdAt: new Date('2024-02-01') }),
+  buildPublicGroup({ id: '3', name: 'Gamma Fund', memberCount: 10, contributionAmount: 200, status: 'active', createdAt: new Date('2024-03-01') }),
+  buildPublicGroup({ id: '4', name: 'Delta Pool', memberCount: 3, contributionAmount: 75, status: 'completed', createdAt: new Date('2024-04-01') }),
 ];
 
 function renderComp(groups = mockGroups) {

@@ -3,41 +3,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useGroups, clearGroupsCache } from '../hooks/useGroups';
 import * as groupApi from '../utils/groupApi';
 import type { PublicGroup } from '../types/group';
+import { mockPublicGroups } from '@stellar-save/test-fixtures';
 
-const mockGroups: PublicGroup[] = [
-  {
-    id: '1',
-    name: 'Alpha Group',
-    description: 'First group',
-    memberCount: 5,
-    contributionAmount: 100,
-    currency: 'XLM',
-    status: 'active',
-    createdAt: new Date('2024-01-01'),
-    cycleDuration: 7,
-  },
-  {
-    id: '2',
-    name: 'Beta Group',
-    description: 'Second group',
-    memberCount: 10,
-    contributionAmount: 200,
-    currency: 'XLM',
-    status: 'pending',
-    createdAt: new Date('2024-02-01'),
-    cycleDuration: 14,
-  },
-  {
-    id: '3',
-    name: 'Gamma Group',
-    memberCount: 3,
-    contributionAmount: 50,
-    currency: 'XLM',
-    status: 'completed',
-    createdAt: new Date('2024-03-01'),
-    cycleDuration: 30,
-  },
-];
+const mockGroups: PublicGroup[] = mockPublicGroups;
 
 beforeEach(() => {
   clearGroupsCache();

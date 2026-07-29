@@ -22,15 +22,10 @@ import { EmailService } from '../src/email_service';
 import { FeedbackService } from '../src/feedback_service';
 import { createV1Router } from '../src/routes/v1';
 import { getMemberReputation } from '../src/reputation_service';
-import { Group, UserInteraction } from '../src/models';
+import { UserInteraction } from '../src/models';
 import { format as fastCsvFormat } from 'fast-csv';
 import { mockTransactions } from '../src/mock_data';
-
-const mockGroups: Group[] = [
-  { id: '1', name: 'Weekly Savers', contributionAmount: 100, cycleDuration: 604800, maxMembers: 10, currentMembers: 5, status: 'Active', tags: ['weekly', 'low-entry'] },
-  { id: '2', name: 'Monthly Builders', contributionAmount: 1000, cycleDuration: 2592000, maxMembers: 12, currentMembers: 3, status: 'Active', tags: ['monthly', 'high-entry'] },
-  { id: '3', name: 'Student Circle', contributionAmount: 50, cycleDuration: 604800, maxMembers: 5, currentMembers: 4, status: 'Active', tags: ['weekly', 'students'] },
-];
+import { mockApiGroups as mockGroups } from '@stellar-save/test-fixtures';
 
 const mockInteractions: UserInteraction[] = [];
 

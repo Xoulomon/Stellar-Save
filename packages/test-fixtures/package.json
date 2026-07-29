@@ -1,0 +1,20 @@
+{
+  "name": "@stellar-save/test-fixtures",
+  "version": "0.1.0",
+  "description": "Shared test fixtures (Group, Member, Transaction, Contribution, Payout) for Stellar-Save backend and frontend test suites",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "test": "vitest run",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@stellar-save/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vitest": "^2.1.8"
+  },
+  "license": "MIT"
+}
