@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+# Pre-commit hook: run lint-staged to format only staged files with Prettier.
+# Staged files matching *.{ts,tsx,js,jsx,json,css,md} are auto-formatted
+# and re-staged before the commit is recorded.
+#
+# Installed automatically by: npm install (at repo root)
+# To bypass in a genuine emergency: git commit --no-verify
+
+cd "$(git rev-parse --show-toplevel)"
+./node_modules/.bin/lint-staged

@@ -1,0 +1,23 @@
+{
+  "name": "stellar-save",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Stellar-Save monorepo root — tooling scripts",
+  "scripts": {
+    "format": "prettier --write \"frontend/src/**/*.{ts,tsx,js,jsx,json,css}\" \"*.{json,md}\" \"docs/**/*.md\"",
+    "format:check": "prettier --check \"frontend/src/**/*.{ts,tsx,js,jsx,json,css}\" \"*.{json,md}\" \"docs/**/*.md\"",
+    "format:all": "prettier --write . --ignore-path .prettierignore",
+    "format:all:check": "prettier --check . --ignore-path .prettierignore",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.5.3"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,css,md}": [
+      "prettier --write"
+    ]
+  }
+}

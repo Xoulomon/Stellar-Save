@@ -57,11 +57,89 @@ git checkout -b your-branch-name
 ```
 
 Use descriptive branch names:
+
 - `fix/contribution-overflow`
 - `docs/api-reference`
 - `feat/custom-tokens`
 
 > **Note:** Avoid using `feature/` as a prefix — use `feat/` instead to prevent directory conflicts on some remotes.
+
+---
+
+## Formatting Policy
+
+All TypeScript, JavaScript, JSON, CSS, and Markdown files in this repo are
+formatted with [Prettier](https://prettier.io/). A single shared config lives
+at the **root `.prettierrc`** and applies to both the `frontend/` workspace and
+any other JS/TS tooling files. There is no per-workspace override.
+
+### Config summary
+
+| Option | Value | Reason |
+|--------|-------|--------|
+| `printWidth` | `100` | Readable on modern displays without excessive wrapping |
+| `singleQuote` | `true` | Consistent with existing TypeScript codebase style |
+| `trailingComma` | `"es5"` | Cleaner diffs; valid in all ES5+ environments |
+| `semi` | `true` | Explicit semicolons reduce ambiguity |
+| `tabWidth` | `2` | Matches `.editorconfig` for JS/TS files |
+| `endOfLine` | `"lf"` | Cross-platform consistency |
+| `arrowParens` | `"always"` | Consistent syntax regardless of param count |
+
+### Running the formatter
+
+```bash
+# From the repo root — format everything
+npm run format:all
+
+# Check formatting without writing (CI mode)
+npm run format:all:check
+
+# Format only frontend source files
+npm run format
+
+# From inside frontend/
+npm run format
+npm run format:check
+```
+
+### Pre-commit hook
+
+A Git pre-commit hook (`.husky/pre-commit`) automatically runs
+[lint-staged](https://github.com/okonet/lint-staged) before every commit.
+It formats **only the staged files** matching `*.{ts,tsx,js,jsx,json,css,md}`,
+then re-stages them. This means you never need to run the formatter manually.
+
+The hook is installed automatically when you run `npm install` at the repo root.
+
+To bypass in an emergency (must be justified in the PR):
+
+```bash
+git commit --no-verify -m "chore: emergency fix — formatter bypass documented in PR"
+```
+
+### CI check
+
+The `.github/workflows/format-check.yml` workflow runs
+`npm run format:all:check` on every push and pull request. A PR with
+unformatted files will be blocked from merging.
+
+### Files excluded from formatting
+
+See `.prettierignore` for the full list. Key exclusions:
+
+- `**/node_modules/`, `dist/`, `target/` — generated/installed output
+- `package-lock.json`, `Cargo.lock` — machine-managed lock files
+- `**/test_snapshots/` — auto-generated test snapshot files
+- `frontend/tsconfig.node.json` — contains trailing-comma JSON not parseable by Prettier
+
+### Adding a new workspace
+
+If a new workspace (e.g. `backend/`) is added that has JS/TS files:
+
+1. Do **not** create a local `.prettierrc` — the root config applies automatically
+2. Add any workspace-specific ignore patterns to `.prettierignore`
+3. Update the `format` and `format:check` glob patterns in the root `package.json`
+   if the new workspace files are not already covered by `**/*.{ts,tsx,...}`
 
 ---
 
@@ -131,15 +209,15 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 
 ### Types
 
-| Type | When to use |
-|------|-------------|
-| `feat` | A new feature |
-| `fix` | A bug fix |
-| `docs` | Documentation changes only |
-| `style` | Formatting, whitespace (no logic change) |
+| Type       | When to use                                 |
+| ---------- | ------------------------------------------- |
+| `feat`     | A new feature                               |
+| `fix`      | A bug fix                                   |
+| `docs`     | Documentation changes only                  |
+| `style`    | Formatting, whitespace (no logic change)    |
 | `refactor` | Code restructuring without behaviour change |
-| `test` | Adding or updating tests |
-| `chore` | Build process, dependency updates, tooling |
+| `test`     | Adding or updating tests                    |
+| `chore`    | Build process, dependency updates, tooling  |
 
 ### Examples
 

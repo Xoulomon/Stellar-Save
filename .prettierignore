@@ -1,0 +1,29 @@
+# Prettier ignore file
+# Generated/compiled output
+dist/
+build/
+target/
+coverage/
+*.wasm
+
+# Dependency directories
+node_modules/
+frontend/node_modules/
+
+# Lock files (not formatted by Prettier)
+package-lock.json
+frontend/package-lock.json
+Cargo.lock
+
+# Auto-generated snapshots
+**/test_snapshots/
+
+# Env files
+.env
+.env.*
+
+# Design assets
+design/
+
+# Files with non-standard JSON that Prettier cannot parse
+frontend/tsconfig.node.json
