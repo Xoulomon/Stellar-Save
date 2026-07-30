@@ -50,13 +50,13 @@ BrowseGroupsPage
 
 Owns all page-level state. Passes derived data down; never passes raw setters to children.
 
-| State field     | Type           | Purpose                                      |
-|-----------------|----------------|----------------------------------------------|
-| `groups`        | `PublicGroup[]`| Raw data from `fetchGroups`                  |
-| `loading`       | `boolean`      | True while fetch is in-flight                |
-| `error`         | `string \| null` | Error message; null when no error           |
-| `searchQuery`   | `string`       | Current debounced search string              |
-| `filters`       | `FilterState`  | Current filter/sort selections               |
+| State field   | Type             | Purpose                           |
+| ------------- | ---------------- | --------------------------------- |
+| `groups`      | `PublicGroup[]`  | Raw data from `fetchGroups`       |
+| `loading`     | `boolean`        | True while fetch is in-flight     |
+| `error`       | `string \| null` | Error message; null when no error |
+| `searchQuery` | `string`         | Current debounced search string   |
+| `filters`     | `FilterState`    | Current filter/sort selections    |
 
 Derived (via `useMemo`):
 
@@ -68,22 +68,26 @@ const filteredGroups = useMemo(() => {
   if (searchQuery.trim()) {
     const q = searchQuery.toLowerCase();
     result = result.filter(
-      g => g.name.toLowerCase().includes(q) || g.description?.toLowerCase().includes(q)
+      (g) => g.name.toLowerCase().includes(q) || g.description?.toLowerCase().includes(q)
     );
   }
 
   // 2. Status filter
   if (filters.status !== 'all') {
-    result = result.filter(g => g.status === filters.status);
+    result = result.filter((g) => g.status === filters.status);
   }
 
   // 3. Amount range
-  if (filters.minAmount) result = result.filter(g => g.contributionAmount >= Number(filters.minAmount));
-  if (filters.maxAmount) result = result.filter(g => g.contributionAmount <= Number(filters.maxAmount));
+  if (filters.minAmount)
+    result = result.filter((g) => g.contributionAmount >= Number(filters.minAmount));
+  if (filters.maxAmount)
+    result = result.filter((g) => g.contributionAmount <= Number(filters.maxAmount));
 
   // 4. Member count range
-  if (filters.minMembers) result = result.filter(g => g.memberCount >= Number(filters.minMembers));
-  if (filters.maxMembers) result = result.filter(g => g.memberCount <= Number(filters.maxMembers));
+  if (filters.minMembers)
+    result = result.filter((g) => g.memberCount >= Number(filters.minMembers));
+  if (filters.maxMembers)
+    result = result.filter((g) => g.memberCount <= Number(filters.maxMembers));
 
   // 5. Sort
   return applySortOption(result, filters.sort);
@@ -97,7 +101,9 @@ The `applySortOption` helper maps `FilterState.sort` (`SortOption`) to a compara
 ```tsx
 <SearchBar
   placeholder="Search groups by name or keyword..."
-  onSearch={(q) => { setSearchQuery(q); }}
+  onSearch={(q) => {
+    setSearchQuery(q);
+  }}
   debounceMs={300}
   loading={loading}
   aria-label="Search groups"
@@ -110,7 +116,9 @@ The `applySortOption` helper maps `FilterState.sort` (`SortOption`) to a compara
 
 ```tsx
 <GroupFilters
-  onFilterChange={(f) => { setFilters(f); }}
+  onFilterChange={(f) => {
+    setFilters(f);
+  }}
 />
 ```
 
@@ -128,9 +136,11 @@ The `applySortOption` helper maps `FilterState.sort` (`SortOption`) to a compara
   pageSizeOptions={[12, 24, 48]}
   showPagination={filteredGroups.length > 12}
   emptyTitle={hasActiveFilters ? 'No groups found' : 'No groups available'}
-  emptyDescription={hasActiveFilters
-    ? 'Try adjusting your search or filters to find groups.'
-    : 'There are no public groups yet. Be the first to create one!'}
+  emptyDescription={
+    hasActiveFilters
+      ? 'Try adjusting your search or filters to find groups.'
+      : 'There are no public groups yet. Be the first to create one!'
+  }
   emptyActionLabel={hasActiveFilters ? 'Clear Filters' : 'Create Group'}
   onEmptyAction={hasActiveFilters ? handleClearFilters : handleCreateGroup}
   renderGroupItem={(group) => (
@@ -143,9 +153,11 @@ The `applySortOption` helper maps `FilterState.sort` (`SortOption`) to a compara
       currency={group.currency}
       status={group.status}
       onViewDetails={() => navigate(buildRoute.groupDetail(group.id))}
-      onJoin={group.status === 'active' || group.status === 'pending'
-        ? () => handleJoin(group.id)
-        : undefined}
+      onJoin={
+        group.status === 'active' || group.status === 'pending'
+          ? () => handleJoin(group.id)
+          : undefined
+      }
     />
   )}
 />
@@ -167,8 +179,8 @@ export interface PublicGroup {
   name: string;
   description?: string;
   memberCount: number;
-  contributionAmount: number;   // in XLM
-  currency: string;             // e.g. "XLM"
+  contributionAmount: number; // in XLM
+  currency: string; // e.g. "XLM"
   status: 'active' | 'completed' | 'pending';
   createdAt: Date;
 }
@@ -192,8 +204,15 @@ export interface FilterState {
   maxAmount: string;
   minMembers: string;
   maxMembers: string;
-  sort: 'name-asc' | 'name-desc' | 'amount-asc' | 'amount-desc'
-      | 'members-asc' | 'members-desc' | 'date-asc' | 'date-desc';
+  sort:
+    | 'name-asc'
+    | 'name-desc'
+    | 'amount-asc'
+    | 'amount-desc'
+    | 'members-asc'
+    | 'members-desc'
+    | 'date-asc'
+    | 'date-desc';
 }
 ```
 
@@ -208,8 +227,8 @@ Add `GROUPS_BROWSE: "/groups/browse"` to the `ROUTES` object.
 ```ts
 export const ROUTES = {
   // ...existing...
-  GROUPS_BROWSE: "/groups/browse",
-  GROUP_DETAIL: "/groups/:groupId",   // must remain AFTER GROUPS_BROWSE
+  GROUPS_BROWSE: '/groups/browse',
+  GROUP_DETAIL: '/groups/:groupId', // must remain AFTER GROUPS_BROWSE
 } as const;
 ```
 
@@ -237,7 +256,14 @@ const BrowseGroupsPage = lazy(() => import("../pages/BrowseGroupsPage"));
 `hasActiveFilters` is a derived boolean:
 
 ```ts
-const defaultFilters: FilterState = { status: 'all', minAmount: '', maxAmount: '', minMembers: '', maxMembers: '', sort: 'date-desc' };
+const defaultFilters: FilterState = {
+  status: 'all',
+  minAmount: '',
+  maxAmount: '',
+  minMembers: '',
+  maxMembers: '',
+  sort: 'date-desc',
+};
 
 const hasActiveFilters =
   searchQuery.trim() !== '' ||
@@ -248,10 +274,10 @@ const hasActiveFilters =
   filters.maxMembers !== '';
 ```
 
-| Condition | Title | Description | Action |
-|-----------|-------|-------------|--------|
-| `filteredGroups.length === 0 && !hasActiveFilters` | "No groups available" | "There are no public groups yet. Be the first to create one!" | "Create Group" → `/groups/create` |
-| `filteredGroups.length === 0 && hasActiveFilters` | "No groups found" | "Try adjusting your search or filters to find groups." | "Clear Filters" → resets search + filters |
+| Condition                                          | Title                 | Description                                                   | Action                                    |
+| -------------------------------------------------- | --------------------- | ------------------------------------------------------------- | ----------------------------------------- |
+| `filteredGroups.length === 0 && !hasActiveFilters` | "No groups available" | "There are no public groups yet. Be the first to create one!" | "Create Group" → `/groups/create`         |
+| `filteredGroups.length === 0 && hasActiveFilters`  | "No groups found"     | "Try adjusting your search or filters to find groups."        | "Clear Filters" → resets search + filters |
 
 ---
 
@@ -275,18 +301,18 @@ const hasActiveFilters =
 .browse-groups-grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: 1fr;                          /* < 600px: 1 col */
+  grid-template-columns: 1fr; /* < 600px: 1 col */
 }
 
 @media (min-width: 600px) {
   .browse-groups-grid {
-    grid-template-columns: repeat(2, 1fr);             /* 600–1023px: 2 cols */
+    grid-template-columns: repeat(2, 1fr); /* 600–1023px: 2 cols */
   }
 }
 
 @media (min-width: 1024px) {
   .browse-groups-grid {
-    grid-template-columns: repeat(3, 1fr);             /* ≥ 1024px: 3 cols */
+    grid-template-columns: repeat(3, 1fr); /* ≥ 1024px: 3 cols */
   }
 }
 ```
@@ -297,11 +323,11 @@ const hasActiveFilters =
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: fetchGroups resolves to a PublicGroup array
 
-*For any* invocation of `fetchGroups`, the resolved value must be an array where every element has the required `PublicGroup` fields (`id`, `name`, `memberCount`, `contributionAmount`, `currency`, `status`, `createdAt`).
+_For any_ invocation of `fetchGroups`, the resolved value must be an array where every element has the required `PublicGroup` fields (`id`, `name`, `memberCount`, `contributionAmount`, `currency`, `status`, `createdAt`).
 
 **Validates: Requirements 2.2**
 
@@ -309,7 +335,7 @@ const hasActiveFilters =
 
 ### Property 2: Search filtering correctness
 
-*For any* non-empty search query and any array of `PublicGroup` objects, every group in the filtered result must have its `name` or `description` contain the query string (case-insensitive), and clearing the search query must restore the full original array.
+_For any_ non-empty search query and any array of `PublicGroup` objects, every group in the filtered result must have its `name` or `description` contain the query string (case-insensitive), and clearing the search query must restore the full original array.
 
 **Validates: Requirements 3.2, 3.4**
 
@@ -317,7 +343,7 @@ const hasActiveFilters =
 
 ### Property 3: Filter criteria correctness
 
-*For any* `FilterState` and any array of `PublicGroup` objects, every group in the filtered result must satisfy all active filter criteria simultaneously (status match, amount within range, member count within range) — i.e., search and filter are combined with logical AND.
+_For any_ `FilterState` and any array of `PublicGroup` objects, every group in the filtered result must satisfy all active filter criteria simultaneously (status match, amount within range, member count within range) — i.e., search and filter are combined with logical AND.
 
 **Validates: Requirements 4.2, 4.5**
 
@@ -325,7 +351,7 @@ const hasActiveFilters =
 
 ### Property 4: Page resets to 1 on any state change
 
-*For any* current page greater than 1, changing the search query or any filter value must reset the displayed page to 1.
+_For any_ current page greater than 1, changing the search query or any filter value must reset the displayed page to 1.
 
 **Validates: Requirements 3.3, 4.3**
 
@@ -333,7 +359,7 @@ const hasActiveFilters =
 
 ### Property 5: Filter reset round-trip
 
-*For any* `FilterState`, applying it and then clicking Reset must produce a `FilterState` equal to the default (`status: 'all'`, all range fields empty, `sort: 'date-desc'`), and the displayed groups must equal the full unfiltered list.
+_For any_ `FilterState`, applying it and then clicking Reset must produce a `FilterState` equal to the default (`status: 'all'`, all range fields empty, `sort: 'date-desc'`), and the displayed groups must equal the full unfiltered list.
 
 **Validates: Requirements 4.4**
 
@@ -341,7 +367,7 @@ const hasActiveFilters =
 
 ### Property 6: GroupCard renders all required fields
 
-*For any* array of `PublicGroup` objects passed to `BrowseGroupsPage`, each rendered `GroupCard` must display the group's `name`, `memberCount`, `contributionAmount`, `currency`, and `status` badge.
+_For any_ array of `PublicGroup` objects passed to `BrowseGroupsPage`, each rendered `GroupCard` must display the group's `name`, `memberCount`, `contributionAmount`, `currency`, and `status` badge.
 
 **Validates: Requirements 5.1**
 
@@ -349,7 +375,7 @@ const hasActiveFilters =
 
 ### Property 7: Join button visibility matches group status
 
-*For any* `PublicGroup`, the "Join Group" button must be present in the rendered `GroupCard` if and only if the group's `status` is `'active'` or `'pending'`; it must be absent for `'completed'` groups.
+_For any_ `PublicGroup`, the "Join Group" button must be present in the rendered `GroupCard` if and only if the group's `status` is `'active'` or `'pending'`; it must be absent for `'completed'` groups.
 
 **Validates: Requirements 5.4**
 
@@ -357,7 +383,7 @@ const hasActiveFilters =
 
 ### Property 8: Pagination hidden when results fit on one page
 
-*For any* filtered group list whose length is 12 or fewer, the pagination controls must not be rendered.
+_For any_ filtered group list whose length is 12 or fewer, the pagination controls must not be rendered.
 
 **Validates: Requirements 6.4**
 
@@ -365,7 +391,7 @@ const hasActiveFilters =
 
 ### Property 9: Page size constrains rendered card count
 
-*For any* filtered group list larger than the current page size, the number of `GroupCard` components rendered must equal the page size (not the total list length).
+_For any_ filtered group list larger than the current page size, the number of `GroupCard` components rendered must equal the page size (not the total list length).
 
 **Validates: Requirements 6.1, 10.4**
 
@@ -373,7 +399,7 @@ const hasActiveFilters =
 
 ### Property 10: GroupCard aria-labels include group name
 
-*For any* `PublicGroup`, the "View Details" button's `aria-label` must contain the group's name (e.g., `"View details for {name}"`), and the "Join Group" button's `aria-label` must also contain the group's name.
+_For any_ `PublicGroup`, the "View Details" button's `aria-label` must contain the group's name (e.g., `"View details for {name}"`), and the "Join Group" button's `aria-label` must also contain the group's name.
 
 **Validates: Requirements 9.6**
 
@@ -381,7 +407,7 @@ const hasActiveFilters =
 
 ### Property 11: fetchGroups called exactly once on mount
 
-*For any* sequence of search queries and filter changes applied after mount, `fetchGroups` must have been called exactly once (on mount), and must not be called again unless the Retry button is explicitly clicked.
+_For any_ sequence of search queries and filter changes applied after mount, `fetchGroups` must have been called exactly once (on mount), and must not be called again unless the Retry button is explicitly clicked.
 
 **Validates: Requirements 10.3, 2.1**
 
@@ -389,12 +415,12 @@ const hasActiveFilters =
 
 ## Error Handling
 
-| Scenario | Behavior |
-|----------|----------|
-| `fetchGroups` rejects with an `Error` | Display `err.message` if non-empty, else fallback "Failed to load groups. Please try again." |
-| `fetchGroups` rejects with non-Error | Display fallback message |
-| Retry clicked | Clear `error`, set `loading = true`, re-invoke `fetchGroups` |
-| `fetchGroups` resolves with empty array | No error; show EmptyState via `GroupList` |
+| Scenario                                | Behavior                                                                                     |
+| --------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `fetchGroups` rejects with an `Error`   | Display `err.message` if non-empty, else fallback "Failed to load groups. Please try again." |
+| `fetchGroups` rejects with non-Error    | Display fallback message                                                                     |
+| Retry clicked                           | Clear `error`, set `loading = true`, re-invoke `fetchGroups`                                 |
+| `fetchGroups` resolves with empty array | No error; show EmptyState via `GroupList`                                                    |
 
 Error state is rendered inside the `aria-live="polite"` region so screen readers announce it automatically.
 
@@ -407,6 +433,7 @@ Error state is rendered inside the `aria-live="polite"` region so screen readers
 Unit tests cover specific examples, edge cases, and integration points. They live in `frontend/src/test/BrowseGroupsPage.test.tsx`.
 
 Key examples to cover:
+
 - Page renders with `AppLayout`, correct title and subtitle (Req 1.1, 1.2)
 - Route `/groups/browse` renders `BrowseGroupsPage` (Req 1.3)
 - `fetchGroups` is called once on mount (Req 2.1)
@@ -433,19 +460,19 @@ Tests live in `frontend/src/test/BrowseGroupsPage.property.test.tsx`.
 Each test is tagged with a comment in the format:
 `// Feature: browse-groups-page, Property {N}: {property_text}`
 
-| Test | Property | fast-check arbitraries |
-|------|----------|------------------------|
-| P1: fetchGroups shape | Resolved value is `PublicGroup[]` with all required fields | `fc.array(fc.record({id, name, memberCount, ...}))` |
-| P2: Search filtering | All results contain query in name/description; clear restores full list | `fc.array(PublicGroupArb)`, `fc.string()` |
-| P3: Filter correctness | All results satisfy active filter criteria (AND logic) | `fc.array(PublicGroupArb)`, `FilterStateArb` |
-| P4: Page reset | Any search/filter change resets page to 1 | `fc.array(PublicGroupArb)`, `fc.string()`, `FilterStateArb` |
-| P5: Filter reset round-trip | Reset returns to default FilterState | `FilterStateArb` |
-| P6: GroupCard fields | Each card displays all required PublicGroup fields | `fc.array(PublicGroupArb, {minLength: 1})` |
-| P7: Join button visibility | Join button iff status active or pending | `PublicGroupArb` |
-| P8: Pagination hidden ≤12 | No pagination when ≤12 filtered results | `fc.array(PublicGroupArb, {maxLength: 12})` |
-| P9: Page size constraint | Rendered card count ≤ page size | `fc.array(PublicGroupArb, {minLength: 13})`, `fc.constantFrom(12, 24, 48)` |
-| P10: aria-labels | Buttons contain group name in aria-label | `PublicGroupArb` |
-| P11: Fetch called once | fetchGroups call count = 1 after N state changes | `fc.array(fc.string())`, `fc.array(FilterStateArb)` |
+| Test                        | Property                                                                | fast-check arbitraries                                                     |
+| --------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| P1: fetchGroups shape       | Resolved value is `PublicGroup[]` with all required fields              | `fc.array(fc.record({id, name, memberCount, ...}))`                        |
+| P2: Search filtering        | All results contain query in name/description; clear restores full list | `fc.array(PublicGroupArb)`, `fc.string()`                                  |
+| P3: Filter correctness      | All results satisfy active filter criteria (AND logic)                  | `fc.array(PublicGroupArb)`, `FilterStateArb`                               |
+| P4: Page reset              | Any search/filter change resets page to 1                               | `fc.array(PublicGroupArb)`, `fc.string()`, `FilterStateArb`                |
+| P5: Filter reset round-trip | Reset returns to default FilterState                                    | `FilterStateArb`                                                           |
+| P6: GroupCard fields        | Each card displays all required PublicGroup fields                      | `fc.array(PublicGroupArb, {minLength: 1})`                                 |
+| P7: Join button visibility  | Join button iff status active or pending                                | `PublicGroupArb`                                                           |
+| P8: Pagination hidden ≤12   | No pagination when ≤12 filtered results                                 | `fc.array(PublicGroupArb, {maxLength: 12})`                                |
+| P9: Page size constraint    | Rendered card count ≤ page size                                         | `fc.array(PublicGroupArb, {minLength: 13})`, `fc.constantFrom(12, 24, 48)` |
+| P10: aria-labels            | Buttons contain group name in aria-label                                | `PublicGroupArb`                                                           |
+| P11: Fetch called once      | fetchGroups call count = 1 after N state changes                        | `fc.array(fc.string())`, `fc.array(FilterStateArb)`                        |
 
 **Configuration example:**
 
@@ -457,7 +484,7 @@ it('all filtered results contain the search query', () => {
       const result = applySearch(groups, query);
       const q = query.toLowerCase();
       return result.every(
-        g => g.name.toLowerCase().includes(q) || g.description?.toLowerCase().includes(q)
+        (g) => g.name.toLowerCase().includes(q) || g.description?.toLowerCase().includes(q)
       );
     }),
     { numRuns: 100 }

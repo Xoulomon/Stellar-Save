@@ -1,10 +1,7 @@
-import { useMemo } from "react";
-import { Badge } from "./Badge";
-import {
-  calculateCycleProgressFromDeadline,
-  type CycleProgressResult,
-} from "../utils";
-import "./CycleProgress.css";
+import { useMemo } from 'react';
+import { Badge } from './Badge';
+import { calculateCycleProgressFromDeadline, type CycleProgressResult } from '../utils';
+import './CycleProgress.css';
 
 export interface CycleProgressProps {
   cycleNumber: number;
@@ -13,7 +10,7 @@ export interface CycleProgressProps {
   totalMembers: number;
   targetAmount: number;
   currentAmount?: number;
-  status?: "active" | "completed" | "pending";
+  status?: 'active' | 'completed' | 'pending';
 }
 
 type CycleProgressType = CycleProgressResult;
@@ -25,17 +22,13 @@ export function CycleProgress({
   totalMembers,
   targetAmount,
   currentAmount = 0,
-  status = "active",
+  status = 'active',
 }: CycleProgressProps) {
   const cycleProgress = useMemo((): CycleProgressType => {
-    return calculateCycleProgressFromDeadline(
-      deadline,
-      contributedCount,
-      totalMembers,
-    );
+    return calculateCycleProgressFromDeadline(deadline, contributedCount, totalMembers);
   }, [deadline, contributedCount, totalMembers]);
 
-  const timeRemaining = cycleProgress.timeRemaining ?? "Ended";
+  const timeRemaining = cycleProgress.timeRemaining ?? 'Ended';
   const contributionProgress = cycleProgress.contributionProgress;
   const amountProgress = (currentAmount / targetAmount) * 100;
   const isOverdue = cycleProgress.isOverdue;
@@ -46,18 +39,12 @@ export function CycleProgress({
         <div className="cycle-progress-title">
           <h3>Cycle {cycleNumber}</h3>
           <Badge
-            variant={
-              status === "completed"
-                ? "success"
-                : status === "pending"
-                  ? "warning"
-                  : "info"
-            }
+            variant={status === 'completed' ? 'success' : status === 'pending' ? 'warning' : 'info'}
           >
             {status}
           </Badge>
         </div>
-        <div className={`cycle-progress-time ${isOverdue ? "overdue" : ""}`}>
+        <div className={`cycle-progress-time ${isOverdue ? 'overdue' : ''}`}>
           <span className="time-label">Time Remaining:</span>
           <span className="time-value">{timeRemaining}</span>
         </div>
@@ -72,15 +59,11 @@ export function CycleProgress({
         </div>
         <div className="stat">
           <span className="stat-label">Amount</span>
-          <span className="stat-value">
-            {currentAmount.toLocaleString()} XLM
-          </span>
+          <span className="stat-value">{currentAmount.toLocaleString()} XLM</span>
         </div>
         <div className="stat">
           <span className="stat-label">Target</span>
-          <span className="stat-value">
-            {targetAmount.toLocaleString()} XLM
-          </span>
+          <span className="stat-value">{targetAmount.toLocaleString()} XLM</span>
         </div>
       </div>
 
@@ -88,9 +71,7 @@ export function CycleProgress({
         <div className="progress-item">
           <div className="progress-header">
             <span>Contribution Progress</span>
-            <span className="progress-percentage">
-              {contributionProgress.toFixed(0)}%
-            </span>
+            <span className="progress-percentage">{contributionProgress.toFixed(0)}%</span>
           </div>
           <div className="progress-bar">
             <div
@@ -103,9 +84,7 @@ export function CycleProgress({
         <div className="progress-item">
           <div className="progress-header">
             <span>Amount Progress</span>
-            <span className="progress-percentage">
-              {amountProgress.toFixed(0)}%
-            </span>
+            <span className="progress-percentage">{amountProgress.toFixed(0)}%</span>
           </div>
           <div className="progress-bar">
             <div
@@ -116,9 +95,7 @@ export function CycleProgress({
         </div>
       </div>
 
-      {cycleProgress.isComplete && (
-        <div className="cycle-progress-complete">✓ Cycle complete</div>
-      )}
+      {cycleProgress.isComplete && <div className="cycle-progress-complete">✓ Cycle complete</div>}
     </div>
   );
 }

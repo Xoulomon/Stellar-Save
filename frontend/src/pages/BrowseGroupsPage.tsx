@@ -62,10 +62,7 @@ export default function BrowseGroupsPage() {
                   loading={isLoading}
                   aria-label="Search groups"
                 />
-                <GroupFilters
-                  onFilterChange={(f) => setFilters(f)}
-                  initialFilters={filters}
-                />
+                <GroupFilters onFilterChange={(f) => setFilters(f)} initialFilters={filters} />
               </div>
 
               <div aria-busy={isLoading}>
@@ -106,7 +103,11 @@ export default function BrowseGroupsPage() {
 
               {/* Pagination controls driven by the hook */}
               {pagination.totalPages > 1 && (
-                <div className="browse-groups-pagination" role="navigation" aria-label="Group list pagination">
+                <div
+                  className="browse-groups-pagination"
+                  role="navigation"
+                  aria-label="Group list pagination"
+                >
                   <Button
                     variant="secondary"
                     size="sm"
@@ -133,7 +134,9 @@ export default function BrowseGroupsPage() {
                     className="browse-groups-page-size"
                   >
                     {[12, 24, 48].map((n) => (
-                      <option key={n} value={n}>{n} per page</option>
+                      <option key={n} value={n}>
+                        {n} per page
+                      </option>
                     ))}
                   </select>
                 </div>

@@ -33,7 +33,7 @@ describe('Spinner', () => {
     (color) => {
       const { container } = render(<Spinner color={color} />);
       expect(container.querySelector(`.spinner-${color}`)).toBeInTheDocument();
-    },
+    }
   );
 });
 

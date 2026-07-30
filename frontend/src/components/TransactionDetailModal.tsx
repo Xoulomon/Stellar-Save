@@ -10,11 +10,7 @@ interface Props {
   onClose: () => void;
 }
 
-const TransactionDetailModal: React.FC<Props> = ({
-  transaction,
-  isOpen,
-  onClose,
-}) => {
+const TransactionDetailModal: React.FC<Props> = ({ transaction, isOpen, onClose }) => {
   if (!isOpen || !transaction) return null;
 
   return (
@@ -55,9 +51,7 @@ const TransactionDetailModal: React.FC<Props> = ({
           </div>
 
           {/* FIXED: Using 'danger' which exists in your Badge.tsx */}
-          <Badge
-            variant={transaction.status === 'success' ? 'success' : 'danger'}
-          >
+          <Badge variant={transaction.status === 'success' ? 'success' : 'danger'}>
             {transaction.status.toUpperCase()}
           </Badge>
         </div>

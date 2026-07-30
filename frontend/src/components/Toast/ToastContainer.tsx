@@ -8,10 +8,7 @@ interface ToastContainerProps {
   onRemoveToast: (id: string) => void;
 }
 
-const ToastContainer: React.FC<ToastContainerProps> = ({
-  toasts,
-  onRemoveToast,
-}) => {
+const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemoveToast }) => {
   return (
     <Box
       role="region"
@@ -33,11 +30,7 @@ const ToastContainer: React.FC<ToastContainerProps> = ({
         }}
       >
         {toasts.map((toast) => (
-          <ToastItem
-            key={toast.id}
-            toast={toast}
-            onClose={onRemoveToast}
-          />
+          <ToastItem key={toast.id} toast={toast} onClose={onRemoveToast} />
         ))}
       </Stack>
     </Box>

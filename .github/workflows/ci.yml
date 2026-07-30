@@ -68,7 +68,7 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: ". -> target"
+          workspaces: '. -> target'
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
@@ -87,11 +87,11 @@ jobs:
             --manifest-path contracts/stellar-save/Cargo.toml \
             --summary-only \
             -- --test-threads=1 2>&1 | tee coverage_summary.txt
-          
+
           # Extract line coverage percentage
           LINE_COV=$(grep -oP 'Lines\s+\K[\d.]+(?=%)' coverage_summary.txt || echo "0")
           echo "Line coverage: ${LINE_COV}%"
-          
+
           # Fail if below 95%
           python3 -c "
           cov = float('${LINE_COV}' or 0)

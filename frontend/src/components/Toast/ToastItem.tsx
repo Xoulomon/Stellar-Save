@@ -1,12 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import {
-  Alert,
-  AlertTitle,
-  Box,
-  Button,
-  Stack,
-  keyframes,
-} from '@mui/material';
+import { Alert, AlertTitle, Box, Button, Stack, keyframes } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
@@ -89,14 +82,20 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onClose }) => {
     <Box
       ref={toastRef}
       sx={{
-        animation: isExiting
-          ? `${slideOut} 0.3s ease-in-out forwards`
-          : `${slideIn} 0.3s ease-out`,
+        animation: isExiting ? `${slideOut} 0.3s ease-in-out forwards` : `${slideIn} 0.3s ease-out`,
       }}
     >
       <Alert
         icon={getIcon()}
-        severity={toast.type === 'success' ? 'success' : toast.type === 'error' ? 'error' : toast.type === 'warning' ? 'warning' : 'info'}
+        severity={
+          toast.type === 'success'
+            ? 'success'
+            : toast.type === 'error'
+              ? 'error'
+              : toast.type === 'warning'
+                ? 'warning'
+                : 'info'
+        }
         sx={{
           minWidth: '300px',
           maxWidth: '400px',

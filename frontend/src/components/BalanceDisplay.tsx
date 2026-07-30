@@ -1,7 +1,7 @@
-import { useBalance } from "../hooks/useBalance";
-import { Card } from "./Card";
-import { Spinner } from "./Spinner";
-import "./BalanceDisplay.css";
+import { useBalance } from '../hooks/useBalance';
+import { Card } from './Card';
+import { Spinner } from './Spinner';
+import './BalanceDisplay.css';
 
 export interface BalanceDisplayProps {
   /**
@@ -33,23 +33,16 @@ export interface BalanceDisplayProps {
 export function BalanceDisplay({
   refreshInterval = 30000,
   showAllBalances = false,
-  className = "",
+  className = '',
 }: BalanceDisplayProps) {
-  const {
-    xlmBalance,
-    allBalances,
-    isLoading,
-    error,
-    lastUpdated,
-    refresh,
-    hasAddress,
-  } = useBalance({ refreshInterval });
+  const { xlmBalance, allBalances, isLoading, error, lastUpdated, refresh, hasAddress } =
+    useBalance({ refreshInterval });
 
   // Format balance for display
   const formatBalance = (balance: string | null): string => {
-    if (!balance) return "0.00";
+    if (!balance) return '0.00';
     const num = parseFloat(balance);
-    return num.toLocaleString("en-US", {
+    return num.toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 7,
     });
@@ -57,7 +50,7 @@ export function BalanceDisplay({
 
   // Format timestamp
   const formatTimestamp = (date: Date | null): string => {
-    if (!date) return "Never";
+    if (!date) return 'Never';
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const seconds = Math.floor(diff / 1000);
@@ -89,11 +82,7 @@ export function BalanceDisplay({
           disabled={isLoading}
           aria-label="Refresh balance"
         >
-          <span
-            className={`balance-display__refresh-icon ${isLoading ? "spinning" : ""}`}
-          >
-            ↻
-          </span>
+          <span className={`balance-display__refresh-icon ${isLoading ? 'spinning' : ''}`}>↻</span>
         </button>
       </div>
 
@@ -113,9 +102,7 @@ export function BalanceDisplay({
         <>
           <div className="balance-display__main">
             <div className="balance-display__xlm">
-              <span className="balance-display__amount">
-                {formatBalance(xlmBalance)}
-              </span>
+              <span className="balance-display__amount">{formatBalance(xlmBalance)}</span>
               <span className="balance-display__currency">XLM</span>
             </div>
             {lastUpdated && (
@@ -132,9 +119,7 @@ export function BalanceDisplay({
                 {allBalances.map((balance, index) => (
                   <div key={index} className="balance-display__asset">
                     <span className="balance-display__asset-code">
-                      {balance.asset_type === "native"
-                        ? "XLM"
-                        : balance.asset_code || "Unknown"}
+                      {balance.asset_type === 'native' ? 'XLM' : balance.asset_code || 'Unknown'}
                     </span>
                     <span className="balance-display__asset-balance">
                       {formatBalance(balance.balance)}

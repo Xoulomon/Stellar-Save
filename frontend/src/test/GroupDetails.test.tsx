@@ -59,36 +59,21 @@ const cycles: CycleInfo[] = [
 describe('GroupDetails', () => {
   it('renders group name', () => {
     render(
-      <GroupDetails
-        group={group}
-        members={members}
-        contributions={contributions}
-        cycles={cycles}
-      />,
+      <GroupDetails group={group} members={members} contributions={contributions} cycles={cycles} />
     );
     expect(screen.getByText('Test Group')).toBeInTheDocument();
   });
 
   it('renders overview tab by default', () => {
     render(
-      <GroupDetails
-        group={group}
-        members={members}
-        contributions={contributions}
-        cycles={cycles}
-      />,
+      <GroupDetails group={group} members={members} contributions={contributions} cycles={cycles} />
     );
     expect(screen.getByText('A test savings group')).toBeInTheDocument();
   });
 
   it('switches to members tab', () => {
     render(
-      <GroupDetails
-        group={group}
-        members={members}
-        contributions={contributions}
-        cycles={cycles}
-      />,
+      <GroupDetails group={group} members={members} contributions={contributions} cycles={cycles} />
     );
     fireEvent.click(screen.getByText('Members'));
     expect(screen.getByText('Alice')).toBeInTheDocument();
@@ -96,12 +81,7 @@ describe('GroupDetails', () => {
 
   it('switches to contributions tab', () => {
     render(
-      <GroupDetails
-        group={group}
-        members={members}
-        contributions={contributions}
-        cycles={cycles}
-      />,
+      <GroupDetails group={group} members={members} contributions={contributions} cycles={cycles} />
     );
     fireEvent.click(screen.getByText('Contributions'));
     expect(screen.getByText('Contribution History (1)')).toBeInTheDocument();
@@ -116,7 +96,7 @@ describe('GroupDetails', () => {
         contributions={contributions}
         cycles={cycles}
         onMemberClick={onMemberClick}
-      />,
+      />
     );
     fireEvent.click(screen.getByText('Members'));
     fireEvent.click(screen.getByText('Alice'));
@@ -139,7 +119,7 @@ describe('GroupDetails', () => {
         contributions={contributions}
         cycles={cycles}
         currentCycle={currentCycle}
-      />,
+      />
     );
     fireEvent.click(screen.getByText('Cycles'));
     expect(screen.getByText('Current Cycle #2')).toBeInTheDocument();
@@ -147,12 +127,7 @@ describe('GroupDetails', () => {
 
   it('shows inactive badge for inactive member', () => {
     render(
-      <GroupDetails
-        group={group}
-        members={members}
-        contributions={contributions}
-        cycles={cycles}
-      />,
+      <GroupDetails group={group} members={members} contributions={contributions} cycles={cycles} />
     );
     fireEvent.click(screen.getByText('Members'));
     expect(screen.getByText('Inactive')).toBeInTheDocument();

@@ -88,7 +88,11 @@ export interface UseContractReturn {
 
   // ── Read operations (no wallet required) ──────────────────────────────────
   getGroup: (groupId: bigint) => Promise<Record<string, unknown>>;
-  listGroups: (cursor: bigint, limit: number, statusFilter?: string) => Promise<Record<string, unknown>[]>;
+  listGroups: (
+    cursor: bigint,
+    limit: number,
+    statusFilter?: string
+  ) => Promise<Record<string, unknown>[]>;
   getTotalGroups: () => Promise<bigint>;
   getMemberCount: (groupId: bigint) => Promise<number>;
   getPayoutPosition: (groupId: bigint, memberAddress: string) => Promise<number>;
@@ -131,7 +135,7 @@ export function useContract(): UseContractReturn {
   async function runMutation<TParams>(
     key: keyof ContractLoadingState,
     params: TParams,
-    fn: (p: TParams) => Promise<string>,
+    fn: (p: TParams) => Promise<string>
   ): Promise<MutationResult> {
     if (!isReady || !activeAddress) {
       const err = new ContractError(null, 'Wallet is not connected.');
@@ -159,130 +163,105 @@ export function useContract(): UseContractReturn {
   const createGroup = useCallback(
     (params: Omit<CreateGroupParams, 'creator'>) =>
       runMutation('createGroup', params, (p) =>
-        clientCreateGroup({ ...p, creator: activeAddress! }).then(String),
+        clientCreateGroup({ ...p, creator: activeAddress! }).then(String)
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isReady, activeAddress],
+    [isReady, activeAddress]
   );
 
   const joinGroup = useCallback(
     (params: Omit<JoinGroupParams, 'member'>) =>
-      runMutation('joinGroup', params, (p) =>
-        clientJoinGroup({ ...p, member: activeAddress! }),
-      ),
+      runMutation('joinGroup', params, (p) => clientJoinGroup({ ...p, member: activeAddress! })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isReady, activeAddress],
+    [isReady, activeAddress]
   );
 
   const contribute = useCallback(
     (params: Omit<ContributeParams, 'member'>) =>
-      runMutation('contribute', params, (p) =>
-        clientContribute({ ...p, member: activeAddress! }),
-      ),
+      runMutation('contribute', params, (p) => clientContribute({ ...p, member: activeAddress! })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isReady, activeAddress],
+    [isReady, activeAddress]
   );
 
   const activateGroup = useCallback(
     (params: Omit<ActivateGroupParams, 'creator'>) =>
       runMutation('activateGroup', params, (p) =>
-        clientActivateGroup({ ...p, creator: activeAddress! }),
+        clientActivateGroup({ ...p, creator: activeAddress! })
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isReady, activeAddress],
+    [isReady, activeAddress]
   );
 
   const executePayout = useCallback(
     (params: Omit<ExecutePayoutParams, 'recipient'>) =>
       runMutation('executePayout', params, (p) =>
-        clientExecutePayout({ ...p, recipient: activeAddress! }),
+        clientExecutePayout({ ...p, recipient: activeAddress! })
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isReady, activeAddress],
+    [isReady, activeAddress]
   );
 
   const pauseGroup = useCallback(
     (params: Omit<PauseGroupParams, 'caller'>) =>
-      runMutation('pauseGroup', params, (p) =>
-        clientPauseGroup({ ...p, caller: activeAddress! }),
-      ),
+      runMutation('pauseGroup', params, (p) => clientPauseGroup({ ...p, caller: activeAddress! })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isReady, activeAddress],
+    [isReady, activeAddress]
   );
 
   const resumeGroup = useCallback(
     (params: Omit<PauseGroupParams, 'caller'>) =>
       runMutation('resumeGroup', params, (p) =>
-        clientResumeGroup({ ...p, caller: activeAddress! }),
+        clientResumeGroup({ ...p, caller: activeAddress! })
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isReady, activeAddress],
+    [isReady, activeAddress]
   );
 
   // ── Read operations ────────────────────────────────────────────────────────
 
-  const getGroup = useCallback(
-    (groupId: bigint) => clientGetGroup(groupId),
-    [],
-  );
+  const getGroup = useCallback((groupId: bigint) => clientGetGroup(groupId), []);
 
   const listGroups = useCallback(
     (cursor: bigint, limit: number, statusFilter?: string) =>
       clientListGroups(cursor, limit, statusFilter),
-    [],
+    []
   );
 
   const getTotalGroups = useCallback(() => clientGetTotalGroups(), []);
 
-  const getMemberCount = useCallback(
-    (groupId: bigint) => clientGetMemberCount(groupId),
-    [],
-  );
+  const getMemberCount = useCallback((groupId: bigint) => clientGetMemberCount(groupId), []);
 
   const getPayoutPosition = useCallback(
-    (groupId: bigint, memberAddress: string) =>
-      clientGetPayoutPosition(groupId, memberAddress),
-    [],
+    (groupId: bigint, memberAddress: string) => clientGetPayoutPosition(groupId, memberAddress),
+    []
   );
 
   const hasReceivedPayout = useCallback(
-    (groupId: bigint, memberAddress: string) =>
-      clientHasReceivedPayout(groupId, memberAddress),
-    [],
+    (groupId: bigint, memberAddress: string) => clientHasReceivedPayout(groupId, memberAddress),
+    []
   );
 
   const getMemberTotalContributions = useCallback(
     (groupId: bigint, memberAddress: string) =>
       clientGetMemberTotalContributions(groupId, memberAddress),
-    [],
+    []
   );
 
-  const getGroupBalance = useCallback(
-    (groupId: bigint) => clientGetGroupBalance(groupId),
-    [],
-  );
+  const getGroupBalance = useCallback((groupId: bigint) => clientGetGroupBalance(groupId), []);
 
-  const getPayoutSchedule = useCallback(
-    (groupId: bigint) => clientGetPayoutSchedule(groupId),
-    [],
-  );
+  const getPayoutSchedule = useCallback((groupId: bigint) => clientGetPayoutSchedule(groupId), []);
 
   const getContributionDeadline = useCallback(
-    (groupId: bigint, cycleNumber: number) =>
-      clientGetContributionDeadline(groupId, cycleNumber),
-    [],
+    (groupId: bigint, cycleNumber: number) => clientGetContributionDeadline(groupId, cycleNumber),
+    []
   );
 
   const isCycleComplete = useCallback(
-    (groupId: bigint, cycleNumber: number) =>
-      clientIsCycleComplete(groupId, cycleNumber),
-    [],
+    (groupId: bigint, cycleNumber: number) => clientIsCycleComplete(groupId, cycleNumber),
+    []
   );
 
-  const isPayoutDue = useCallback(
-    (groupId: bigint) => clientIsPayoutDue(groupId),
-    [],
-  );
+  const isPayoutDue = useCallback((groupId: bigint) => clientIsPayoutDue(groupId), []);
 
   return {
     loading,

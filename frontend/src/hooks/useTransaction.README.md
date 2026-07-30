@@ -75,6 +75,7 @@ submitTransaction(buildTx: () => Promise<xdr.Operation>): Promise<TransactionRes
 ## Error Handling
 
 The hook handles various error scenarios:
+
 - Wallet not connected
 - Transaction simulation failures
 - Signing failures

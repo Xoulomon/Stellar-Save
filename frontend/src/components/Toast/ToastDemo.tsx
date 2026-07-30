@@ -1,10 +1,5 @@
 import React from 'react';
-import {
-  Box,
-  Button,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Box, Button, Stack, Typography } from '@mui/material';
 import { useToast } from './useToast';
 import { AppCard } from '../../ui';
 
@@ -76,43 +71,20 @@ export const ToastDemo: React.FC = () => {
           </Typography>
         </Box>
 
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={1}
-          sx={{ flexWrap: 'wrap' }}
-        >
-          <Button
-            variant="contained"
-            color="success"
-            onClick={showSuccessToast}
-          >
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ flexWrap: 'wrap' }}>
+          <Button variant="contained" color="success" onClick={showSuccessToast}>
             Success Toast
           </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={showErrorToast}
-          >
+          <Button variant="contained" color="error" onClick={showErrorToast}>
             Error Toast
           </Button>
-          <Button
-            variant="contained"
-            color="warning"
-            onClick={showWarningToast}
-          >
+          <Button variant="contained" color="warning" onClick={showWarningToast}>
             Warning Toast
           </Button>
-          <Button
-            variant="contained"
-            color="info"
-            onClick={showInfoToast}
-          >
+          <Button variant="contained" color="info" onClick={showInfoToast}>
             Info Toast
           </Button>
-          <Button
-            variant="outlined"
-            onClick={showPersistentToast}
-          >
+          <Button variant="outlined" onClick={showPersistentToast}>
             Persistent Toast
           </Button>
         </Stack>
@@ -123,8 +95,7 @@ export const ToastDemo: React.FC = () => {
           ✓ Action buttons: Click "Undo", "Review", or "Learn more" to handle custom actions
           <br />
           ✓ Persistent: Info toast will stay until manually dismissed
-          <br />
-          ✓ Stacking: Multiple toasts will queue and display together
+          <br />✓ Stacking: Multiple toasts will queue and display together
         </Typography>
       </Stack>
     </AppCard>

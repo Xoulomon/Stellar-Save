@@ -1,4 +1,3 @@
-
 import LandingPage from './LandingPage';
 
 /**

@@ -1,7 +1,7 @@
 coverage:
   precision: 2
   round: down
-  range: "70...100"
+  range: '70...100'
 
   status:
     project:
@@ -30,15 +30,15 @@ coverage:
       carryforward: false
 
 comment:
-  layout: "reach,diff,flags,files"
+  layout: 'reach,diff,flags,files'
   behavior: default
   require_changes: false
   require_base: false
   require_head: true
 
 ignore:
-  - "frontend/src/test/**"
-  - "frontend/src/**/*.example.tsx"
-  - "frontend/src/main.tsx"
-  - "frontend/src/components/*Demo.tsx"
-  - "contracts/stellar-save/test_snapshots/**"
+  - 'frontend/src/test/**'
+  - 'frontend/src/**/*.example.tsx'
+  - 'frontend/src/main.tsx'
+  - 'frontend/src/components/*Demo.tsx'
+  - 'contracts/stellar-save/test_snapshots/**'

@@ -12,7 +12,7 @@ export interface GroupData {
   name: string;
   description: string;
   contribution_amount: number; // stroops = XLM * 10_000_000
-  cycle_duration: number;      // seconds
+  cycle_duration: number; // seconds
   max_members: number;
   min_members: number;
 }
@@ -85,7 +85,8 @@ export async function fetchGroup(groupId: string): Promise<DetailedGroup> {
   const mockGroup: DetailedGroup = {
     id: groupId,
     name: `Savings Group ${groupId.slice(-4)}`,
-    description: 'A community savings group focused on building financial security through regular contributions and transparent payouts.',
+    description:
+      'A community savings group focused on building financial security through regular contributions and transparent payouts.',
     memberCount: 12,
     contributionAmount: 50,
     currency: 'XLM',

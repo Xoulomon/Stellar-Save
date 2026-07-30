@@ -1,6 +1,5 @@
 import type { ComponentType } from 'react';
 
-
 /**
  * Route metadata and configuration
  */
@@ -23,4 +22,3 @@ export interface RouteConfig {
 export interface RouteParams extends Record<string, string | undefined> {
   groupId?: string;
 }
-

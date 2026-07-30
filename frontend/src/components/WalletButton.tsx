@@ -8,7 +8,7 @@ export function WalletButton() {
   const { status, activeAddress, connect, disconnect } = useWallet();
   const [showMenu, setShowMenu] = useState(false);
   const [balance] = useState('0.00'); // TODO: Fetch actual balance
-  
+
   // Handle post-authentication redirect
   useAuthRedirect();
 
@@ -27,12 +27,8 @@ export function WalletButton() {
         </Button>
         {showMenu && (
           <div className="wallet-menu">
-            <div className="wallet-menu-item wallet-menu-address">
-              {activeAddress}
-            </div>
-            <div className="wallet-menu-item wallet-menu-balance">
-              Balance: {balance} XLM
-            </div>
+            <div className="wallet-menu-item wallet-menu-address">{activeAddress}</div>
+            <div className="wallet-menu-item wallet-menu-balance">Balance: {balance} XLM</div>
             <button
               className="wallet-menu-item wallet-menu-disconnect"
               onClick={() => {

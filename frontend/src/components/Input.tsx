@@ -32,11 +32,7 @@ export function Input({
     onChange?.(e);
   };
 
-  const inputClasses = [
-    'input-field',
-    error ? 'input-field-error' : '',
-    className,
-  ]
+  const inputClasses = ['input-field', error ? 'input-field-error' : '', className]
     .filter(Boolean)
     .join(' ');
 
@@ -55,9 +51,7 @@ export function Input({
         required={required}
         onChange={handleChange}
         aria-invalid={!!error}
-        aria-describedby={
-          error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined
-        }
+        aria-describedby={error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined}
         {...rest}
       />
       {error && (

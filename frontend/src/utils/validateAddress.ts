@@ -1,7 +1,7 @@
 /**
  * Stellar address validation utility.
  * Validates format (G..., 56 base32 chars) and CRC16-XMODEM checksum.
- * 
+ *
  * Usage:
  * ```ts
  * const result = validateAddress('GDXP4...');
@@ -26,7 +26,7 @@ function crc16(data: Uint8Array): number {
       } else {
         crc <<= 1;
       }
-      crc &= 0xFFFF;
+      crc &= 0xffff;
     }
   }
   return crc;
@@ -40,7 +40,8 @@ function base32Decode(input: string): Uint8Array | null {
     return null;
   }
   let bits = '';
-  for (let i = 1; i < input.length; i++) { // skip 'G'
+  for (let i = 1; i < input.length; i++) {
+    // skip 'G'
     const char = input[i];
     const value = BASE32_ALPHABET.indexOf(char);
     if (value === -1) return null;
@@ -76,7 +77,8 @@ export function validateAddress(address: string): { valid: boolean; error?: stri
   }
 
   // Check version byte (6 for account ID)
-  if (bytes[0] !== 6 << 3) { // G = version 6 <<3
+  if (bytes[0] !== 6 << 3) {
+    // G = version 6 <<3
     return { valid: false, error: 'Invalid version byte' };
   }
 

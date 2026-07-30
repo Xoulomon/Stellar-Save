@@ -5,7 +5,15 @@ import { Button } from './Button';
 import './GroupFilters.css';
 
 export type GroupStatus = 'all' | 'active' | 'completed' | 'pending';
-export type SortOption = 'name-asc' | 'name-desc' | 'amount-asc' | 'amount-desc' | 'members-asc' | 'members-desc' | 'date-asc' | 'date-desc';
+export type SortOption =
+  | 'name-asc'
+  | 'name-desc'
+  | 'amount-asc'
+  | 'amount-desc'
+  | 'members-asc'
+  | 'members-desc'
+  | 'date-asc'
+  | 'date-desc';
 
 export interface FilterState {
   status: GroupStatus;
@@ -57,16 +65,33 @@ export function GroupFilters({ onFilterChange, initialFilters }: GroupFiltersPro
   const sortItems = [
     { id: 'name-asc', label: 'Name (A-Z)', onClick: () => updateFilter('sort', 'name-asc') },
     { id: 'name-desc', label: 'Name (Z-A)', onClick: () => updateFilter('sort', 'name-desc') },
-    { id: 'amount-asc', label: 'Amount (Low-High)', onClick: () => updateFilter('sort', 'amount-asc') },
-    { id: 'amount-desc', label: 'Amount (High-Low)', onClick: () => updateFilter('sort', 'amount-desc') },
-    { id: 'members-asc', label: 'Members (Low-High)', onClick: () => updateFilter('sort', 'members-asc') },
-    { id: 'members-desc', label: 'Members (High-Low)', onClick: () => updateFilter('sort', 'members-desc') },
+    {
+      id: 'amount-asc',
+      label: 'Amount (Low-High)',
+      onClick: () => updateFilter('sort', 'amount-asc'),
+    },
+    {
+      id: 'amount-desc',
+      label: 'Amount (High-Low)',
+      onClick: () => updateFilter('sort', 'amount-desc'),
+    },
+    {
+      id: 'members-asc',
+      label: 'Members (Low-High)',
+      onClick: () => updateFilter('sort', 'members-asc'),
+    },
+    {
+      id: 'members-desc',
+      label: 'Members (High-Low)',
+      onClick: () => updateFilter('sort', 'members-desc'),
+    },
     { id: 'date-asc', label: 'Date (Oldest)', onClick: () => updateFilter('sort', 'date-asc') },
     { id: 'date-desc', label: 'Date (Newest)', onClick: () => updateFilter('sort', 'date-desc') },
   ];
 
-  const getStatusLabel = () => statusItems.find(i => i.id === filters.status)?.label || 'All Groups';
-  const getSortLabel = () => sortItems.find(i => i.id === filters.sort)?.label || 'Date (Newest)';
+  const getStatusLabel = () =>
+    statusItems.find((i) => i.id === filters.status)?.label || 'All Groups';
+  const getSortLabel = () => sortItems.find((i) => i.id === filters.sort)?.label || 'Date (Newest)';
 
   return (
     <div className="group-filters">
@@ -76,7 +101,7 @@ export function GroupFilters({ onFilterChange, initialFilters }: GroupFiltersPro
           items={statusItems}
           position="bottom-start"
         />
-        
+
         <Dropdown
           trigger={<button className="filter-button">Sort: {getSortLabel()}</button>}
           items={sortItems}

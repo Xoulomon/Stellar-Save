@@ -76,16 +76,10 @@ export function SpinnerDemo() {
       {/* Full-Page Loader */}
       <section className="demo-section">
         <h2>Full-Page Loader</h2>
-        <button
-          className="demo-button"
-          onClick={() => setShowFullPageLoader(!showFullPageLoader)}
-        >
+        <button className="demo-button" onClick={() => setShowFullPageLoader(!showFullPageLoader)}>
           {showFullPageLoader ? 'Hide' : 'Show'} Full-Page Loader
         </button>
-        <FullPageLoader
-          loading={showFullPageLoader}
-          message="Loading your data..."
-        />
+        <FullPageLoader loading={showFullPageLoader} message="Loading your data..." />
       </section>
 
       {/* Combined Variants */}

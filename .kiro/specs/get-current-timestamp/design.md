@@ -57,7 +57,7 @@ let current_time = env.ledger().timestamp();
 let current_time = Self::get_current_timestamp(env.clone());
 ```
 
-The requirement is that `get_current_timestamp` is *available* for internal callers; wholesale refactoring of existing call sites is out of scope for this feature.
+The requirement is that `get_current_timestamp` is _available_ for internal callers; wholesale refactoring of existing call sites is out of scope for this feature.
 
 ### Relationship to `is_cycle_deadline_passed`
 
@@ -69,21 +69,20 @@ No new data types or storage keys are introduced by this feature.
 
 The function signature uses only existing types:
 
-| Element | Type | Description |
-|---------|------|-------------|
-| `env` | `soroban_sdk::Env` | Soroban host environment (passed by value per SDK convention) |
-| return value | `u64` | Unix epoch seconds from `env.ledger().timestamp()` |
+| Element      | Type               | Description                                                   |
+| ------------ | ------------------ | ------------------------------------------------------------- |
+| `env`        | `soroban_sdk::Env` | Soroban host environment (passed by value per SDK convention) |
+| return value | `u64`              | Unix epoch seconds from `env.ledger().timestamp()`            |
 
 The Soroban `Env` object is the standard entry point for all host functions including ledger access. `env.ledger().timestamp()` returns a `u64` representing seconds since the Unix epoch, consistent with how all other time values are stored and compared throughout the contract.
 
-
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Timestamp round-trip
 
-*For any* ledger timestamp value `T` set in the test environment, calling `get_current_timestamp` must return exactly `T`.
+_For any_ ledger timestamp value `T` set in the test environment, calling `get_current_timestamp` must return exactly `T`.
 
 This property subsumes several related criteria: it implies idempotence (two calls in the same ledger both return `T`), it implies the return value is positive whenever `T > 0`, and it implies consistency with any other code that reads `env.ledger().timestamp()` in the same ledger context.
 

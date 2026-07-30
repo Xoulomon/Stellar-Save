@@ -4,7 +4,7 @@ import './DebounceDemo.css';
 
 /**
  * Demo component showcasing the useDebounce hook functionality
- * 
+ *
  * This component demonstrates:
  * - Basic debouncing with default settings
  * - Custom delay configuration
@@ -27,22 +27,21 @@ export function DebounceDemo() {
   const [leadingValue, setLeadingValue] = useState('');
   const debouncedLeadingValue = useDebounce(leadingValue, {
     delay: 500,
-    leading: true
+    leading: true,
   });
 
   // Max wait example
   const [maxWaitValue, setMaxWaitValue] = useState('');
   const debouncedMaxWaitValue = useDebounce(maxWaitValue, {
     delay: 500,
-    maxWait: 2000
+    maxWait: 2000,
   });
 
   // Cancel example
   const [cancelValue, setCancelValue] = useState('');
-  const { debouncedValue: debouncedCancelValue, cancel } = useDebounceWithCancel(
-    cancelValue,
-    { delay: 1000 }
-  );
+  const { debouncedValue: debouncedCancelValue, cancel } = useDebounceWithCancel(cancelValue, {
+    delay: 1000,
+  });
 
   // Track search API calls - use ref to avoid setState in effect
   useEffect(() => {
@@ -50,7 +49,7 @@ export function DebounceDemo() {
       prevDebouncedSearchTerm.current = debouncedSearchTerm;
       // Use setTimeout to avoid synchronous setState in effect
       setTimeout(() => {
-        setSearchCount(prev => prev + 1);
+        setSearchCount((prev) => prev + 1);
       }, 0);
       console.log('Searching for:', debouncedSearchTerm);
     }
@@ -85,16 +84,16 @@ export function DebounceDemo() {
     <div className="debounce-demo">
       <h1>useDebounce Hook Demo</h1>
       <p className="demo-description">
-        This demo showcases various features of the useDebounce hook.
-        Try typing in the inputs below to see how debouncing works!
+        This demo showcases various features of the useDebounce hook. Try typing in the inputs below
+        to see how debouncing works!
       </p>
 
       {/* Basic Debounce */}
       <section className="demo-section">
         <h2>1. Basic Debounce (500ms)</h2>
         <p className="section-description">
-          The debounced value updates 500ms after you stop typing.
-          This is useful for search inputs to reduce API calls.
+          The debounced value updates 500ms after you stop typing. This is useful for search inputs
+          to reduce API calls.
         </p>
         <div className="input-group">
           <label htmlFor="search">Search:</label>
@@ -114,9 +113,7 @@ export function DebounceDemo() {
           </div>
           <div className="output-item">
             <span className="output-label">Debounced Value:</span>
-            <span className="output-value debounced">
-              {debouncedSearchTerm || '(empty)'}
-            </span>
+            <span className="output-value debounced">{debouncedSearchTerm || '(empty)'}</span>
           </div>
           <div className="output-item">
             <span className="output-label">API Calls Made:</span>
@@ -149,9 +146,7 @@ export function DebounceDemo() {
           </div>
           <div className="output-item">
             <span className="output-label">Debounced Value:</span>
-            <span className="output-value debounced">
-              {debouncedCustomValue || '(empty)'}
-            </span>
+            <span className="output-value debounced">{debouncedCustomValue || '(empty)'}</span>
           </div>
         </div>
       </section>
@@ -160,8 +155,8 @@ export function DebounceDemo() {
       <section className="demo-section">
         <h2>3. Leading Edge Update</h2>
         <p className="section-description">
-          Updates immediately on the first change, then debounces subsequent changes.
-          Great for immediate user feedback.
+          Updates immediately on the first change, then debounces subsequent changes. Great for
+          immediate user feedback.
         </p>
         <div className="input-group">
           <label htmlFor="leading">Leading Edge:</label>
@@ -181,9 +176,7 @@ export function DebounceDemo() {
           </div>
           <div className="output-item">
             <span className="output-label">Debounced Value:</span>
-            <span className="output-value debounced">
-              {debouncedLeadingValue || '(empty)'}
-            </span>
+            <span className="output-value debounced">{debouncedLeadingValue || '(empty)'}</span>
           </div>
         </div>
       </section>
@@ -192,8 +185,8 @@ export function DebounceDemo() {
       <section className="demo-section">
         <h2>4. Maximum Wait Time (2000ms)</h2>
         <p className="section-description">
-          Forces an update after 2 seconds, even if you keep typing continuously.
-          Useful for auto-save features.
+          Forces an update after 2 seconds, even if you keep typing continuously. Useful for
+          auto-save features.
         </p>
         <div className="input-group">
           <label htmlFor="maxwait">Max Wait:</label>
@@ -213,9 +206,7 @@ export function DebounceDemo() {
           </div>
           <div className="output-item">
             <span className="output-label">Debounced Value:</span>
-            <span className="output-value debounced">
-              {debouncedMaxWaitValue || '(empty)'}
-            </span>
+            <span className="output-value debounced">{debouncedMaxWaitValue || '(empty)'}</span>
           </div>
         </div>
       </section>
@@ -247,9 +238,7 @@ export function DebounceDemo() {
           </div>
           <div className="output-item">
             <span className="output-label">Debounced Value:</span>
-            <span className="output-value debounced">
-              {debouncedCancelValue || '(empty)'}
-            </span>
+            <span className="output-value debounced">{debouncedCancelValue || '(empty)'}</span>
           </div>
         </div>
       </section>

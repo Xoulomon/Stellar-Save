@@ -38,12 +38,7 @@ describe('JoinGroupButton', () => {
   it('shows "Group Full" when max members reached', () => {
     render(
       <WalletContext.Provider value={mockWalletContext}>
-        <JoinGroupButton
-          groupId={1}
-          maxMembers={10}
-          currentMembers={10}
-          isActive={false}
-        />
+        <JoinGroupButton groupId={1} maxMembers={10} currentMembers={10} isActive={false} />
       </WalletContext.Provider>
     );
     expect(screen.getByText('Group Full')).toBeInTheDocument();
@@ -52,12 +47,7 @@ describe('JoinGroupButton', () => {
   it('shows "Group Active" when group is active', () => {
     render(
       <WalletContext.Provider value={mockWalletContext}>
-        <JoinGroupButton
-          groupId={1}
-          maxMembers={10}
-          currentMembers={5}
-          isActive={true}
-        />
+        <JoinGroupButton groupId={1} maxMembers={10} currentMembers={5} isActive={true} />
       </WalletContext.Provider>
     );
     expect(screen.getByText('Group Active')).toBeInTheDocument();
@@ -66,12 +56,7 @@ describe('JoinGroupButton', () => {
   it('shows "Connect Wallet" when wallet not connected', () => {
     render(
       <WalletContext.Provider value={{ ...mockWalletContext, status: 'idle' }}>
-        <JoinGroupButton
-          groupId={1}
-          maxMembers={10}
-          currentMembers={5}
-          isActive={false}
-        />
+        <JoinGroupButton groupId={1} maxMembers={10} currentMembers={5} isActive={false} />
       </WalletContext.Provider>
     );
     expect(screen.getByText('Connect Wallet')).toBeInTheDocument();
@@ -81,15 +66,10 @@ describe('JoinGroupButton', () => {
     const user = userEvent.setup();
     render(
       <WalletContext.Provider value={mockWalletContext}>
-        <JoinGroupButton
-          groupId={1}
-          maxMembers={10}
-          currentMembers={5}
-          isActive={false}
-        />
+        <JoinGroupButton groupId={1} maxMembers={10} currentMembers={5} isActive={false} />
       </WalletContext.Provider>
     );
-    
+
     await user.click(screen.getByText('Join Group'));
     expect(screen.getByText('Confirm')).toBeInTheDocument();
     expect(screen.getByText('Cancel')).toBeInTheDocument();
@@ -98,7 +78,7 @@ describe('JoinGroupButton', () => {
   it('calls onSuccess after successful join', async () => {
     const user = userEvent.setup();
     const onSuccess = vi.fn();
-    
+
     render(
       <WalletContext.Provider value={mockWalletContext}>
         <JoinGroupButton
@@ -110,13 +90,16 @@ describe('JoinGroupButton', () => {
         />
       </WalletContext.Provider>
     );
-    
+
     await user.click(screen.getByText('Join Group'));
     await user.click(screen.getByText('Confirm'));
-    
+
     // Wait for async operation
-    await waitFor(() => {
-      expect(onSuccess).toHaveBeenCalled();
-    }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        expect(onSuccess).toHaveBeenCalled();
+      },
+      { timeout: 3000 }
+    );
   });
 });

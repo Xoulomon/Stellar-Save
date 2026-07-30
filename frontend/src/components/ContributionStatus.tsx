@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { ContributionCycle, Member } from "../types/contribution";
+import React, { useState, useEffect } from 'react';
+import { ContributionCycle, Member } from '../types/contribution';
 
 interface ContributionStatusProps {
   cycle: ContributionCycle;
@@ -15,7 +15,7 @@ function formatAddress(address: string): string {
 function formatTimeLeft(deadline: Date): string {
   const now = new Date();
   const diff = deadline.getTime() - now.getTime();
-  if (diff <= 0) return "Deadline passed";
+  if (diff <= 0) return 'Deadline passed';
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -39,17 +39,10 @@ function DeadlineBadge({ deadline }: { deadline: Date }) {
   return (
     <span
       className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
-        isUrgent
-          ? "bg-red-100 text-red-700 animate-pulse"
-          : "bg-yellow-100 text-yellow-700"
+        isUrgent ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-yellow-100 text-yellow-700'
       }`}
     >
-      <svg
-        className="w-3 h-3"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
+      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -62,26 +55,18 @@ function DeadlineBadge({ deadline }: { deadline: Date }) {
   );
 }
 
-function MemberRow({
-  member,
-  isCurrentUser,
-}: {
-  member: Member;
-  isCurrentUser: boolean;
-}) {
+function MemberRow({ member, isCurrentUser }: { member: Member; isCurrentUser: boolean }) {
   return (
     <div
       className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-        member.contributed
-          ? "bg-green-50 border-green-200"
-          : "bg-red-50 border-red-200"
-      } ${isCurrentUser ? "ring-2 ring-indigo-400" : ""}`}
+        member.contributed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+      } ${isCurrentUser ? 'ring-2 ring-indigo-400' : ''}`}
     >
       <div className="flex items-center gap-3">
         {/* Status indicator */}
         <div
           className={`w-3 h-3 rounded-full flex-shrink-0 ${
-            member.contributed ? "bg-green-500" : "bg-red-400"
+            member.contributed ? 'bg-green-500' : 'bg-red-400'
           }`}
         />
         {/* Address / name */}
@@ -89,9 +74,7 @@ function MemberRow({
           <p className="text-sm font-medium text-gray-800">
             {member.name || formatAddress(member.address)}
             {isCurrentUser && (
-              <span className="ml-2 text-xs text-indigo-600 font-semibold">
-                (you)
-              </span>
+              <span className="ml-2 text-xs text-indigo-600 font-semibold">(you)</span>
             )}
           </p>
           {member.contributed && member.contributedAt && (
@@ -110,12 +93,10 @@ function MemberRow({
         )}
         <span
           className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-            member.contributed
-              ? "bg-green-100 text-green-700"
-              : "bg-red-100 text-red-600"
+            member.contributed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
           }`}
         >
-          {member.contributed ? "✓ Paid" : "✗ Pending"}
+          {member.contributed ? '✓ Paid' : '✗ Pending'}
         </span>
       </div>
     </div>
@@ -149,9 +130,7 @@ export function ContributionStatus({
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-white font-bold text-lg">
-              Cycle #{cycle.cycleId}
-            </h2>
+            <h2 className="text-white font-bold text-lg">Cycle #{cycle.cycleId}</h2>
             <p className="text-indigo-200 text-sm">Contribution Status</p>
           </div>
           <div className="flex items-center gap-2">
@@ -190,9 +169,7 @@ export function ContributionStatus({
           <span className="text-sm font-medium text-gray-600">
             {cycle.contributedCount} of {cycle.totalMembers} contributed
           </span>
-          <span className="text-sm font-bold text-indigo-600">
-            {Math.round(progress)}%
-          </span>
+          <span className="text-sm font-bold text-indigo-600">{Math.round(progress)}%</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2.5">
           <div

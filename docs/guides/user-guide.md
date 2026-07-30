@@ -56,13 +56,14 @@ From the dashboard, click **Create Group**.
 
 Fill in the following details:
 
-| Field | Description | Example |
-|-------|-------------|---------|
-| Contribution Amount | Fixed XLM amount each member pays per cycle | 100 XLM |
-| Cycle Duration | How long each cycle lasts (in seconds) | 604800 (7 days) |
-| Max Members | Maximum number of members allowed | 5 |
+| Field               | Description                                 | Example         |
+| ------------------- | ------------------------------------------- | --------------- |
+| Contribution Amount | Fixed XLM amount each member pays per cycle | 100 XLM         |
+| Cycle Duration      | How long each cycle lasts (in seconds)      | 604800 (7 days) |
+| Max Members         | Maximum number of members allowed           | 5               |
 
 **Tips:**
+
 - Choose a contribution amount everyone in your group can comfortably afford
 - Shorter cycles (e.g. weekly) keep momentum; longer cycles (e.g. monthly) give members more time
 - The total payout per cycle = contribution amount × number of members
@@ -78,6 +79,7 @@ Once created, your group will have a unique **Group ID**. Share this ID with the
 ### Managing Your Group
 
 As the creator, while the group is still `Pending` you can:
+
 - Update the contribution amount, cycle duration, or max members
 - Delete the group if plans change
 
@@ -98,6 +100,7 @@ From the dashboard, click **Join Group** and enter the Group ID. You'll see the 
 ### Step 3 — Review the Terms
 
 Before joining, confirm you understand:
+
 - The exact contribution amount required each cycle
 - The cycle duration (how often you need to contribute)
 - The maximum number of members (determines how many cycles before you receive your payout)
@@ -125,6 +128,7 @@ Every member must contribute the fixed amount each cycle for the payout to be tr
 ### When to Contribute
 
 Each cycle has a deadline. You can contribute any time after a cycle starts and before the deadline. Check the group dashboard to see:
+
 - The current cycle number
 - How many members have contributed so far
 - The time remaining in the cycle
@@ -163,6 +167,7 @@ Payout Amount = Contribution Amount × Number of Members
 ### Payout Order
 
 Payout positions are assigned when members join:
+
 - Position 0 → receives payout in Cycle 0 (first cycle)
 - Position 1 → receives payout in Cycle 1
 - Position 2 → receives payout in Cycle 2
@@ -179,6 +184,7 @@ Once every member has received their payout, the group moves to `Completed` stat
 ### Checking Payout Status
 
 From the group dashboard you can see:
+
 - Which cycle is currently active
 - Who has received payouts in past cycles
 - When your payout cycle is expected (based on cycle duration)

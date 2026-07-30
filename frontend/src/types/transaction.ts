@@ -6,7 +6,7 @@ export interface Transaction {
   createdAt: string;
   type: TransactionType;
   amount: string;
-  assetCode: string;        // XLM, USDC, etc.
+  assetCode: string; // XLM, USDC, etc.
   assetIssuer?: string;
   from: string;
   to?: string;

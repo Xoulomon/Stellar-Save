@@ -47,6 +47,7 @@ interface PageState {
 ```
 
 Responsibilities:
+
 - Renders `AppLayout` with title `"Create Group"` and subtitle `"Set up your savings circle"`
 - Passes `onSubmit` and `onCancel` callbacks to `CreateGroupForm`
 - Manages `PageState` and renders the appropriate status UI
@@ -62,8 +63,8 @@ Multi-step form component. Owns field values, step index, and per-field validati
 interface FormData {
   name: string;
   description: string;
-  contributionAmount: string;   // XLM as string, converted to stroops on submit
-  cycleDuration: string;        // one of: "604800" | "1209600" | "2592000"
+  contributionAmount: string; // XLM as string, converted to stroops on submit
+  cycleDuration: string; // one of: "604800" | "1209600" | "2592000"
   maxMembers: string;
   minMembers: string;
 }
@@ -80,7 +81,7 @@ interface FormErrors {
 interface CreateGroupFormProps {
   onSubmit: (data: GroupData) => void;
   onCancel: () => void;
-  isSubmitting?: boolean;       // disables all interaction during API call
+  isSubmitting?: boolean; // disables all interaction during API call
 }
 ```
 
@@ -92,8 +93,8 @@ interface CreateGroupFormProps {
 export interface GroupData {
   name: string;
   description: string;
-  contribution_amount: number;  // stroops = XLM * 10_000_000
-  cycle_duration: number;       // seconds
+  contribution_amount: number; // stroops = XLM * 10_000_000
+  cycle_duration: number; // seconds
   max_members: number;
   min_members: number;
 }
@@ -115,9 +116,9 @@ export async function createGroup(data: GroupData): Promise<string> {
 
 ```tsx
 export const CYCLE_DURATION_OPTIONS = [
-  { value: '604800',  label: 'Weekly'    },
+  { value: '604800', label: 'Weekly' },
   { value: '1209600', label: 'Bi-Weekly' },
-  { value: '2592000', label: 'Monthly'   },
+  { value: '2592000', label: 'Monthly' },
 ] as const;
 ```
 
@@ -127,26 +128,29 @@ export const CYCLE_DURATION_OPTIONS = [
 
 ### FormState shape
 
-| Field | Type | Initial value | Notes |
-|---|---|---|---|
-| `name` | `string` | `''` | 3–50 chars |
-| `description` | `string` | `''` | 1–200 chars |
-| `contributionAmount` | `string` | `''` | Positive number, XLM |
-| `cycleDuration` | `string` | `''` | One of the 3 option values |
-| `maxMembers` | `string` | `''` | Integer ≥ 2 |
-| `minMembers` | `string` | `'2'` | Integer ≥ 2, ≤ maxMembers |
+| Field                | Type     | Initial value | Notes                      |
+| -------------------- | -------- | ------------- | -------------------------- |
+| `name`               | `string` | `''`          | 3–50 chars                 |
+| `description`        | `string` | `''`          | 1–200 chars                |
+| `contributionAmount` | `string` | `''`          | Positive number, XLM       |
+| `cycleDuration`      | `string` | `''`          | One of the 3 option values |
+| `maxMembers`         | `string` | `''`          | Integer ≥ 2                |
+| `minMembers`         | `string` | `'2'`         | Integer ≥ 2, ≤ maxMembers  |
 
 ### Validation rules per step
 
 **Step 1 — Basic Information**
+
 - `name`: required, length 3–50; errors: `"Group name must be at least 3 characters"` / `"Group name must be 50 characters or fewer"`
 - `description`: required, length 1–200; errors: `"Description is required"` / `"Description must be 200 characters or fewer"`
 
 **Step 2 — Financial Settings**
+
 - `contributionAmount`: required, `parseFloat > 0`; error: `"Contribution amount must be greater than 0"`
 - `cycleDuration`: required, non-empty; error: `"Cycle duration is required"`
 
 **Step 3 — Group Settings**
+
 - `maxMembers`: required, `parseInt >= 2`; error: `"Maximum members must be at least 2"`
 - `minMembers`: required, `parseInt >= 2`; error: `"Minimum members must be at least 2"`
 - cross-field: `maxMembers >= minMembers`; error on `maxMembers`: `"Maximum members must be greater than or equal to minimum members"`
@@ -170,11 +174,11 @@ idle ──[submit]──► loading ──[success]──► success ──[2s 
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Step navigation controls are consistent
 
-*For any* step value in {1, 2, 3, 4}, the form must render: a "Next" button if and only if the step is in {1, 2, 3}; a "Back" button if and only if the step is in {2, 3, 4}; a "Create Group" button if and only if the step is 4; and a "Cancel" button on every step.
+_For any_ step value in {1, 2, 3, 4}, the form must render: a "Next" button if and only if the step is in {1, 2, 3}; a "Back" button if and only if the step is in {2, 3, 4}; a "Create Group" button if and only if the step is 4; and a "Cancel" button on every step.
 
 **Validates: Requirements 2.3, 2.4, 2.5, 2.6**
 
@@ -182,7 +186,7 @@ idle ──[submit]──► loading ──[success]──► success ──[2s 
 
 ### Property 2: Progress indicator reflects current step
 
-*For any* step value in {1, 2, 3, 4}, the number of "active" progress segments rendered equals the current step value.
+_For any_ step value in {1, 2, 3, 4}, the number of "active" progress segments rendered equals the current step value.
 
 **Validates: Requirements 2.2**
 
@@ -190,7 +194,7 @@ idle ──[submit]──► loading ──[success]──► success ──[2s 
 
 ### Property 3: Group name length validation
 
-*For any* string used as a group name, the validator must reject strings shorter than 3 characters with `"Group name must be at least 3 characters"` and reject strings longer than 50 characters with `"Group name must be 50 characters or fewer"`, and accept strings of length 3–50.
+_For any_ string used as a group name, the validator must reject strings shorter than 3 characters with `"Group name must be at least 3 characters"` and reject strings longer than 50 characters with `"Group name must be 50 characters or fewer"`, and accept strings of length 3–50.
 
 **Validates: Requirements 3.3, 3.4**
 
@@ -198,7 +202,7 @@ idle ──[submit]──► loading ──[success]──► success ──[2s 
 
 ### Property 4: Description length validation
 
-*For any* string used as a description, the validator must reject the empty string with `"Description is required"` and reject strings longer than 200 characters with `"Description must be 200 characters or fewer"`, and accept strings of length 1–200.
+_For any_ string used as a description, the validator must reject the empty string with `"Description is required"` and reject strings longer than 200 characters with `"Description must be 200 characters or fewer"`, and accept strings of length 1–200.
 
 **Validates: Requirements 3.5, 3.6**
 
@@ -206,7 +210,7 @@ idle ──[submit]──► loading ──[success]──► success ──[2s 
 
 ### Property 5: Validation errors are accessible
 
-*For any* form field that has a validation error, the rendered input must have `aria-invalid="true"` and an `aria-describedby` attribute pointing to the id of the rendered error message element; and a `<label>` with a matching `htmlFor` must be present.
+_For any_ form field that has a validation error, the rendered input must have `aria-invalid="true"` and an `aria-describedby` attribute pointing to the id of the rendered error message element; and a `<label>` with a matching `htmlFor` must be present.
 
 **Validates: Requirements 3.7, 10.1, 10.2, 10.3**
 
@@ -214,7 +218,7 @@ idle ──[submit]──► loading ──[success]──► success ──[2s 
 
 ### Property 6: Contribution amount validation
 
-*For any* numeric value ≤ 0 (including zero and negative numbers) entered as the contribution amount, the validator must produce the error `"Contribution amount must be greater than 0"`.
+_For any_ numeric value ≤ 0 (including zero and negative numbers) entered as the contribution amount, the validator must produce the error `"Contribution amount must be greater than 0"`.
 
 **Validates: Requirements 4.3**
 
@@ -222,7 +226,7 @@ idle ──[submit]──► loading ──[success]──► success ──[2s 
 
 ### Property 7: Member count validation
 
-*For any* integer value less than 2 entered as max members, the validator must produce `"Maximum members must be at least 2"`. *For any* integer value less than 2 entered as min members, the validator must produce `"Minimum members must be at least 2"`. *For any* pair (max, min) where max < min, the validator must produce `"Maximum members must be greater than or equal to minimum members"`.
+_For any_ integer value less than 2 entered as max members, the validator must produce `"Maximum members must be at least 2"`. _For any_ integer value less than 2 entered as min members, the validator must produce `"Minimum members must be at least 2"`. _For any_ pair (max, min) where max < min, the validator must produce `"Maximum members must be greater than or equal to minimum members"`.
 
 **Validates: Requirements 5.3, 5.4, 5.5**
 
@@ -230,7 +234,7 @@ idle ──[submit]──► loading ──[success]──► success ──[2s 
 
 ### Property 8: Review step displays all form data
 
-*For any* valid `FormData` object, when the form is on step 4, the rendered summary must contain the group name, description, contribution amount (in XLM), cycle duration as a human-readable label (e.g., "Weekly"), max members, and min members.
+_For any_ valid `FormData` object, when the form is on step 4, the rendered summary must contain the group name, description, contribution amount (in XLM), cycle duration as a human-readable label (e.g., "Weekly"), max members, and min members.
 
 **Validates: Requirements 6.1**
 
@@ -238,7 +242,7 @@ idle ──[submit]──► loading ──[success]──► success ──[2s 
 
 ### Property 9: XLM to stroops conversion
 
-*For any* positive XLM value entered as the contribution amount, the `contribution_amount` field in the submitted `GroupData` payload must equal `Math.round(xlmValue * 10_000_000)`.
+_For any_ positive XLM value entered as the contribution amount, the `contribution_amount` field in the submitted `GroupData` payload must equal `Math.round(xlmValue * 10_000_000)`.
 
 **Validates: Requirements 7.2**
 
@@ -246,7 +250,7 @@ idle ──[submit]──► loading ──[success]──► success ──[2s 
 
 ### Property 10: Redirect uses returned group ID
 
-*For any* group ID string returned by the `API_Handler`, the router must redirect to `/groups/:groupId` using that exact ID.
+_For any_ group ID string returned by the `API_Handler`, the router must redirect to `/groups/:groupId` using that exact ID.
 
 **Validates: Requirements 8.3**
 
@@ -254,7 +258,7 @@ idle ──[submit]──► loading ──[success]──► success ──[2s 
 
 ### Property 11: Form fields preserved on error
 
-*For any* `FormData` state at the time of a failed submission, all field values must remain identical after the error is received — no field is cleared or reset.
+_For any_ `FormData` state at the time of a failed submission, all field values must remain identical after the error is received — no field is cleared or reset.
 
 **Validates: Requirements 9.3**
 
@@ -263,11 +267,13 @@ idle ──[submit]──► loading ──[success]──► success ──[2s 
 ## Error Handling
 
 ### Client-side validation errors
+
 - Validated per-step before advancing; errors rendered inline below each field
 - Submission blocked until step 3 validation passes
 - Errors cleared field-by-field as the user edits
 
 ### API / contract errors
+
 - `createGroup` rejects with an `Error` object; `message` is extracted
 - If `message` is empty or undefined, fallback: `"Failed to create group. Please try again."`
 - Error displayed in an `aria-live="polite"` region above the form actions
@@ -275,6 +281,7 @@ idle ──[submit]──► loading ──[success]──► success ──[2s 
 - User can retry without re-entering data
 
 ### Unexpected errors
+
 - Any thrown value that is not an `Error` instance is caught and the fallback message is shown
 
 ```tsx
@@ -282,9 +289,8 @@ try {
   const groupId = await createGroup(payload);
   setPageState({ status: 'success', groupId, errorMessage: null });
 } catch (err) {
-  const msg = err instanceof Error && err.message
-    ? err.message
-    : 'Failed to create group. Please try again.';
+  const msg =
+    err instanceof Error && err.message ? err.message : 'Failed to create group. Please try again.';
   setPageState({ status: 'error', groupId: null, errorMessage: msg });
 }
 ```
@@ -380,11 +386,13 @@ frontend/src/
 ### Routing changes
 
 `constants.ts` — add one entry:
+
 ```ts
 GROUP_CREATE: "/groups/create",
 ```
 
 `routes.tsx` — add one lazy import and one route config entry:
+
 ```ts
 const CreateGroupPage = lazy(() => import('../pages/CreateGroupPage'));
 

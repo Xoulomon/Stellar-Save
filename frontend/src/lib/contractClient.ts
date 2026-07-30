@@ -93,10 +93,7 @@ export function parseContractError(err: unknown): ContractError {
       const match = errorStr.match(/Error\(Contract, #(\d+)\)/);
       if (match) {
         const code = parseInt(match[1], 10);
-        return new ContractError(
-          code,
-          CONTRACT_ERROR_MESSAGES[code] ?? `Contract error #${code}`,
-        );
+        return new ContractError(code, CONTRACT_ERROR_MESSAGES[code] ?? `Contract error #${code}`);
       }
       return new ContractError(null, errorStr);
     }
@@ -115,14 +112,11 @@ export function parseContractError(err: unknown): ContractError {
  * Signs and submits a Soroban transaction via Freighter.
  * Returns the transaction hash on success.
  */
-async function signAndSubmit(
-  sourceAddress: string,
-  operation: xdr.Operation,
-): Promise<string> {
+async function signAndSubmit(sourceAddress: string, operation: xdr.Operation): Promise<string> {
   if (!CONTRACT_ID) {
     throw new ContractError(
       null,
-      'Contract ID is not configured. Set VITE_STELLAR_SAVE_CONTRACT_ID in your .env file.',
+      'Contract ID is not configured. Set VITE_STELLAR_SAVE_CONTRACT_ID in your .env file.'
     );
   }
 
@@ -222,7 +216,7 @@ async function simulateRead<T>(operation: xdr.Operation): Promise<T> {
   if (!CONTRACT_ID) {
     throw new ContractError(
       null,
-      'Contract ID is not configured. Set VITE_STELLAR_SAVE_CONTRACT_ID in your .env file.',
+      'Contract ID is not configured. Set VITE_STELLAR_SAVE_CONTRACT_ID in your .env file.'
     );
   }
 
@@ -234,13 +228,10 @@ async function simulateRead<T>(operation: xdr.Operation): Promise<T> {
     incrementSequenceNumber: () => undefined,
   }));
 
-  const tx = new TransactionBuilder(
-    account as Parameters<typeof TransactionBuilder>[0],
-    {
-      fee: BASE_FEE,
-      networkPassphrase: NETWORK_PASSPHRASE,
-    },
-  )
+  const tx = new TransactionBuilder(account as Parameters<typeof TransactionBuilder>[0], {
+    fee: BASE_FEE,
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
     .addOperation(operation)
     .setTimeout(30)
     .build();
@@ -272,7 +263,7 @@ function getContract(): Contract {
 export interface CreateGroupParams {
   creator: string;
   contributionAmount: bigint; // stroops
-  cycleDuration: bigint;      // seconds
+  cycleDuration: bigint; // seconds
   maxMembers: number;
 }
 
@@ -284,7 +275,7 @@ export async function createGroup(params: CreateGroupParams): Promise<bigint> {
     new Address(params.creator).toScVal(),
     nativeToScVal(params.contributionAmount, { type: 'i128' }),
     nativeToScVal(params.cycleDuration, { type: 'u64' }),
-    nativeToScVal(params.maxMembers, { type: 'u32' }),
+    nativeToScVal(params.maxMembers, { type: 'u32' })
   );
   await signAndSubmit(params.creator, op);
   // Return the latest group ID from the counter after creation
@@ -302,7 +293,7 @@ export async function getGroup(groupId: bigint): Promise<Record<string, unknown>
 export async function listGroups(
   cursor: bigint,
   limit: number,
-  statusFilter?: string,
+  statusFilter?: string
 ): Promise<Record<string, unknown>[]> {
   const contract = getContract();
   const statusArg = statusFilter
@@ -312,7 +303,7 @@ export async function listGroups(
     'list_groups',
     nativeToScVal(cursor, { type: 'u64' }),
     nativeToScVal(limit, { type: 'u32' }),
-    statusArg,
+    statusArg
   );
   return simulateRead<Record<string, unknown>[]>(op);
 }
@@ -335,7 +326,7 @@ export async function joinGroup(params: JoinGroupParams): Promise<string> {
   const op = contract.call(
     'join_group',
     nativeToScVal(params.groupId, { type: 'u64' }),
-    new Address(params.member).toScVal(),
+    new Address(params.member).toScVal()
   );
   return signAndSubmit(params.member, op);
 }
@@ -353,7 +344,7 @@ export async function contribute(params: ContributeParams): Promise<string> {
     'contribute',
     nativeToScVal(params.groupId, { type: 'u64' }),
     new Address(params.member).toScVal(),
-    nativeToScVal(params.amount, { type: 'i128' }),
+    nativeToScVal(params.amount, { type: 'i128' })
   );
   return signAndSubmit(params.member, op);
 }
@@ -369,7 +360,7 @@ export async function activateGroup(params: ActivateGroupParams): Promise<string
   const op = contract.call(
     'activate_group',
     nativeToScVal(params.groupId, { type: 'u64' }),
-    new Address(params.creator).toScVal(),
+    new Address(params.creator).toScVal()
   );
   return signAndSubmit(params.creator, op);
 }
@@ -385,7 +376,7 @@ export async function executePayout(params: ExecutePayoutParams): Promise<string
   const op = contract.call(
     'execute_payout',
     nativeToScVal(params.groupId, { type: 'u64' }),
-    new Address(params.recipient).toScVal(),
+    new Address(params.recipient).toScVal()
   );
   return signAndSubmit(params.recipient, op);
 }
@@ -405,29 +396,23 @@ export async function getMemberCount(groupId: bigint): Promise<number> {
 }
 
 /** get_payout_position → read-only */
-export async function getPayoutPosition(
-  groupId: bigint,
-  memberAddress: string,
-): Promise<number> {
+export async function getPayoutPosition(groupId: bigint, memberAddress: string): Promise<number> {
   const contract = getContract();
   const op = contract.call(
     'get_payout_position',
     nativeToScVal(groupId, { type: 'u64' }),
-    new Address(memberAddress).toScVal(),
+    new Address(memberAddress).toScVal()
   );
   return simulateRead<number>(op);
 }
 
 /** has_received_payout → read-only */
-export async function hasReceivedPayout(
-  groupId: bigint,
-  memberAddress: string,
-): Promise<boolean> {
+export async function hasReceivedPayout(groupId: bigint, memberAddress: string): Promise<boolean> {
   const contract = getContract();
   const op = contract.call(
     'has_received_payout',
     nativeToScVal(groupId, { type: 'u64' }),
-    new Address(memberAddress).toScVal(),
+    new Address(memberAddress).toScVal()
   );
   return simulateRead<boolean>(op);
 }
@@ -435,13 +420,13 @@ export async function hasReceivedPayout(
 /** get_member_total_contributions → read-only */
 export async function getMemberTotalContributions(
   groupId: bigint,
-  memberAddress: string,
+  memberAddress: string
 ): Promise<bigint> {
   const contract = getContract();
   const op = contract.call(
     'get_member_total_contributions',
     nativeToScVal(groupId, { type: 'u64' }),
-    new Address(memberAddress).toScVal(),
+    new Address(memberAddress).toScVal()
   );
   return simulateRead<bigint>(op);
 }
@@ -460,9 +445,7 @@ export interface PayoutScheduleEntry {
 }
 
 /** get_payout_schedule → read-only */
-export async function getPayoutSchedule(
-  groupId: bigint,
-): Promise<PayoutScheduleEntry[]> {
+export async function getPayoutSchedule(groupId: bigint): Promise<PayoutScheduleEntry[]> {
   const contract = getContract();
   const op = contract.call('get_payout_schedule', nativeToScVal(groupId, { type: 'u64' }));
   return simulateRead<PayoutScheduleEntry[]>(op);
@@ -471,27 +454,24 @@ export async function getPayoutSchedule(
 /** get_contribution_deadline → read-only */
 export async function getContributionDeadline(
   groupId: bigint,
-  cycleNumber: number,
+  cycleNumber: number
 ): Promise<bigint> {
   const contract = getContract();
   const op = contract.call(
     'get_contribution_deadline',
     nativeToScVal(groupId, { type: 'u64' }),
-    nativeToScVal(cycleNumber, { type: 'u32' }),
+    nativeToScVal(cycleNumber, { type: 'u32' })
   );
   return simulateRead<bigint>(op);
 }
 
 /** is_cycle_complete → read-only */
-export async function isCycleComplete(
-  groupId: bigint,
-  cycleNumber: number,
-): Promise<boolean> {
+export async function isCycleComplete(groupId: bigint, cycleNumber: number): Promise<boolean> {
   const contract = getContract();
   const op = contract.call(
     'is_cycle_complete',
     nativeToScVal(groupId, { type: 'u64' }),
-    nativeToScVal(cycleNumber, { type: 'u32' }),
+    nativeToScVal(cycleNumber, { type: 'u32' })
   );
   return simulateRead<boolean>(op);
 }
@@ -507,7 +487,7 @@ export async function pauseGroup(params: PauseGroupParams): Promise<string> {
   const op = contract.call(
     'pause_group',
     nativeToScVal(params.groupId, { type: 'u64' }),
-    new Address(params.caller).toScVal(),
+    new Address(params.caller).toScVal()
   );
   return signAndSubmit(params.caller, op);
 }
@@ -518,7 +498,7 @@ export async function resumeGroup(params: PauseGroupParams): Promise<string> {
   const op = contract.call(
     'resume_group',
     nativeToScVal(params.groupId, { type: 'u64' }),
-    new Address(params.caller).toScVal(),
+    new Address(params.caller).toScVal()
   );
   return signAndSubmit(params.caller, op);
 }

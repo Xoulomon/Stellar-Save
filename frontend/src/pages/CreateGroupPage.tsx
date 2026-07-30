@@ -43,7 +43,7 @@ export default function CreateGroupPage() {
   };
 
   const handleSubmit = async (data: GroupData) => {
-    setPageState(prev => ({ ...prev, status: 'loading', errorMessage: null }));
+    setPageState((prev) => ({ ...prev, status: 'loading', errorMessage: null }));
     try {
       const groupId = await createGroup(data);
       setPageState({
@@ -57,7 +57,7 @@ export default function CreateGroupPage() {
         err instanceof Error && err.message
           ? err.message
           : 'Failed to create group. Please try again.';
-      setPageState(prev => ({ ...prev, status: 'error', errorMessage }));
+      setPageState((prev) => ({ ...prev, status: 'error', errorMessage }));
     }
   };
 

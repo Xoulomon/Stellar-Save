@@ -55,7 +55,7 @@ import { useDebounce } from '../hooks/useDebounce';
 
 function Component() {
   const [value, setValue] = useState('');
-  
+
   // Debounce with 1 second delay
   const debouncedValue = useDebounce(value, { delay: 1000 });
 
@@ -79,10 +79,10 @@ import { useDebounce } from '../hooks/useDebounce';
 
 function Component() {
   const [value, setValue] = useState('');
-  
+
   const debouncedValue = useDebounce(value, {
     delay: 500,
-    leading: true  // Update immediately on first change
+    leading: true, // Update immediately on first change
   });
 
   return (
@@ -103,10 +103,10 @@ import { useDebounce } from '../hooks/useDebounce';
 
 function Component() {
   const [value, setValue] = useState('');
-  
+
   const debouncedValue = useDebounce(value, {
     delay: 500,
-    maxWait: 2000  // Force update after 2 seconds max
+    maxWait: 2000, // Force update after 2 seconds max
   });
 
   // Even if the user types continuously, the value will update
@@ -130,9 +130,9 @@ import { useDebounceWithCancel } from '../hooks/useDebounce';
 
 function Component() {
   const [value, setValue] = useState('');
-  
+
   const { debouncedValue, cancel } = useDebounceWithCancel(value, {
-    delay: 1000
+    delay: 1000,
   });
 
   const handleReset = () => {
@@ -216,18 +216,12 @@ function SearchBar() {
   useEffect(() => {
     if (debouncedQuery) {
       fetch(`/api/search?q=${debouncedQuery}`)
-        .then(res => res.json())
-        .then(data => console.log(data));
+        .then((res) => res.json())
+        .then((data) => console.log(data));
     }
   }, [debouncedQuery]);
 
-  return (
-    <input
-      value={query}
-      onChange={(e) => setQuery(e.target.value)}
-      placeholder="Search..."
-    />
-  );
+  return <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search..." />;
 }
 ```
 
@@ -251,11 +245,7 @@ function EmailInput() {
 
   return (
     <div>
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
+      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
       {email && !isValid && <span>Invalid email</span>}
     </div>
   );
@@ -290,7 +280,7 @@ function Editor() {
   const [content, setContent] = useState('');
   const debouncedContent = useDebounce(content, {
     delay: 1000,
-    maxWait: 5000  // Save at least every 5 seconds
+    maxWait: 5000, // Save at least every 5 seconds
   });
 
   useEffect(() => {
@@ -298,17 +288,12 @@ function Editor() {
       // Save to backend
       fetch('/api/save', {
         method: 'POST',
-        body: JSON.stringify({ content: debouncedContent })
+        body: JSON.stringify({ content: debouncedContent }),
       });
     }
   }, [debouncedContent]);
 
-  return (
-    <textarea
-      value={content}
-      onChange={(e) => setContent(e.target.value)}
-    />
-  );
+  return <textarea value={content} onChange={(e) => setContent(e.target.value)} />;
 }
 ```
 
@@ -321,8 +306,8 @@ function LivePreview() {
   const [code, setCode] = useState('');
   const debouncedCode = useDebounce(code, {
     delay: 500,
-    leading: true,  // Show initial preview immediately
-    maxWait: 2000   // Update at least every 2 seconds
+    leading: true, // Show initial preview immediately
+    maxWait: 2000, // Update at least every 2 seconds
   });
 
   useEffect(() => {
@@ -330,12 +315,7 @@ function LivePreview() {
     compileCode(debouncedCode);
   }, [debouncedCode]);
 
-  return (
-    <textarea
-      value={code}
-      onChange={(e) => setCode(e.target.value)}
-    />
-  );
+  return <textarea value={code} onChange={(e) => setCode(e.target.value)} />;
 }
 ```
 
@@ -348,6 +328,7 @@ The hook uses refs to track internal state, which avoids unnecessary re-renders 
 ### Timer Management
 
 All timers are automatically cleaned up when:
+
 - The component unmounts
 - The value changes before the delay expires
 - The cancel function is called (when using `useDebounceWithCancel`)
@@ -371,7 +352,7 @@ The hook only triggers a re-render when the debounced value actually changes, no
 // Good for user interactions that need immediate response
 const debouncedValue = useDebounce(value, {
   delay: 500,
-  leading: true
+  leading: true,
 });
 ```
 
@@ -381,7 +362,7 @@ const debouncedValue = useDebounce(value, {
 // Ensure updates happen even with continuous changes
 const debouncedValue = useDebounce(value, {
   delay: 1000,
-  maxWait: 3000
+  maxWait: 3000,
 });
 ```
 
@@ -457,6 +438,7 @@ const debouncedValue = useDebounce(value, { delay: 500 });
 ```
 
 **Advantages of useDebounce**:
+
 - No external dependencies
 - React-friendly (works with state)
 - Automatic cleanup
@@ -470,6 +452,7 @@ This hook is part of the Stellar-Save project.
 ## Contributing
 
 Contributions are welcome! Please ensure:
+
 - Code follows project style guidelines
 - TypeScript types are properly defined
 - Documentation is updated

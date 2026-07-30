@@ -52,7 +52,7 @@ describe('Tooltip', () => {
 
     const button = screen.getByText('Hover me');
     await userEvent.hover(button);
-    
+
     vi.advanceTimersByTime(0);
 
     await waitFor(() => {
@@ -162,7 +162,7 @@ describe('Tooltip', () => {
     );
 
     const button = screen.getByText('Hover me');
-    
+
     // Initially no aria-describedby
     expect(button).not.toHaveAttribute('aria-describedby');
 

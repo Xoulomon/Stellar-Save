@@ -61,18 +61,12 @@ export function GroupListExample() {
 
       <section style={{ marginBottom: '3rem' }}>
         <h2>Basic Usage</h2>
-        <GroupList
-          groups={groups}
-          onGroupClick={handleGroupClick}
-        />
+        <GroupList groups={groups} onGroupClick={handleGroupClick} />
       </section>
 
       <section style={{ marginBottom: '3rem' }}>
         <h2>Loading State</h2>
-        <GroupList
-          groups={[]}
-          loading={true}
-        />
+        <GroupList groups={[]} loading={true} />
       </section>
 
       <section style={{ marginBottom: '3rem' }}>
@@ -121,9 +115,7 @@ export function GroupListExample() {
                 background: 'linear-gradient(135deg, #667eea22 0%, #764ba222 100%)',
               }}
             >
-              <h3 style={{ margin: '0 0 0.5rem 0', color: '#667eea' }}>
-                {group.name}
-              </h3>
+              <h3 style={{ margin: '0 0 0.5rem 0', color: '#667eea' }}>{group.name}</h3>
               <p style={{ margin: '0', color: '#666' }}>{group.description}</p>
               <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#999' }}>
                 {group.memberCount} members

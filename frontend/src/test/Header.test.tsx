@@ -14,7 +14,7 @@ function renderHeader() {
   return render(
     <MemoryRouter>
       <Header />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 

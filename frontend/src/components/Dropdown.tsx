@@ -36,7 +36,7 @@ export function Dropdown({
   const menuRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  const enabledItems = items.filter(item => !item.disabled && !item.divider);
+  const enabledItems = items.filter((item) => !item.disabled && !item.divider);
 
   const calculatePosition = useCallback(() => {
     if (!triggerRef.current || !menuRef.current) return;
@@ -92,52 +92,58 @@ export function Dropdown({
     setFocusedIndex(-1);
   }, []);
 
-  const handleItemClick = useCallback((item: DropdownItem) => {
-    if (item.disabled) return;
-    item.onClick?.();
-    closeDropdown();
-  }, [closeDropdown]);
+  const handleItemClick = useCallback(
+    (item: DropdownItem) => {
+      if (item.disabled) return;
+      item.onClick?.();
+      closeDropdown();
+    },
+    [closeDropdown]
+  );
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (!isOpen) return;
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!isOpen) return;
 
-    switch (e.key) {
-      case 'Escape':
-        e.preventDefault();
-        closeDropdown();
-        triggerRef.current?.querySelector('button')?.focus();
-        break;
-      case 'ArrowDown':
-        e.preventDefault();
-        setFocusedIndex(prev => {
-          const nextIndex = prev + 1;
-          return nextIndex >= enabledItems.length ? 0 : nextIndex;
-        });
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setFocusedIndex(prev => {
-          const nextIndex = prev - 1;
-          return nextIndex < 0 ? enabledItems.length - 1 : nextIndex;
-        });
-        break;
-      case 'Home':
-        e.preventDefault();
-        setFocusedIndex(0);
-        break;
-      case 'End':
-        e.preventDefault();
-        setFocusedIndex(enabledItems.length - 1);
-        break;
-      case 'Enter':
-      case ' ':
-        e.preventDefault();
-        if (focusedIndex >= 0 && focusedIndex < enabledItems.length) {
-          handleItemClick(enabledItems[focusedIndex]);
-        }
-        break;
-    }
-  }, [isOpen, focusedIndex, enabledItems, closeDropdown, handleItemClick]);
+      switch (e.key) {
+        case 'Escape':
+          e.preventDefault();
+          closeDropdown();
+          triggerRef.current?.querySelector('button')?.focus();
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          setFocusedIndex((prev) => {
+            const nextIndex = prev + 1;
+            return nextIndex >= enabledItems.length ? 0 : nextIndex;
+          });
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setFocusedIndex((prev) => {
+            const nextIndex = prev - 1;
+            return nextIndex < 0 ? enabledItems.length - 1 : nextIndex;
+          });
+          break;
+        case 'Home':
+          e.preventDefault();
+          setFocusedIndex(0);
+          break;
+        case 'End':
+          e.preventDefault();
+          setFocusedIndex(enabledItems.length - 1);
+          break;
+        case 'Enter':
+        case ' ':
+          e.preventDefault();
+          if (focusedIndex >= 0 && focusedIndex < enabledItems.length) {
+            handleItemClick(enabledItems[focusedIndex]);
+          }
+          break;
+      }
+    },
+    [isOpen, focusedIndex, enabledItems, closeDropdown, handleItemClick]
+  );
 
   // Handle click outside
   useEffect(() => {
@@ -237,7 +243,7 @@ export function Dropdown({
             return (
               <button
                 key={item.id}
-                ref={el => {
+                ref={(el) => {
                   if (!item.disabled) {
                     itemRefs.current[currentEnabledIndex] = el;
                   }

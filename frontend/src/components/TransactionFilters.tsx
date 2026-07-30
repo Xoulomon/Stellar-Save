@@ -37,14 +37,8 @@ const TransactionFilters: React.FC<Props> = ({ filters, onChange }) => {
           {types.map((t) => {
             const isActive = filters.type?.includes(t) || false;
             return (
-              <div
-                key={t}
-                onClick={() => toggleType(t)}
-                className="cursor-pointer"
-              >
-                <Badge variant={isActive ? 'primary' : 'secondary'}>
-                  {t}
-                </Badge>
+              <div key={t} onClick={() => toggleType(t)} className="cursor-pointer">
+                <Badge variant={isActive ? 'primary' : 'secondary'}>{t}</Badge>
               </div>
             );
           })}
@@ -57,14 +51,8 @@ const TransactionFilters: React.FC<Props> = ({ filters, onChange }) => {
           {statuses.map((s) => {
             const isActive = filters.status?.includes(s) || false;
             return (
-              <div
-                key={s}
-                onClick={() => toggleStatus(s)}
-                className="cursor-pointer"
-              >
-                <Badge variant={isActive ? 'success' : 'secondary'}>
-                  {s}
-                </Badge>
+              <div key={s} onClick={() => toggleStatus(s)} className="cursor-pointer">
+                <Badge variant={isActive ? 'success' : 'secondary'}>{s}</Badge>
               </div>
             );
           })}

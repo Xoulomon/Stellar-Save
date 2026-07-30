@@ -1,5 +1,5 @@
-import { createTheme } from "@mui/material/styles";
-import { themeTokens } from "./tokens";
+import { createTheme } from '@mui/material/styles';
+import { themeTokens } from './tokens';
 
 export const appTheme = createTheme({
   palette: themeTokens.palette,
@@ -9,13 +9,13 @@ export const appTheme = createTheme({
   components: {
     MuiButton: {
       defaultProps: {
-        variant: "contained",
+        variant: 'contained',
         disableElevation: true,
       },
       styleOverrides: {
         root: {
           borderRadius: 10,
-          paddingInline: "1rem",
+          paddingInline: '1rem',
         },
       },
     },
@@ -29,7 +29,7 @@ export const appTheme = createTheme({
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          backgroundColor: "#ffffff",
+          backgroundColor: '#ffffff',
         },
       },
     },

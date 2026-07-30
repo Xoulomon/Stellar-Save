@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchGroups } from '../utils/groupApi';
-import type {
-  GroupFilters,
-  PaginationMeta,
-  PublicGroup,
-  UseGroupsReturn,
-} from '../types/group';
+import type { GroupFilters, PaginationMeta, PublicGroup, UseGroupsReturn } from '../types/group';
 import { DEFAULT_GROUP_FILTERS } from '../types/group';
 
 // ─── Simple in-memory cache ───────────────────────────────────────────────────
@@ -44,9 +39,7 @@ function applyFilters(groups: PublicGroup[], filters: GroupFilters): PublicGroup
   if (filters.search.trim()) {
     const q = filters.search.toLowerCase();
     result = result.filter(
-      (g) =>
-        g.name.toLowerCase().includes(q) ||
-        g.description?.toLowerCase().includes(q),
+      (g) => g.name.toLowerCase().includes(q) || g.description?.toLowerCase().includes(q)
     );
   }
 
@@ -78,15 +71,24 @@ function applySort(groups: PublicGroup[], sort: GroupFilters['sort']): PublicGro
   const sorted = [...groups];
   sorted.sort((a, b) => {
     switch (sort) {
-      case 'name-asc':    return a.name.localeCompare(b.name);
-      case 'name-desc':   return b.name.localeCompare(a.name);
-      case 'amount-asc':  return a.contributionAmount - b.contributionAmount;
-      case 'amount-desc': return b.contributionAmount - a.contributionAmount;
-      case 'members-asc':  return a.memberCount - b.memberCount;
-      case 'members-desc': return b.memberCount - a.memberCount;
-      case 'date-asc':  return a.createdAt.getTime() - b.createdAt.getTime();
-      case 'date-desc': return b.createdAt.getTime() - a.createdAt.getTime();
-      default: return 0;
+      case 'name-asc':
+        return a.name.localeCompare(b.name);
+      case 'name-desc':
+        return b.name.localeCompare(a.name);
+      case 'amount-asc':
+        return a.contributionAmount - b.contributionAmount;
+      case 'amount-desc':
+        return b.contributionAmount - a.contributionAmount;
+      case 'members-asc':
+        return a.memberCount - b.memberCount;
+      case 'members-desc':
+        return b.memberCount - a.memberCount;
+      case 'date-asc':
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      case 'date-desc':
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      default:
+        return 0;
     }
   });
   return sorted;
@@ -144,7 +146,7 @@ export function useGroups(options: UseGroupsOptions = {}): UseGroupsReturn {
       setError(
         err instanceof Error && err.message
           ? err.message
-          : 'Failed to load groups. Please try again.',
+          : 'Failed to load groups. Please try again.'
       );
     } finally {
       if (fetchId === fetchIdRef.current) {
@@ -162,7 +164,7 @@ export function useGroups(options: UseGroupsOptions = {}): UseGroupsReturn {
 
   const filteredAndSorted = useMemo(
     () => applySort(applyFilters(rawGroups, filters), filters.sort),
-    [rawGroups, filters],
+    [rawGroups, filters]
   );
 
   const totalItems = filteredAndSorted.length;

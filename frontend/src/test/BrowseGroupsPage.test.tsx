@@ -33,9 +33,36 @@ vi.mock('react-router-dom', async () => {
 const mockFetchGroups = vi.mocked(fetchGroups);
 
 const mockGroups: PublicGroup[] = [
-  { id: '1', name: 'Alpha Savers', description: 'First group', memberCount: 5, contributionAmount: 100, currency: 'XLM', status: 'active', createdAt: new Date('2024-01-01') },
-  { id: '2', name: 'Beta Circle', description: 'Second group', memberCount: 3, contributionAmount: 50, currency: 'XLM', status: 'pending', createdAt: new Date('2024-02-01') },
-  { id: '3', name: 'Gamma Fund', description: 'Third group', memberCount: 8, contributionAmount: 200, currency: 'XLM', status: 'completed', createdAt: new Date('2024-03-01') },
+  {
+    id: '1',
+    name: 'Alpha Savers',
+    description: 'First group',
+    memberCount: 5,
+    contributionAmount: 100,
+    currency: 'XLM',
+    status: 'active',
+    createdAt: new Date('2024-01-01'),
+  },
+  {
+    id: '2',
+    name: 'Beta Circle',
+    description: 'Second group',
+    memberCount: 3,
+    contributionAmount: 50,
+    currency: 'XLM',
+    status: 'pending',
+    createdAt: new Date('2024-02-01'),
+  },
+  {
+    id: '3',
+    name: 'Gamma Fund',
+    description: 'Third group',
+    memberCount: 8,
+    contributionAmount: 200,
+    currency: 'XLM',
+    status: 'completed',
+    createdAt: new Date('2024-03-01'),
+  },
 ];
 
 function renderPage() {
@@ -153,7 +180,7 @@ describe('BrowseGroupsPage', () => {
   });
 
   it('route config contains GROUPS_BROWSE entry', () => {
-    const entry = routeConfig.find(r => r.path === ROUTES.GROUPS_BROWSE);
+    const entry = routeConfig.find((r) => r.path === ROUTES.GROUPS_BROWSE);
     expect(entry).toBeDefined();
     expect(entry?.path).toBe('/groups/browse');
   });

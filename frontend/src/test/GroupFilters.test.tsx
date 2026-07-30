@@ -36,7 +36,7 @@ describe('GroupFilters', () => {
         minAmount: '',
         maxAmount: '',
         sort: 'date-desc',
-      }),
+      })
     );
   });
 
@@ -45,7 +45,7 @@ describe('GroupFilters', () => {
       <GroupFilters
         onFilterChange={vi.fn()}
         initialFilters={{ status: 'active', sort: 'name-asc' }}
-      />,
+      />
     );
     expect(screen.getByText(/Active/)).toBeInTheDocument();
   });

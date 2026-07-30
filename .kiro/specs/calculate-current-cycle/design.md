@@ -7,6 +7,7 @@ This feature adds a `calculate_current_cycle` pure helper function to `contracts
 It is called internally by contribution validation, payout scheduling, and cycle advancement logic to avoid duplicating cycle-calculation arithmetic across the contract.
 
 Key design decisions:
+
 - **Pure helper, no state mutation**: the function only reads from storage and the ledger clock.
 - **Placed in `helpers.rs`**: consistent with the existing `is_cycle_deadline_passed` helper that lives there.
 - **Returns `Result<u32, StellarSaveError>`**: typed errors let callers handle failures without panicking.
@@ -59,15 +60,15 @@ The function is a free function (not a method on `StellarSaveContract`) consiste
 
 ### Interaction with Existing Code
 
-| Existing symbol | How it is used |
-|---|---|
-| `StorageKeyBuilder::group_data(group_id)` | Load the `Group` struct |
-| `Group.started` | Early-return `Ok(0)` if group not started |
-| `Group.started_at` | Base timestamp for elapsed calculation |
-| `Group.cycle_duration` | Divisor for integer division |
-| `Group.max_members` | Cap: result ≤ `max_members - 1` |
-| `StellarSaveError::GroupNotFound` | Returned when group absent from storage |
-| `env.ledger().timestamp()` | Current on-chain time |
+| Existing symbol                           | How it is used                            |
+| ----------------------------------------- | ----------------------------------------- |
+| `StorageKeyBuilder::group_data(group_id)` | Load the `Group` struct                   |
+| `Group.started`                           | Early-return `Ok(0)` if group not started |
+| `Group.started_at`                        | Base timestamp for elapsed calculation    |
+| `Group.cycle_duration`                    | Divisor for integer division              |
+| `Group.max_members`                       | Cap: result ≤ `max_members - 1`           |
+| `StellarSaveError::GroupNotFound`         | Returned when group absent from storage   |
+| `env.ledger().timestamp()`                | Current on-chain time                     |
 
 ---
 
@@ -95,20 +96,20 @@ result           = capped_cycles as u32               (safe: value ≤ max_membe
 ```
 
 Edge cases handled before the computation:
+
 1. Group not in storage → `Err(GroupNotFound)`
 2. `group.started == false` → `Ok(0)`
 3. `current_time < started_at` → `Ok(0)` (clock skew guard)
-
 
 ---
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: GroupNotFound for unknown group_id
 
-*For any* `group_id` that has not been stored in persistent storage, `calculate_current_cycle` must return `Err(StellarSaveError::GroupNotFound)`.
+_For any_ `group_id` that has not been stored in persistent storage, `calculate_current_cycle` must return `Err(StellarSaveError::GroupNotFound)`.
 
 **Validates: Requirements 1.2, 5.1**
 
@@ -116,7 +117,7 @@ Edge cases handled before the computation:
 
 ### Property 2: Unstarted group always returns cycle 0
 
-*For any* `Group` whose `started` field is `false` (regardless of other fields), `calculate_current_cycle` must return `Ok(0)`.
+_For any_ `Group` whose `started` field is `false` (regardless of other fields), `calculate_current_cycle` must return `Ok(0)`.
 
 **Validates: Requirements 1.3**
 
@@ -124,7 +125,7 @@ Edge cases handled before the computation:
 
 ### Property 3: Cycle count correctness formula
 
-*For any* started group with `current_time >= started_at`, the returned cycle number must equal `min(floor((current_time - started_at) / cycle_duration), max_members - 1)` cast to `u32`. This subsumes the cap requirement and the integer-truncation requirement.
+_For any_ started group with `current_time >= started_at`, the returned cycle number must equal `min(floor((current_time - started_at) / cycle_duration), max_members - 1)` cast to `u32`. This subsumes the cap requirement and the integer-truncation requirement.
 
 **Validates: Requirements 2.2, 3.1, 3.3, 4.2, 6.3**
 
@@ -132,7 +133,7 @@ Edge cases handled before the computation:
 
 ### Property 4: Result is always a valid cycle index
 
-*For any* started group and any `current_time >= started_at`, the returned value `n` must satisfy `0 <= n <= max_members - 1`. This invariant holds independently of the exact formula and can be checked without recomputing the formula.
+_For any_ started group and any `current_time >= started_at`, the returned value `n` must satisfy `0 <= n <= max_members - 1`. This invariant holds independently of the exact formula and can be checked without recomputing the formula.
 
 **Validates: Requirements 4.4**
 
@@ -140,7 +141,7 @@ Edge cases handled before the computation:
 
 ### Property 5: Determinism — same inputs produce same result
 
-*For any* group and ledger timestamp, calling `calculate_current_cycle` twice with identical inputs must return identical results. The function has no side effects that could cause divergence.
+_For any_ group and ledger timestamp, calling `calculate_current_cycle` twice with identical inputs must return identical results. The function has no side effects that could cause divergence.
 
 **Validates: Requirements 6.6**
 
@@ -148,12 +149,12 @@ Edge cases handled before the computation:
 
 ## Error Handling
 
-| Condition | Return value | Notes |
-|---|---|---|
-| `group_id` not in storage | `Err(StellarSaveError::GroupNotFound)` | Propagated from `.ok_or(...)` on storage get |
-| `group.started == false` | `Ok(0)` | Early return before any arithmetic |
-| `current_time < started_at` | `Ok(0)` | Clock-skew guard; no panic |
-| Normal operation | `Ok(n)` where `0 <= n <= max_members - 1` | Integer division + cap |
+| Condition                   | Return value                              | Notes                                        |
+| --------------------------- | ----------------------------------------- | -------------------------------------------- |
+| `group_id` not in storage   | `Err(StellarSaveError::GroupNotFound)`    | Propagated from `.ok_or(...)` on storage get |
+| `group.started == false`    | `Ok(0)`                                   | Early return before any arithmetic           |
+| `current_time < started_at` | `Ok(0)`                                   | Clock-skew guard; no panic                   |
+| Normal operation            | `Ok(n)` where `0 <= n <= max_members - 1` | Integer division + cap                       |
 
 The function never panics. All arithmetic is on `u64` values (no overflow possible for realistic timestamps and durations), and the cast to `u32` is safe because the value is capped at `max_members - 1` which fits in `u32`.
 
@@ -178,13 +179,13 @@ Property-based testing library: **`proptest`** (already available in the Rust ec
 
 Each property test runs a minimum of **100 iterations**.
 
-| Property | Test description | Tag |
-|---|---|---|
-| P1: GroupNotFound | Generate random `u64` group_ids, verify `Err(GroupNotFound)` | `Feature: calculate-current-cycle, Property 1: GroupNotFound for unknown group_id` |
-| P2: Unstarted returns 0 | Generate random `Group` with `started=false`, verify `Ok(0)` | `Feature: calculate-current-cycle, Property 2: Unstarted group always returns cycle 0` |
-| P3: Correctness formula | Generate random started groups + timestamps ≥ `started_at`, verify formula | `Feature: calculate-current-cycle, Property 3: Cycle count correctness formula` |
-| P4: Bounds invariant | Generate random started groups + timestamps ≥ `started_at`, verify `0 <= n <= max_members-1` | `Feature: calculate-current-cycle, Property 4: Result is always a valid cycle index` |
-| P5: Determinism | Call twice with same inputs, verify identical results | `Feature: calculate-current-cycle, Property 5: Determinism — same inputs produce same result` |
+| Property                | Test description                                                                             | Tag                                                                                           |
+| ----------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| P1: GroupNotFound       | Generate random `u64` group_ids, verify `Err(GroupNotFound)`                                 | `Feature: calculate-current-cycle, Property 1: GroupNotFound for unknown group_id`            |
+| P2: Unstarted returns 0 | Generate random `Group` with `started=false`, verify `Ok(0)`                                 | `Feature: calculate-current-cycle, Property 2: Unstarted group always returns cycle 0`        |
+| P3: Correctness formula | Generate random started groups + timestamps ≥ `started_at`, verify formula                   | `Feature: calculate-current-cycle, Property 3: Cycle count correctness formula`               |
+| P4: Bounds invariant    | Generate random started groups + timestamps ≥ `started_at`, verify `0 <= n <= max_members-1` | `Feature: calculate-current-cycle, Property 4: Result is always a valid cycle index`          |
+| P5: Determinism         | Call twice with same inputs, verify identical results                                        | `Feature: calculate-current-cycle, Property 5: Determinism — same inputs produce same result` |
 
 Each property test must include a comment referencing its design property using the tag format above.
 

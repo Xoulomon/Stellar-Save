@@ -9,17 +9,9 @@ interface Props {
   onRowClick: (tx: Transaction) => void;
 }
 
-const TransactionTable: React.FC<Props> = ({
-  transactions,
-  isLoading,
-  onRowClick,
-}) => {
+const TransactionTable: React.FC<Props> = ({ transactions, isLoading, onRowClick }) => {
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-12 text-gray-400">
-        Loading transactions...
-      </div>
-    );
+    return <div className="flex justify-center py-12 text-gray-400">Loading transactions...</div>;
   }
 
   if (transactions.length === 0) {
@@ -63,15 +55,9 @@ const TransactionTable: React.FC<Props> = ({
                 {tx.amount} {tx.assetCode}
               </td>
               <td className="p-6 font-medium">{tx.assetCode}</td>
-              <td className="p-6 text-sm text-gray-400 truncate max-w-[180px]">
-                {tx.from}
-              </td>
+              <td className="p-6 text-sm text-gray-400 truncate max-w-[180px]">{tx.from}</td>
               <td className="p-6">
-                <Badge
-                  variant={tx.status === 'success' ? 'success' : 'danger'}
-                >
-                  {tx.status}
-                </Badge>
+                <Badge variant={tx.status === 'success' ? 'success' : 'danger'}>{tx.status}</Badge>
               </td>
               <td className="p-6">
                 <Button variant="secondary" size="sm">

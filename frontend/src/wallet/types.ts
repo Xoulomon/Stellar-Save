@@ -1,8 +1,4 @@
-export type WalletConnectionStatus =
-  | "idle"
-  | "connecting"
-  | "connected"
-  | "error";
+export type WalletConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
 export interface WalletConnection {
   address: string;

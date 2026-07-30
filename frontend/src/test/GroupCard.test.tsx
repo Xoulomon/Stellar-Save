@@ -13,7 +13,7 @@ function renderCard(props = {}) {
   return render(
     <MemoryRouter>
       <GroupCard {...defaultProps} {...props} />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 

@@ -1,8 +1,5 @@
-import { useState } from "react";
-import type {
-  TransactionStatus,
-  ContributeButtonProps,
-} from "../types/contribution";
+import { useState } from 'react';
+import type { TransactionStatus, ContributeButtonProps } from '../types/contribution';
 
 // ── Status helpers ──────────────────────────────────────────────────────────
 
@@ -11,33 +8,18 @@ const STATUS_CONFIG: Record<
   { label: string; icon: React.ReactNode; className: string }
 > = {
   idle: {
-    label: "Contribute",
+    label: 'Contribute',
     icon: (
-      <svg
-        className="w-4 h-4"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 4v16m8-8H4"
-        />
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
       </svg>
     ),
-    className: "bg-indigo-600 hover:bg-indigo-700 text-white",
+    className: 'bg-indigo-600 hover:bg-indigo-700 text-white',
   },
   confirming: {
-    label: "Confirm in Wallet",
+    label: 'Confirm in Wallet',
     icon: (
-      <svg
-        className="w-4 h-4 animate-pulse"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
+      <svg className="w-4 h-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -46,10 +28,10 @@ const STATUS_CONFIG: Record<
         />
       </svg>
     ),
-    className: "bg-yellow-500 text-white cursor-wait",
+    className: 'bg-yellow-500 text-white cursor-wait',
   },
   pending: {
-    label: "Processing...",
+    label: 'Processing...',
     icon: (
       <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
         <circle
@@ -60,17 +42,13 @@ const STATUS_CONFIG: Record<
           stroke="currentColor"
           strokeWidth="4"
         />
-        <path
-          className="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8v8H4z"
-        />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
       </svg>
     ),
-    className: "bg-yellow-500 text-white cursor-wait",
+    className: 'bg-yellow-500 text-white cursor-wait',
   },
   submitting: {
-    label: "Submitting...",
+    label: 'Submitting...',
     icon: (
       <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
         <circle
@@ -81,43 +59,24 @@ const STATUS_CONFIG: Record<
           stroke="currentColor"
           strokeWidth="4"
         />
-        <path
-          className="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8v8H4z"
-        />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
       </svg>
     ),
-    className: "bg-blue-500 text-white cursor-wait",
+    className: 'bg-blue-500 text-white cursor-wait',
   },
   success: {
-    label: "Contributed!",
+    label: 'Contributed!',
     icon: (
-      <svg
-        className="w-4 h-4"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M5 13l4 4L19 7"
-        />
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
       </svg>
     ),
-    className: "bg-green-500 text-white",
+    className: 'bg-green-500 text-white',
   },
   error: {
-    label: "Try Again",
+    label: 'Try Again',
     icon: (
-      <svg
-        className="w-4 h-4"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -126,7 +85,7 @@ const STATUS_CONFIG: Record<
         />
       </svg>
     ),
-    className: "bg-red-500 hover:bg-red-600 text-white",
+    className: 'bg-red-500 hover:bg-red-600 text-white',
   },
 };
 
@@ -139,12 +98,7 @@ interface ConfirmModalProps {
   onCancel: () => void;
 }
 
-function ConfirmModal({
-  amount,
-  cycleId,
-  onConfirm,
-  onCancel,
-}: ConfirmModalProps) {
+function ConfirmModal({ amount, cycleId, onConfirm, onCancel }: ConfirmModalProps) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 animate-in fade-in zoom-in">
@@ -164,9 +118,7 @@ function ConfirmModal({
               />
             </svg>
           </div>
-          <h3 className="text-lg font-bold text-gray-900">
-            Confirm Contribution
-          </h3>
+          <h3 className="text-lg font-bold text-gray-900">Confirm Contribution</h3>
           <p className="text-gray-500 text-sm mt-1">Cycle #{cycleId}</p>
         </div>
 
@@ -217,34 +169,29 @@ interface StatusBannerProps {
   onDismiss: () => void;
 }
 
-function StatusBanner({
-  status,
-  txHash,
-  errorMessage,
-  onDismiss,
-}: StatusBannerProps) {
-  if (status === "idle" || status === "confirming") return null;
+function StatusBanner({ status, txHash, errorMessage, onDismiss }: StatusBannerProps) {
+  if (status === 'idle' || status === 'confirming') return null;
 
   const banners = {
     pending: {
-      bg: "bg-yellow-50 border-yellow-200",
-      text: "text-yellow-700",
-      msg: "Waiting for wallet confirmation...",
+      bg: 'bg-yellow-50 border-yellow-200',
+      text: 'text-yellow-700',
+      msg: 'Waiting for wallet confirmation...',
     },
     submitting: {
-      bg: "bg-blue-50 border-blue-200",
-      text: "text-blue-700",
-      msg: "Submitting transaction to network...",
+      bg: 'bg-blue-50 border-blue-200',
+      text: 'text-blue-700',
+      msg: 'Submitting transaction to network...',
     },
     success: {
-      bg: "bg-green-50 border-green-200",
-      text: "text-green-700",
-      msg: "Transaction confirmed! ✓",
+      bg: 'bg-green-50 border-green-200',
+      text: 'text-green-700',
+      msg: 'Transaction confirmed! ✓',
     },
     error: {
-      bg: "bg-red-50 border-red-200",
-      text: "text-red-700",
-      msg: errorMessage || "Transaction failed. Please try again.",
+      bg: 'bg-red-50 border-red-200',
+      text: 'text-red-700',
+      msg: errorMessage || 'Transaction failed. Please try again.',
     },
   };
 
@@ -252,12 +199,10 @@ function StatusBanner({
   if (!banner) return null;
 
   return (
-    <div
-      className={`mt-3 p-3 rounded-xl border ${banner.bg} flex items-start justify-between`}
-    >
+    <div className={`mt-3 p-3 rounded-xl border ${banner.bg} flex items-start justify-between`}>
       <div>
         <p className={`text-sm font-medium ${banner.text}`}>{banner.msg}</p>
-        {txHash && status === "success" && (
+        {txHash && status === 'success' && (
           <a
             href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
             target="_blank"
@@ -268,11 +213,8 @@ function StatusBanner({
           </a>
         )}
       </div>
-      {(status === "success" || status === "error") && (
-        <button
-          onClick={onDismiss}
-          className={`text-sm ${banner.text} hover:opacity-70`}
-        >
+      {(status === 'success' || status === 'error') && (
+        <button onClick={onDismiss} className={`text-sm ${banner.text} hover:opacity-70`}>
           ✕
         </button>
       )}
@@ -286,7 +228,7 @@ async function mockWalletTransaction(amount: number): Promise<string> {
   // Simulates wallet interaction + network submission
   // Replace with actual Freighter/Stellar SDK call
   await new Promise((r) => setTimeout(r, 1500));
-  if (Math.random() < 0.1) throw new Error("User rejected the request");
+  if (Math.random() < 0.1) throw new Error('User rejected the request');
   await new Promise((r) => setTimeout(r, 1000));
   return `tx_${Math.random().toString(36).substr(2, 16)}`;
 }
@@ -299,18 +241,17 @@ export function ContributeButton({
   onError,
   disabled = false,
 }: ContributeButtonProps) {
-  const [status, setStatus] = useState<TransactionStatus>("idle");
+  const [status, setStatus] = useState<TransactionStatus>('idle');
   const [showConfirm, setShowConfirm] = useState(false);
   const [txHash, setTxHash] = useState<string>();
   const [errorMessage, setErrorMessage] = useState<string>();
 
-  const isLoading = ["confirming", "pending", "submitting"].includes(status);
-  const isDisabled =
-    disabled || isLoading || status === "success" || !walletAddress;
+  const isLoading = ['confirming', 'pending', 'submitting'].includes(status);
+  const isDisabled = disabled || isLoading || status === 'success' || !walletAddress;
 
   const handleClick = () => {
-    if (status === "error") {
-      setStatus("idle");
+    if (status === 'error') {
+      setStatus('idle');
       setErrorMessage(undefined);
       return;
     }
@@ -319,20 +260,19 @@ export function ContributeButton({
 
   const handleConfirm = async () => {
     setShowConfirm(false);
-    setStatus("confirming");
+    setStatus('confirming');
     try {
-      setStatus("pending");
+      setStatus('pending');
       const hash = await mockWalletTransaction(amount);
-      setStatus("submitting");
+      setStatus('submitting');
       await new Promise((r) => setTimeout(r, 800));
       setTxHash(hash);
-      setStatus("success");
+      setStatus('success');
       onSuccess?.(hash);
     } catch (err) {
-      const error =
-        err instanceof Error ? err : new Error("Transaction failed");
+      const error = err instanceof Error ? err : new Error('Transaction failed');
       setErrorMessage(error.message);
-      setStatus("error");
+      setStatus('error');
       onError?.(error);
     }
   };
@@ -354,10 +294,8 @@ export function ContributeButton({
       >
         {config.icon}
         {config.label}
-        {status === "idle" && (
-          <span className="ml-1 bg-white/20 px-2 py-0.5 rounded-full text-xs">
-            {amount} XLM
-          </span>
+        {status === 'idle' && (
+          <span className="ml-1 bg-white/20 px-2 py-0.5 rounded-full text-xs">{amount} XLM</span>
         )}
       </button>
 
@@ -365,7 +303,7 @@ export function ContributeButton({
         status={status}
         txHash={txHash}
         errorMessage={errorMessage}
-        onDismiss={() => setStatus("idle")}
+        onDismiss={() => setStatus('idle')}
       />
 
       {showConfirm && (

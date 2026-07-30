@@ -50,7 +50,7 @@ interface UseGroupOptions {
  */
 export function useGroup(
   groupId: string | null | undefined,
-  options: UseGroupOptions = {},
+  options: UseGroupOptions = {}
 ): UseGroupReturn {
   const { autoRefresh = true, refreshInterval = AUTO_REFRESH_MS } = options;
 
@@ -61,49 +61,46 @@ export function useGroup(
   // Tracks the latest in-flight fetch so stale responses are silently dropped
   const fetchIdRef = useRef(0);
 
-  const load = useCallback(
-    async (id: string, bust = false) => {
-      const fetchId = ++fetchIdRef.current;
+  const load = useCallback(async (id: string, bust = false) => {
+    const fetchId = ++fetchIdRef.current;
 
-      if (!bust) {
-        const cached = getFromCache(id);
-        if (cached) {
-          setGroup(cached);
-          setError(null);
-          return;
-        }
+    if (!bust) {
+      const cached = getFromCache(id);
+      if (cached) {
+        setGroup(cached);
+        setError(null);
+        return;
       }
+    }
 
-      setIsLoading(true);
-      setError(null);
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        const data = await fetchGroup(id);
+    try {
+      const data = await fetchGroup(id);
 
-        if (fetchId !== fetchIdRef.current) return; // stale — discard
+      if (fetchId !== fetchIdRef.current) return; // stale — discard
 
-        if (data === null) {
-          setError('Group not found.');
-          setGroup(null);
-        } else {
-          setInCache(id, data);
-          setGroup(data);
-        }
-      } catch (err) {
-        if (fetchId !== fetchIdRef.current) return;
-        setError(
-          err instanceof Error && err.message
-            ? err.message
-            : 'Failed to load group. Please try again.',
-        );
-      } finally {
-        if (fetchId === fetchIdRef.current) {
-          setIsLoading(false);
-        }
+      if (data === null) {
+        setError('Group not found.');
+        setGroup(null);
+      } else {
+        setInCache(id, data);
+        setGroup(data);
       }
-    },
-    [],
-  );
+    } catch (err) {
+      if (fetchId !== fetchIdRef.current) return;
+      setError(
+        err instanceof Error && err.message
+          ? err.message
+          : 'Failed to load group. Please try again.'
+      );
+    } finally {
+      if (fetchId === fetchIdRef.current) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
 
   // Initial fetch + re-fetch when groupId changes
   useEffect(() => {

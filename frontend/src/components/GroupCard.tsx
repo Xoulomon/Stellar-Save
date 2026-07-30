@@ -93,8 +93,8 @@ export function GroupCard({
   // If groupId is provided, wrap in Link
   if (groupId) {
     return (
-      <Link 
-        to={buildRoute.groupDetail(groupId)} 
+      <Link
+        to={buildRoute.groupDetail(groupId)}
         className={classes}
         style={{ textDecoration: 'none', color: 'inherit' }}
         onClick={handleCardClick}

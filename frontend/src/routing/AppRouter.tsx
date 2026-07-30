@@ -43,11 +43,10 @@ export function AppRouter() {
 
           return <Route key={route.path} path={route.path} element={element} />;
         })}
-        
+
         {/* Catch-all route for undefined paths */}
         <Route path="*" element={<Navigate to={ROUTES.NOT_FOUND} replace />} />
       </Routes>
     </Suspense>
   );
 }
-

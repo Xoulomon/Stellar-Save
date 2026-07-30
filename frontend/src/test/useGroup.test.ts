@@ -80,7 +80,9 @@ describe('useGroup', () => {
     vi.useFakeTimers();
     const fetchSpy = vi.spyOn(groupApi, 'fetchGroup').mockResolvedValue(mockGroup);
     renderHook(() => useGroup('g1', { autoRefresh: false }));
-    await act(async () => { vi.advanceTimersByTime(60_000); });
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+    });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
   });

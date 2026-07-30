@@ -5,6 +5,7 @@
 This feature adds a `validate_max_members` helper function to the Stellar-Save Soroban smart contract. The function validates a proposed `max_members` value against the bounds stored in the contract's global `ContractConfig` (`config.min_members` to `config.max_members`), returning a typed `Result` so callers can handle out-of-range values without panicking.
 
 The function follows the exact same pattern as the two existing range validators in `lib.rs`:
+
 - `validate_cycle_duration` — checks a `u64` against `config.min_cycle_duration` / `config.max_cycle_duration`
 - `validate_contribution_amount_range` — checks an `i128` against `config.min_contribution` / `config.max_contribution`
 
@@ -90,35 +91,35 @@ The storage key used to retrieve the config is `StorageKeyBuilder::contract_conf
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Below-minimum values are rejected
 
-*For any* `ContractConfig` stored in the environment and *for any* `max_members` value strictly less than `config.min_members`, calling `validate_max_members` shall return `Err(StellarSaveError::InvalidState)`.
+_For any_ `ContractConfig` stored in the environment and _for any_ `max_members` value strictly less than `config.min_members`, calling `validate_max_members` shall return `Err(StellarSaveError::InvalidState)`.
 
 **Validates: Requirements 1.2**
 
 ### Property 2: Above-maximum values are rejected
 
-*For any* `ContractConfig` stored in the environment and *for any* `max_members` value strictly greater than `config.max_members`, calling `validate_max_members` shall return `Err(StellarSaveError::InvalidState)`.
+_For any_ `ContractConfig` stored in the environment and _for any_ `max_members` value strictly greater than `config.max_members`, calling `validate_max_members` shall return `Err(StellarSaveError::InvalidState)`.
 
 **Validates: Requirements 1.3**
 
 ### Property 3: In-range values (including boundaries) are accepted
 
-*For any* `ContractConfig` stored in the environment and *for any* `max_members` value in the inclusive range `[config.min_members, config.max_members]`, calling `validate_max_members` shall return `Ok(())`.
+_For any_ `ContractConfig` stored in the environment and _for any_ `max_members` value in the inclusive range `[config.min_members, config.max_members]`, calling `validate_max_members` shall return `Ok(())`.
 
 **Validates: Requirements 1.4, 2.1, 2.2**
 
 ### Property 4: Contract entry points reject out-of-range max_members
 
-*For any* `ContractConfig` stored in the environment and *for any* `max_members` value outside `[config.min_members, config.max_members]`, both `create_group` and `update_group` shall return `Err(StellarSaveError::InvalidState)`.
+_For any_ `ContractConfig` stored in the environment and _for any_ `max_members` value outside `[config.min_members, config.max_members]`, both `create_group` and `update_group` shall return `Err(StellarSaveError::InvalidState)`.
 
 **Validates: Requirements 3.1, 3.2**
 
 ### Property 5: Validator is deterministic (idempotence)
 
-*For any* environment state and *for any* `max_members` value, calling `validate_max_members` twice with the same value shall produce the same result.
+_For any_ environment state and _for any_ `max_members` value, calling `validate_max_members` twice with the same value shall produce the same result.
 
 **Validates: Requirements 4.7**
 
@@ -126,12 +127,12 @@ The storage key used to retrieve the config is `StorageKeyBuilder::contract_conf
 
 ## Error Handling
 
-| Scenario | Return value |
-|---|---|
-| `max_members < config.min_members` (config present) | `Err(StellarSaveError::InvalidState)` |
-| `max_members > config.max_members` (config present) | `Err(StellarSaveError::InvalidState)` |
-| `max_members` in `[config.min_members, config.max_members]` | `Ok(())` |
-| No `ContractConfig` in storage | `Ok(())` (permissive default) |
+| Scenario                                                    | Return value                          |
+| ----------------------------------------------------------- | ------------------------------------- |
+| `max_members < config.min_members` (config present)         | `Err(StellarSaveError::InvalidState)` |
+| `max_members > config.max_members` (config present)         | `Err(StellarSaveError::InvalidState)` |
+| `max_members` in `[config.min_members, config.max_members]` | `Ok(())`                              |
+| No `ContractConfig` in storage                              | `Ok(())` (permissive default)         |
 
 `StellarSaveError::InvalidState` (code 1003) is the correct error because an out-of-range `max_members` represents a group configuration that violates the contract's global policy — the same error used by `validate_cycle_duration` for the analogous out-of-range case.
 
@@ -145,14 +146,14 @@ No new error variants are needed.
 
 Unit tests cover the concrete examples and edge cases required by Requirement 4:
 
-| Test name | Scenario |
-|---|---|
-| `test_validate_max_members_at_min_boundary` | `max_members == config.min_members` → `Ok(())` |
-| `test_validate_max_members_at_max_boundary` | `max_members == config.max_members` → `Ok(())` |
-| `test_validate_max_members_in_range` | `min < max_members < max` → `Ok(())` |
-| `test_validate_max_members_below_min` | `max_members < config.min_members` → `Err(InvalidState)` |
-| `test_validate_max_members_above_max` | `max_members > config.max_members` → `Err(InvalidState)` |
-| `test_validate_max_members_no_config` | no config stored → `Ok(())` |
+| Test name                                   | Scenario                                                 |
+| ------------------------------------------- | -------------------------------------------------------- |
+| `test_validate_max_members_at_min_boundary` | `max_members == config.min_members` → `Ok(())`           |
+| `test_validate_max_members_at_max_boundary` | `max_members == config.max_members` → `Ok(())`           |
+| `test_validate_max_members_in_range`        | `min < max_members < max` → `Ok(())`                     |
+| `test_validate_max_members_below_min`       | `max_members < config.min_members` → `Err(InvalidState)` |
+| `test_validate_max_members_above_max`       | `max_members > config.max_members` → `Err(InvalidState)` |
+| `test_validate_max_members_no_config`       | no config stored → `Ok(())`                              |
 
 ### Property-based tests
 

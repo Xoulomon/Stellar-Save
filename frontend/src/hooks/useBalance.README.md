@@ -44,17 +44,9 @@ function MyComponent() {
 ### With Custom Options
 
 ```tsx
-const {
-  xlmBalance,
-  allBalances,
-  isLoading,
-  error,
-  lastUpdated,
-  refresh,
-  hasAddress,
-} = useBalance({
+const { xlmBalance, allBalances, isLoading, error, lastUpdated, refresh, hasAddress } = useBalance({
   refreshInterval: 60000, // Refresh every 60 seconds
-  fetchOnMount: true,     // Fetch immediately on mount
+  fetchOnMount: true, // Fetch immediately on mount
   horizonUrl: 'https://horizon-testnet.stellar.org', // Custom Horizon server
 });
 ```
@@ -86,8 +78,7 @@ function AllBalances() {
     <div>
       {allBalances.map((balance, index) => (
         <div key={index}>
-          {balance.asset_type === 'native' ? 'XLM' : balance.asset_code}:
-          {balance.balance}
+          {balance.asset_type === 'native' ? 'XLM' : balance.asset_code}:{balance.balance}
         </div>
       ))}
     </div>
@@ -115,13 +106,13 @@ interface UseBalanceOptions {
    * @default 30000 (30 seconds)
    */
   refreshInterval?: number;
-  
+
   /**
    * Whether to fetch balance immediately on mount
    * @default true
    */
   fetchOnMount?: boolean;
-  
+
   /**
    * Custom Horizon server URL
    * @default 'https://horizon-testnet.stellar.org' for testnet
@@ -138,32 +129,32 @@ interface UseBalanceOptions {
    * XLM balance as a string (e.g., "100.5000000")
    */
   xlmBalance: string | null;
-  
+
   /**
    * All account balances including assets
    */
   allBalances: Balance[];
-  
+
   /**
    * Whether balance is currently being fetched
    */
   isLoading: boolean;
-  
+
   /**
    * Error message if fetch failed
    */
   error: string | null;
-  
+
   /**
    * Timestamp of last successful fetch
    */
   lastUpdated: Date | null;
-  
+
   /**
    * Manually trigger a balance refresh
    */
   refresh: () => Promise<void>;
-  
+
   /**
    * Whether the hook has an active address to fetch balance for
    */
@@ -208,6 +199,7 @@ The hook automatically determines the correct Horizon server based on the connec
 ## Example Component
 
 See [`BalanceDisplay.tsx`](../components/BalanceDisplay.tsx) for a complete example of using the hook in a component with:
+
 - Loading states
 - Error display
 - Manual refresh button

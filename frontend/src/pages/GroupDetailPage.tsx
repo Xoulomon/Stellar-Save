@@ -51,7 +51,9 @@ export default function GroupDetailPage() {
       setLoading(true);
       fetchGroup(groupId)
         .then(setGroup)
-        .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load group details'))
+        .catch((err) =>
+          setError(err instanceof Error ? err.message : 'Failed to load group details')
+        )
         .finally(() => setLoading(false));
     }
   };
@@ -66,8 +68,9 @@ export default function GroupDetailPage() {
     console.log('Join group:', groupId);
   };
 
-  const isMember = group?.members.some(member => member.address === activeAddress);
-  const canContribute = isMember && group?.status === 'active' && group?.currentCycle?.status === 'active';
+  const isMember = group?.members.some((member) => member.address === activeAddress);
+  const canContribute =
+    isMember && group?.status === 'active' && group?.currentCycle?.status === 'active';
 
   if (loading) {
     return (
@@ -101,7 +104,9 @@ export default function GroupDetailPage() {
               {error || 'Group not found'}
             </Typography>
             <Typography color="text.secondary">
-              {error ? 'There was an error loading the group details.' : 'The requested group could not be found.'}
+              {error
+                ? 'There was an error loading the group details.'
+                : 'The requested group could not be found.'}
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
               <Button onClick={handleRetry} variant="primary">
@@ -126,13 +131,15 @@ export default function GroupDetailPage() {
       <Stack spacing={3}>
         {/* Action Buttons */}
         <AppCard>
-          <Box sx={{
-            display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: 2,
-            alignItems: { xs: 'stretch', sm: 'center' },
-            justifyContent: 'space-between'
-          }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: 2,
+              alignItems: { xs: 'stretch', sm: 'center' },
+              justifyContent: 'space-between',
+            }}
+          >
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
               {!isMember && group.status === 'active' && (
                 <Button onClick={handleJoinGroup} variant="primary" size="large">

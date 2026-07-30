@@ -7,6 +7,7 @@
 The system enables groups of people to save together transparently and securely without relying on a central authority. Contributions are made via Stellar payments, and payouts are automated through smart contract logic when a member's turn arrives.
 
 ### Goals
+
 - Full transparency and auditability of all transactions
 - Low-cost, fast operations using Stellar network
 - Trust-minimized ROSCA mechanics via Soroban smart contracts
@@ -26,13 +27,13 @@ The system enables groups of people to save together transparently and securely 
 
 ### Traditional ROSCA vs Stellar-Save
 
-| Aspect               | Traditional ROSCA          | Stellar-Save (On-Chain)                  |
-|----------------------|----------------------------|------------------------------------------|
-| Trust Model          | High (based on relationships) | Low (enforced by smart contract)       |
-| Contribution         | Cash / Bank transfer       | Stellar assets (XLM, USDC, etc.)        |
-| Payout               | Manual handover            | Automatic via contract invocation       |
-| Transparency         | Low                        | Full on-chain auditability              |
-| Cost                 | Variable                   | Very low (~0.00001 XLM per tx)          |
+| Aspect       | Traditional ROSCA             | Stellar-Save (On-Chain)           |
+| ------------ | ----------------------------- | --------------------------------- |
+| Trust Model  | High (based on relationships) | Low (enforced by smart contract)  |
+| Contribution | Cash / Bank transfer          | Stellar assets (XLM, USDC, etc.)  |
+| Payout       | Manual handover               | Automatic via contract invocation |
+| Transparency | Low                           | Full on-chain auditability        |
+| Cost         | Variable                      | Very low (~0.00001 XLM per tx)    |
 
 ### Smart Contract Design (Soroban)
 
@@ -43,6 +44,7 @@ The core logic lives in one or more Soroban contracts:
 - **Token Handling** — Supports native XLM and custom Stellar assets
 
 Key on-chain operations:
+
 - `create_group()`
 - `join_group()`
 - `contribute()`
@@ -59,6 +61,7 @@ Key on-chain operations:
 6. **History** → Frontend queries Horizon or indexed data for transaction history
 
 **Frontend → Contract Interaction**:
+
 - React components call Soroban client (`@soroban-client`)
 - Transactions are built, signed by user's wallet, and submitted to Stellar network
 - Results are parsed and reflected in UI state
@@ -67,7 +70,7 @@ Key on-chain operations:
 
 - **Local UI State**: React `useState` + `useReducer` for modals, forms, filters
 - **Global App State**: Context API or Zustand (lightweight)
-- **Blockchain State**: 
+- **Blockchain State**:
   - Real-time via Stellar Horizon streams / Soroban events
   - Cached with React Query / TanStack Query for performance
 - **Persistent Data**: Mostly on-chain; off-chain only for UI preferences

@@ -8,7 +8,15 @@ import { ROUTES } from '../routing/constants';
 import { createGroup } from '../utils/groupApi';
 
 vi.mock('../ui', () => ({
-  AppLayout: ({ children, title, subtitle }: { children: React.ReactNode; title?: string; subtitle?: string }) => (
+  AppLayout: ({
+    children,
+    title,
+    subtitle,
+  }: {
+    children: React.ReactNode;
+    title?: string;
+    subtitle?: string;
+  }) => (
     <div>
       {title && <h1>{title}</h1>}
       {subtitle && <p>{subtitle}</p>}
@@ -71,7 +79,7 @@ describe('CreateGroupPage', () => {
   });
 
   it('route config contains GROUP_CREATE entry pointing to CreateGroupPage', () => {
-    const entry = routeConfig.find(r => r.path === ROUTES.GROUP_CREATE);
+    const entry = routeConfig.find((r) => r.path === ROUTES.GROUP_CREATE);
     expect(entry).toBeDefined();
     expect(entry?.path).toBe('/groups/create');
   });

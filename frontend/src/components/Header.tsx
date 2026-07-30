@@ -20,18 +20,21 @@ export default function Header() {
     }
   };
 
-  const formatAddress = (address: string) => 
-    `${address.slice(0, 4)}...${address.slice(-4)}`;
+  const formatAddress = (address: string) => `${address.slice(0, 4)}...${address.slice(-4)}`;
 
   return (
     <header className="header">
       <div className="header-container">
-        <Link to={ROUTES.HOME} className="header-logo" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <Link
+          to={ROUTES.HOME}
+          className="header-logo"
+          style={{ textDecoration: 'none', color: 'inherit' }}
+        >
           <span className="logo-icon">⭐</span>
           <span className="logo-text">Stellar-Save</span>
         </Link>
 
-        <button 
+        <button
           className="menu-toggle"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           aria-label="Toggle menu"
@@ -45,10 +48,7 @@ export default function Header() {
           <Link to={ROUTES.PROFILE}>Profile</Link>
         </nav>
 
-        <button 
-          className="wallet-button"
-          onClick={connectWallet}
-        >
+        <button className="wallet-button" onClick={connectWallet}>
           {walletAddress ? formatAddress(walletAddress) : 'Connect Wallet'}
         </button>
       </div>

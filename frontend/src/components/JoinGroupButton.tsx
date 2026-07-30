@@ -40,10 +40,10 @@ export function JoinGroupButton({
       // TODO: Implement contract interaction
       // const contract = new Contract(CONTRACT_ADDRESS);
       // await contract.join_group({ group_id: groupId, member: activeAddress });
-      
+
       // Simulate transaction for now
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       setShowConfirm(false);
       onSuccess?.();
     } catch (err) {
@@ -54,38 +54,44 @@ export function JoinGroupButton({
   };
 
   if (isMember) {
-    return <Button disabled size="sm">Already Joined</Button>;
+    return (
+      <Button disabled size="sm">
+        Already Joined
+      </Button>
+    );
   }
 
   if (isFull) {
-    return <Button disabled size="sm">Group Full</Button>;
+    return (
+      <Button disabled size="sm">
+        Group Full
+      </Button>
+    );
   }
 
   if (isActive) {
-    return <Button disabled size="sm">Group Active</Button>;
+    return (
+      <Button disabled size="sm">
+        Group Active
+      </Button>
+    );
   }
 
   if (walletStatus !== 'connected') {
-    return <Button disabled size="sm">Connect Wallet</Button>;
+    return (
+      <Button disabled size="sm">
+        Connect Wallet
+      </Button>
+    );
   }
 
   if (showConfirm) {
     return (
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <Button
-          size="sm"
-          onClick={handleJoin}
-          loading={loading}
-          disabled={loading}
-        >
+        <Button size="sm" onClick={handleJoin} loading={loading} disabled={loading}>
           Confirm
         </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setShowConfirm(false)}
-          disabled={loading}
-        >
+        <Button size="sm" variant="ghost" onClick={() => setShowConfirm(false)} disabled={loading}>
           Cancel
         </Button>
         {error && <span style={{ color: 'var(--color-error)', fontSize: '12px' }}>{error}</span>}
@@ -94,11 +100,7 @@ export function JoinGroupButton({
   }
 
   return (
-    <Button
-      size="sm"
-      onClick={() => setShowConfirm(true)}
-      disabled={!isEligible}
-    >
+    <Button size="sm" onClick={() => setShowConfirm(true)} disabled={!isEligible}>
       Join Group
     </Button>
   );

@@ -19,7 +19,7 @@ export function SearchBar({
   defaultValue = '',
 }: SearchBarProps) {
   const [value, setValue] = useState(defaultValue);
-  const debounceTimerRef = useRef<number | null>(null);   // ← Fixed here
+  const debounceTimerRef = useRef<number | null>(null); // ← Fixed here
 
   useEffect(() => {
     if (debounceTimerRef.current) {

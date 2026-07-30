@@ -1,13 +1,13 @@
-import { useState } from "react";
-import { Button } from "./Button";
-import { Input } from "./Input";
-import type { GroupData } from "../utils/groupApi";
-import "./CreateGroupForm.css";
+import { useState } from 'react';
+import { Button } from './Button';
+import { Input } from './Input';
+import type { GroupData } from '../utils/groupApi';
+import './CreateGroupForm.css';
 
 export const CYCLE_DURATION_OPTIONS = [
-  { value: "604800", label: "Weekly" },
-  { value: "1209600", label: "Bi-Weekly" },
-  { value: "2592000", label: "Monthly" },
+  { value: '604800', label: 'Weekly' },
+  { value: '1209600', label: 'Bi-Weekly' },
+  { value: '2592000', label: 'Monthly' },
 ] as const;
 
 interface FormData {
@@ -27,33 +27,29 @@ interface CreateGroupFormProps {
   isSubmitting?: boolean;
 }
 
-export function validateStep(
-  currentStep: number,
-  formData: FormData,
-): FormErrors {
+export function validateStep(currentStep: number, formData: FormData): FormErrors {
   const newErrors: FormErrors = {};
 
   if (currentStep === 1) {
     if (!formData.name.trim() || formData.name.trim().length < 3) {
-      newErrors.name = "Group name must be at least 3 characters";
+      newErrors.name = 'Group name must be at least 3 characters';
     } else if (formData.name.trim().length > 50) {
-      newErrors.name = "Group name must be 50 characters or fewer";
+      newErrors.name = 'Group name must be 50 characters or fewer';
     }
     if (!formData.description.trim()) {
-      newErrors.description = "Description is required";
+      newErrors.description = 'Description is required';
     } else if (formData.description.trim().length > 200) {
-      newErrors.description = "Description must be 200 characters or fewer";
+      newErrors.description = 'Description must be 200 characters or fewer';
     }
   }
 
   if (currentStep === 2) {
     const amount = parseFloat(formData.contributionAmount);
     if (!formData.contributionAmount || isNaN(amount) || amount <= 0) {
-      newErrors.contributionAmount =
-        "Contribution amount must be greater than 0";
+      newErrors.contributionAmount = 'Contribution amount must be greater than 0';
     }
     if (!formData.cycleDuration) {
-      newErrors.cycleDuration = "Cycle duration is required";
+      newErrors.cycleDuration = 'Cycle duration is required';
     }
   }
 
@@ -61,14 +57,13 @@ export function validateStep(
     const max = parseInt(formData.maxMembers);
     const min = parseInt(formData.minMembers);
     if (!formData.maxMembers || isNaN(max) || max < 2) {
-      newErrors.maxMembers = "Maximum members must be at least 2";
+      newErrors.maxMembers = 'Maximum members must be at least 2';
     }
     if (!formData.minMembers || isNaN(min) || min < 2) {
-      newErrors.minMembers = "Minimum members must be at least 2";
+      newErrors.minMembers = 'Minimum members must be at least 2';
     }
     if (!newErrors.maxMembers && !newErrors.minMembers && max < min) {
-      newErrors.maxMembers =
-        "Maximum members must be greater than or equal to minimum members";
+      newErrors.maxMembers = 'Maximum members must be greater than or equal to minimum members';
     }
   }
 
@@ -82,12 +77,12 @@ export function CreateGroupForm({
 }: CreateGroupFormProps) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
-    name: "",
-    description: "",
-    contributionAmount: "",
-    cycleDuration: "",
-    maxMembers: "",
-    minMembers: "2",
+    name: '',
+    description: '',
+    contributionAmount: '',
+    cycleDuration: '',
+    maxMembers: '',
+    minMembers: '2',
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -115,9 +110,7 @@ export function CreateGroupForm({
       onSubmit({
         name: formData.name.trim(),
         description: formData.description.trim(),
-        contribution_amount: Math.round(
-          parseFloat(formData.contributionAmount) * 10_000_000,
-        ),
+        contribution_amount: Math.round(parseFloat(formData.contributionAmount) * 10_000_000),
         cycle_duration: parseInt(formData.cycleDuration),
         max_members: parseInt(formData.maxMembers),
         min_members: parseInt(formData.minMembers),
@@ -136,10 +129,7 @@ export function CreateGroupForm({
         aria-label={`Step ${step} of 4`}
       >
         {[1, 2, 3, 4].map((s) => (
-          <div
-            key={s}
-            className={`progress-step ${s <= step ? "active" : ""}`}
-          />
+          <div key={s} className={`progress-step ${s <= step ? 'active' : ''}`} />
         ))}
       </div>
       <p className="form-step-label">Step {step} of 4</p>
@@ -150,7 +140,7 @@ export function CreateGroupForm({
           <Input
             label="Group Name"
             value={formData.name}
-            onChange={(e) => updateField("name", e.target.value)}
+            onChange={(e) => updateField('name', e.target.value)}
             error={errors.name}
             required
             aria-required="true"
@@ -159,7 +149,7 @@ export function CreateGroupForm({
           <Input
             label="Description"
             value={formData.description}
-            onChange={(e) => updateField("description", e.target.value)}
+            onChange={(e) => updateField('description', e.target.value)}
             error={errors.description}
             required
             aria-required="true"
@@ -175,7 +165,7 @@ export function CreateGroupForm({
             label="Contribution Amount (XLM)"
             type="number"
             value={formData.contributionAmount}
-            onChange={(e) => updateField("contributionAmount", e.target.value)}
+            onChange={(e) => updateField('contributionAmount', e.target.value)}
             error={errors.contributionAmount}
             helperText="Amount each member contributes per cycle"
             required
@@ -188,14 +178,12 @@ export function CreateGroupForm({
             </label>
             <select
               id="cycleDuration"
-              className={`cycle-select${errors.cycleDuration ? " cycle-select--error" : ""}`}
+              className={`cycle-select${errors.cycleDuration ? ' cycle-select--error' : ''}`}
               value={formData.cycleDuration}
-              onChange={(e) => updateField("cycleDuration", e.target.value)}
+              onChange={(e) => updateField('cycleDuration', e.target.value)}
               aria-required="true"
-              aria-invalid={errors.cycleDuration ? "true" : undefined}
-              aria-describedby={
-                errors.cycleDuration ? "cycleDuration-error" : undefined
-              }
+              aria-invalid={errors.cycleDuration ? 'true' : undefined}
+              aria-describedby={errors.cycleDuration ? 'cycleDuration-error' : undefined}
               disabled={isSubmitting}
             >
               <option value="">Select cycle duration</option>
@@ -206,11 +194,7 @@ export function CreateGroupForm({
               ))}
             </select>
             {errors.cycleDuration && (
-              <span
-                id="cycleDuration-error"
-                className="input-error"
-                role="alert"
-              >
+              <span id="cycleDuration-error" className="input-error" role="alert">
                 {errors.cycleDuration}
               </span>
             )}
@@ -225,7 +209,7 @@ export function CreateGroupForm({
             label="Maximum Members"
             type="number"
             value={formData.maxMembers}
-            onChange={(e) => updateField("maxMembers", e.target.value)}
+            onChange={(e) => updateField('maxMembers', e.target.value)}
             error={errors.maxMembers}
             helperText="Maximum number of members allowed"
             required
@@ -236,7 +220,7 @@ export function CreateGroupForm({
             label="Minimum Members"
             type="number"
             value={formData.minMembers}
-            onChange={(e) => updateField("minMembers", e.target.value)}
+            onChange={(e) => updateField('minMembers', e.target.value)}
             error={errors.minMembers}
             helperText="Minimum members needed to start"
             required
@@ -265,9 +249,8 @@ export function CreateGroupForm({
             <div className="review-item">
               <span className="review-label">Cycle Duration:</span>
               <span>
-                {CYCLE_DURATION_OPTIONS.find(
-                  (o) => o.value === formData.cycleDuration,
-                )?.label ?? formData.cycleDuration}
+                {CYCLE_DURATION_OPTIONS.find((o) => o.value === formData.cycleDuration)?.label ??
+                  formData.cycleDuration}
               </span>
             </div>
             <div className="review-item">
@@ -284,11 +267,7 @@ export function CreateGroupForm({
 
       <div className="form-actions">
         {step > 1 && (
-          <Button
-            variant="secondary"
-            onClick={handleBack}
-            disabled={isSubmitting}
-          >
+          <Button variant="secondary" onClick={handleBack} disabled={isSubmitting}>
             Back
           </Button>
         )}

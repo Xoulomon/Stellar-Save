@@ -1,9 +1,11 @@
 # API Reference
 
 ## 1. API Template
+
 Use consistent NatSpec comments and clear parameter names.
 
 ### Example function: `mint`
+
 ```solidity
 /// @notice Mint tokens to a recipient.
 /// @param to Address receiving the tokens.
@@ -13,6 +15,7 @@ function mint(address to, uint256 amount) external returns (bool success);
 ```
 
 ### Example function: `transfer`
+
 ```solidity
 /// @notice Transfer tokens from caller to recipient.
 /// @param to Recipient address.
@@ -22,6 +25,7 @@ function transfer(address to, uint256 amount) external returns (bool success);
 ```
 
 ### Example function: `burn`
+
 ```solidity
 /// @notice Burn tokens from the caller.
 /// @param amount Number of tokens to burn.
@@ -30,6 +34,7 @@ function burn(uint256 amount) external returns (uint256 burnt);
 ```
 
 ## 2. Standard Error Codes
+
 - `Unauthorized()`
 - `InsufficientBalance()`
 - `TransferFailed()`
@@ -42,6 +47,7 @@ function burn(uint256 amount) external returns (uint256 burnt);
 - `ReentrancyGuard()`
 
 ## 3. Usage Example
+
 ```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
@@ -67,6 +73,7 @@ contract ExampleUsage {
 ```
 
 ## 4. Mermaid Sequence Diagram
+
 ```mermaid
 sequenceDiagram
     participant User as User
@@ -80,6 +87,7 @@ sequenceDiagram
 ```
 
 ## 5. Additional Notes
+
 - Document all events and custom revert reasons.
 - For upgradeable contracts, include function visibility and initializer patterns (`initializer`).
 - Provide interface compatibility (IERC20, IERC721, ERC165) in reference docs.

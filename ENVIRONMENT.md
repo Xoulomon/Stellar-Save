@@ -5,6 +5,7 @@ This document describes all environment variables and network configurations for
 ## Quick Setup
 
 1. Copy the example file:
+
 ```bash
 cp .env.example .env
 ```
@@ -16,38 +17,38 @@ cp .env.example .env
 
 ### Stellar Network Configuration
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `STELLAR_NETWORK` | Network name | `testnet`, `mainnet`, `futurenet` |
-| `STELLAR_RPC_URL` | Soroban RPC endpoint | `https://soroban-testnet.stellar.org` |
-| `STELLAR_NETWORK_PASSPHRASE` | Network passphrase | `Test SDF Network ; September 2015` |
+| Variable                     | Description          | Example                               |
+| ---------------------------- | -------------------- | ------------------------------------- |
+| `STELLAR_NETWORK`            | Network name         | `testnet`, `mainnet`, `futurenet`     |
+| `STELLAR_RPC_URL`            | Soroban RPC endpoint | `https://soroban-testnet.stellar.org` |
+| `STELLAR_NETWORK_PASSPHRASE` | Network passphrase   | `Test SDF Network ; September 2015`   |
 
 ### Contract Addresses
 
 Populated after deployment:
 
-| Variable | Description |
-|----------|-------------|
-| `CONTRACT_GUESS_THE_NUMBER` | Guess the Number contract ID |
+| Variable                      | Description                          |
+| ----------------------------- | ------------------------------------ |
+| `CONTRACT_GUESS_THE_NUMBER`   | Guess the Number contract ID         |
 | `CONTRACT_FUNGIBLE_ALLOWLIST` | Fungible Token Allowlist contract ID |
-| `CONTRACT_NFT_ENUMERABLE` | NFT Enumerable contract ID |
+| `CONTRACT_NFT_ENUMERABLE`     | NFT Enumerable contract ID           |
 
 ### Frontend Configuration
 
 Frontend variables must be prefixed with `VITE_`:
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_STELLAR_NETWORK` | Network for frontend |
-| `VITE_STELLAR_RPC_URL` | RPC URL for frontend |
-| `VITE_CONTRACT_GUESS_THE_NUMBER` | Contract ID for frontend |
+| Variable                           | Description              |
+| ---------------------------------- | ------------------------ |
+| `VITE_STELLAR_NETWORK`             | Network for frontend     |
+| `VITE_STELLAR_RPC_URL`             | RPC URL for frontend     |
+| `VITE_CONTRACT_GUESS_THE_NUMBER`   | Contract ID for frontend |
 | `VITE_CONTRACT_FUNGIBLE_ALLOWLIST` | Contract ID for frontend |
-| `VITE_CONTRACT_NFT_ENUMERABLE` | Contract ID for frontend |
+| `VITE_CONTRACT_NFT_ENUMERABLE`     | Contract ID for frontend |
 
 ### Development
 
-| Variable | Description | Values |
-|----------|-------------|--------|
+| Variable   | Description      | Values                      |
+| ---------- | ---------------- | --------------------------- |
 | `NODE_ENV` | Node environment | `development`, `production` |
 
 ## Network Configurations
@@ -55,6 +56,7 @@ Frontend variables must be prefixed with `VITE_`:
 Network settings are defined in `environments.toml`:
 
 ### Testnet
+
 ```toml
 [testnet]
 rpc_url = "https://soroban-testnet.stellar.org"
@@ -62,6 +64,7 @@ network_passphrase = "Test SDF Network ; September 2015"
 ```
 
 ### Mainnet
+
 ```toml
 [mainnet]
 rpc_url = "https://soroban-rpc.mainnet.stellar.gateway.fm"
@@ -69,6 +72,7 @@ network_passphrase = "Public Global Stellar Network ; September 2015"
 ```
 
 ### Futurenet
+
 ```toml
 [futurenet]
 rpc_url = "https://rpc-futurenet.stellar.org"
@@ -76,6 +80,7 @@ network_passphrase = "Test SDF Future Network ; October 2022"
 ```
 
 ### Standalone (Local)
+
 ```toml
 [standalone]
 rpc_url = "http://localhost:8000/soroban/rpc"
@@ -105,6 +110,7 @@ STELLAR_NETWORK=mainnet ./scripts/deploy_mainnet.sh
 ## Example Configurations
 
 ### Development (Testnet)
+
 ```bash
 STELLAR_NETWORK=testnet
 STELLAR_RPC_URL=https://soroban-testnet.stellar.org
@@ -113,6 +119,7 @@ NODE_ENV=development
 ```
 
 ### Production (Mainnet)
+
 ```bash
 STELLAR_NETWORK=mainnet
 STELLAR_RPC_URL=https://soroban-rpc.mainnet.stellar.gateway.fm
@@ -121,6 +128,7 @@ NODE_ENV=production
 ```
 
 ### Local Development
+
 ```bash
 STELLAR_NETWORK=standalone
 STELLAR_RPC_URL=http://localhost:8000/soroban/rpc

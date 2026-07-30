@@ -47,30 +47,22 @@ describe('CycleProgress', () => {
   });
 
   it('shows completion message when all members contributed', () => {
-    render(
-      <CycleProgress {...baseProps} contributedCount={10} totalMembers={10} />,
-    );
+    render(<CycleProgress {...baseProps} contributedCount={10} totalMembers={10} />);
     expect(screen.getByText('✓ All members have contributed')).toBeInTheDocument();
   });
 
   it('does not show completion message when not all contributed', () => {
     render(<CycleProgress {...baseProps} />);
-    expect(
-      screen.queryByText('✓ All members have contributed'),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText('✓ All members have contributed')).not.toBeInTheDocument();
   });
 
   it('renders with completed status', () => {
-    const { container } = render(
-      <CycleProgress {...baseProps} status="completed" />,
-    );
+    const { container } = render(<CycleProgress {...baseProps} status="completed" />);
     expect(container.querySelector('.cycle-progress--completed')).toBeInTheDocument();
   });
 
   it('renders with pending status', () => {
-    const { container } = render(
-      <CycleProgress {...baseProps} status="pending" />,
-    );
+    const { container } = render(<CycleProgress {...baseProps} status="pending" />);
     expect(container.querySelector('.cycle-progress--pending')).toBeInTheDocument();
   });
 

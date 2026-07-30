@@ -203,7 +203,11 @@ const ToastContainer: React.FC<{
 };
 
 // Toast Provider - Context provider and state management
-export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }: { children: React.ReactNode }) => {
+export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const addToast = useCallback((toast: Omit<Toast, 'id'>): string => {

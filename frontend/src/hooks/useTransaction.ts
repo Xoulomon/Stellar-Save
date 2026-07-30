@@ -12,13 +12,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import {
-  TransactionBuilder,
-  xdr,
-  SorobanRpc,
-  BASE_FEE,
-  Networks,
-} from '@stellar/stellar-sdk';
+import { TransactionBuilder, xdr, SorobanRpc, BASE_FEE, Networks } from '@stellar/stellar-sdk';
 import * as freighterApi from '@stellar/freighter-api';
 import { useWallet } from './useWallet';
 
@@ -84,7 +78,10 @@ export function useTransaction(): UseTransactionReturn {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const isLoading = transactionStatus === 'signing' || transactionStatus === 'submitting' || transactionStatus === 'pending';
+  const isLoading =
+    transactionStatus === 'signing' ||
+    transactionStatus === 'submitting' ||
+    transactionStatus === 'pending';
 
   const reset = useCallback(() => {
     setTransactionStatus('idle');
@@ -228,7 +225,6 @@ export function useTransaction(): UseTransactionReturn {
         setTransactionStatus('success');
         showNotification('Transaction confirmed successfully!', 'success');
         return { txHash: hash, error: null, status: 'success' };
-
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred';
         setError(errorMsg);

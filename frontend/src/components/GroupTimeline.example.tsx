@@ -133,18 +133,19 @@ export function GroupTimelineExample() {
           fontSize: '0.9rem',
         }}
       >
-        <h3 style={{ color: 'rgba(255,255,255,0.87)', marginTop: 0 }}>
-          Legend
-        </h3>
+        <h3 style={{ color: 'rgba(255,255,255,0.87)', marginTop: 0 }}>Legend</h3>
         <ul>
           <li>
-            <strong style={{ color: '#4caf50' }}>Green (Contribution)</strong>: Member contributed funds to the group
+            <strong style={{ color: '#4caf50' }}>Green (Contribution)</strong>: Member contributed
+            funds to the group
           </li>
           <li>
-            <strong style={{ color: '#ffc107' }}>Yellow (Payout)</strong>: Member received their payout
+            <strong style={{ color: '#ffc107' }}>Yellow (Payout)</strong>: Member received their
+            payout
           </li>
           <li>
-            <strong style={{ color: '#2196f3' }}>Blue (Member Join)</strong>: New member joined the group
+            <strong style={{ color: '#2196f3' }}>Blue (Member Join)</strong>: New member joined the
+            group
           </li>
         </ul>
       </div>
@@ -159,9 +160,7 @@ export function GroupTimelineExample() {
           fontSize: '0.9rem',
         }}
       >
-        <h3 style={{ color: 'rgba(255,255,255,0.87)', marginTop: 0 }}>
-          Features Demonstrated
-        </h3>
+        <h3 style={{ color: 'rgba(255,255,255,0.87)', marginTop: 0 }}>Features Demonstrated</h3>
         <ul>
           <li>Chronological sorting (newest first)</li>
           <li>Relative time formatting (e.g., "5 minutes ago")</li>

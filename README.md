@@ -7,12 +7,14 @@ Stellar Save is a traditional community-based savings system where members contr
 ## 🎯 What is Stellar-Save?
 
 Stellar-Save is a rotating savings and credit association (ROSCA) common in Nigeria and across Africa. Members:
+
 - Form a group with a fixed contribution amount
 - Contribute the same amount each cycle (e.g., weekly or monthly)
 - Take turns receiving the full pool of contributions
 - Build trust and financial discipline within communities
 
 **This Soroban implementation makes Stellar-Save:**
+
 - ✅ Trustless (no central coordinator needed)
 - ✅ Transparent (all transactions on-chain)
 - ✅ Accessible (anyone with a Stellar wallet can join)
@@ -50,11 +52,13 @@ Stellar-Save is a rotating savings and credit association (ROSCA) common in Nige
 ### Setup Environment
 
 1. Copy the example environment file:
+
 ```bash
 cp .env.example .env
 ```
 
 2. Configure your environment variables in `.env`:
+
 ```bash
 # Network configuration
 STELLAR_NETWORK=testnet
@@ -100,6 +104,7 @@ Follow the step-by-step guide in [demo/demo-script.md](demo/demo-script.md)
 ## 🎓 Smart Contract API
 
 ### Group Management
+
 ```rust
 create_group(contribution_amount, cycle_duration, max_members) -> u64
 get_group(group_id) -> Group
@@ -107,18 +112,21 @@ list_members(group_id) -> Vec<Address>
 ```
 
 ### Membership
+
 ```rust
 join_group(group_id)
 is_member(group_id, address) -> bool
 ```
 
 ### Contributions
+
 ```rust
 contribute(group_id)
 get_contribution_status(group_id, cycle_number) -> Vec<(Address, bool)>
 ```
 
 ### Payouts
+
 ```rust
 execute_payout(group_id)
 is_complete(group_id) -> bool
@@ -127,6 +135,7 @@ is_complete(group_id) -> bool
 ## 🧪 Testing
 
 Comprehensive test suite covering:
+
 - ✅ Group creation and configuration
 - ✅ Member joining and validation
 - ✅ Contribution flow and tracking
@@ -135,6 +144,7 @@ Comprehensive test suite covering:
 - ✅ Error handling and edge cases
 
 Run tests:
+
 ```bash
 cargo test
 ```
@@ -144,17 +154,18 @@ cargo test
 **Financial Inclusion**: Over 1.7 billion adults globally are unbanked. Ajo/Esusu has served African communities for generations as a trusted savings mechanism.
 
 **Blockchain Benefits**:
+
 - No need for a trusted coordinator
 - Transparent contribution and payout history
 - Programmable rules enforced by smart contracts
 - Accessible to anyone with a Stellar wallet
 
 **Target Users**:
+
 - African diaspora communities
 - Unbanked/underbanked populations
 - Small business owners needing working capital
 - Communities building financial discipline
-
 
 ## 🗺️ Roadmap
 
@@ -169,6 +180,7 @@ See [docs/roadmap.md](docs/roadmap.md) for details.
 ## 🤝 Contributing
 
 We welcome contributions! Please:
+
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
@@ -180,13 +192,15 @@ See our [Code of Conduct](CODE_OF_CONDUCT.md) and [Contributing Guidelines](CONT
 ### 🌊 Drips Wave Contributors
 
 This project participates in **Drips Wave** - a contributor funding program! Check out:
+
 - **[Wave Contributor Guide](docs/wave-guide.md)** - How to earn funding for contributions
 - **[Wave-Ready Issues](docs/wave-ready-issues.md)** - 12 funded issues ready to tackle
 - **GitHub Issues** labeled with `wave-ready` - Earn 100-200 points per issue
 
 Issues are categorized as:
+
 - `trivial` (100 points) - Documentation, simple tests, minor fixes
-- `medium` (150 points) - Helper functions, validation logic, moderate features  
+- `medium` (150 points) - Helper functions, validation logic, moderate features
 - `high` (200 points) - Core features, complex integrations, security enhancements
 
 ## 📄 License

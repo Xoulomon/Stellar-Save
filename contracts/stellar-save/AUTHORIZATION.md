@@ -7,10 +7,12 @@ The Stellar-Save smart contract implements role-based access control (RBAC) for 
 ## Roles
 
 ### 1. Admin
+
 - Can update global contract configuration
 - Set via `update_config` function
 
 ### 2. Group Creator
+
 - Can create groups
 - Can update group parameters (while Pending)
 - Can delete groups (while no members)
@@ -18,12 +20,14 @@ The Stellar-Save smart contract implements role-based access control (RBAC) for 
 - Can activate groups
 
 ### 3. Group Member
+
 - Can join groups
 - Can make contributions (via record_contribution)
 - Can withdraw in emergency situations
 - Can view group data
 
 ### 4. Public/Anyone
+
 - Can read group data
 - Can list groups
 - Can trigger payout execution (once preconditions are met)
@@ -32,64 +36,64 @@ The Stellar-Save smart contract implements role-based access control (RBAC) for 
 
 ### Admin-Only Functions
 
-| Function | Required Role | Authorization Method |
-|----------|--------------|---------------------|
-| `update_config` | Admin | `require_auth()` on admin address |
+| Function        | Required Role | Authorization Method              |
+| --------------- | ------------- | --------------------------------- |
+| `update_config` | Admin         | `require_auth()` on admin address |
 
 ### Creator-Only Functions
 
-| Function | Required Role | Authorization Method |
-|----------|--------------|---------------------|
-| `create_group` | None (open) | `require_auth()` on creator |
-| `update_group` | Creator | `require_auth()` + creator check |
-| `delete_group` | Creator | `require_auth()` + creator check |
-| `assign_payout_positions` | Creator | `require_auth()` + creator check |
-| `activate_group` | Creator | Creator parameter check |
+| Function                  | Required Role | Authorization Method             |
+| ------------------------- | ------------- | -------------------------------- |
+| `create_group`            | None (open)   | `require_auth()` on creator      |
+| `update_group`            | Creator       | `require_auth()` + creator check |
+| `delete_group`            | Creator       | `require_auth()` + creator check |
+| `assign_payout_positions` | Creator       | `require_auth()` + creator check |
+| `activate_group`          | Creator       | Creator parameter check          |
 
 ### Member-Only Functions
 
-| Function | Required Role | Authorization Method |
-|----------|--------------|---------------------|
-| `join_group` | None (open join) | `require_auth()` on member |
-| `emergency_withdraw` | Member | `require_auth()` + member check |
+| Function             | Required Role    | Authorization Method            |
+| -------------------- | ---------------- | ------------------------------- |
+| `join_group`         | None (open join) | `require_auth()` on member      |
+| `emergency_withdraw` | Member           | `require_auth()` + member check |
 
 ### Permissionless Functions (Anyone can call)
 
-| Function | Access | Notes |
-|----------|--------|-------|
-| `execute_payout` | Public | Preconditions must be met (cycle complete) |
-| `transfer_payout` | Public | Internal function, validates eligibility |
-| `get_group` | Public | Read-only |
-| `get_member_count` | Public | Read-only |
-| `list_groups` | Public | Read-only |
-| `has_received_payout` | Public | Read-only |
-| `is_payout_due` | Public | Read-only |
-| `get_payout_position` | Public | Read-only |
-| `get_total_paid_out` | Public | Read-only |
-| `get_group_balance` | Public | Read-only |
-| `get_payout_history` | Public | Read-only |
-| `get_member_payout` | Public | Read-only |
-| `get_payout` | Public | Read-only |
-| `get_payout_schedule` | Public | Read-only |
-| `is_complete` | Public | Read-only |
-| `get_payout_queue` | Public | Read-only |
-| `get_total_groups` | Public | Read-only |
-| `get_total_groups_created` | Public | Read-only |
-| `get_contract_balance` | Public | Read-only |
-| `get_member_total_contributions` | Public | Read-only |
-| `get_member_contribution_history` | Public | Read-only |
-| `get_cycle_contributions` | Public | Read-only |
-| `is_cycle_complete` | Public | Read-only |
-| `get_missed_contributions` | Public | Read-only |
-| `get_contribution_deadline` | Public | Read-only |
-| `get_next_payout_cycle` | Public | Read-only |
-| `get_group_members` | Public | Read-only |
+| Function                          | Access | Notes                                      |
+| --------------------------------- | ------ | ------------------------------------------ |
+| `execute_payout`                  | Public | Preconditions must be met (cycle complete) |
+| `transfer_payout`                 | Public | Internal function, validates eligibility   |
+| `get_group`                       | Public | Read-only                                  |
+| `get_member_count`                | Public | Read-only                                  |
+| `list_groups`                     | Public | Read-only                                  |
+| `has_received_payout`             | Public | Read-only                                  |
+| `is_payout_due`                   | Public | Read-only                                  |
+| `get_payout_position`             | Public | Read-only                                  |
+| `get_total_paid_out`              | Public | Read-only                                  |
+| `get_group_balance`               | Public | Read-only                                  |
+| `get_payout_history`              | Public | Read-only                                  |
+| `get_member_payout`               | Public | Read-only                                  |
+| `get_payout`                      | Public | Read-only                                  |
+| `get_payout_schedule`             | Public | Read-only                                  |
+| `is_complete`                     | Public | Read-only                                  |
+| `get_payout_queue`                | Public | Read-only                                  |
+| `get_total_groups`                | Public | Read-only                                  |
+| `get_total_groups_created`        | Public | Read-only                                  |
+| `get_contract_balance`            | Public | Read-only                                  |
+| `get_member_total_contributions`  | Public | Read-only                                  |
+| `get_member_contribution_history` | Public | Read-only                                  |
+| `get_cycle_contributions`         | Public | Read-only                                  |
+| `is_cycle_complete`               | Public | Read-only                                  |
+| `get_missed_contributions`        | Public | Read-only                                  |
+| `get_contribution_deadline`       | Public | Read-only                                  |
+| `get_next_payout_cycle`           | Public | Read-only                                  |
+| `get_group_members`               | Public | Read-only                                  |
 
 ## Authorization Error Codes
 
-| Error Code | Description |
-|------------|-------------|
-| 2003 | Unauthorized - Caller does not have permission to perform this operation |
+| Error Code | Description                                                              |
+| ---------- | ------------------------------------------------------------------------ |
+| 2003       | Unauthorized - Caller does not have permission to perform this operation |
 
 ## Implementation Details
 
@@ -102,6 +106,7 @@ The Soroban SDK provides `require_auth()` on Address objects. This function:
 3. Should be called at the beginning of sensitive functions
 
 Example:
+
 ```rust
 caller.require_auth();
 ```
@@ -167,7 +172,8 @@ The following functions have authorization checks implemented:
 ## Testing Authorization
 
 Tests should verify:
+
 - Unauthorized callers are rejected
 - Creators can perform creator-only operations
-- Members can perform member-only operations  
+- Members can perform member-only operations
 - Public read functions work without authentication

@@ -1,5 +1,5 @@
-import React from "react";
-import "./ErrorBoundary.css";
+import React from 'react';
+import './ErrorBoundary.css';
 
 export interface ErrorBoundaryProps {
   fallback?: React.ReactNode;
@@ -30,7 +30,7 @@ export class ErrorBoundary extends React.Component<
     // Keeping logging simple and local to avoid external deps
     // Consumers can override `onError` to forward to a server or Sentry
     // eslint-disable-next-line no-console
-    console.error("ErrorBoundary caught an error:", error, info);
+    console.error('ErrorBoundary caught an error:', error, info);
     if (this.props.onError) this.props.onError(error, info);
   }
 
@@ -48,18 +48,14 @@ export class ErrorBoundary extends React.Component<
     if (fallback) return <>{fallback}</>;
 
     return (
-      <div className={["error-boundary", className].filter(Boolean).join(" ")}>
+      <div className={['error-boundary', className].filter(Boolean).join(' ')}>
         <div className="error-boundary__card">
           <h3 className="error-boundary__title">Something went wrong</h3>
           <p className="error-boundary__message">
             An unexpected error occurred while loading this page.
           </p>
           <div className="error-boundary__actions">
-            <button
-              className="error-boundary__retry"
-              type="button"
-              onClick={this.handleRetry}
-            >
+            <button className="error-boundary__retry" type="button" onClick={this.handleRetry}>
               Retry
             </button>
             <button

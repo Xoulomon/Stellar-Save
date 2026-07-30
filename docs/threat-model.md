@@ -1,11 +1,13 @@
 # Threat Model
 
 ## 1. Introduction
+
 This threat model is designed for EVM smart contracts (Solidity) and evaluates significant attack vectors and mitigations. It assumes a production-grade DeFi or token contract using OpenZeppelin patterns and upgradeable proxies.
 
 ## 2. Common EVM Attack Vectors
 
 ### 2.1 Reentrancy
+
 - Description: An external call to an attacker-controlled contract re-enters the vulnerable function before state updates are finalized.
 - Example: `withdraw` function updates balance after ETH transfer.
 - Impact: Funds drained, invariant violation, leveraged attacks.
@@ -15,6 +17,7 @@ This threat model is designed for EVM smart contracts (Solidity) and evaluates s
   - Use `transfer`/`send` for small fixed stipend or pull patterns.
 
 ### 2.2 Front-running (MEV)
+
 - Description: Adversary reorders transactions in the mempool to gain profit by exploiting price-sensitive operations.
 - Common targets: `swap`, `liquidate`, `mint`, `redeem`, `oracle updates`.
 - Mitigations:
@@ -24,6 +27,7 @@ This threat model is designed for EVM smart contracts (Solidity) and evaluates s
   - Protect from sandwich attacks via slippage controls.
 
 ### 2.3 Integer Over/Underflow
+
 - Description: Arithmetic overflow/underflow when using unchecked math on uints/ints.
 - Solidity >=0.8 has built-in overflow checks by default, but unchecked blocks and inline assembly can bypass.
 - Mitigations:
@@ -32,7 +36,8 @@ This threat model is designed for EVM smart contracts (Solidity) and evaluates s
   - Add explicit bounds checks for array indices and multiplications.
 
 ### 2.4 Denial of Service (DoS)
-- Description: Contract logic can be blocked by one or more malicious actors (e.g., gas exhaustion, locked states, blocklist). 
+
+- Description: Contract logic can be blocked by one or more malicious actors (e.g., gas exhaustion, locked states, blocklist).
 - Variants:
   - DoS with block gas limit (e.g., unbounded iteration over user array).
   - Starvation attacks (e.g., set a high fee that prevents calls).
@@ -44,6 +49,7 @@ This threat model is designed for EVM smart contracts (Solidity) and evaluates s
 ## 3. Access Control
 
 ### 3.1 Role-Based Access Control (OpenZeppelin)
+
 - Use `AccessControl` or `AccessControlEnumerable`.
 - Define roles as `bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");`.
 - Setup roles with `grantRole` and `revokeRole`.
@@ -53,6 +59,7 @@ This threat model is designed for EVM smart contracts (Solidity) and evaluates s
   - `onlyRole` modifier usage.
 
 ### 3.2 Common pitfalls
+
 - Never use `tx.origin` for auth.
 - Enforce least privilege, separate `PAUSER_ROLE`, `UPGRADER_ROLE`, `MINTER_ROLE`.
 - Protect role renouncement paths and emergency admin key compromise.
@@ -60,11 +67,13 @@ This threat model is designed for EVM smart contracts (Solidity) and evaluates s
 ## 4. Fund Safety
 
 ### 4.1 Slippage Protection
+
 - Provide slippage / max price impact parameters in functions that execute swaps or pricing-sensitive operations.
 - Validate on-chain prices with oracle oracles such as Chainlink.
 - `require(amountOut >= minAmountOut, "Slippage exceeded")`.
 
 ### 4.2 Pull-over-Push Patterns
+
 - Description: avoid sending ETH/tokens to arbitrary user-controlled addresses in same function; instead record entitlements and let users withdraw.
 - Benefits: prevents reentrancy, failed transfer due to gas/stipend constraints, and reduces atomic risk.
 - Example: `pendingWithdrawals[user] += amount;` followed by user calling `withdraw()`.
@@ -72,16 +81,19 @@ This threat model is designed for EVM smart contracts (Solidity) and evaluates s
 ## 5. Emergency Procedures
 
 ### 5.1 Circuit Breakers / Pausing
+
 - Use `Pausable` from OpenZeppelin.
 - Implement `pause()` and `unpause()` guarded by `PAUSER_ROLE`.
 - Add `whenNotPaused` and `whenPaused` to critical operational methods.
 - Include a `isPaused()` public view.
 
 ### 5.2 Emergency Withdrawal
+
 - Add emergency `rescueTokens` / `rescueETH` function with strict access control and timelock.
 - Log events: `EmergencyPause`, `EmergencyUnpause`, `RescueTokens`.
 
 ## 6. Security Best Practices
+
 - Code review and static analysis by two or more peers.
 - Keep contract size manageable, avoid enormous logic in single contract.
 - Use immutable state and constants when possible.
@@ -90,6 +102,7 @@ This threat model is designed for EVM smart contracts (Solidity) and evaluates s
 - Establish bug bounty and responsible disclosure policy.
 
 ## 7. Audit Recommendations
+
 - Slither: static analysis and invariant checking; run `slither . --solc-remaps ...`.
 - MythX / Certora / VeriSol: deeper semantic analysis.
 - Echidna: property-based fuzzing to catch assertion violations.

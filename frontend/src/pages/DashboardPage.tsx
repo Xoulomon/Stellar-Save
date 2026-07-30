@@ -206,11 +206,7 @@ export default function DashboardPage() {
               {/* View All Link */}
               {mockUserGroups.length > 0 && (
                 <Box sx={{ textAlign: 'center' }}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleViewAllGroups}
-                  >
+                  <Button variant="ghost" size="sm" onClick={handleViewAllGroups}>
                     View All Groups
                   </Button>
                 </Box>

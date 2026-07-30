@@ -24,13 +24,13 @@ export interface UseBalanceOptions {
    * @default 30000 (30 seconds)
    */
   refreshInterval?: number;
-  
+
   /**
    * Whether to fetch balance immediately on mount
    * @default true
    */
   fetchOnMount?: boolean;
-  
+
   /**
    * Custom Horizon server URL
    * @default 'https://horizon-testnet.stellar.org' for testnet
@@ -43,17 +43,17 @@ const DEFAULT_HORIZON_URL = 'https://horizon-testnet.stellar.org';
 
 /**
  * Hook for fetching and managing Stellar account XLM balance
- * 
+ *
  * Features:
  * - Fetches XLM balance from Stellar Horizon API
  * - Auto-refresh with configurable interval
  * - Error handling with retry logic
  * - Loading states
  * - Manual refresh capability
- * 
+ *
  * @param options - Configuration options for the hook
  * @returns Balance state and control functions
- * 
+ *
  * @example
  * ```tsx
  * const { xlmBalance, isLoading, error, refresh } = useBalance({
@@ -70,7 +70,7 @@ export function useBalance(options: UseBalanceOptions = {}) {
   } = options;
 
   const { activeAddress, network } = useWallet();
-  
+
   const [state, setState] = useState<BalanceState>({
     xlmBalance: null,
     allBalances: [],
@@ -96,7 +96,7 @@ export function useBalance(options: UseBalanceOptions = {}) {
     if (network === 'PUBLIC' || network === 'MAINNET') {
       return new Horizon.Server('https://horizon.stellar.org');
     }
-    
+
     // Default to testnet
     return new Horizon.Server('https://horizon-testnet.stellar.org');
   }, [horizonUrl, network]);
@@ -234,7 +234,7 @@ export function useBalance(options: UseBalanceOptions = {}) {
     return () => {
       isMountedRef.current = false;
       clearRefreshInterval();
-      
+
       // Cancel any pending requests
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -247,32 +247,32 @@ export function useBalance(options: UseBalanceOptions = {}) {
      * XLM balance as a string (e.g., "100.5000000")
      */
     xlmBalance: state.xlmBalance,
-    
+
     /**
      * All account balances including assets
      */
     allBalances: state.allBalances,
-    
+
     /**
      * Whether balance is currently being fetched
      */
     isLoading: state.isLoading,
-    
+
     /**
      * Error message if fetch failed
      */
     error: state.error,
-    
+
     /**
      * Timestamp of last successful fetch
      */
     lastUpdated: state.lastUpdated,
-    
+
     /**
      * Manually trigger a balance refresh
      */
     refresh,
-    
+
     /**
      * Whether the hook has an active address to fetch balance for
      */

@@ -21,11 +21,7 @@ const mockContextValue: WalletContextValue = {
 };
 
 function wrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <WalletContext.Provider value={mockContextValue}>
-      {children}
-    </WalletContext.Provider>
-  );
+  return <WalletContext.Provider value={mockContextValue}>{children}</WalletContext.Provider>;
 }
 
 describe('useWallet', () => {

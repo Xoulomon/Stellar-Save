@@ -15,27 +15,26 @@ export function useNavigation() {
     navigateTo: (path: string, options?: { replace?: boolean; state?: unknown }) => {
       navigate(path, options);
     },
-    
+
     /** Navigate back in history */
     goBack: () => {
       navigate(-1);
     },
-    
+
     /** Navigate forward in history */
     goForward: () => {
       navigate(1);
     },
-    
+
     /** Current route parameters */
     params,
-    
+
     /** Current location object */
     location,
-    
+
     /** Navigate with state data */
     navigateWithState: <T>(path: string, state: T) => {
       navigate(path, { state });
     },
   };
 }
-

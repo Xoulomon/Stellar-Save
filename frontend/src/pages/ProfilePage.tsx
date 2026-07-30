@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Stack, Typography, Box } from '@mui/material';
 import { AppCard, AppLayout } from '../ui';
@@ -41,7 +40,14 @@ export default function ProfilePage() {
         <AppCard>
           <Stack spacing={2}>
             <Typography variant="h2">Profile</Typography>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, alignItems: { xs: 'flex-start', sm: 'center' } }}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 2,
+                alignItems: { xs: 'flex-start', sm: 'center' },
+              }}
+            >
               <Typography color="text.secondary">
                 Wallet Address: {activeAddress || 'Not connected'}
               </Typography>
@@ -114,9 +120,7 @@ export default function ProfilePage() {
               </Stack>
             )}
 
-            {activeTab === 'settings' && (
-              <SettingsSection />
-            )}
+            {activeTab === 'settings' && <SettingsSection />}
           </Box>
         </AppCard>
       </Stack>

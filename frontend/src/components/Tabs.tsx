@@ -29,15 +29,13 @@ export function Tabs({
   className = '',
 }: TabsProps) {
   const isControlled = controlledActiveTab !== undefined;
-  const [internalActiveTab, setInternalActiveTab] = useState(
-    defaultTab || tabs[0]?.id || ''
-  );
+  const [internalActiveTab, setInternalActiveTab] = useState(defaultTab || tabs[0]?.id || '');
   const activeTab = isControlled ? controlledActiveTab : internalActiveTab;
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
   const handleTabClick = (tabId: string, disabled?: boolean) => {
     if (disabled) return;
-    
+
     if (!isControlled) {
       setInternalActiveTab(tabId);
     }
@@ -45,9 +43,9 @@ export function Tabs({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
-    const enabledTabs = tabs.filter(tab => !tab.disabled);
-    const currentEnabledIndex = enabledTabs.findIndex(tab => tab.id === tabs[currentIndex].id);
-    
+    const enabledTabs = tabs.filter((tab) => !tab.disabled);
+    const currentEnabledIndex = enabledTabs.findIndex((tab) => tab.id === tabs[currentIndex].id);
+
     let nextIndex = currentEnabledIndex;
     const isHorizontal = orientation === 'horizontal';
 
@@ -81,22 +79,17 @@ export function Tabs({
 
   useEffect(() => {
     // Ensure active tab is valid
-    if (activeTab && !tabs.find(tab => tab.id === activeTab)) {
-      const firstEnabledTab = tabs.find(tab => !tab.disabled);
+    if (activeTab && !tabs.find((tab) => tab.id === activeTab)) {
+      const firstEnabledTab = tabs.find((tab) => !tab.disabled);
       if (firstEnabledTab && !isControlled) {
         setInternalActiveTab(firstEnabledTab.id);
       }
     }
   }, [tabs, activeTab, isControlled]);
 
-  const activeTabContent = tabs.find(tab => tab.id === activeTab)?.content;
+  const activeTabContent = tabs.find((tab) => tab.id === activeTab)?.content;
 
-  const classes = [
-    'tabs',
-    `tabs-${variant}`,
-    `tabs-${orientation}`,
-    className,
-  ]
+  const classes = ['tabs', `tabs-${variant}`, `tabs-${orientation}`, className]
     .filter(Boolean)
     .join(' ');
 
