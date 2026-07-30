@@ -27,3 +27,4 @@ design/
 
 # Files with non-standard JSON that Prettier cannot parse
 frontend/tsconfig.node.json
+stellar-save@*
