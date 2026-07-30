@@ -75,15 +75,15 @@ any other JS/TS tooling files. There is no per-workspace override.
 
 ### Config summary
 
-| Option | Value | Reason |
-|--------|-------|--------|
-| `printWidth` | `100` | Readable on modern displays without excessive wrapping |
-| `singleQuote` | `true` | Consistent with existing TypeScript codebase style |
-| `trailingComma` | `"es5"` | Cleaner diffs; valid in all ES5+ environments |
-| `semi` | `true` | Explicit semicolons reduce ambiguity |
-| `tabWidth` | `2` | Matches `.editorconfig` for JS/TS files |
-| `endOfLine` | `"lf"` | Cross-platform consistency |
-| `arrowParens` | `"always"` | Consistent syntax regardless of param count |
+| Option          | Value      | Reason                                                 |
+| --------------- | ---------- | ------------------------------------------------------ |
+| `printWidth`    | `100`      | Readable on modern displays without excessive wrapping |
+| `singleQuote`   | `true`     | Consistent with existing TypeScript codebase style     |
+| `trailingComma` | `"es5"`    | Cleaner diffs; valid in all ES5+ environments          |
+| `semi`          | `true`     | Explicit semicolons reduce ambiguity                   |
+| `tabWidth`      | `2`        | Matches `.editorconfig` for JS/TS files                |
+| `endOfLine`     | `"lf"`     | Cross-platform consistency                             |
+| `arrowParens`   | `"always"` | Consistent syntax regardless of param count            |
 
 ### Running the formatter
 
