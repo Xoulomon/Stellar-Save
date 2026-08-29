@@ -1,5 +1,6 @@
 [package]
-name = "fungible-allowlist-example"
+name = "stellar-save-common"
+description = "Shared types reused across the Stellar-Save Soroban contracts"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -7,15 +8,11 @@ publish = false
 version.workspace = true
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["rlib"]
 doctest = false
 
 [dependencies]
 soroban-sdk = { workspace = true }
-stellar-access = { workspace = true }
-stellar-macros = { workspace = true }
-stellar-tokens = { workspace = true }
-stellar-save-common = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
