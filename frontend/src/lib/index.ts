@@ -68,3 +68,7 @@ export * as validation from './validation';
 
 // ── Group filtering predicates ────────────────────────────────────────────────
 export * from './filters';
+
+// ── Clipboard & share-link helpers ───────────────────────────────────────────
+export { copyToClipboard, shareOrCopy, isClipboardSupported, isShareSupported } from './clipboard';
+export type { ShareData, ShareResult } from './clipboard';

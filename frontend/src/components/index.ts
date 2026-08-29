@@ -8,6 +8,8 @@ export { GroupBadge } from "./GroupBadge";
 export type { GroupBadgeStatus } from "./GroupBadge";
 export { Tooltip } from "./Tooltip";
 export { Dropdown } from "./Dropdown";
+export { Dialog } from "./Dialog";
+export type { DialogProps } from "./Dialog";
 export { EmptyState } from "./EmptyState/EmptyState";
 export { ErrorBoundary } from "./ErrorBoundary/ErrorBoundary";
 export { LoadingState } from "./LoadingState/LoadingState";
