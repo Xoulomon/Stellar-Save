@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useSimulatedLoading } from './useAsyncData';
 import type { AnalyticsData } from '../types/analytics';
 
 const MOCK_DATA: Omit<AnalyticsData, 'isLoading' | 'error'> = {
@@ -28,12 +28,7 @@ const MOCK_DATA: Omit<AnalyticsData, 'isLoading' | 'error'> = {
 };
 
 export function useAnalytics(): AnalyticsData {
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(t);
-  }, []);
+  const isLoading = useSimulatedLoading(1000);
 
   return { ...MOCK_DATA, isLoading, error: null };
 }

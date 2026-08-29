@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useSimulatedLoading } from './useAsyncData';
 import type { DashboardStats, DashboardGroup, PayoutItem, Transaction } from '../types/dashboard';
 
 const mockStats: DashboardStats = {
@@ -39,12 +39,7 @@ export interface DashboardData {
 }
 
 export const useDashboardData = (): DashboardData => {
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => setIsLoading(false), 1400);
-    return () => clearTimeout(t);
-  }, []);
+  const isLoading = useSimulatedLoading(1400);
 
   return {
     stats: mockStats,
