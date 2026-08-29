@@ -151,13 +151,17 @@ export class ContractEventIndexer {
           url.searchParams.set('order', 'asc');
           url.searchParams.set('limit', String(PAGE_LIMIT));
 
-          const response = await fetchWithCorrelationId(url.toString());
-          sorobanRpcCallsTotal.inc({ method: 'getEvents', status: response.ok ? 'success' : 'error' });
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status} from ${url}`);
-          }
-
-          const data: any = await response.json();
+          // Guarded by the Horizon breaker so a degraded endpoint backs the poll
+          // loop off immediately instead of burning the full request timeout on
+          // every iteration (#1511).
+          const data: any = await withHorizonCircuit(async () => {
+            const response = await fetchWithCorrelationId(url.toString());
+            sorobanRpcCallsTotal.inc({ method: 'getEvents', status: response.ok ? 'success' : 'error' });
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status} from ${url}`);
+            }
+            return response.json();
+          });
           const records: any[] = data._embedded?.records ?? [];
           span.setAttribute('indexer.records', records.length);
 
@@ -356,13 +360,15 @@ export class ContractEventIndexer {
     const start = Date.now();
     try {
       // Use Horizon SDK as a reachability check (latest ledger is cheap enough)
-      await this.server.ledgers().order('desc').limit(1).call();
+      await withHorizonCircuit(() => this.server.ledgers().order('desc').limit(1).call());
       return { up: true, latencyMs: Date.now() - start };
     } catch (err) {
       return {
         up: false,
         latencyMs: Date.now() - start,
-        error: err instanceof Error ? err.message : String(err),
+        error: isCircuitOpenError(err)
+          ? 'Horizon circuit breaker is OPEN'
+          : err instanceof Error ? err.message : String(err),
       };
     }
   }

@@ -27,6 +27,9 @@
 import { prisma } from './prisma_client';
 import { logger } from './logger';
 import { getSorobanPool } from './lib/soroban';
+import { GroupStateCache } from './lib/cache';
+import { isCircuitOpenError } from './lib/rpc_circuit_breaker';
+import { circuitBreakerFallbacksTotal, cacheStaleReadsTotal } from './metrics';
 import { Gauge, Counter } from 'prom-client';
 import { registry } from './metrics';
 import {
@@ -286,6 +289,12 @@ export class ReconciliationService {
   /**
    * Fetch group state from on-chain via Soroban RPC simulation.
    * Returns null if the contract / group does not exist.
+   *
+   * RPC errors are allowed to escape the pooled call so the Soroban circuit
+   * breaker can count them (#1511); a swallowed error would look like a
+   * successful empty read and the circuit would never trip. On failure or an
+   * open circuit we degrade to the last known group state from cache, and
+   * return null only when there is nothing cached either.
    */
   private async fetchOnChainGroupState(groupId: string): Promise<Record<string, unknown> | null> {
     if (!this.cfg.contractId || this.cfg.contractId === 'CA...') {
@@ -293,8 +302,8 @@ export class ReconciliationService {
       return null;
     }
 
-    return getSorobanPool().withClient(async (client) => {
-      try {
+    try {
+      const state = await getSorobanPool().withClient(async (client) => {
         const contract = new Contract(this.cfg.contractId);
         const op = contract.call('get_group', xdr.ScVal.scvString(groupId));
         const tx = {
@@ -305,12 +314,31 @@ export class ReconciliationService {
         const sim = await (client as any).simulateTransaction(tx);
         if (!sim?.result?.retval) return null;
 
-        const native = scValToNative(sim.result.retval);
-        return native as Record<string, unknown>;
-      } catch {
-        return null;
+        return scValToNative(sim.result.retval) as Record<string, unknown>;
+      }, 'get_group');
+
+      if (state !== null) {
+        // Prime the cache so a later outage has something to fall back to.
+        await GroupStateCache.set(this.cfg.contractId, groupId, state).catch(() => undefined);
       }
-    }, 'get_group');
+      return state;
+    } catch (err) {
+      const reason = isCircuitOpenError(err) ? 'circuit_open' : 'call_failed';
+      const cached = await GroupStateCache
+        .get<Record<string, unknown>>(this.cfg.contractId, groupId)
+        .catch(() => null);
+
+      circuitBreakerFallbacksTotal.inc({
+        breaker: 'soroban_rpc',
+        outcome: cached === null ? `${reason}_miss` : `${reason}_hit`,
+      });
+      if (cached !== null) cacheStaleReadsTotal.inc({ cache: 'group_state' });
+
+      logger.warn(
+        `[reconciliation] on-chain read for ${groupId} degraded (${reason}); using ${cached === null ? 'no' : 'cached'} state`
+      );
+      return cached;
+    }
   }
 
   /**

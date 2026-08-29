@@ -114,6 +114,28 @@ export const sorobanRpcCallsTotal = new Counter({
   registers: [registry],
 });
 
+// ── Circuit breaker metrics (Soroban / Horizon RPC) ───────────────────────────
+export const circuitBreakerState = new Gauge({
+  name: 'circuit_breaker_state',
+  help: 'Circuit breaker state (0=CLOSED, 1=HALF_OPEN, 2=OPEN)',
+  labelNames: ['breaker'],
+  registers: [registry],
+});
+
+export const circuitBreakerTripsTotal = new Counter({
+  name: 'circuit_breaker_trips_total',
+  help: 'Total times a circuit breaker transitioned to OPEN',
+  labelNames: ['breaker'],
+  registers: [registry],
+});
+
+export const circuitBreakerFallbacksTotal = new Counter({
+  name: 'circuit_breaker_fallbacks_total',
+  help: 'Total requests served from a fallback because the circuit was open or the call failed',
+  labelNames: ['breaker', 'outcome'],
+  registers: [registry],
+});
+
 export const eventsIndexedTotal = new Counter({
   name: 'events_indexed_total',
   help: 'Total contract events indexed',
