@@ -1,0 +1,45 @@
+# Fragments
+
+fragment GroupFields on Group {
+  id
+  name
+  contributionAmount
+  cycleDuration
+  maxMembers
+  currentMembers
+  status
+  tags
+}
+
+fragment GroupWithRelations on Group {
+  ...GroupFields
+  members {
+    id
+    address
+    name
+    joinedAt
+  }
+  transactions {
+    id
+    groupId
+    memberAddress
+    amount
+    type
+    timestamp
+    stellarTxHash
+  }
+}
+
+# Queries
+
+query GetGroups {
+  groups {
+    ...GroupFields
+  }
+}
+
+query GetGroup($id: ID!) {
+  group(id: $id) {
+    ...GroupWithRelations
+  }
+}
