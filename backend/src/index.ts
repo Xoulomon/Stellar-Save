@@ -54,6 +54,7 @@ import { initReconciliationService } from './reconciliation_service';
 import docsRouter from './docs';
 import { IpfsClient, PinningService, GroupMetadataCache, IpfsMonitor } from './ipfs';
 import { createIpfsRouter } from './routes/ipfs';
+import { createHealthRouter, createDatabaseCheck, createRpcCheck } from './routes/health';
 
 const CSP_POLICY = [
   "default-src 'self'",
@@ -120,6 +121,17 @@ setEndpointCost('/api/admin', 5, 'admin');
 setEndpointCost('/graphql', 2, 'read');
 
 app.get('/metrics', metricsHandler);
+
+// ── Operational probes (Issue #1514) ─────────────────────────────────────────
+// Mounted ahead of the rate limiter so an orchestrator's probes can never be
+// throttled into a false unhealthy verdict.
+app.use(
+  createHealthRouter({
+    checkDatabase: createDatabaseCheck(prisma),
+    checkRpc: createRpcCheck(config.stellar.rpcUrl),
+  }),
+);
+
 app.use(createTieredRateLimiter());
 
 // Stricter rate limiting on auth/admin endpoints: 10 req / 15 min per IP (Issue #1507)

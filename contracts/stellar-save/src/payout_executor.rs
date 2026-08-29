@@ -840,14 +840,15 @@ pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
     // Step 8: Verify contract has sufficient balance to cover the payout
     verify_contract_balance(&env, group_id, payout_amount)?;
 
-    // === EXECUTION PHASE (Task 12.3) ===
-    // All validations passed - proceed with payout execution
-    // If any step fails after this point, Soroban will automatically revert all changes
+    // === EFFECTS PHASE (Task 12.3) ===
+    // All validations passed. Checks-effects-interactions: every state mutation
+    // below is committed *before* the token transfer, so a caller-supplied token
+    // contract that calls back during `transfer` sees a fully settled cycle —
+    // the payout-recipient key is already present and the cycle has already
+    // advanced, which is what makes the duplicate-payout check at Step 3 hold.
+    // If any step fails after this point, Soroban reverts all changes atomically.
 
-    // Step 9: Execute the fund transfer to the recipient
-    execute_transfer(&env, group_id, &recipient, payout_amount)?;
-
-    // Step 10: Create and store the payout record for audit trail
+    // Step 9: Create and store the payout record for audit trail
     // Gas opt: cache timestamp — single ledger call for the whole function
     let timestamp = env.ledger().timestamp();
     record_payout(
@@ -867,23 +868,30 @@ pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
         .ok_or(StellarSaveError::Overflow)?;
     env.storage().persistent().set(&paid_out_key, &new_paid);
 
-    // Step 11: Update the member status to reflect payout completion
+    // Step 10: Update the member status to reflect payout completion
     update_member_status(&env, group_id, &recipient)?;
 
-    // Step 12: Emit payout event (non-critical - continues on failure)
+    // Step 11: Emit payout event (non-critical - continues on failure)
     emit_payout_event(
         &env,
         group_id,
-        recipient,
+        recipient.clone(),
         payout_amount,
         current_cycle,
         timestamp,
     );
 
-    // Step 13: Advance to the next cycle or mark group as complete
+    // Step 12: Advance to the next cycle or mark group as complete.
+    // The per-group reentrancy guard stays set across this write so it is still
+    // held when the external token call runs below.
     advance_cycle_or_complete(&env, &mut group)?;
 
-    // Clear per-group reentrancy guard
+    // === INTERACTIONS PHASE ===
+
+    // Step 13: Execute the fund transfer to the recipient
+    execute_transfer(&env, group_id, &recipient, payout_amount)?;
+
+    // Clear per-group reentrancy guard only after the external call has returned
     group.payout_in_progress = false;
     env.storage().persistent().set(&group_key, &group);
 
