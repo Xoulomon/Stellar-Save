@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import {
   Dialog,
   DialogTitle,
@@ -43,52 +44,54 @@ function computeDiff(original: FormValues, updated: FormValues): Diff[] {
   return diffs;
 }
 
+// See src/components/FORMS.md for the react-hook-form conventions used here.
 export function GroupSettings({ group, onSaved }: GroupSettingsProps) {
   const { activeAddress } = useWallet();
   const { updateGroupMetadata } = useContract();
   const { state, txHash, error, execute, reset } = useTransaction();
 
-  const [values, setValues] = useState<FormValues>({
+  const defaultValues: FormValues = {
     name: group.name,
     description: group.description ?? '',
-  });
-  const [fieldErrors, setFieldErrors] = useState<Partial<FormValues>>({});
+  };
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<FormValues>({ defaultValues, mode: 'onSubmit' });
+
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDiff, setPendingDiff] = useState<Diff[]>([]);
+  const [pendingValues, setPendingValues] = useState<FormValues | null>(null);
+
+  const nameValue = watch('name');
+  const descriptionValue = watch('description');
 
   // Creator gate
   if (!activeAddress || activeAddress !== group.creator) return null;
 
-  const validate = (): boolean => {
-    const errs: Partial<FormValues> = {};
-    if (!values.name.trim()) errs.name = 'Name is required.';
-    else if (values.name.length < NAME_MIN) errs.name = `Name must be at least ${NAME_MIN} characters.`;
-    else if (values.name.length > NAME_MAX) errs.name = `Name must be at most ${NAME_MAX} characters.`;
-    if (values.description.length > DESC_MAX) errs.description = `Description must be at most ${DESC_MAX} characters.`;
-    setFieldErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
+  const onValid = (values: FormValues) => {
     const diff = computeDiff(
       { name: group.name, description: group.description ?? '' },
       values,
     );
     if (diff.length === 0) return; // nothing changed
     setPendingDiff(diff);
+    setPendingValues(values);
     setConfirmOpen(true);
   };
 
   const handleConfirm = async () => {
+    if (!pendingValues) return;
     setConfirmOpen(false);
     reset();
     await execute(async () => {
       const result = await updateGroupMetadata({
         groupId: BigInt(group.id),
-        name: values.name,
-        description: values.description,
+        name: pendingValues.name,
+        description: pendingValues.description,
       });
       if (result.error) throw new Error(result.error.message);
       return result.txHash!;
@@ -102,13 +105,19 @@ export function GroupSettings({ group, onSaved }: GroupSettingsProps) {
     <div>
       <Typography variant="h6" gutterBottom>Group Settings</Typography>
 
-      <form onSubmit={handleSubmit} noValidate>
+      <form onSubmit={handleSubmit(onValid)} noValidate>
         <TextField
           label="Group Name"
-          value={values.name}
-          onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))}
-          error={!!fieldErrors.name}
-          helperText={fieldErrors.name ?? `${values.name.length}/${NAME_MAX}`}
+          {...register('name', {
+            validate: (value) => {
+              if (!value.trim()) return 'Name is required.';
+              if (value.length < NAME_MIN) return `Name must be at least ${NAME_MIN} characters.`;
+              if (value.length > NAME_MAX) return `Name must be at most ${NAME_MAX} characters.`;
+              return true;
+            },
+          })}
+          error={!!errors.name}
+          helperText={errors.name?.message ?? `${nameValue.length}/${NAME_MAX}`}
           fullWidth
           margin="normal"
           disabled={isPending}
@@ -116,10 +125,14 @@ export function GroupSettings({ group, onSaved }: GroupSettingsProps) {
         />
         <TextField
           label="Description"
-          value={values.description}
-          onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))}
-          error={!!fieldErrors.description}
-          helperText={fieldErrors.description ?? `${values.description.length}/${DESC_MAX}`}
+          {...register('description', {
+            validate: (value) =>
+              value.length > DESC_MAX
+                ? `Description must be at most ${DESC_MAX} characters.`
+                : true,
+          })}
+          error={!!errors.description}
+          helperText={errors.description?.message ?? `${descriptionValue.length}/${DESC_MAX}`}
           fullWidth
           multiline
           rows={3}
