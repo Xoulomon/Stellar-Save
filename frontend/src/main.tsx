@@ -10,11 +10,12 @@ import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
 import { queryClient } from './lib/queryClient';
 import { registerServiceWorker } from './notifications/serviceWorkerRegistration';
+import { env } from './lib/env';
 import './index.css';
 
 // Initialise distributed tracing (no-op unless VITE_OTEL_ENABLED=true).
 // Loaded lazily so the OpenTelemetry packages stay out of the main bundle.
-if (import.meta.env.VITE_OTEL_ENABLED === 'true') {
+if (env.VITE_OTEL_ENABLED) {
   import('./lib/tracing').then((m) => m.startTracing()).catch(() => {
     // Tracing must never break app startup.
   });
@@ -30,8 +31,8 @@ if ('serviceWorker' in navigator) {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary
-      enableErrorReporting={import.meta.env.VITE_ENABLE_ERROR_REPORTING === 'true'}
-      sentryDsn={import.meta.env.VITE_SENTRY_DSN}
+      enableErrorReporting={env.VITE_ENABLE_ERROR_REPORTING}
+      sentryDsn={env.VITE_SENTRY_DSN}
     >
       <QueryClientProvider client={queryClient}>
         <AppThemeProvider>

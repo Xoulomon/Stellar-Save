@@ -2,7 +2,9 @@
  * Insurance pool API helpers (Issue #1012).
  */
 
-const API_BASE = (import.meta.env['VITE_API_BASE_URL'] as string | undefined) ?? '/api/v1';
+import { env } from '../lib/env';
+
+const API_BASE = env.VITE_API_BASE_URL;
 
 export interface InsuranceClaim {
   id: string;
