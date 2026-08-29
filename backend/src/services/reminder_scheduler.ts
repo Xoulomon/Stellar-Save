@@ -113,7 +113,7 @@ export function adjustTimeForTimezone(baseDate: Date, targetTime: string, timezo
       month: '2-digit',
       day: '2-digit',
     });
-    
+
     // We compute the exact difference in minutes between UTC test date and its local rendering
     const localParts = tzFormatter.formatToParts(utcTestDate);
     const lH = Number(localParts.find((p) => p.type === 'hour')?.value % 24);

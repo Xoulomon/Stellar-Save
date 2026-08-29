@@ -1,6 +1,6 @@
 /**
  * db.ts — IndexedDB wrapper for offline storage
- * 
+ *
  * Stores groups, members, contributions, and sync queue for offline-first functionality
  */
 
@@ -157,7 +157,7 @@ export async function getCachedGroupsList(): Promise<CachedGroupsList | null> {
 
 export async function markGroupsAsStale(): Promise<void> {
   const db = await getDB();
-  
+
   // Mark all groups as stale
   const allGroups = await db.getAll('groups');
   for (const cached of allGroups) {
@@ -265,7 +265,7 @@ export async function getCachedGroupsListWithStatus(): Promise<{
   fromCache: boolean;
 }> {
   const cached = await getCachedGroupsList();
-  
+
   if (!cached) {
     return { groups: [], isStale: false, fromCache: false };
   }

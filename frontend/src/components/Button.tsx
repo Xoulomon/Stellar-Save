@@ -38,9 +38,9 @@ export function Button({
   const computedAriaLabel = ariaLabel || (!children && icon ? "Icon Button" : undefined);
 
   return (
-    <button 
-      className={classes} 
-      disabled={disabled || loading} 
+    <button
+      className={classes}
+      disabled={disabled || loading}
       aria-label={computedAriaLabel}
       role={role}
       {...rest}

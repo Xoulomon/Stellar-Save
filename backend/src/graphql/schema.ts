@@ -1,4 +1,11 @@
 export const typeDefs = `#graphql
+  type PaginationInfo {
+    limit: Int!
+    offset: Int!
+    total: Int!
+    hasMore: Boolean!
+  }
+
   type Group {
     id: ID!
     name: String!
@@ -58,15 +65,15 @@ export const typeDefs = `#graphql
 
   type Query {
     # Groups
-    groups: [Group!]!
+    groups(limit: Int, offset: Int): [Group!]!
     group(id: ID!): Group
 
     # Members
-    members: [Member!]!
+    members(limit: Int, offset: Int): [Member!]!
     member(id: ID!): Member
 
     # Transactions
-    transactions(groupId: ID): [Transaction!]!
+    transactions(groupId: ID, limit: Int, offset: Int): [Transaction!]!
     transaction(id: ID!): Transaction
 
     # Recommendations

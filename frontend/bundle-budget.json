@@ -1,0 +1,13 @@
+{
+  "$comment": "Performance budget for the production bundle. Values are gzipped KiB. Enforced by scripts/check-bundle-size.mjs (npm run size). See docs/bundle-budget.md for how to adjust these limits.",
+  "budgets": {
+    "totalJsGzipKib": 1200,
+    "totalCssGzipKib": 80,
+    "largestChunkGzipKib": 400
+  },
+  "measured": {
+    "totalJsGzipKib": null,
+    "totalCssGzipKib": null,
+    "largestChunkGzipKib": null
+  }
+}

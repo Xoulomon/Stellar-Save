@@ -28,6 +28,7 @@
 
 import { context, trace, SpanStatusCode, type Span } from '@opentelemetry/api';
 import { config } from './config';
+import { logger } from './logger';
 
 const SERVICE_NAME = config.tracing.serviceName;
 
@@ -93,8 +94,7 @@ export function startTracing(): void {
     });
 
     sdk.start();
-    // eslint-disable-next-line no-console
-    console.log(
+    logger.info(
       `[tracing] OpenTelemetry enabled for "${SERVICE_NAME}" ` +
         `(sampler ratio=${ratio}, exporter=OTLP/HTTP)`,
     );
@@ -102,15 +102,14 @@ export function startTracing(): void {
     const shutdown = () =>
       sdk
         .shutdown()
-        .catch((err: unknown) => console.error('[tracing] shutdown error', err))
+        .catch((err: unknown) => logger.error('[tracing] shutdown error', err))
         .finally(() => process.exit(0));
     process.once('SIGTERM', shutdown);
     process.once('SIGINT', shutdown);
   } catch (err) {
     started = false;
     // Missing optional deps or misconfig must never crash the server.
-    // eslint-disable-next-line no-console
-    console.warn(
+    logger.warn(
       '[tracing] Failed to initialise OpenTelemetry; continuing without tracing.',
       err instanceof Error ? err.message : err,
     );

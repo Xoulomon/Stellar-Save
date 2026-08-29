@@ -269,6 +269,8 @@ impl StellarSaveContract {
             
             // Initialize storage version on first deployment
             initialize_storage_version(&env);
+            // Initialize contract binary version on first deployment (Issue #72)
+            migration::initialize_contract_version(&env);
         }
 
         // 3. Perform migration if needed
@@ -311,6 +313,51 @@ impl StellarSaveContract {
     /// This can be used to check if migration is needed.
     pub fn get_storage_version(env: Env) -> u32 {
         migration::get_storage_version(&env)
+    }
+
+    /// Returns the on-chain contract binary version.
+    ///
+    /// This is the monotonically increasing version number that the upgrade
+    /// guard tracks to prevent downgrade or double-upgrade (Issue #72).
+    pub fn get_contract_version(env: Env) -> u32 {
+        migration::get_contract_version(&env)
+    }
+
+    /// Upgrades the contract Wasm to a new binary, enforcing the version guard.
+    ///
+    /// Only the contract admin may call this.  `new_version` must be strictly
+    /// greater than the current on-chain contract version, which prevents
+    /// accidental downgrade or double-upgrade (Issue #72).
+    ///
+    /// # Arguments
+    /// * `caller`      – Must be the contract admin
+    /// * `new_wasm`    – 32-byte Wasm hash of the replacement binary
+    /// * `new_version` – New version number (must be > current on-chain version)
+    ///
+    /// # Returns
+    /// * `Ok(())` – Upgrade applied, version persisted, event emitted
+    /// * `Err(StellarSaveError::Unauthorized)` – Caller is not the admin
+    /// * `Err(StellarSaveError::InvalidState)` – Version guard rejected the upgrade
+    pub fn upgrade_contract(
+        env: Env,
+        caller: Address,
+        new_wasm: BytesN<32>,
+        new_version: u32,
+    ) -> Result<(), StellarSaveError> {
+        caller.require_auth();
+
+        // Verify admin
+        let config_key = StorageKeyBuilder::contract_config();
+        let config = env
+            .storage()
+            .persistent()
+            .get::<_, ContractConfig>(&config_key)
+            .ok_or(StellarSaveError::Unauthorized)?;
+        if config.admin != caller {
+            return Err(StellarSaveError::Unauthorized);
+        }
+
+        migration::execute_upgrade(&env, caller, new_wasm, new_version)
     }
 
     /// Updates the global contribution amount limits.
@@ -4378,20 +4425,14 @@ impl StellarSaveContract {
                 StellarSaveError::GroupNotFound
             })?;
 
-        // ── Step 7: SEP-41 transfer_from ──────────────────────────────────────
-        // If transfer_from panics the entire transaction reverts atomically;
-        // no contribution state is recorded.
-        let token_client = soroban_sdk::token::TokenClient::new(&env, &token_config.token_address);
-        let contract_address = env.current_contract_address();
-
-        token_client.transfer_from(&contract_address, &member, &contract_address, &amount);
-
-        // ── Step 8: Record contribution and release guard ─────────────────────
+        // ── Step 7: Record contribution (effects) ─────────────────────────────
+        // Checks-effects-interactions: the contribution is written before the
+        // token is called. The token contract is caller-supplied at group
+        // creation, so a malicious implementation can call back during
+        // `transfer_from`; the temporary reentrancy guard set at Step 5 is still
+        // held here and rejects the reentrant call with InternalError.
         let timestamp = env.ledger().timestamp();
         let current_cycle = group.current_cycle;
-
-        // Release reentrancy guard before storage ops (safe from re-entrancy now)
-        env.storage().temporary().set(&reentrancy_key, &0u64);
 
         // Gas opt: record_contribution now returns the new cycle_total so we
         // can pass it directly to the event emitter without an extra SLOAD.
@@ -4404,8 +4445,16 @@ impl StellarSaveContract {
             timestamp,
         )?;
 
-        // Release reentrancy guard AFTER all state changes are complete
-        env.storage().persistent().set(&reentrancy_key, &0u64);
+        // ── Step 8: SEP-41 transfer_from (interaction) ────────────────────────
+        // If transfer_from panics the entire transaction reverts atomically;
+        // the contribution recorded above is rolled back with it.
+        let token_client = soroban_sdk::token::TokenClient::new(&env, &token_config.token_address);
+        let contract_address = env.current_contract_address();
+
+        token_client.transfer_from(&contract_address, &member, &contract_address, &amount);
+
+        // Release the reentrancy guard only after the external call has returned
+        env.storage().temporary().set(&reentrancy_key, &0u64);
 
         // ── Step 9: Emit event using the cycle_total returned above ───────────
         // Gas opt: no extra SLOAD needed — cycle_total came back from
@@ -4522,25 +4571,43 @@ impl StellarSaveContract {
         let amount = group.contribution_amount;
         let timestamp = env.ledger().timestamp();
 
-        // Transfer total amount in one call to minimise token round-trips
         let total = amount
             .checked_mul(cycles.len() as i128)
             .ok_or(StellarSaveError::Overflow)?;
-        token_client.transfer_from(&contract_address, &member, &contract_address, &total);
 
-        // Record each cycle and emit individual ContributionEvents
+        // ── Effects ───────────────────────────────────────────────────────────
+        // Checks-effects-interactions: every cycle is recorded before the token
+        // is touched. The token is caller-supplied at group creation, so a
+        // malicious implementation can call back during `transfer_from`; with the
+        // contribution keys already written, the `has(&contrib_key)` validation
+        // above rejects a reentrant batch with AlreadyContributed.
+        let mut cycle_totals: Vec<i128> = Vec::new(&env);
         for i in 0..cycles.len() {
             let cycle = cycles.get(i).unwrap();
-            let cycle_total =
-                Self::record_contribution(&env, group_id, cycle, member.clone(), amount, timestamp)?;
+            cycle_totals.push_back(Self::record_contribution(
+                &env,
+                group_id,
+                cycle,
+                member.clone(),
+                amount,
+                timestamp,
+            )?);
+        }
 
+        // ── Interaction ───────────────────────────────────────────────────────
+        // Transfer total amount in one call to minimise token round-trips.
+        // A trap here reverts every record written above atomically.
+        token_client.transfer_from(&contract_address, &member, &contract_address, &total);
+
+        // Emit one ContributionEvent per cycle now that the funds have landed
+        for i in 0..cycles.len() {
             EventEmitter::emit_contribution_made(
                 &env,
                 group_id,
                 member.clone(),
                 amount,
-                cycle,
-                cycle_total,
+                cycles.get(i).unwrap(),
+                cycle_totals.get(i).unwrap(),
                 timestamp,
             );
         }
@@ -4810,15 +4877,10 @@ impl StellarSaveContract {
                 continue;
             }
 
-            // 4e. Execute the transfer
-            token_client.transfer_from(
-                &contract_address,
-                &member,
-                &contract_address,
-                &contribution_amount,
-            );
-
-            // 4f. Record contribution in storage
+            // 4e. Record contribution in storage (effects before interaction)
+            // Checks-effects-interactions: writing the contribution key first
+            // means a token that calls back during `transfer_from` hits the
+            // "already contributed" skip at 4b instead of being charged twice.
             let cycle_total = Self::record_contribution(
                 &env,
                 group_id,
@@ -4827,6 +4889,15 @@ impl StellarSaveContract {
                 contribution_amount,
                 timestamp,
             )?;
+
+            // 4f. Execute the transfer (interaction)
+            // A trap reverts the record written above along with it.
+            token_client.transfer_from(
+                &contract_address,
+                &member,
+                &contract_address,
+                &contribution_amount,
+            );
 
             // 4g. Emit AutoContributionExecuted event
             EventEmitter::emit_auto_contribution_executed(

@@ -16,8 +16,8 @@ export function GroupStats({
   currency = 'XLM',
   className = '',
 }: GroupStatsProps) {
-  const completionPercentage = totalExpected > 0 
-    ? Math.round((totalContributed / totalExpected) * 100) 
+  const completionPercentage = totalExpected > 0
+    ? Math.round((totalContributed / totalExpected) * 100)
     : 0;
 
   const payoutPercentage = totalContributed > 0
@@ -45,8 +45,8 @@ export function GroupStats({
           <div className="stat-label">Completion Progress</div>
           <div className="stat-value">{completionPercentage}%</div>
           <div className="progress-bar">
-            <div 
-              className="progress-fill" 
+            <div
+              className="progress-fill"
               style={{ width: `${completionPercentage}%` }}
             />
           </div>
@@ -59,8 +59,8 @@ export function GroupStats({
           <div className="stat-label">Payout Progress</div>
           <div className="stat-value">{payoutPercentage}%</div>
           <div className="progress-bar">
-            <div 
-              className="progress-fill progress-fill-secondary" 
+            <div
+              className="progress-fill progress-fill-secondary"
               style={{ width: `${payoutPercentage}%` }}
             />
           </div>

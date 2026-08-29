@@ -1,15 +1,14 @@
 import cron from 'node-cron';
 import { prisma } from '../prisma_client';
-import { AnalyticsService } from '../analytics_service';
 import { logger } from '../logger';
-
-const analyticsService = new AnalyticsService(prisma);
+import { AnalyticsHandler } from './handlers/analytics.handler';
 
 export function startAnalyticsResyncJob(schedule = '0 * * * *'): cron.ScheduledTask {
+  const handler = new AnalyticsHandler(prisma);
+
   const task = cron.schedule(schedule, async () => {
     try {
-      const result = await analyticsService.resyncSorobanAnalytics({ lookbackHours: 25 });
-      logger.info('Analytics resync job completed', result);
+      await handler.execute(25);
     } catch (error) {
       logger.error('Analytics resync job failed', {
         error: error instanceof Error ? error.message : String(error),

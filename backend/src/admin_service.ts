@@ -29,7 +29,7 @@ export class AdminService {
   updateUser(id: string, updates: Partial<Member>, adminId: string) {
     const index = this.members.findIndex(u => u.id === id);
     if (index === -1) return null;
-    
+
     this.members[index] = { ...this.members[index], ...updates };
     this.logAction(adminId, 'UPDATE_USER', id, 'Member', updates);
     return this.members[index];
@@ -38,7 +38,7 @@ export class AdminService {
   deleteUser(id: string, adminId: string) {
     const index = this.members.findIndex(u => u.id === id);
     if (index === -1) return false;
-    
+
     this.members.splice(index, 1);
     this.logAction(adminId, 'DELETE_USER', id, 'Member');
     return true;

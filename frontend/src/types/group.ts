@@ -1,5 +1,9 @@
 // Re-export shared primitives from the canonical SDK package so there is a
 // single source of truth for these types across frontend, backend, and mobile.
+//
+// NOTE: The GraphQL API uses separate Group / Member types — see the generated
+// types in `src/generated/graphql.ts` (Group, Member, GetGroupQuery, etc.).
+// The types below are the REST API / UI-layer shapes used by the frontend.
 export type { GroupStatus, PaginationMeta } from '@stellar-save/sdk';
 
 import type { FilterState, SortOption } from '../components/GroupFilters';

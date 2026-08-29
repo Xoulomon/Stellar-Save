@@ -142,9 +142,9 @@ export function WalletStatusIndicator() {
         />
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           {isMeasuringLatency ? (
-            <CircularProgress size={14} />
+            <CircularProgress size={14} aria-label="Measuring connection latency" />
           ) : (
-            <WifiIcon sx={{ color: strengthColor, fontSize: 16 }} />
+            <WifiIcon sx={{ color: strengthColor, fontSize: 16 }} aria-hidden="true" />
           )}
           <Tooltip title={getStrengthLabel(strength)}>
             <Typography variant="caption" sx={{ color: strengthColor, cursor: 'help' }}>
@@ -164,6 +164,7 @@ export function WalletStatusIndicator() {
             <IconButton
               size="small"
               onClick={() => copy(activeAddress)}
+              aria-label={copied ? 'Address copied' : 'Copy wallet address'}
               sx={{ p: 0.5 }}
             >
               {copied ? (

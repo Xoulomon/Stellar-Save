@@ -170,6 +170,13 @@ const envSchema = z.object({
   SOROBAN_POOL_SIZE: z.string().regex(/^\d+$/).default('5').transform(Number),
   SOROBAN_POOL_TIMEOUT_MS: z.string().regex(/^\d+$/).default('5000').transform(Number),
 
+  // ── RPC circuit breakers (Soroban / Horizon) ──────────────────────────────
+  RPC_BREAKER_TIMEOUT_MS: z.string().regex(/^\d+$/).default('8000').transform(Number),
+  RPC_BREAKER_ERROR_THRESHOLD_PCT: z.string().regex(/^\d+$/).default('50').transform(Number),
+  RPC_BREAKER_RESET_TIMEOUT_MS: z.string().regex(/^\d+$/).default('15000').transform(Number),
+  RPC_BREAKER_VOLUME_THRESHOLD: z.string().regex(/^\d+$/).default('5').transform(Number),
+  RPC_BREAKER_STALE_CACHE_TTL_SECONDS: z.string().regex(/^\d+$/).default('300').transform(Number),
+
   // ── Horizon / Contract Indexer ────────────────────────────────────────────
   HORIZON_URL: z.string().url().default('https://horizon-testnet.stellar.org'),
   CONTRACT_ID: z.string().default(''),
@@ -223,9 +230,15 @@ if (!parsed.success) {
   const issues = parsed.error.issues
     .map((i) => `  • ${i.path.join('.')}: ${i.message}`)
     .join('\n');
-  console.error(
-    `\n[config] ❌ Invalid environment configuration:\n${issues}\n` +
-      `  Check your .env file against .env.example and fix the above variables.\n`,
+  // NOTE: the structured logger depends on this module, so it is not available
+  // yet during config bootstrap — write directly to stderr as JSON instead.
+  process.stderr.write(
+    JSON.stringify({
+      level: 'error',
+      message: 'invalid environment configuration',
+      issues: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`),
+      hint: 'Check your .env file against .env.example and fix the above variables.',
+    }) + '\n',
   );
   process.exit(1);
 }
@@ -251,9 +264,12 @@ function getDatabaseUrl(): string {
   }
 
   // Fallback for local development
-  console.warn(
-    '[config] ⚠️  Neither DATABASE_URL nor complete DB_* variables provided. ' +
-    'Using default local connection.'
+  process.stderr.write(
+    JSON.stringify({
+      level: 'warn',
+      message:
+        'Neither DATABASE_URL nor complete DB_* variables provided; using default local connection',
+    }) + '\n',
   );
   return 'postgresql://user:pass@localhost:5432/stellar_save';
 }
@@ -393,6 +409,14 @@ export const config = {
   soroban: {
     poolSize: env.SOROBAN_POOL_SIZE,
     poolTimeoutMs: env.SOROBAN_POOL_TIMEOUT_MS,
+  },
+
+  rpcCircuitBreaker: {
+    timeoutMs: env.RPC_BREAKER_TIMEOUT_MS,
+    errorThresholdPercentage: env.RPC_BREAKER_ERROR_THRESHOLD_PCT,
+    resetTimeoutMs: env.RPC_BREAKER_RESET_TIMEOUT_MS,
+    volumeThreshold: env.RPC_BREAKER_VOLUME_THRESHOLD,
+    staleCacheTtlSeconds: env.RPC_BREAKER_STALE_CACHE_TTL_SECONDS,
   },
 
   indexer: {

@@ -16,7 +16,12 @@ import {
 } from '@mui/material';
 import { useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+<<<<<<< HEAD
 
+=======
+import { copyToClipboard } from '../lib/clipboard';
+import type { MemberProfile, MemberDirectoryFilters, MemberSortOption } from '../types/member';
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import { DEFAULT_MEMBER_FILTERS } from '../types/member';
 import { formatAddress } from '../utils/formatAddress';
 import { formatAmount } from '../utils/formatAmount';
@@ -73,7 +78,7 @@ function MemberDirectoryCard({ member, isCurrentUser, groupId }: MemberCardProps
   const handleCopy = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    void navigator.clipboard.writeText(member.address);
+    void copyToClipboard(member.address);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

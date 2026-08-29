@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { createRateLimiterMiddleware, RateLimiterOptions } from './rate_limiter';
 import * as redis from './redis';
+import { logger } from './logger';
 
 /**
  * Middleware for caching analytics GET requests
@@ -28,7 +29,7 @@ export function createAnalyticsCacheMiddleware(ttlSeconds: number = 3600) {
       res.json = (data: any) => {
         // Cache the response
         redis.set(cacheKey, data, ttlSeconds).catch((err) => {
-          console.error('Error caching analytics response:', err);
+          logger.error('Error caching analytics response:', err);
         });
 
         res.setHeader('X-Cache', 'MISS');
@@ -37,7 +38,7 @@ export function createAnalyticsCacheMiddleware(ttlSeconds: number = 3600) {
 
       next();
     } catch (error) {
-      console.error('Error in analytics cache middleware:', error);
+      logger.error('Error in analytics cache middleware:', error);
       next();
     }
   };
@@ -103,7 +104,7 @@ export async function invalidateAnalyticsCache(pattern: string = 'http_cache:/an
   try {
     await redis.delPattern(pattern);
   } catch (error) {
-    console.error('Error invalidating analytics cache:', error);
+    logger.error('Error invalidating analytics cache:', error);
   }
 }
 
@@ -122,7 +123,7 @@ export async function invalidateAnalyticsCacheByDate(date: Date) {
     try {
       await redis.delPattern(pattern);
     } catch (error) {
-      console.error(`Error invalidating cache pattern ${pattern}:`, error);
+      logger.error(`Error invalidating cache pattern ${pattern}:`, error);
     }
   }
 }

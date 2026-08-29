@@ -27,7 +27,7 @@ describe('BadgeGallery', () => {
 
   it('renders loading skeletons when isLoading is true', () => {
     render(<BadgeGallery badges={[]} isLoading={true} />);
-    
+
     const loading = screen.getByLabelText(/loading badges/i);
     expect(loading).toBeInTheDocument();
     expect(loading.children.length).toBeGreaterThan(0);
@@ -35,7 +35,7 @@ describe('BadgeGallery', () => {
 
   it('renders empty state when badges array is empty', () => {
     render(<BadgeGallery badges={[]} isLoading={false} />);
-    
+
     expect(screen.getByRole('status', { name: /no badges earned yet/i })).toBeInTheDocument();
     expect(screen.getByText(/no badges yet/i)).toBeInTheDocument();
     expect(screen.getByText(/contribute consistently/i)).toBeInTheDocument();
@@ -44,14 +44,14 @@ describe('BadgeGallery', () => {
   it('renders error message when error prop is provided', () => {
     const errorMsg = 'Failed to load badges.';
     render(<BadgeGallery badges={[]} isLoading={false} error={errorMsg} />);
-    
+
     const alert = screen.getByRole('alert');
     expect(alert).toHaveTextContent(errorMsg);
   });
 
   it('renders all provided badges in a grid', () => {
     render(<BadgeGallery badges={mockBadges} isLoading={false} />);
-    
+
     expect(screen.getByText('Founder')).toBeInTheDocument();
     expect(screen.getByText('5-Cycle Streak')).toBeInTheDocument();
     expect(screen.getByText('🏛️')).toBeInTheDocument();
@@ -60,20 +60,20 @@ describe('BadgeGallery', () => {
 
   it('displays badge count when badges are present', () => {
     render(<BadgeGallery badges={mockBadges} isLoading={false} />);
-    
+
     expect(screen.getByText(/2 badges earned/i)).toBeInTheDocument();
   });
 
   it('renders share button on each badge card', () => {
     render(<BadgeGallery badges={mockBadges} isLoading={false} walletAddress="GABCD..." />);
-    
+
     const shareButtons = screen.getAllByRole('button', { name: /share .* badge/i });
     expect(shareButtons.length).toBe(mockBadges.length);
   });
 
   it('renders earned dates with proper datetime attribute', () => {
     render(<BadgeGallery badges={mockBadges} isLoading={false} />);
-    
+
     const times = screen.getAllByRole('time');
     expect(times.length).toBe(mockBadges.length);
     times.forEach((time, idx) => {
@@ -85,13 +85,13 @@ describe('BadgeGallery', () => {
   it('respects custom title prop', () => {
     const customTitle = 'My Achievements';
     render(<BadgeGallery badges={[]} isLoading={false} title={customTitle} />);
-    
+
     expect(screen.getByText(customTitle)).toBeInTheDocument();
   });
 
   it('renders badges with correct accessibility roles', () => {
     render(<BadgeGallery badges={mockBadges} isLoading={false} />);
-    
+
     const list = screen.getByRole('list', { name: /2 earned badges/i });
     expect(list).toBeInTheDocument();
 
@@ -101,7 +101,7 @@ describe('BadgeGallery', () => {
 
   it('badge cards are keyboard accessible', () => {
     render(<BadgeGallery badges={mockBadges} isLoading={false} />);
-    
+
     const cards = screen.getAllByRole('listitem');
     cards.forEach((card) => {
       expect(card).toHaveAttribute('tabIndex', '0');

@@ -19,7 +19,7 @@ mod upgrade_tests {
         group::{Group, GroupStatus, TokenConfig},
         migration::{get_schema_version, load_migration_record, V1, V2},
         migrations::v1_to_v2,
-        storage::{GroupKey, StorageKey, StorageKeyBuilder},
+        storage::{StorageKey, StorageKeyBuilder},
         ContractConfig, ContributionRecord, MemberProfile, StellarSaveContract, StellarSaveError,
     };
     use soroban_sdk::{testutils::Address as _, Address, Env, Vec};
@@ -501,7 +501,7 @@ mod upgrade_tests {
         // Pre-seed a custom TokenConfig for group 2.
         let custom_token = Address::generate(&env);
         env.storage().persistent().set(
-            &StorageKey::Group(GroupKey::TokenConfig(2)),
+            &StorageKey::GrpTok(2),
             &TokenConfig {
                 token_address: custom_token.clone(),
                 token_decimals: 6,
@@ -516,14 +516,14 @@ mod upgrade_tests {
         assert!(
             !env.storage()
                 .persistent()
-                .has(&StorageKey::Group(GroupKey::TokenConfig(1))),
+                .has(&StorageKey::GrpTok(1)),
             "backfilled TokenConfig must be removed on rollback"
         );
         // Group 2's pre-existing config must still be there.
         assert!(
             env.storage()
                 .persistent()
-                .has(&StorageKey::Group(GroupKey::TokenConfig(2))),
+                .has(&StorageKey::GrpTok(2)),
             "pre-existing TokenConfig must survive rollback"
         );
     }
@@ -690,7 +690,7 @@ mod upgrade_tests {
         // Overwrite the TokenConfig with a sentinel value.
         let sentinel = Address::generate(&env);
         env.storage().persistent().set(
-            &StorageKey::Group(GroupKey::TokenConfig(1)),
+            &StorageKey::GrpTok(1),
             &TokenConfig {
                 token_address: sentinel.clone(),
                 token_decimals: 99,
@@ -703,7 +703,7 @@ mod upgrade_tests {
         let stored: TokenConfig = env
             .storage()
             .persistent()
-            .get(&StorageKey::Group(GroupKey::TokenConfig(1)))
+            .get(&StorageKey::GrpTok(1))
             .expect("TokenConfig must still exist");
         assert_eq!(
             stored.token_address, sentinel,
@@ -1038,7 +1038,7 @@ mod upgrade_tests {
 
         let custom_token = Address::generate(&env);
         env.storage().persistent().set(
-            &StorageKey::Group(GroupKey::TokenConfig(2)),
+            &StorageKey::GrpTok(2),
             &TokenConfig {
                 token_address: custom_token.clone(),
                 token_decimals: 6,
@@ -1052,7 +1052,7 @@ mod upgrade_tests {
         let config1: TokenConfig = env
             .storage()
             .persistent()
-            .get(&StorageKey::Group(GroupKey::TokenConfig(1)))
+            .get(&StorageKey::GrpTok(1))
             .expect("group 1 must have TokenConfig after migration");
         assert_eq!(config1.token_address, xlm);
         assert_eq!(config1.token_decimals, 7);
@@ -1061,7 +1061,7 @@ mod upgrade_tests {
         let config2: TokenConfig = env
             .storage()
             .persistent()
-            .get(&StorageKey::Group(GroupKey::TokenConfig(2)))
+            .get(&StorageKey::GrpTok(2))
             .expect("group 2 must have TokenConfig after migration");
         assert_eq!(config2.token_address, custom_token);
         assert_eq!(config2.token_decimals, 6);
@@ -1091,7 +1091,7 @@ mod upgrade_tests {
             assert!(
                 !env.storage()
                     .persistent()
-                    .has(&StorageKey::Group(GroupKey::TokenConfig(id))),
+                    .has(&StorageKey::GrpTok(id)),
                 "group {id} must not have TokenConfig before migration"
             );
         }
@@ -1104,7 +1104,7 @@ mod upgrade_tests {
             let config: TokenConfig = env
                 .storage()
                 .persistent()
-                .get(&StorageKey::Group(GroupKey::TokenConfig(id)))
+                .get(&StorageKey::GrpTok(id))
                 .unwrap_or_else(|| panic!("group {id} must have TokenConfig after migration"));
             assert_eq!(config.token_address, xlm,
                 "group {id} must have the XLM token address after migration");
@@ -1137,7 +1137,7 @@ mod upgrade_tests {
 
         let custom_token = Address::generate(&env);
         env.storage().persistent().set(
-            &StorageKey::Group(GroupKey::TokenConfig(2)),
+            &StorageKey::GrpTok(2),
             &TokenConfig {
                 token_address: custom_token.clone(),
                 token_decimals: 6,
@@ -1157,14 +1157,14 @@ mod upgrade_tests {
         assert!(
             !env.storage()
                 .persistent()
-                .has(&StorageKey::Group(GroupKey::TokenConfig(1))),
+                .has(&StorageKey::GrpTok(1)),
             "group 1 backfilled TokenConfig must be removed after rollback"
         );
         // - Group 2's pre-existing config must be preserved.
         let preserved: TokenConfig = env
             .storage()
             .persistent()
-            .get(&StorageKey::Group(GroupKey::TokenConfig(2)))
+            .get(&StorageKey::GrpTok(2))
             .expect("group 2 pre-existing TokenConfig must survive rollback");
         assert_eq!(preserved.token_address, custom_token,
             "group 2 must retain its original token address after rollback");
@@ -1172,7 +1172,7 @@ mod upgrade_tests {
         assert!(
             !env.storage()
                 .persistent()
-                .has(&StorageKey::Group(GroupKey::TokenConfig(3))),
+                .has(&StorageKey::GrpTok(3)),
             "group 3 backfilled TokenConfig must be removed after rollback"
         );
     }

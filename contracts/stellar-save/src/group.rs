@@ -8,7 +8,7 @@ pub const MAX_MEMBERS: u32 = crate::constants::MAX_MEMBERS;
 
 /// Configuration for the token used by a savings group.
 ///
-/// Stored separately from `Group` under `GroupKey::TokenConfig(group_id)` to
+/// Stored separately from `Group` under `StorageKey::GrpTok(group_id)` to
 /// preserve backward compatibility with existing serialized groups.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]

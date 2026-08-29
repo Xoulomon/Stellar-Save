@@ -1,4 +1,10 @@
 import { z } from 'zod';
+import {
+  isValidPositiveNumber,
+  isValidNumberInRange,
+  isValidStringLength,
+  commonValidators,
+} from '../lib/validation';
 
 /**
  * Zod validation schema for group creation
@@ -30,44 +36,22 @@ const VALID_CYCLE_DURATIONS = [604800, 1209600, 2592000]; // 1 week, 2 weeks, 1 
 export const createGroupFormSchema = z.object({
   name: z
     .string()
-    .min(GROUP_NAME_MIN, `Group name must be at least ${GROUP_NAME_MIN} characters`)
-    .max(GROUP_NAME_MAX, `Group name must be no more than ${GROUP_NAME_MAX} characters`)
-    .trim(),
+    .trim()
+    .refine(
+      (val) => isValidStringLength(val, GROUP_NAME_MIN, GROUP_NAME_MAX),
+      `Group name must be between ${GROUP_NAME_MIN} and ${GROUP_NAME_MAX} characters`,
+    ),
 
-  description: z
-    .string()
-    .min(1, 'Description is required')
-    .max(GROUP_DESCRIPTION_MAX, `Description must be no more than ${GROUP_DESCRIPTION_MAX} characters`)
-    .trim(),
+  description: commonValidators.nonEmptyString(GROUP_DESCRIPTION_MAX, 'Description'),
 
-  imageUrl: z
-    .string()
-    .url('Image URL must be a valid URL')
-    .optional()
-    .or(z.literal('')),
+  imageUrl: commonValidators.url,
 
   contributionAmount: z
     .string()
+    .refine(isValidPositiveNumber, 'Contribution amount must be a positive number')
     .refine(
-      (val) => {
-        const num = parseFloat(val);
-        return !isNaN(num) && num > 0;
-      },
-      'Contribution amount must be a positive number',
-    )
-    .refine(
-      (val) => {
-        const num = parseFloat(val);
-        return num >= MIN_CONTRIBUTION_XLM;
-      },
-      `Contribution amount must be at least ${MIN_CONTRIBUTION_XLM} XLM`,
-    )
-    .refine(
-      (val) => {
-        const num = parseFloat(val);
-        return num <= MAX_CONTRIBUTION_XLM;
-      },
-      `Contribution amount must not exceed ${MAX_CONTRIBUTION_XLM} XLM`,
+      (val) => isValidNumberInRange(val, MIN_CONTRIBUTION_XLM, MAX_CONTRIBUTION_XLM),
+      `Contribution amount must be between ${MIN_CONTRIBUTION_XLM} and ${MAX_CONTRIBUTION_XLM} XLM`,
     ),
 
   cycleDuration: z
@@ -80,10 +64,7 @@ export const createGroupFormSchema = z.object({
   maxMembers: z
     .string()
     .refine(
-      (val) => {
-        const num = parseInt(val, 10);
-        return !isNaN(num) && num >= MIN_MEMBERS && num <= MAX_MEMBERS_LIMIT;
-      },
+      (val) => isValidNumberInRange(val, MIN_MEMBERS, MAX_MEMBERS_LIMIT),
       `Maximum members must be between ${MIN_MEMBERS} and ${MAX_MEMBERS_LIMIT}`,
     ),
 
@@ -105,8 +86,7 @@ export const createGroupFormSchema = z.object({
     .refine(
       (val) => {
         if (!val) return true;
-        const n = parseFloat(val);
-        return !isNaN(n) && n >= 0 && n <= 100;
+        return isValidNumberInRange(val, 0, 100);
       },
       'Premium must be between 0 and 100 %',
     ),
@@ -157,10 +137,7 @@ export type GroupData = z.infer<typeof groupDataSchema>;
 export const fieldValidators = {
   name: (value: string) => {
     try {
-      z.string()
-        .min(GROUP_NAME_MIN)
-        .max(GROUP_NAME_MAX)
-        .parse(value);
+      createGroupFormSchema.shape.name.parse(value);
       return null;
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -172,10 +149,7 @@ export const fieldValidators = {
 
   description: (value: string) => {
     try {
-      z.string()
-        .min(1)
-        .max(GROUP_DESCRIPTION_MAX)
-        .parse(value);
+      createGroupFormSchema.shape.description.parse(value);
       return null;
     } catch (error) {
       if (error instanceof z.ZodError) {

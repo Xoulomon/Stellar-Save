@@ -63,7 +63,7 @@ fn guess() {
     // Now we test a wrong guess but the user has no funds so  we get an error
     assert_eq!(
         client.try_guess(&3, &bob).unwrap_err(),
-        Ok(Error::FailedToTransferFromGuesser)
+        Ok(Error::TransferFailed)
     );
 
     // Now we test a correct guess, the balance should go up by the initial 1 XLM + the 1 XLM from the contract
@@ -72,7 +72,7 @@ fn guess() {
 
     assert_eq!(
         client.try_guess(&4, &alice).unwrap_err(),
-        Ok(Error::NoBalanceToTransfer)
+        Ok(Error::InsufficientBalance)
     );
 }
 
@@ -119,6 +119,21 @@ fn reset_and_guess() {
     // Guess again, this should be correct now
     assert!(client.guess(&10, &alice));
 }
+
+#[test]
+fn test_optimized_storage_and_funds_flow() {
+    let env = &Env::default();
+    let (admin, sac, client) = init_test(env);
+    env.mock_all_auths();
+
+    // Add funds using optimized single-read require_admin path
+    client.add_funds(&xlm::to_stroops(3));
+    assert_eq!(sac.balance(&client.address), xlm::to_stroops(4));
+
+    // Verify admin query is consistent
+    assert_eq!(client.admin(), Some(admin.clone()));
+}
+
 
 fn set_caller<T>(client: &GuessTheNumberClient, fn_name: &str, caller: &Address, args: T)
 where

@@ -5,7 +5,7 @@ module.exports = {
   setupFiles: ['./test/setup.ts'],
   moduleFileExtensions: ['ts', 'js'],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.test.json' }],
   },
   testTimeout: 30000,
 };

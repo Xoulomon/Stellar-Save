@@ -43,7 +43,7 @@ const JoinViaInvite: React.FC = () => {
       // await joinGroup({ inviteCode, member: activeAddress });
       await new Promise((resolve) => setTimeout(resolve, 1500));
       setJoined(true);
-      
+
       // Navigate to the group detail page
       // In production, you'd get the groupId from the backend after decoding inviteCode
       setTimeout(() => navigate('/groups'), 1500);

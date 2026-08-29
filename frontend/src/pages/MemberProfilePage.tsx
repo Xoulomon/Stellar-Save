@@ -14,9 +14,16 @@ import {
 import { useParams } from 'react-router-dom';
 
 import { BadgeGallery } from '../components/BadgeGallery';
+<<<<<<< HEAD
 import { Spinner } from '../components/Spinner';
 import { StreakDisplay } from '../components/StreakDisplay';
 import { UserStats } from '../components/UserStats';
+=======
+import { LoadingState } from '../components/LoadingState';
+import { ErrorState } from '../components/ErrorState';
+import { useMemberProfile } from '../hooks/useMemberProfile';
+import { useMemberBadges } from '../hooks/useMemberBadges';
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import { useClipboard } from '../hooks/useClipboard';
 import { useMemberBadges } from '../hooks/useMemberBadges';
 import { useMemberProfile } from '../hooks/useMemberProfile';
@@ -59,13 +66,9 @@ export default function MemberProfilePage() {
       subtitle="Contribution history and reputation"
       footerText="Stellar Save — Built for transparent, on-chain savings"
     >
-      {isLoading && (
-        <Box sx={{ py: 8, textAlign: 'center' }}>
-          <Spinner size="lg" />
-        </Box>
-      )}
+      {isLoading && <LoadingState message="Loading member profile…" />}
 
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && <ErrorState message={error} />}
 
       {!isLoading && !error && !profile && (
         <Alert severity="warning">Member not found.</Alert>

@@ -11,6 +11,13 @@ import { SearchBar } from '../components/SearchBar';
 import { GroupCardSkeleton } from '../components/Skeleton/GroupCardSkeleton';
 import { ToastProvider } from '../components/Toast/ToastProvider';
 import { useToast } from '../components/Toast/useToast';
+<<<<<<< HEAD
+=======
+import { Button } from '../components/Button';
+import { GroupCardSkeleton } from '../components/Skeleton/GroupCardSkeleton';
+import { EmptyState } from '../components/EmptyState/EmptyState';
+import { ErrorState } from '../components/ErrorState';
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import { useDiscoveryFeed } from '../hooks/useDiscoveryFeed';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { ROUTES } from '../routing/constants';
@@ -107,10 +114,7 @@ function BrowseGroupsContent() {
         <Stack spacing={2}>
           <div aria-live="polite" aria-atomic="true">
             {error && (
-              <div className="browse-groups-error" role="alert">
-                <p>{error}</p>
-                <Button onClick={refresh}>Retry</Button>
-              </div>
+              <ErrorState message={error} onRetry={refresh} />
             )}
           </div>
 

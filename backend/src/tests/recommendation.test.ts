@@ -37,7 +37,7 @@ async function runTests() {
 
   // Test Collaborative filtering
   console.log('Testing collaborative filtering...');
-  // user1 joined group 1. user2 joined group 1 and 2. 
+  // user1 joined group 1. user2 joined group 1 and 2.
   // user1 and user2 are similar (both joined 1).
   // user1 should be recommended group 2.
   const collabRecs = engine.getRecommendations('user1', 'collaborative');

@@ -41,6 +41,16 @@ export type {
 // ── Low-level helpers (kept for backward compatibility) ───────────────────────
 export { server, CONTRACT_ID } from './contractClient';
 
+// ── Stellar Horizon service (wraps @stellar/stellar-sdk Horizon calls) ────────
+export { stellarService, StellarService } from './stellarService';
+export type {
+  AccountBalance,
+  AccountInfo,
+  HorizonPaymentRecord,
+  FetchPaymentsOptions,
+  NetworkName,
+} from './stellarService';
+
 // ── Event service ─────────────────────────────────────────────────────────────
 export type {
   GroupCreatedEvent,
@@ -52,3 +62,13 @@ export type {
   EventFilter,
 } from '../types/events';
 export { EventService, eventService } from './EventService';
+
+// ── Shared validation utilities ───────────────────────────────────────────────
+export * as validation from './validation';
+
+// ── Group filtering predicates ────────────────────────────────────────────────
+export * from './filters';
+
+// ── Clipboard & share-link helpers ───────────────────────────────────────────
+export { copyToClipboard, shareOrCopy, isClipboardSupported, isShareSupported } from './clipboard';
+export type { ShareData, ShareResult } from './clipboard';

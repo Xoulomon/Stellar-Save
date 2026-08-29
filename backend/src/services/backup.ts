@@ -7,6 +7,7 @@ import {
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { config } from '../config';
+import { logger } from '../logger';
 
 export interface BackupResult {
   key: string;
@@ -53,7 +54,7 @@ export class BackupService {
    * and return metadata about the backup.
    */
   async runBackup(): Promise<BackupResult> {
-    console.log('[BackupService] Running pg_dump...');
+    logger.info('[BackupService] Running pg_dump...');
     const data = await this.pgDump();
     const timestamp = new Date();
     const key = `backups/stellar-save-${formatTimestamp(timestamp)}.dump`;
@@ -61,7 +62,7 @@ export class BackupService {
     await this.uploadToS3(data, key);
 
     const checksum = crypto.createHash('sha256').update(data).digest('hex');
-    console.log(
+    logger.info(
       `[BackupService] Backup complete — s3://${this.bucket}/${key} (${data.length} bytes)`
     );
     return { key, sizeBytes: data.length, timestamp, checksum };
@@ -80,13 +81,13 @@ export class BackupService {
       const ts = this.parseKeyTimestamp(key);
       if (ts && ts.getTime() < cutoff) {
         await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
-        console.log(`[BackupService] Deleted expired backup: ${key}`);
+        logger.info(`[BackupService] Deleted expired backup: ${key}`);
         deleted++;
       }
     }
 
     if (deleted > 0) {
-      console.log(
+      logger.info(
         `[BackupService] Retention policy applied — deleted ${deleted} backup(s) older than ${this.retentionDays} days`
       );
     }
@@ -127,7 +128,7 @@ export class BackupService {
         const msg = chunk.toString().trim();
         // pg_dump writes progress notices to stderr; only log real errors
         if (msg && !msg.startsWith('pg_dump: last built-in')) {
-          console.error('[pg_dump stderr]', msg);
+          logger.error('[pg_dump stderr]', msg);
         }
       });
 

@@ -1,6 +1,7 @@
 import { Client } from '@elastic/elasticsearch';
 import { Group, Member, Transaction } from './models';
 import { config } from './config';
+import { logger } from './logger';
 
 export class SearchService {
   private client: Client;
@@ -20,10 +21,10 @@ export class SearchService {
     try {
       await this.client.ping();
       this.isConnected = true;
-      console.log('Connected to Elasticsearch');
+      logger.info('Connected to Elasticsearch');
       await this.createIndices();
     } catch (error) {
-      console.error('Elasticsearch connection failed:', error);
+      logger.error('Elasticsearch connection failed:', error);
       this.isConnected = false;
     }
   }
@@ -136,7 +137,7 @@ export class SearchService {
 
   async globalSearch(query: string) {
     if (!this.isConnected) return { groups: [], members: [], transactions: [] };
-    
+
     const [groups, members, transactions] = await Promise.all([
       this.searchGroups(query),
       this.searchMembers(query),

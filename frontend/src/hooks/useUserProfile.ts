@@ -1,6 +1,13 @@
+<<<<<<< HEAD
 import { Horizon } from '@stellar/stellar-sdk';
 import { useState, useEffect } from 'react';
 
+=======
+import { useState, useEffect } from 'react';
+
+import { stellarService } from '../lib/stellarService';
+import type { HorizonPaymentRecord } from '../lib/stellarService';
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import { useWallet } from './useWallet';
 
 import type { Transaction } from '../types/transaction';
@@ -22,43 +29,19 @@ export interface UserProfile {
   timeline: Transaction[];
 }
 
-interface HorizonRecord {
-  id?: string;
-  transaction_hash?: string;
-  amount?: string;
-  source_amount?: string;
-  sent_amount?: string;
-  total_sent_amount?: string;
-  from?: string;
-  type?: string;
-  asset_type?: string;
-  asset_code?: string;
-  asset?: { code?: string };
-  created_at?: string;
-}
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-function getHorizonServer(network?: string) {
-  if (network === 'PUBLIC' || network === 'MAINNET') {
-    return new Horizon.Server('https://horizon.stellar.org');
-  }
-
-  if (network === 'testnet' || network === 'TESTNET') {
-    return new Horizon.Server('https://horizon-testnet.stellar.org');
-  }
-
-  return new Horizon.Server('https://horizon-testnet.stellar.org');
-}
-
-function parseAmount(value: string | number | undefined) {
-  if (value === undefined || value === null) {
-    return 0;
-  }
-
+function parseAmount(value: string | number | undefined): number {
+  if (value === undefined || value === null) return 0;
   return Number(value.toString()) || 0;
 }
 
-function parseHorizonRecord(record: HorizonRecord, address: string): Transaction | null {
-  const amount = record.amount ?? record.source_amount ?? record.sent_amount ?? record.total_sent_amount ?? '0';
+function parseHorizonRecord(
+  record: HorizonPaymentRecord,
+  address: string,
+): Transaction | null {
+  const amount =
+    record.amount ?? '0';
   const parsedAmount = parseAmount(amount);
 
   if (parsedAmount === 0 && record.type !== 'account_merge') {
@@ -67,9 +50,10 @@ function parseHorizonRecord(record: HorizonRecord, address: string): Transaction
 
   const isOutgoing = record.from?.toString() === address;
 
-  const assetCode = record.asset_type === 'native'
-    ? 'XLM'
-    : record.asset_code || record.asset?.code || 'UNKNOWN';
+  const assetCode =
+    record.asset_type === 'native'
+      ? 'XLM'
+      : record.asset_code ?? 'UNKNOWN';
 
   const signedAmount = `${isOutgoing ? '-' : '+'}${Math.abs(parsedAmount)}`;
 
@@ -77,37 +61,53 @@ function parseHorizonRecord(record: HorizonRecord, address: string): Transaction
     id: record.id || record.transaction_hash || `${record.transaction_hash}-${record.id}`,
     hash: record.transaction_hash || record.id || '',
     createdAt: record.created_at || new Date().toISOString(),
-    type: ['payment', 'path_payment_strict_receive', 'path_payment_strict_send'].includes(record.type)
+    type: ['payment', 'path_payment_strict_receive', 'path_payment_strict_send'].includes(
+      record.type ?? '',
+    )
       ? 'payment'
       : 'other',
     amount: signedAmount,
     assetCode,
-    from: record.from || 'Unknown',
-    to: record.to || 'Unknown',
-    memo: record.transaction_memo || record.memo || '',
+    from: record.from ?? 'Unknown',
+    to: (record as Record<string, unknown>)['to'] as string ?? 'Unknown',
+    memo: (record as Record<string, unknown>)['transaction_memo'] as string ?? record.memo ?? '',
     status: 'success',
     fee: '0.0000000',
   };
 }
 
 function computeStats(address: string, timeline: Transaction[]): UserStats {
-  const contributions = timeline.filter((tx) => tx.from === address && Number(tx.amount) < 0);
-  const payouts = timeline.filter((tx) => tx.to === address && Number(tx.amount) > 0);
+  const contributions = timeline.filter(
+    (tx) => tx.from === address && Number(tx.amount) < 0,
+  );
+  const payouts = timeline.filter(
+    (tx) => tx.to === address && Number(tx.amount) > 0,
+  );
 
-  const totalContributed = contributions.reduce((sum, tx) => sum + Math.abs(Number(tx.amount)), 0);
-  const totalReceived = payouts.reduce((sum, tx) => sum + Math.abs(Number(tx.amount)), 0);
+  const totalContributed = contributions.reduce(
+    (sum, tx) => sum + Math.abs(Number(tx.amount)),
+    0,
+  );
+  const totalReceived = payouts.reduce(
+    (sum, tx) => sum + Math.abs(Number(tx.amount)),
+    0,
+  );
 
-  const groupsJoined = new Set(contributions.filter((tx) => tx.to).map((tx) => tx.to)).size;
+  const groupsJoined = new Set(
+    contributions.filter((tx) => tx.to).map((tx) => tx.to),
+  ).size;
+
   const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
   const activeGroups = new Set(
     contributions
       .filter((tx) => new Date(tx.createdAt).getTime() >= cutoff)
       .filter((tx) => tx.to)
-      .map((tx) => tx.to)
+      .map((tx) => tx.to),
   ).size;
 
   const completedCycles = payouts.length;
-  const averageContribution = contributions.length > 0 ? totalContributed / contributions.length : 0;
+  const averageContribution =
+    contributions.length > 0 ? totalContributed / contributions.length : 0;
 
   return {
     totalContributed,
@@ -119,6 +119,13 @@ function computeStats(address: string, timeline: Transaction[]): UserStats {
   };
 }
 
+// ── Hook ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Fetches a user's on-chain transaction history and computes their stats.
+ *
+ * Uses `stellarService` for all Horizon interactions — no direct SDK imports.
+ */
 export const useUserProfile = (address?: string) => {
   const { network } = useWallet();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -140,19 +147,25 @@ export const useUserProfile = (address?: string) => {
       setError(null);
 
       try {
-        const server = getHorizonServer(network);
-        const page = await server.payments().forAccount(address).order('desc').limit(100).call();
-        const records = page.records || [];
+        const records = await stellarService.fetchPayments(
+          address,
+          network ?? 'TESTNET',
+          { limit: 100, order: 'desc' },
+        );
 
         const timeline = records
-          .map((record: any) => parseHorizonRecord(record, address))
-          .filter((tx: Transaction | null): tx is Transaction => tx !== null)
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          .map((record: HorizonPaymentRecord) => parseHorizonRecord(record, address))
+          .filter((tx): tx is Transaction => tx !== null)
+          .sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          );
 
         const stats = computeStats(address, timeline);
-        const joinDate = timeline.length > 0
-          ? new Date(timeline[timeline.length - 1].createdAt)
-          : new Date();
+        const joinDate =
+          timeline.length > 0
+            ? new Date(timeline[timeline.length - 1].createdAt)
+            : new Date();
 
         if (!isCancelled) {
           setProfile({
@@ -166,7 +179,9 @@ export const useUserProfile = (address?: string) => {
         }
       } catch (err) {
         if (!isCancelled) {
-          setError(err instanceof Error ? err.message : 'Unable to fetch profile data');
+          setError(
+            err instanceof Error ? err.message : 'Unable to fetch profile data',
+          );
           setIsLoading(false);
         }
       }

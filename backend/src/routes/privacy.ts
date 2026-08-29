@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { jwtAuthMiddleware, AuthenticatedRequest } from '../auth_middleware';
 import {
   exportUserData,
@@ -6,6 +6,7 @@ import {
   createPrivacyRequest,
   completePrivacyRequest,
 } from '../privacy_service';
+import { AppError } from '../lib/errors';
 import { logger } from '../logger';
 
 /**
@@ -30,7 +31,7 @@ export function createPrivacyRouter(): Router {
    * Response is served as application/json with a content-disposition header
    * so browsers treat it as a file download.
    */
-  router.get('/export', async (req: AuthenticatedRequest, res: Response) => {
+  router.get('/export', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const walletAddress = req.walletAddress!;
     let requestId: string | undefined;
 
@@ -48,7 +49,7 @@ export function createPrivacyRouter(): Router {
     } catch (error) {
       if (requestId) await completePrivacyRequest(requestId, 'failed').catch(() => {});
       logger.error('Privacy export failed', { walletAddress, error: String(error) });
-      return res.status(500).json({ error: 'Failed to export data' });
+      return next(new AppError('PRIVACY_EXPORT_FAILED', 'Failed to export data', 500));
     }
   });
 
@@ -59,7 +60,7 @@ export function createPrivacyRouter(): Router {
    * This action is irreversible. The request itself is retained in PrivacyRequest
    * as an audit trail (legal obligation).
    */
-  router.post('/delete', async (req: AuthenticatedRequest, res: Response) => {
+  router.post('/delete', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const walletAddress = req.walletAddress!;
     let requestId: string | undefined;
 
@@ -76,7 +77,7 @@ export function createPrivacyRouter(): Router {
     } catch (error) {
       if (requestId) await completePrivacyRequest(requestId, 'failed').catch(() => {});
       logger.error('Privacy deletion failed', { walletAddress, error: String(error) });
-      return res.status(500).json({ error: 'Failed to delete data' });
+      return next(new AppError('PRIVACY_DELETE_FAILED', 'Failed to delete data', 500));
     }
   });
 
@@ -85,7 +86,7 @@ export function createPrivacyRouter(): Router {
    *
    * Returns the history of privacy requests (export/deletion) for the authenticated wallet.
    */
-  router.get('/requests', async (req: AuthenticatedRequest, res: Response) => {
+  router.get('/requests', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const { prisma } = await import('../prisma_client');
       const requests = await prisma.privacyRequest.findMany({
@@ -95,7 +96,7 @@ export function createPrivacyRouter(): Router {
       return res.status(200).json({ requests });
     } catch (error) {
       logger.error('Error fetching privacy requests', { error: String(error) });
-      return res.status(500).json({ error: 'Failed to fetch privacy requests' });
+      return next(new AppError('PRIVACY_REQUESTS_FETCH_FAILED', 'Failed to fetch privacy requests', 500));
     }
   });
 

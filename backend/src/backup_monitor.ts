@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { BackupService } from './backup_service';
 import { BackupAlert } from './models';
 import { fetchWithCorrelationId } from './lib/http';
+import { logger } from './logger';
 
 export interface MonitorConfig {
   maxBackupAgeMs: number;       // alert if latest backup is older than this (default: 25h)
@@ -27,7 +28,7 @@ export class BackupMonitor {
 
   start(): void {
     this.timer = setInterval(() => this.runChecks(), this.config.checkIntervalMs);
-    console.log('[BackupMonitor] Started, checking every', this.config.checkIntervalMs / 60000, 'min');
+    logger.info('[BackupMonitor] Started, checking every', this.config.checkIntervalMs / 60000, 'min');
   }
 
   stop(): void {
@@ -58,7 +59,7 @@ export class BackupMonitor {
     this.alerts.push(...newAlerts);
 
     for (const alert of newAlerts) {
-      console.warn(`[BackupMonitor] [${alert.level.toUpperCase()}] ${alert.message}`);
+      logger.warn(`[BackupMonitor] [${alert.level.toUpperCase()}] ${alert.message}`);
       await this.sendWebhook(alert);
     }
 
@@ -89,7 +90,7 @@ export class BackupMonitor {
         body: JSON.stringify(alert),
       });
     } catch (err) {
-      console.error('[BackupMonitor] Webhook delivery failed:', err);
+      logger.error('[BackupMonitor] Webhook delivery failed:', err);
     }
   }
 }

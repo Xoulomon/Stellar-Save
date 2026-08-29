@@ -13,6 +13,30 @@ stellar-save = { path = ".." }
 soroban-sdk = "23.0.3"
 arbitrary = { version = "1", features = ["derive"] }
 
+[[bin]]
+name = "fuzz_create_group"
+path = "fuzz_targets/fuzz_create_group.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_contribute"
+path = "fuzz_targets/fuzz_contribute.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_join_group"
+path = "fuzz_targets/fuzz_join_group.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_deposit_withdraw"
+path = "fuzz_targets/fuzz_deposit_withdraw.rs"
+test = false
+doc = false
+
 # Prevent this library from being built unless it is a fuzz target
 [profile.release]
 debug = true

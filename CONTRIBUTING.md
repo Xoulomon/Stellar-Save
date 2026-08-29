@@ -216,7 +216,7 @@ const ContributionCard = ({ amount, member, isPaid }: ContributionCardProps) => 
   - **LF** (`\n`) line endings (no CRLF)
   - **Final newline** inserted on save
   - **Trailing whitespace** trimmed automatically (except in Markdown `.md` files)
-  - **Indentation**: 4 spaces for Rust (`.rs`); 2 spaces for TypeScript (`.ts`, `.tsx`), JavaScript, JSON, Shell, TOML, YAML, and SQL
+  - **Indentation**: 4 spaces for Rust (`.rs`); 2 spaces for TypeScript (`.ts`, `.tsx`), JavaScript, JSON, CSS/SCSS, Shell, TOML, YAML, and SQL
 - Do not commit secrets, private keys, or `.env` files — `.gitignore` covers common cases but double-check before staging
 
 ---

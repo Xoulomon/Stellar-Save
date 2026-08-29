@@ -65,6 +65,15 @@ Tests join_group validation:
 - Payout position assignment (0-indexed, < max_members)
 - Member profile invariants
 
+### `fuzz_deposit_withdraw`
+Tests deposit and withdraw boundary conditions:
+- Zero and negative deposit rejection
+- Maximum u128 / i128 overflow protection
+- Withdraw overdraw bounds and balance tracking
+- Payout calculation scaling and pool invariants
+- Fee deduction basis point calculation bounds
+
+
 ## Edge Cases Discovered
 
 Document any edge cases or bugs found during fuzzing here:

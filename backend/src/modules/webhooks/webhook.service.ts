@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
 import * as crypto from 'crypto';
+import { logger } from '../../logger';
 
 @Injectable()
 export class WebhookService {
@@ -32,22 +33,22 @@ export class WebhookService {
     const secret = data.secret || crypto.randomBytes(32).toString('hex');
 
     // TODO: Add Prisma later
-    console.log(`Webhook registered for user ${userId}: ${data.url}`);
+    logger.info(`Webhook registered for user ${userId}: ${data.url}`);
     return { id: 'temp-webhook-id', ...data, secret };
   }
 
   async getUserWebhooks(userId: string) {
-    console.log(`Fetching webhooks for user ${userId}`);
+    logger.info(`Fetching webhooks for user ${userId}`);
     return [];
   }
 
   async deleteWebhook(userId: string, webhookId: string) {
-    console.log(`Deleting webhook ${webhookId} for user ${userId}`);
+    logger.info(`Deleting webhook ${webhookId} for user ${userId}`);
     return { success: true };
   }
 
   async dispatchEvent(event: string, payload: any) {
-    console.log(`Event dispatched: ${event}`, payload);
+    logger.info(`Event dispatched: ${event}`, payload);
     // TODO: Implement real logic with Prisma later
   }
 }

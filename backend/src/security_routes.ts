@@ -1,6 +1,6 @@
 /**
  * Security API Routes (Issues #1102, #1103, #1104, #1105)
- * 
+ *
  * Example routes demonstrating security feature usage.
  */
 

@@ -15,7 +15,11 @@ import {
 import React, { useState } from 'react';
 
 import { QRCode } from './QRCode';
+<<<<<<< HEAD
 import { useClipboard } from '../hooks/useClipboard';
+=======
+import { shareOrCopy } from '../lib/clipboard';
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import {
   generateInviteLink,
   buildShareUrls,
@@ -68,8 +72,8 @@ export const InviteModal: React.FC<InviteModalProps> = ({ open, onClose, groupId
   };
 
   const handleNativeShare = async () => {
-    if (navigator.share) {
-      await navigator.share({ title: `Join ${groupName}`, url: inviteLink });
+    const result = await shareOrCopy({ title: `Join ${groupName}`, url: inviteLink });
+    if (result !== 'unsupported') {
       trackInviteShare(groupId);
       setShareCount(getInviteShareCount(groupId));
     }

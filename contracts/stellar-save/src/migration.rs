@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, symbol_short, Address, Env, Symbol, Vec};
+use soroban_sdk::{contracttype, symbol_short, Address, BytesN, Env, Symbol, Vec};
 use crate::{
     error::StellarSaveError,
     storage::{StorageKeyBuilder, STORAGE_VERSION},
@@ -337,6 +337,67 @@ mod tests {
         // Should not need migration (already newer)
         assert!(!is_migration_needed(&env));
     }
+
+    // ── Issue #72: Contract version guard tests ──────────────────────────────
+
+    #[test]
+    fn test_initialize_contract_version() {
+        let env = Env::default();
+
+        // Initially unset → defaults to 0
+        assert_eq!(get_contract_version(&env), 0);
+
+        // Initialise
+        initialize_contract_version(&env);
+        assert_eq!(get_contract_version(&env), CONTRACT_VERSION);
+    }
+
+    #[test]
+    fn test_initialize_contract_version_idempotent() {
+        let env = Env::default();
+        initialize_contract_version(&env);
+        let first = get_contract_version(&env);
+        initialize_contract_version(&env); // second call must be a no-op
+        assert_eq!(first, get_contract_version(&env));
+    }
+
+    #[test]
+    fn test_upgrade_guard_rejects_same_version() {
+        let env = Env::default();
+        initialize_contract_version(&env);
+
+        // Attempting to "upgrade" to the same version must fail
+        let result = require_upgrade_version_guard(&env, CONTRACT_VERSION);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_upgrade_guard_rejects_older_version() {
+        let env = Env::default();
+        set_contract_version(&env, 5);
+
+        // Any version ≤ 5 must be rejected
+        assert!(require_upgrade_version_guard(&env, 5).is_err());
+        assert!(require_upgrade_version_guard(&env, 3).is_err());
+        assert!(require_upgrade_version_guard(&env, 0).is_err());
+    }
+
+    #[test]
+    fn test_upgrade_guard_accepts_newer_version() {
+        let env = Env::default();
+        initialize_contract_version(&env);
+
+        // A strictly higher version must be accepted
+        let result = require_upgrade_version_guard(&env, CONTRACT_VERSION + 1);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_set_and_get_contract_version() {
+        let env = Env::default();
+        set_contract_version(&env, 42);
+        assert_eq!(get_contract_version(&env), 42);
+    }
 }
 
 // # Migration Framework
@@ -366,6 +427,19 @@ pub const V2: u32 = 2;
 
 /// Latest schema version understood by this binary.
 pub const CURRENT_SCHEMA_VERSION: u32 = V2;
+
+// ─── Contract binary version (upgrade guard — Issue #72) ─────────────────────
+
+/// On-chain contract binary version, incremented on every upgrade.
+///
+/// This is distinct from `STORAGE_VERSION` / `CURRENT_SCHEMA_VERSION` which
+/// track the storage *schema*.  The binary version is written to persistent
+/// storage at init time and checked by `require_upgrade_version_guard` before
+/// any upgrade is accepted, preventing accidental downgrade or double-upgrade.
+pub const CONTRACT_VERSION: u32 = 1;
+
+/// Persistent storage key for the on-chain contract binary version.
+pub const CONTRACT_VERSION_KEY: Symbol = symbol_short!("CON_VER");
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -422,6 +496,97 @@ pub fn load_migration_record(env: &Env) -> Option<MigrationRecord> {
     env.storage()
         .persistent()
         .get::<soroban_sdk::Symbol, MigrationRecord>(&migration_record_key(env))
+}
+
+// ─── Contract binary version guard (Issue #72) ───────────────────────────────
+
+/// Returns the on-chain contract binary version (defaults to 0 if unset).
+pub fn get_contract_version(env: &Env) -> u32 {
+    env.storage()
+        .persistent()
+        .get::<Symbol, u32>(&CONTRACT_VERSION_KEY)
+        .unwrap_or(0)
+}
+
+/// Persists the contract binary version.
+pub fn set_contract_version(env: &Env, version: u32) {
+    env.storage()
+        .persistent()
+        .set(&CONTRACT_VERSION_KEY, &version);
+}
+
+/// Initialises the on-chain contract binary version on first deployment.
+///
+/// No-op if the key is already present (prevents overwriting during upgrades).
+pub fn initialize_contract_version(env: &Env) {
+    if !env
+        .storage()
+        .persistent()
+        .has(&CONTRACT_VERSION_KEY)
+    {
+        set_contract_version(env, CONTRACT_VERSION);
+    }
+}
+
+/// Enforces the upgrade version guard.
+///
+/// Returns `Err` if `new_version` is not strictly greater than the current
+/// on-chain version, preventing accidental downgrade or double-upgrade.
+///
+/// # Errors
+/// - `StellarSaveError::InvalidState` – `new_version <= current_version`
+pub fn require_upgrade_version_guard(
+    env: &Env,
+    new_version: u32,
+) -> Result<(), crate::error::StellarSaveError> {
+    let current = get_contract_version(env);
+    if new_version <= current {
+        return Err(crate::error::StellarSaveError::InvalidState);
+    }
+    Ok(())
+}
+
+/// Executes a versioned contract upgrade:
+/// 1. Validates `new_version > current_version` (guard).
+/// 2. Writes the new Wasm hash via `env.deployer().update_current_contract_wasm`.
+/// 3. Persists the new version in storage.
+/// 4. Emits a `ContractUpgraded` event.
+///
+/// # Arguments
+/// * `env`         – Soroban environment
+/// * `admin`       – Must be the contract admin (required_auth enforced by caller)
+/// * `new_wasm`    – 32-byte Wasm hash of the new contract binary
+/// * `new_version` – Monotonically increasing version number (must be > current)
+///
+/// # Errors
+/// - `StellarSaveError::InvalidState` – version guard rejects the upgrade
+pub fn execute_upgrade(
+    env: &Env,
+    admin: Address,
+    new_wasm: soroban_sdk::BytesN<32>,
+    new_version: u32,
+) -> Result<(), crate::error::StellarSaveError> {
+    let old_version = get_contract_version(env);
+
+    // Guard: reject downgrade or double-upgrade
+    require_upgrade_version_guard(env, new_version)?;
+
+    // Apply the Wasm upgrade
+    env.deployer().update_current_contract_wasm(new_wasm);
+
+    // Persist the new version
+    set_contract_version(env, new_version);
+
+    // Emit upgrade event (centralised in events.rs — Issue #73)
+    crate::events::EventEmitter::emit_contract_upgraded(
+        env,
+        admin,
+        old_version,
+        new_version,
+        env.ledger().timestamp(),
+    );
+
+    Ok(())
 }
 
 // ─── Admin guard ─────────────────────────────────────────────────────────────

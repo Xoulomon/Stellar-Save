@@ -3,7 +3,13 @@ import { useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 import { Button } from '../components/Button';
+<<<<<<< HEAD
 import { GroupList } from '../components/GroupList';
+=======
+import { LoadingState } from '../components/LoadingState';
+import { ErrorState } from '../components/ErrorState';
+import { useGroupsQuery } from '../hooks/useGroupsQuery';
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import { StaleDataBanner } from '../components/StaleDataBanner';
 import { useGroupsQuery } from '../hooks/useGroupsQuery';
 import { ROUTES } from '../routing/constants';
@@ -64,11 +70,10 @@ export default function GroupsPage() {
 
           <StaleDataBanner isStale={isStale} fromCache={fromCache} onRefresh={refresh} />
 
-          {error && (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Typography color="error">{error}</Typography>
-              <Button variant="secondary" size="small" onClick={refresh}>Retry</Button>
-            </Stack>
+          {isLoading && <LoadingState message="Loading groups…" />}
+
+          {!isLoading && error && (
+            <ErrorState message={error} onRetry={refresh} />
           )}
 
           <GroupList

@@ -109,7 +109,7 @@ Edit `capacitor.config.ts` to modify:
 
 Currently using:
 - `@capacitor/core` - Core runtime
-- `@capacitor/splash-screen` - Splash screen
+- `@capacitor/app` - App lifecycle and deep-link events
 
 To add more plugins:
 ```bash

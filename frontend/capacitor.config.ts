@@ -8,12 +8,6 @@ const config: CapacitorConfig = {
     // Allow navigation to external URLs (for web fallback)
     allowNavigation: ['stellarsave.app', '*.stellarsave.app'],
   },
-  plugins: {
-    App: {
-      // Handle app links when app is in background/foreground
-      appUrlOpen: 'enabled',
-    },
-  },
 };
 
 export default config;

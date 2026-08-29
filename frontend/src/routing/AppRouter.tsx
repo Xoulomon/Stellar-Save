@@ -1,7 +1,15 @@
 import { Box } from '@mui/material';
 import { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+<<<<<<< HEAD
 
+=======
+import { Box } from '@mui/material';
+import { Skeleton } from '../components/Skeleton/Skeleton';
+import { RouteBoundary } from './RouteBoundary';
+import { routeConfig } from './routes';
+import { ProtectedRoute } from './ProtectedRoute';
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import { AdminRoute } from './AdminRoute';
 import { ROUTES } from './constants';
 import { ProtectedRoute } from './ProtectedRoute';
@@ -38,25 +46,25 @@ export function AppRouter() {
           let element: JSX.Element;
           if (route.adminOnly) {
             element = (
-              <RouteErrorBoundary>
+              <RouteBoundary>
                 <AdminRoute>
                   <Component />
                 </AdminRoute>
-              </RouteErrorBoundary>
+              </RouteBoundary>
             );
           } else if (route.protected) {
             element = (
-              <RouteErrorBoundary>
+              <RouteBoundary>
                 <ProtectedRoute>
                   <Component />
                 </ProtectedRoute>
-              </RouteErrorBoundary>
+              </RouteBoundary>
             );
           } else {
             element = (
-              <RouteErrorBoundary>
+              <RouteBoundary>
                 <Component />
-              </RouteErrorBoundary>
+              </RouteBoundary>
             );
           }
 

@@ -119,3 +119,49 @@ fn allowlist_approve_override_works() {
     client.approve(&user1, &user2, &transfer_amount, &1000);
     assert_eq!(client.allowance(&user1, &user2), transfer_amount);
 }
+
+#[test]
+#[should_panic]
+fn unauthorized_caller_cannot_allow_user() {
+    let e = create_env();
+    let (admin, manager, user1, user2) = setup_accounts(&e);
+    let initial_supply = 1_000_000;
+    let client = create_client(&e, &admin, &manager, &initial_supply);
+
+    // user1 (not admin/manager) attempts to allow user2
+    client.allow_user(&user2, &user1);
+}
+
+#[test]
+#[should_panic]
+fn unauthorized_caller_cannot_disallow_user() {
+    let e = create_env();
+    let (admin, manager, user1, user2) = setup_accounts(&e);
+    let initial_supply = 1_000_000;
+    let client = create_client(&e, &admin, &manager, &initial_supply);
+
+    // First allow user2
+    client.allow_user(&user2, &manager);
+    assert!(client.allowed(&user2));
+
+    // user1 (not admin/manager) attempts to disallow user2
+    client.disallow_user(&user2, &user1);
+}
+
+#[test]
+fn centralized_access_control_guards_work() {
+    let e = create_env();
+    let (admin, manager, user1, _user2) = setup_accounts(&e);
+    let initial_supply = 1_000_000;
+    let client = create_client(&e, &admin, &manager, &initial_supply);
+
+    e.as_contract(&client.address, || {
+        // Admin and manager should pass require_admin check
+        crate::require_admin(&e, &admin);
+        crate::require_admin(&e, &manager);
+
+        // Admin is allowlisted in constructor
+        crate::require_allowlisted(&e, &admin);
+    });
+}
+

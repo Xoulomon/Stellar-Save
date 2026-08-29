@@ -1,6 +1,7 @@
 import { ExportJob, ExportFormat, UserInteraction, UserPreference } from './models';
 import { EmailService } from './email_service';
 import { randomUUID } from 'crypto';
+import { logger } from './logger';
 
 export class ExportService {
   private jobs: Map<string, ExportJob> = new Map();
@@ -32,9 +33,9 @@ export class ExportService {
     };
 
     this.jobs.set(jobId, job);
-    
+
     // Trigger asynchronous processing
-    this.processJob(jobId, email).catch(console.error);
+    this.processJob(jobId, email).catch((err) => logger.error('export job failed', err));
 
     return jobId;
   }
@@ -80,7 +81,7 @@ export class ExportService {
 
   private convertToCSV(data: any): string {
     let csv = 'Type,ID,Value,Timestamp\n';
-    
+
     if (data.preferences) {
       csv += `Preference,${data.preferences.userId},${data.preferences.tags.join('|')},${Date.now()}\n`;
     }

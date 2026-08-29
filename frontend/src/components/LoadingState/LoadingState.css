@@ -1,0 +1,70 @@
+/* LoadingState — Issue #1464 */
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 16px;
+  min-height: 120px;
+}
+
+.loading-state--full-page {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(2px);
+  min-height: 100vh;
+}
+
+/* Respect prefers-color-scheme */
+@media (prefers-color-scheme: dark) {
+  .loading-state--full-page {
+    background-color: rgba(15, 23, 42, 0.85);
+  }
+}
+
+/* Spinner */
+.loading-state__spinner {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--color-primary, #6366f1);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: loading-state-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes loading-state-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Message */
+.loading-state__message {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary, #64748b);
+  text-align: center;
+}
+
+/* Reduced-motion: replace spin with pulse */
+@media (prefers-reduced-motion: reduce) {
+  .loading-state__spinner {
+    animation: loading-state-pulse 1.2s ease-in-out infinite;
+    border-top-color: var(--color-primary, #6366f1);
+  }
+
+  @keyframes loading-state-pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
+  }
+}

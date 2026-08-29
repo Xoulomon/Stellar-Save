@@ -1,11 +1,11 @@
 /**
- * Scheduled warehouse export job.
- * Wired up in main.ts / app startup when WAREHOUSE_EXPORT_ENABLED=true.
+ * Job scheduler for warehouse export.
+ * Separates job scheduling from handler logic.
  */
 import { S3Client } from '@aws-sdk/client-s3';
-import { WarehouseExportPipeline } from '../warehouse_export';
 import { logger } from '../logger';
 import { config } from '../config';
+import { WarehouseHandler } from './handlers/warehouse.handler';
 
 let timer: ReturnType<typeof setInterval> | null = null;
 
@@ -19,7 +19,7 @@ export function startWarehouseExportJob(opts: {
   const intervalMs = opts.intervalMs ?? 60 * 60 * 1000;
 
   const s3 = new S3Client({ region: opts.region || config.aws.region });
-  const pipeline = new WarehouseExportPipeline({
+  const handler = new WarehouseHandler({
     s3Client: s3,
     bucket,
     alertWebhook: opts.alertWebhook || config.backup.alertWebhookUrl,
@@ -27,8 +27,7 @@ export function startWarehouseExportJob(opts: {
 
   const run = async () => {
     try {
-      const result = await pipeline.run();
-      logger.info('[warehouse-job] Export completed', result);
+      await handler.execute();
     } catch (err) {
       logger.error('[warehouse-job] Export failed', err);
     }

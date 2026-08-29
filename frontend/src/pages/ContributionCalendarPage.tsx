@@ -1,7 +1,8 @@
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { ContributionCalendar } from '../components/ContributionCalendar';
-import { Spinner } from '../components/Spinner';
+import { LoadingState } from '../components/LoadingState';
+import { ErrorState } from '../components/ErrorState';
 import { useContributions } from '../hooks/useContributions';
 import { buildRoute } from '../routing/constants';
 import { AppCard, AppLayout } from '../ui';
@@ -22,13 +23,8 @@ export default function ContributionCalendarPage() {
       footerText="Stellar Save - Built for transparent, on-chain savings"
     >
       <AppCard>
-        {isLoading && <Spinner />}
-        {error && (
-          <div role="alert">
-            <p>{error}</p>
-            <button onClick={refresh}>Retry</button>
-          </div>
-        )}
+        {isLoading && <LoadingState message="Loading contributions…" />}
+        {error && <ErrorState message={error} onRetry={refresh} />}
         {!isLoading && !error && (
           <ContributionCalendar
             contributions={contributions}

@@ -1,6 +1,6 @@
 /**
  * Transaction Decoder Service for Stellar/Soroban (Issue #1102)
- * 
+ *
  * Provides human-readable transaction decoding, phishing protection,
  * and educational prompts for transaction signing.
  */
@@ -58,7 +58,7 @@ export class TransactionDecoderService {
   decodeTransaction(transactionXdr: string): DecodedTransaction {
     try {
       const tx = new Transaction(transactionXdr, this.getNetworkPassphrase());
-      
+
       const operations = tx.operations.map((op, idx) => this.decodeOperation(op, idx));
       const overallRiskLevel = this.calculateOverallRisk(operations);
       const warnings = this.collectWarnings(tx, operations);
@@ -101,7 +101,7 @@ export class TransactionDecoderService {
         const paymentOp = operation.body().paymentOp();
         const amount = paymentOp.amount().toString();
         const destination = paymentOp.destination().ed25519();
-        
+
         description = `Send ${this.stroopsToXlm(amount)} XLM to ${this.formatAddress(destination)}`;
         details.destination = this.formatAddress(destination);
         details.amount = amount;
@@ -128,7 +128,7 @@ export class TransactionDecoderService {
         const createOp = operation.body().createAccountOp();
         const destination = createOp.destination().ed25519();
         const startingBalance = createOp.startingBalance().toString();
-        
+
         description = `Create account ${this.formatAddress(destination)} with ${this.stroopsToXlm(startingBalance)} XLM`;
         details.destination = this.formatAddress(destination);
         details.startingBalance = this.stroopsToXlm(startingBalance);
@@ -139,17 +139,17 @@ export class TransactionDecoderService {
       case 'invokeHostFunction': {
         const invokeOp = operation.body().invokeHostFunctionOp();
         const hostFunction = invokeOp.hostFunction();
-        
+
         description = 'Execute smart contract function';
         details.functionType = hostFunction.switch().name;
-        
+
         // Extract contract address if available
         if (hostFunction.switch().name === 'hostFunctionTypeInvokeContract') {
           const contractAddress = invokeOp.auth();
           if (contractAddress && contractAddress.length > 0) {
             const addr = contractAddress[0].toString();
             details.contractAddress = addr;
-            
+
             if (this.isKnownContract(addr)) {
               const contract = KNOWN_CONTRACTS[addr];
               description = `Execute function on ${contract.name}`;
@@ -166,7 +166,7 @@ export class TransactionDecoderService {
       case 'changeTrust': {
         const trustOp = operation.body().changeTrustOp();
         const asset = trustOp.line();
-        
+
         description = `Modify trustline for asset`;
         details.asset = asset.switch().name;
         warnings.push('⚠️ This grants permission to hold a new asset');
@@ -184,7 +184,7 @@ export class TransactionDecoderService {
       case 'manageData': {
         const dataOp = operation.body().manageDataOp();
         const dataName = dataOp.dataName().toString();
-        
+
         description = `Manage account data: ${dataName}`;
         details.dataName = dataName;
         riskLevel = 'low';
@@ -209,7 +209,7 @@ export class TransactionDecoderService {
   /**
    * Validate transaction for unusual patterns and security issues
    */
-  validateTransaction(transactionXdr: string, expectedOrigin?: string): TransactionValidation {
+  validateTransaction(transactionXdr: string): TransactionValidation {
     const errors: string[] = [];
     const warnings: string[] = [];
     const riskFactors: string[] = [];
@@ -270,7 +270,7 @@ export class TransactionDecoderService {
     }
 
     // Check if origin is localhost (for development)
-    if (config.nodeEnv === 'development' && 
+    if (config.nodeEnv === 'development' &&
         (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
       return { valid: true };
     }

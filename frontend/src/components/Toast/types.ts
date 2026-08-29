@@ -1,4 +1,11 @@
-export type ToastType = 'success' | 'error' | 'warning' | 'info';
+/**
+ * Toast types — UI presentation layer.
+ * These types align with the shared NotificationSeverity from notifications/types.ts
+ */
+
+import type { NotificationSeverity } from '../../notifications/types';
+
+export type ToastType = NotificationSeverity;
 
 export interface ToastAction {
   label: string;

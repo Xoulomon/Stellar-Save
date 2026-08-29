@@ -91,3 +91,13 @@ Common causes:
 - **WASM hash mismatch** — the deployed WASM does not match the build artifact; possible supply-chain issue or wrong artifact used.
 - **Contract not found** — deployment may have failed silently; check the deploy job logs.
 - **Network/RPC error** — transient; re-run the verification workflow.
+
+## Contract Test Coverage Gate
+
+Smart contract coverage is formalized and enforced at 90%+ target across all contracts in `contracts/`.
+
+### Configuration & Baselines
+- **cargo-tarpaulin**: Configured via `tarpaulin.toml` with `fail-under = 90`.
+- **cargo-llvm-cov**: Configured via `contracts/cargo-llvm-cov.toml` and baseline tracked in `contracts/coverage-baseline.json`.
+- **Codecov Flag**: `contracts` status gate set to 90% in `codecov.yml`.
+

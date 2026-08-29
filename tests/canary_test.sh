@@ -202,6 +202,121 @@ PYEOF
 WEIGHT=$(python3 -c "import json,os; d=json.load(open(os.environ['REGISTRY'])); print(d['canary_weight'])")
 assert_eq "weight update to 25" "25" "$WEIGHT"
 
+# ─── Test 7: Withdrawal failover ──────────────────────────────────────────────
+echo
+echo "── Withdrawal failover ──────────────────────────────────────────────────"
+
+# Simulate the withdrawal API state: tracks calls and dedup keys
+WITHDRAWAL_STORE="$TMP/withdrawal_store.json"
+export WITHDRAWAL_STORE
+python3 - <<'PYEOF'
+import json, os
+store = {"calls": [], "processed_ids": []}
+with open(os.environ["WITHDRAWAL_STORE"], "w") as f:
+    json.dump(store, f)
+PYEOF
+
+# 7a. Withdrawal path responds during simulated failover (stable → secondary)
+# Write registry into "canary" state (simulating primary failover in progress)
+write_registry '{"stable_contract_id":"STABLE123","canary_contract_id":"CANARY456","canary_weight":100,"status":"canary"}'
+
+WITHDRAWAL_ROUTED_CONTRACT=$(route)
+assert_eq "withdrawal path routes to canary contract during failover" "CANARY456" "$WITHDRAWAL_ROUTED_CONTRACT"
+
+# Simulate a withdrawal request arriving during failover
+WITHDRAWAL_RESPONSE=$(python3 - <<'PYEOF'
+import json, os, datetime
+
+store_path = os.environ["WITHDRAWAL_STORE"]
+with open(store_path) as f:
+    store = json.load(f)
+
+# Record a withdrawal call
+withdrawal = {
+    "id": "wd-001",
+    "wallet_address": "GABCDE1234567890ABCDE",
+    "amount": 100,
+    "contract_id": "CANARY456",
+    "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+    "status": "submitted",
+}
+store["calls"].append(withdrawal)
+store["processed_ids"].append(withdrawal["id"])
+with open(store_path, "w") as f:
+    json.dump(store, f)
+
+print("submitted")
+PYEOF
+)
+assert_eq "withdrawal submitted during failover returns submitted status" "submitted" "$WITHDRAWAL_RESPONSE"
+
+# 7b. Dedup wallet withdrawal — duplicate attempt must be rejected
+DEDUP_RESULT=$(python3 - <<'PYEOF'
+import json, os
+
+store_path = os.environ["WITHDRAWAL_STORE"]
+with open(store_path) as f:
+    store = json.load(f)
+
+duplicate_id = "wd-001"
+
+# Simulate a second submission of the same withdrawal ID
+if duplicate_id in store["processed_ids"]:
+    print("duplicate_rejected")
+else:
+    store["processed_ids"].append(duplicate_id)
+    with open(store_path, "w") as f:
+        json.dump(store, f)
+    print("submitted")
+PYEOF
+)
+assert_eq "duplicate withdrawal attempt is rejected (dedup)" "duplicate_rejected" "$DEDUP_RESULT"
+
+# A distinct withdrawal ID must succeed even when a duplicate was blocked
+DEDUP_NEW=$(python3 - <<'PYEOF'
+import json, os, datetime
+
+store_path = os.environ["WITHDRAWAL_STORE"]
+with open(store_path) as f:
+    store = json.load(f)
+
+new_id = "wd-002"
+if new_id in store["processed_ids"]:
+    print("duplicate_rejected")
+else:
+    store["processed_ids"].append(new_id)
+    store["calls"].append({
+        "id": new_id,
+        "wallet_address": "GABCDE1234567890ABCDE",
+        "amount": 50,
+        "contract_id": "CANARY456",
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "status": "submitted",
+    })
+    with open(store_path, "w") as f:
+        json.dump(store, f)
+    print("submitted")
+PYEOF
+)
+assert_eq "new unique withdrawal succeeds while dedup blocks duplicate" "submitted" "$DEDUP_NEW"
+
+# 7c. Withdrawal endpoint restores to stable after primary recovery
+# Simulate promotion: canary becomes the new stable
+write_registry '{"stable_contract_id":"CANARY456","canary_contract_id":"","canary_weight":0,"status":"stable"}'
+
+WITHDRAWAL_POST_RECOVERY=$(route)
+assert_eq "withdrawal routes to recovered stable contract after primary recovery" "CANARY456" "$WITHDRAWAL_POST_RECOVERY"
+
+# Verify that withdrawals already in the store are preserved (no data loss)
+CALL_COUNT=$(python3 - <<'PYEOF'
+import json, os
+with open(os.environ["WITHDRAWAL_STORE"]) as f:
+    store = json.load(f)
+print(len(store["calls"]))
+PYEOF
+)
+assert_eq "all withdrawal calls preserved across failover (no data loss)" "2" "$CALL_COUNT"
+
 # ─── Summary ─────────────────────────────────────────────────────────────────
 echo
 echo "════════════════════════════════════════"

@@ -32,7 +32,8 @@ import { createV1Router } from './routes/v1';
 import { FeedbackService } from './feedback_service';
 import { createV2Router } from './routes/v2';
 import { metricsMiddleware, metricsHandler } from './metrics';
-import { requestLogger, logger } from './logger';
+import { requestLogger, logger, errFields } from './logger';
+import { requestId } from './middleware/requestId';
 import { disconnectPrisma, prisma } from './prisma_client';
 import { createGracefulShutdown } from './graceful_shutdown';
 import { createRateLimiterMiddleware, createAuthRateLimiterMiddleware } from './rate_limiter';
@@ -53,6 +54,7 @@ import { initReconciliationService } from './reconciliation_service';
 import docsRouter from './docs';
 import { IpfsClient, PinningService, GroupMetadataCache, IpfsMonitor } from './ipfs';
 import { createIpfsRouter } from './routes/ipfs';
+import { createHealthRouter, createDatabaseCheck, createRpcCheck } from './routes/health';
 
 const CSP_POLICY = [
   "default-src 'self'",
@@ -72,13 +74,15 @@ const CSP_POLICY = [
 // 1. cors            — must run before any response is written
 // 2. express.json     — parse bodies before anything reads req.body
 // 3. compression      — compress responses after body parsing
-// 4. requestLogger    — log requests as they arrive
-// 5. metricsMiddleware — record request metrics
-// 6. auditMiddleware  — tamper-evident audit log for state-changing operations
+// 4. requestId        — attach/propagate x-correlation-id + async context
+// 5. requestLogger    — log requests as they arrive
+// 6. metricsMiddleware — record request metrics
+// 7. auditMiddleware  — tamper-evident audit log for state-changing operations
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(compression());
+app.use(requestId);
 app.use(requestLogger);
 app.use(metricsMiddleware);
 // Tamper-evident audit log for all state-changing operations (Issue #1)
@@ -117,12 +121,25 @@ setEndpointCost('/api/admin', 5, 'admin');
 setEndpointCost('/graphql', 2, 'read');
 
 app.get('/metrics', metricsHandler);
+
+// ── Operational probes (Issue #1514) ─────────────────────────────────────────
+// Mounted ahead of the rate limiter so an orchestrator's probes can never be
+// throttled into a false unhealthy verdict.
+app.use(
+  createHealthRouter({
+    checkDatabase: createDatabaseCheck(prisma),
+    checkRpc: createRpcCheck(config.stellar.rpcUrl),
+  }),
+);
+
 app.use(createTieredRateLimiter());
 
-// Stricter rate limiting on auth/admin endpoints: 10 req / 15 min per IP
+// Stricter rate limiting on auth/admin endpoints: 10 req / 15 min per IP (Issue #1507)
+// Prevents brute-force attacks on authentication and admin operations.
 const authRateLimiter = createAuthRateLimiterMiddleware();
 app.use('/api/admin', authRateLimiter);
 app.use('/graphql', authRateLimiter);
+app.use('/api/auth', authRateLimiter);
 
 // ── CSP violation reporting ───────────────────────────────────────────────────
 app.post('/api/csp-report', express.json({ type: ['application/json', 'application/csp-report'] }), (req, res) => {
@@ -180,7 +197,7 @@ if (config.ipfs.enabled) {
   pinningService.start();
   ipfsMonitor.start();
 
-  console.log(`  IPFS:       ${config.ipfs.apiUrl} (pinning enabled)`);
+  logger.info('IPFS pinning enabled', { ipfs_api_url: config.ipfs.apiUrl });
 }
 
 // ── Services ─────────────────────────────────────────────────────────────────
@@ -224,7 +241,7 @@ if (config.backup.drillEnabled) {
 
 // Start the contract event indexer
 if (config.indexer.enabled) {
-  eventIndexer.start().catch(console.error);
+  eventIndexer.start().catch((error) => logger.error('event indexer failed to start', errFields(error)));
 }
 
 // Start on-chain anomaly monitor
@@ -290,7 +307,7 @@ if (ipfsClient && pinningService && metadataCache && ipfsMonitor) {
     '/api/v1/ipfs',
     createIpfsRouter(ipfsClient, pinningService, metadataCache, ipfsMonitor),
   );
-  console.log(`  IPFS API:   http://localhost:${PORT}/api/v1/ipfs`);
+  logger.info('IPFS API mounted', { path: `/api/v1/ipfs`, port: PORT });
 }
 
 // ── Member reputation endpoint (Issue #800) ───────────────────────────────────
@@ -340,10 +357,12 @@ const server = hasTls
   : http2.createServer({ allowHTTP1: true }, app);
 
 server.listen(PORT, async () => {
-  console.log(`API server running on port ${PORT}`);
-  console.log(`  HTTP/2 enabled${hasTls ? ' (TLS)' : ' (h2c cleartext)'}.`);
-  console.log(`  Versioned:  /api/v1/...  /api/v2/...`)
-  console.log(`  Cache stats: http://localhost:${PORT}/api/cache/stats`);
+  logger.info('API server running', {
+    port: PORT,
+    http2: true,
+    tls: hasTls,
+    versioned: '/api/v1/... /api/v2/...',
+  });
 
   // Start fraud detection worker (Issue #1028)
   if (config.fraud.enabled) {
@@ -352,7 +371,7 @@ server.listen(PORT, async () => {
 
   // ── Issue #2: WebSocket gateway for real-time event streaming ──────────────
   const wsGateway = initWebSocketGateway(server as any);
-  console.log(`  WebSocket:  ws://localhost:${PORT}/ws?token=<jwt>`);
+  logger.info('WebSocket gateway ready', { path: '/ws', port: PORT });
 
   // Patch the ContractEventIndexer to publish events to the WS gateway
   // after each indexed event.  We do this post-init to avoid circular deps.
@@ -379,7 +398,7 @@ server.listen(PORT, async () => {
   if (process.env.AUDIT_VERIFY_ENABLED !== 'false') {
     const auditIntervalMs = parseInt(process.env.AUDIT_VERIFY_INTERVAL_MS ?? String(60 * 60 * 1000));
     AuditEventLog.startVerificationJob(auditIntervalMs);
-    console.log(`  Audit:      integrity verification every ${auditIntervalMs / 60000} min`);
+    logger.info('audit integrity verification job started', { interval_min: auditIntervalMs / 60000 });
   }
 
   // ── Issue #3: Start reconciliation service ────────────────────────────────
@@ -391,7 +410,9 @@ server.listen(PORT, async () => {
       intervalMs: parseInt(process.env.RECONCILIATION_INTERVAL_MS ?? String(15 * 60 * 1000)),
     });
     reconciliation.start();
-    console.log(`  Reconciliation: drift check every ${parseInt(process.env.RECONCILIATION_INTERVAL_MS ?? String(15 * 60 * 1000)) / 60000} min`);
+    logger.info('reconciliation service started', {
+      interval_min: parseInt(process.env.RECONCILIATION_INTERVAL_MS ?? String(15 * 60 * 1000)) / 60000,
+    });
   }
 });
 

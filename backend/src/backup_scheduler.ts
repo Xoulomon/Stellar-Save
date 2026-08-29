@@ -1,5 +1,6 @@
 import { BackupService } from './backup_service';
 import { BackupJob } from './models';
+import { logger } from './logger';
 
 export interface SchedulerConfig {
   fullBackupIntervalMs: number;    // default: 24h
@@ -32,7 +33,7 @@ export class BackupScheduler {
     this.fullTimer = setInterval(() => this.runFull(), this.config.fullBackupIntervalMs);
     this.incrementalTimer = setInterval(() => this.runIncremental(), this.config.incrementalIntervalMs);
 
-    console.log('[BackupScheduler] Started — full every', this.config.fullBackupIntervalMs / 3600000, 'h, incremental every', this.config.incrementalIntervalMs / 3600000, 'h');
+    logger.info('[BackupScheduler] Started — full every', this.config.fullBackupIntervalMs / 3600000, 'h, incremental every', this.config.incrementalIntervalMs / 3600000, 'h');
   }
 
   stop(): void {
@@ -41,7 +42,7 @@ export class BackupScheduler {
     this.fullTimer = null;
     this.incrementalTimer = null;
     this.running = false;
-    console.log('[BackupScheduler] Stopped');
+    logger.info('[BackupScheduler] Stopped');
   }
 
   isRunning(): boolean {
@@ -49,18 +50,18 @@ export class BackupScheduler {
   }
 
   private async runFull(): Promise<BackupJob> {
-    console.log('[BackupScheduler] Starting full backup');
+    logger.info('[BackupScheduler] Starting full backup');
     const job = await this.service.createBackup('full');
-    console.log('[BackupScheduler] Full backup queued:', job.id);
+    logger.info('[BackupScheduler] Full backup queued:', job.id);
     return job;
   }
 
   private async runIncremental(): Promise<BackupJob> {
     const base = this.service.getLatestCompleted('full');
     const baseId = base?.id;
-    console.log('[BackupScheduler] Starting incremental backup, base:', baseId ?? 'none');
+    logger.info('[BackupScheduler] Starting incremental backup, base:', baseId ?? 'none');
     const job = await this.service.createBackup('incremental', baseId);
-    console.log('[BackupScheduler] Incremental backup queued:', job.id);
+    logger.info('[BackupScheduler] Incremental backup queued:', job.id);
     return job;
   }
 

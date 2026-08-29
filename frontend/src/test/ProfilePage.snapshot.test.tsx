@@ -22,14 +22,14 @@ vi.mock('../ui', () => ({
 }));
 
 vi.mock('../hooks/useWallet', () => ({
-  useWallet: () => ({ 
-    address: 'GABC123XYZ456DEF789', 
+  useWallet: () => ({
+    address: 'GABC123XYZ456DEF789',
     isConnected: true,
   }),
 }));
 
 vi.mock('../hooks/useClipboard', () => ({
-  useClipboard: () => ({ 
+  useClipboard: () => ({
     copyToClipboard: vi.fn(),
     isCopied: false,
   }),
@@ -60,30 +60,30 @@ const mockUserStats = {
 };
 
 const mockTransactions = [
-  { 
-    id: 'tx1', 
-    type: 'contribution', 
-    groupName: 'Alpha Circle', 
-    amount: 100, 
-    timestamp: new Date('2024-06-01'), 
+  {
+    id: 'tx1',
+    type: 'contribution',
+    groupName: 'Alpha Circle',
+    amount: 100,
+    timestamp: new Date('2024-06-01'),
     status: 'confirmed',
     hash: 'abc123',
   },
-  { 
-    id: 'tx2', 
-    type: 'payout', 
-    groupName: 'Beta Pool', 
-    amount: 4000, 
-    timestamp: new Date('2024-05-15'), 
+  {
+    id: 'tx2',
+    type: 'payout',
+    groupName: 'Beta Pool',
+    amount: 4000,
+    timestamp: new Date('2024-05-15'),
     status: 'confirmed',
     hash: 'def456',
   },
-  { 
-    id: 'tx3', 
-    type: 'contribution', 
-    groupName: 'Gamma Savings', 
-    amount: 250, 
-    timestamp: new Date('2024-05-28'), 
+  {
+    id: 'tx3',
+    type: 'contribution',
+    groupName: 'Gamma Savings',
+    amount: 250,
+    timestamp: new Date('2024-05-28'),
     status: 'confirmed',
     hash: 'ghi789',
   },
@@ -152,8 +152,8 @@ describe('ProfilePage snapshot tests', () => {
 
   it('matches snapshot with no wallet connected', () => {
     vi.mock('../hooks/useWallet', () => ({
-      useWallet: () => ({ 
-        address: null, 
+      useWallet: () => ({
+        address: null,
         isConnected: false,
       }),
     }));

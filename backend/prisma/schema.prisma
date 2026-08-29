@@ -508,3 +508,38 @@ model RampTransaction {
   @@index([startedAt])
   @@index([createdAt])
 }
+
+// ========== NORMALIZED TRANSACTION MODEL (Issue #1508) ==========
+// Unified transaction record separating business logic from on-chain data.
+// Prevents denormalization drift by being the canonical source of transaction state.
+
+model Transaction {
+  id               String    @id @default(cuid())
+  type             String    // 'contribution' | 'payout' | 'ramp-deposit' | 'ramp-withdraw'
+  status           String    @default("pending") // pending | confirmed | failed | reverted
+
+  stellarTxHash    String?   @unique // Link to IndexedTransaction
+  rampTxId         String?   @unique // Link to RampTransaction
+
+  groupId          String?
+  userId           String?
+  walletAddress    String?
+
+  amountStroops    BigInt    @default(0)  // Canonical amount in Stroops
+  amountXlm        Decimal   @db.Decimal(18, 8)
+  feePaid          Int       @default(0)
+
+  submittedAt      DateTime  @default(now())
+  confirmedAt      DateTime?
+  settledAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([groupId])
+  @@index([walletAddress])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@index([confirmedAt])
+}

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as redis from './redis';
+import { logger } from './logger';
 
 export class AnalyticsAggregator {
   private prisma: PrismaClient;
@@ -18,7 +19,7 @@ export class AnalyticsAggregator {
    */
   start(): void {
     if (this.aggregationInterval) {
-      console.warn('Aggregation job already running');
+      logger.warn('Aggregation job already running');
       return;
     }
 
@@ -30,7 +31,7 @@ export class AnalyticsAggregator {
       this.runAggregation();
     }, this.aggregationIntervalMs);
 
-    console.log(
+    logger.info(
       `Analytics aggregation job started (interval: ${this.aggregationIntervalMs}ms)`
     );
   }
@@ -42,7 +43,7 @@ export class AnalyticsAggregator {
     if (this.aggregationInterval) {
       clearInterval(this.aggregationInterval);
       this.aggregationInterval = null;
-      console.log('Analytics aggregation job stopped');
+      logger.info('Analytics aggregation job stopped');
     }
   }
 
@@ -51,7 +52,7 @@ export class AnalyticsAggregator {
    */
   async runAggregation(): Promise<void> {
     try {
-      console.log('Starting analytics aggregation...');
+      logger.info('Starting analytics aggregation...');
 
       const startTime = Date.now();
 
@@ -65,7 +66,7 @@ export class AnalyticsAggregator {
       await this.aggregateGroupMetrics(yesterday);
 
       const duration = Date.now() - startTime;
-      console.log(`Analytics aggregation completed in ${duration}ms`);
+      logger.info(`Analytics aggregation completed in ${duration}ms`);
 
       // Clear related caches
       await redis.delPattern('platform_stats:*');
@@ -73,7 +74,7 @@ export class AnalyticsAggregator {
       await redis.delPattern('user_stats:*');
       await redis.delPattern('group_stats:*');
     } catch (error) {
-      console.error('Error running analytics aggregation:', error);
+      logger.error('Error running analytics aggregation:', error);
     }
   }
 
@@ -188,9 +189,9 @@ export class AnalyticsAggregator {
         });
       }
 
-      console.log(`Platform metrics aggregated for ${date.toISOString().split('T')[0]}`);
+      logger.info(`Platform metrics aggregated for ${date.toISOString().split('T')[0]}`);
     } catch (error) {
-      console.error('Error aggregating platform metrics:', error);
+      logger.error('Error aggregating platform metrics:', error);
     }
   }
 
@@ -298,9 +299,9 @@ export class AnalyticsAggregator {
         }
       }
 
-      console.log(`User metrics aggregated for ${userEvents.size} users on ${date.toISOString().split('T')[0]}`);
+      logger.info(`User metrics aggregated for ${userEvents.size} users on ${date.toISOString().split('T')[0]}`);
     } catch (error) {
-      console.error('Error aggregating user metrics:', error);
+      logger.error('Error aggregating user metrics:', error);
     }
   }
 
@@ -409,9 +410,9 @@ export class AnalyticsAggregator {
         }
       }
 
-      console.log(`Group metrics aggregated for ${groupEvents.size} groups on ${date.toISOString().split('T')[0]}`);
+      logger.info(`Group metrics aggregated for ${groupEvents.size} groups on ${date.toISOString().split('T')[0]}`);
     } catch (error) {
-      console.error('Error aggregating group metrics:', error);
+      logger.error('Error aggregating group metrics:', error);
     }
   }
 }

@@ -1,4 +1,5 @@
 import { PrismaClient } from '../generated/prisma/client';
+import { logger } from '../logger';
 
 export interface IndexerOptions {
   /** How long to wait between polls when no new transactions are found (ms). Default: 5000 */
@@ -44,14 +45,14 @@ export class HorizonIndexer {
 
   async start(): Promise<void> {
     if (this.isRunning) {
-      console.log('[HorizonIndexer] Already running');
+      logger.info('[HorizonIndexer] Already running');
       return;
     }
     this.isRunning = true;
-    console.log('[HorizonIndexer] Starting — contract:', this.contractId);
+    logger.info('[HorizonIndexer] Starting — contract:', this.contractId);
     // Run poll loop detached so callers are not blocked
     this.runPollLoop().catch(err => {
-      console.error('[HorizonIndexer] Fatal error in poll loop:', err);
+      logger.error('[HorizonIndexer] Fatal error in poll loop:', err);
       this.isRunning = false;
     });
   }
@@ -59,7 +60,7 @@ export class HorizonIndexer {
   async stop(): Promise<void> {
     this.isRunning = false;
     await this.prisma.$disconnect();
-    console.log('[HorizonIndexer] Stopped');
+    logger.info('[HorizonIndexer] Stopped');
   }
 
   /** Returns the highest ledger sequence seen in the indexed transactions table. */
@@ -137,11 +138,11 @@ export class HorizonIndexer {
 
         // Advance cursor to the paging_token of the last record processed
         cursor = records[records.length - 1].paging_token;
-        console.log(
+        logger.info(
           `[HorizonIndexer] Indexed ${records.length} tx(s), cursor now ${cursor}`
         );
       } catch (err) {
-        console.error('[HorizonIndexer] Poll error:', err);
+        logger.error('[HorizonIndexer] Poll error:', err);
         await this.delay(this.pollIntervalMs * 2);
       }
     }
@@ -155,12 +156,12 @@ export class HorizonIndexer {
     });
 
     if (latest) {
-      console.log(`[HorizonIndexer] Resuming from ledger ${latest.ledgerSeq}`);
+      logger.info(`[HorizonIndexer] Resuming from ledger ${latest.ledgerSeq}`);
       return latest.pagingToken;
     }
 
     // No prior state — start from the current tip of the chain
-    console.log('[HorizonIndexer] No prior state; starting from current ledger tip');
+    logger.info('[HorizonIndexer] No prior state; starting from current ledger tip');
     return 'now';
   }
 
@@ -186,7 +187,7 @@ export class HorizonIndexer {
     } catch (err: any) {
       // Unique-constraint violations from concurrent indexers are harmless
       if (!String(err).includes('Unique constraint')) {
-        console.error('[HorizonIndexer] Failed to store tx', tx.hash, err);
+        logger.error('[HorizonIndexer] Failed to store tx', tx.hash, err);
       }
     }
   }

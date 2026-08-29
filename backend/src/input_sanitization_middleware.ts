@@ -1,6 +1,6 @@
 /**
  * Input Sanitization Middleware (Issue #1103)
- * 
+ *
  * Comprehensive input sanitization for all user inputs to prevent
  * XSS, SQL injection, and other injection attacks.
  */
@@ -83,7 +83,7 @@ export class InputSanitizer {
     // HTML encode if not allowing HTML
     if (!options.allowHtml) {
       sanitized = this.encodeHtml(sanitized);
-      
+
       // Check for dangerous patterns even after encoding
       for (const pattern of DANGEROUS_PATTERNS) {
         if (pattern.test(value)) { // Check original value

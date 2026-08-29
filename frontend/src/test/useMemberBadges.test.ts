@@ -6,7 +6,7 @@ import { useMemberBadges } from '../hooks/useMemberBadges';
 describe('useMemberBadges', () => {
   it('returns empty badges array when address is undefined', () => {
     const { result } = renderHook(() => useMemberBadges(undefined));
-    
+
     expect(result.current.badges).toEqual([]);
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBe(null);
@@ -14,14 +14,14 @@ describe('useMemberBadges', () => {
 
   it('returns loading state initially when address is provided', () => {
     const { result } = renderHook(() => useMemberBadges('GABCD...'));
-    
+
     expect(result.current.isLoading).toBe(true);
     expect(result.current.badges).toEqual([]);
   });
 
   it('fetches and returns badges for a valid address', async () => {
     const { result } = renderHook(() => useMemberBadges('GABCDEFG...'));
-    
+
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
@@ -32,7 +32,7 @@ describe('useMemberBadges', () => {
 
   it('each badge has required fields', async () => {
     const { result } = renderHook(() => useMemberBadges('GABCDEFG...'));
-    
+
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
@@ -50,7 +50,7 @@ describe('useMemberBadges', () => {
 
   it('earnedAt timestamps are valid numbers', async () => {
     const { result } = renderHook(() => useMemberBadges('GABCDEFG...'));
-    
+
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
@@ -63,7 +63,7 @@ describe('useMemberBadges', () => {
 
   it('refetch function triggers a re-fetch', async () => {
     const { result } = renderHook(() => useMemberBadges('GABCDEFG...'));
-    
+
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
@@ -71,7 +71,7 @@ describe('useMemberBadges', () => {
     const firstBadgeCount = result.current.badges.length;
 
     result.current.refetch();
-    
+
     expect(result.current.isLoading).toBe(true);
 
     await waitFor(() => {
@@ -87,7 +87,7 @@ describe('useMemberBadges', () => {
       ({ address }) => useMemberBadges(address),
       { initialProps: { address: 'GABCDEFG...' as string | undefined } }
     );
-    
+
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });

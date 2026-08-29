@@ -1,9 +1,23 @@
+<<<<<<< HEAD
 import { Skeleton } from '@mui/material';
 import React from 'react';
 
 
+=======
+/**
+ * TransactionTables — migrated to DataTable
+ *
+ * Re-implements the earlier raw HTML table using the generic DataTable
+ * component, gaining free sorting and pagination.
+ */
+import React from 'react';
+
+import type { Transaction } from '../types/transaction';
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import { Badge } from './Badge';
 import { Button } from './Button';
+import { DataTable } from './DataTable/DataTable';
+import type { DataTableColumn } from './DataTable/DataTable';
 
 import type { Transaction } from '../types/transaction';
 
@@ -13,115 +27,92 @@ interface Props {
   onRowClick: (tx: Transaction) => void;
 }
 
-const TransactionTable: React.FC<Props> = ({
-  transactions,
-  isLoading,
-  onRowClick,
-}) => {
-  if (isLoading) {
-    return (
-      <div className="overflow-x-auto bg-gray-900 rounded-2xl border border-gray-800">
-        <table className="w-full min-w-[800px]">
-          <thead>
-            <tr className="border-b border-gray-800 text-left text-gray-400 text-sm">
-              <th className="p-6">Date</th>
-              <th className="p-6">Type</th>
-              <th className="p-6">Amount</th>
-              <th className="p-6">Asset</th>
-              <th className="p-6">From / To</th>
-              <th className="p-6">Status</th>
-              <th className="p-6"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {[1, 2, 3, 4, 5].map((i) => (
-              <tr key={i} className="border-b border-gray-800">
-                <td className="p-6"><Skeleton variant="text" width={80} height={16} /></td>
-                <td className="p-6"><Skeleton variant="text" width={70} height={16} /></td>
-                <td className="p-6"><Skeleton variant="text" width={90} height={16} /></td>
-                <td className="p-6"><Skeleton variant="text" width={50} height={16} /></td>
-                <td className="p-6"><Skeleton variant="text" width={140} height={16} /></td>
-                <td className="p-6"><Skeleton variant="rounded" width={70} height={24} /></td>
-                <td className="p-6"><Skeleton variant="rounded" width={70} height={32} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
+const columns: DataTableColumn<Transaction>[] = [
+  {
+    key: 'createdAt',
+    header: 'Date',
+    sortable: true,
+    render: (row) => new Date(row.createdAt).toLocaleDateString(),
+  },
+  {
+    key: 'type',
+    header: 'Type',
+    sortable: true,
+    cellClassName: 'tx-table__type',
+    render: (row) => (
+      <span style={{ textTransform: 'capitalize' }}>{row.type}</span>
+    ),
+  },
+  {
+    key: 'amount',
+    header: 'Amount',
+    sortable: true,
+    sortComparator: (a, b) => parseFloat(a.amount) - parseFloat(b.amount),
+    render: (row) => (
+      <span
+        className={
+          parseFloat(row.amount) > 0 ? 'tx-table__amount--positive' : 'tx-table__amount--negative'
+        }
+      >
+        {row.amount} {row.assetCode}
+      </span>
+    ),
+  },
+  {
+    key: 'assetCode',
+    header: 'Asset',
+    sortable: true,
+  },
+  {
+    key: 'from',
+    header: 'From / To',
+    sortable: false,
+    render: (row) => (
+      <span className="tx-table__address">{row.from}</span>
+    ),
+  },
+  {
+    key: 'status',
+    header: 'Status',
+    sortable: true,
+    render: (row) => (
+      <Badge variant={row.status === 'success' ? 'success' : 'danger'}>
+        {row.status}
+      </Badge>
+    ),
+  },
+  {
+    key: '_actions',
+    header: '',
+    sortable: false,
+    render: () => (
+      <Button variant="secondary" size="sm">
+        Details
+      </Button>
+    ),
+  },
+];
 
-  if (transactions.length === 0) {
-    return (
-      <div className="bg-gray-900 rounded-2xl border border-gray-800 p-12 text-center">
-        <p className="text-gray-400">No transactions found</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="overflow-x-auto bg-gray-900 rounded-2xl border border-gray-800">
-      <table className="w-full min-w-[800px]">
-        <thead>
-          <tr className="border-b border-gray-800 text-left text-gray-400 text-sm">
-            <th className="p-6">Date</th>
-            <th className="p-6">Type</th>
-            <th className="p-6">Amount</th>
-            <th className="p-6">Asset</th>
-            <th className="p-6">From / To</th>
-            <th className="p-6">Status</th>
-            <th className="p-6"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {transactions.map((tx) => (
-            <tr
-              key={tx.id}
-              onClick={() => onRowClick(tx)}
-              className="border-b border-gray-800 hover:bg-gray-800 cursor-pointer transition-colors"
-              tabIndex={0}
-              role="button"
-              aria-label={`Transaction ${tx.type} ${tx.amount} ${tx.assetCode} on ${new Date(tx.createdAt).toLocaleDateString()}`}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onRowClick(tx);
-                }
-              }}
-            >
-              <td className="p-6 text-sm text-gray-300">
-                {new Date(tx.createdAt).toLocaleDateString()}
-              </td>
-              <td className="p-6 capitalize">{tx.type}</td>
-              <td
-                className={`p-6 font-medium ${
-                  parseFloat(tx.amount) > 0 ? 'text-green-400' : 'text-red-400'
-                }`}
-              >
-                {tx.amount} {tx.assetCode}
-              </td>
-              <td className="p-6 font-medium">{tx.assetCode}</td>
-              <td className="p-6 text-sm text-gray-400 truncate max-w-[180px]">
-                {tx.from}
-              </td>
-              <td className="p-6">
-                <Badge
-                  variant={tx.status === 'success' ? 'success' : 'danger'}
-                >
-                  {tx.status}
-                </Badge>
-              </td>
-              <td className="p-6">
-                <Button variant="secondary" size="sm">
-                  Details
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
+const TransactionTable: React.FC<Props> = ({ transactions, isLoading, onRowClick }) => (
+  <>
+    <style>{`
+      .tx-table__type { text-transform: capitalize; }
+      .tx-table__amount--positive { color: #4ade80; font-weight: 600; }
+      .tx-table__amount--negative { color: #f87171; font-weight: 600; }
+      .tx-table__address { font-size: 0.8125rem; color: rgba(0,0,0,0.54); overflow: hidden; text-overflow: ellipsis; max-width: 180px; white-space: nowrap; }
+    `}</style>
+    <DataTable
+      columns={columns}
+      rows={transactions}
+      loading={isLoading}
+      emptyMessage="No transactions found"
+      defaultSortKey="createdAt"
+      defaultSortDir="desc"
+      pageSize={10}
+      onRowClick={onRowClick}
+      caption="Transaction history"
+    />
+  </>
+);
 
 export default TransactionTable;

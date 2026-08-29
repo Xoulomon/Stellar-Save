@@ -1,6 +1,6 @@
 /**
  * AWS Lambda function for automatic secret rotation (Issue #1105)
- * 
+ *
  * This Lambda function is triggered by AWS Secrets Manager during rotation.
  * It handles the 4-step rotation process: createSecret, setSecret, testSecret, finishSecret
  */
@@ -13,6 +13,7 @@ import {
   DescribeSecretCommand,
 } from '@aws-sdk/client-secrets-manager';
 import * as crypto from 'crypto';
+import { logger } from './logger';
 
 // Types for Lambda event
 interface RotationEvent {
@@ -43,7 +44,7 @@ export async function handler(
   event: RotationEvent,
   context: RotationContext
 ): Promise<{ statusCode: number; body: string }> {
-  console.log('Starting secret rotation', {
+  logger.info('Starting secret rotation', {
     step: event.Step,
     secretId: event.SecretId,
     token: event.Token,
@@ -68,7 +69,7 @@ export async function handler(
         throw new Error(`Invalid step: ${event.Step}`);
     }
 
-    console.log('Secret rotation step completed', {
+    logger.info('Secret rotation step completed', {
       step: event.Step,
       secretId: event.SecretId,
     });
@@ -78,7 +79,7 @@ export async function handler(
       body: JSON.stringify({ message: 'Rotation step completed successfully' }),
     };
   } catch (error) {
-    console.error('Secret rotation failed', {
+    logger.error('Secret rotation failed', {
       step: event.Step,
       secretId: event.SecretId,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -95,7 +96,7 @@ export async function handler(
  * Step 1: Create a new version of the secret
  */
 async function createSecret(event: RotationEvent): Promise<void> {
-  console.log('Creating new secret version', { secretId: event.SecretId });
+  logger.info('Creating new secret version', { secretId: event.SecretId });
 
   // Get the current secret metadata
   const describeCommand = new DescribeSecretCommand({
@@ -106,7 +107,7 @@ async function createSecret(event: RotationEvent): Promise<void> {
   // Check if the version already exists
   const versions = metadata.VersionIdsToStages || {};
   if (versions[event.Token]?.includes('AWSCURRENT')) {
-    console.log('Secret version already exists', { token: event.Token });
+    logger.info('Secret version already exists', { token: event.Token });
     return;
   }
 
@@ -137,7 +138,7 @@ async function createSecret(event: RotationEvent): Promise<void> {
 
   await client.send(putCommand);
 
-  console.log('New secret version created', {
+  logger.info('New secret version created', {
     secretId: event.SecretId,
     token: event.Token,
   });
@@ -147,7 +148,7 @@ async function createSecret(event: RotationEvent): Promise<void> {
  * Step 2: Configure the service to use the new secret
  */
 async function setSecret(event: RotationEvent): Promise<void> {
-  console.log('Setting new secret in service', { secretId: event.SecretId });
+  logger.info('Setting new secret in service', { secretId: event.SecretId });
 
   // Get the pending secret
   const getCommand = new GetSecretValueCommand({
@@ -165,14 +166,14 @@ async function setSecret(event: RotationEvent): Promise<void> {
   // This is where you'd update database passwords, API keys, etc.
   await updateServiceWithNewSecret(event.SecretId, pendingSecret.SecretString);
 
-  console.log('Service updated with new secret', { secretId: event.SecretId });
+  logger.info('Service updated with new secret', { secretId: event.SecretId });
 }
 
 /**
  * Step 3: Test the new secret
  */
 async function testSecret(event: RotationEvent): Promise<void> {
-  console.log('Testing new secret', { secretId: event.SecretId });
+  logger.info('Testing new secret', { secretId: event.SecretId });
 
   // Get the pending secret
   const getCommand = new GetSecretValueCommand({
@@ -193,14 +194,14 @@ async function testSecret(event: RotationEvent): Promise<void> {
     throw new Error(`Secret test failed: ${testResult.error}`);
   }
 
-  console.log('New secret tested successfully', { secretId: event.SecretId });
+  logger.info('New secret tested successfully', { secretId: event.SecretId });
 }
 
 /**
  * Step 4: Finalize the rotation
  */
 async function finishSecret(event: RotationEvent): Promise<void> {
-  console.log('Finalizing secret rotation', { secretId: event.SecretId });
+  logger.info('Finalizing secret rotation', { secretId: event.SecretId });
 
   // Get current version
   const describeCommand = new DescribeSecretCommand({
@@ -213,7 +214,7 @@ async function finishSecret(event: RotationEvent): Promise<void> {
   for (const [version, stages] of Object.entries(versions)) {
     if (stages.includes('AWSCURRENT')) {
       if (version === event.Token) {
-        console.log('Secret already marked as current', { token: event.Token });
+        logger.info('Secret already marked as current', { token: event.Token });
         return;
       }
       currentVersion = version;
@@ -231,7 +232,7 @@ async function finishSecret(event: RotationEvent): Promise<void> {
 
   await client.send(updateCommand);
 
-  console.log('Secret rotation completed', {
+  logger.info('Secret rotation completed', {
     secretId: event.SecretId,
     newVersion: event.Token,
     oldVersion: currentVersion,
@@ -254,11 +255,11 @@ function generateNewSecretValue(secretId: string, currentValue: string): string 
     const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
     let password = '';
     const randomBytes = crypto.randomBytes(length);
-    
+
     for (let i = 0; i < length; i++) {
       password += charset[randomBytes[i] % charset.length];
     }
-    
+
     return password;
   }
 
@@ -284,18 +285,18 @@ async function updateServiceWithNewSecret(
   // - Update API key in external service
   // - Restart services if needed
 
-  console.log('Updating service with new secret', { secretId });
+  logger.info('Updating service with new secret', { secretId });
 
   // Example: Update database password
   if (secretId.includes('db-password')) {
     // await updateDatabasePassword(newValue);
-    console.log('Database password would be updated here');
+    logger.info('Database password would be updated here');
   }
 
   // Example: Update JWT secret (requires application restart)
   if (secretId.includes('jwt-secret')) {
     // Signal application to reload secrets
-    console.log('JWT secret would trigger application reload here');
+    logger.info('JWT secret would trigger application reload here');
   }
 }
 
@@ -308,17 +309,17 @@ async function testSecretValue(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Implement secret-specific testing logic
-    
+
     if (secretId.includes('db-password')) {
       // Test database connection with new password
       // const connection = await testDatabaseConnection(value);
-      console.log('Testing database connection with new password');
+      logger.info('Testing database connection with new password');
       return { success: true };
     }
 
     if (secretId.includes('jwt-secret')) {
       // Test JWT generation and verification
-      console.log('Testing JWT secret');
+      logger.info('Testing JWT secret');
       if (value.length < 32) {
         return { success: false, error: 'JWT secret too short' };
       }
@@ -349,7 +350,7 @@ async function sendRotationFailureAlert(
 ): Promise<void> {
   // Implement alerting logic here
   // For example: SNS, CloudWatch, PagerDuty, etc.
-  
+
   console.error('ROTATION FAILURE ALERT', {
     secretId,
     step,

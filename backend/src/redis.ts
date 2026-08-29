@@ -61,4 +61,4 @@ export const readinessCheckCache = async (): Promise<{ up: boolean; latencyMs: n
   }
 };
 
-export default redis; 
+export default redis;

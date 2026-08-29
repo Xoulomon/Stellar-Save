@@ -255,6 +255,19 @@ pub struct RewardClaimed {
     pub claimed_at: u64,
 }
 
+/// Event emitted when the contract binary is upgraded to a new version.
+///
+/// Centralising this type in `events.rs` ensures all upgrade callers emit a
+/// consistent shape (Issue #73).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContractUpgraded {
+    pub upgraded_by: Address,
+    pub old_version: u32,
+    pub new_version: u32,
+    pub upgraded_at: u64,
+}
+
 /// Utility functions for emitting events.
 pub struct EventEmitter;
 
@@ -1013,6 +1026,25 @@ impl EventEmitter {
             (group_id, resolved_by, resolution, resolved_at),
         );
     }
+
+    /// Emits an event when the contract is upgraded to a new version.
+    ///
+    /// Centralised here so all callers use the same topic/shape (Issue #73).
+    pub fn emit_contract_upgraded(
+        env: &Env,
+        upgraded_by: Address,
+        old_version: u32,
+        new_version: u32,
+        upgraded_at: u64,
+    ) {
+        let event = ContractUpgraded {
+            upgraded_by,
+            old_version,
+            new_version,
+            upgraded_at,
+        };
+        env.events().publish(("contract_upgraded",), event);
+    }
 }
 
 #[cfg(test)]
@@ -1322,5 +1354,32 @@ mod tests {
         let creator = Address::generate(&env);
 
         EventEmitter::emit_group_unpaused(&env, 1, creator, 1234567890);
+    }
+
+    // Issue #73: Verify ContractUpgraded event type and emit helper are centralised
+    #[test]
+    fn test_contract_upgraded_event() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+
+        let event = ContractUpgraded {
+            upgraded_by: admin.clone(),
+            old_version: 1,
+            new_version: 2,
+            upgraded_at: 1234567890,
+        };
+
+        assert_eq!(event.old_version, 1);
+        assert_eq!(event.new_version, 2);
+        assert_eq!(event.upgraded_by, admin);
+    }
+
+    #[test]
+    fn test_event_emitter_contract_upgraded() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+
+        // Should not panic — verifies the emit helper is wired correctly
+        EventEmitter::emit_contract_upgraded(&env, admin, 1, 2, 1234567890);
     }
 }

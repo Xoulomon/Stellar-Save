@@ -20,14 +20,14 @@ coverage:
         if_not_found: success
         if_ci_failed: error
       contracts:
-        target: 85%
+        target: 90%
         threshold: 1%
         flags:
           - contracts
         if_not_found: success
         if_ci_failed: error
       backend:
-        target: 60%
+        target: 85%
         threshold: 1%
         flags:
           - backend
@@ -42,7 +42,7 @@ coverage:
         if_not_found: success
         if_ci_failed: error
       backend:
-        target: 60%
+        target: 85%
         threshold: 5%
         flags:
           - backend

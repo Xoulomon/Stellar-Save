@@ -2,12 +2,12 @@
 function describe(name: string, fn: Function) { console.log(`Describe: ${name}`); fn(); }
 function beforeEach(fn: Function) { fn(); }
 function afterEach(fn: Function) { }
-function test(name: string, fn: Function) { 
-  console.log(`Test: ${name}`); 
+function test(name: string, fn: Function) {
+  console.log(`Test: ${name}`);
   try {
     const res = fn();
     if (res && typeof res.catch === 'function') {
-      res.catch((e: any) => console.error(`Test failed: ${name}`, e)); 
+      res.catch((e: any) => console.error(`Test failed: ${name}`, e));
     }
   } catch (e) {
     console.error(`Test failed: ${name}`, e);
@@ -73,7 +73,7 @@ describe('ExportService', () => {
 
   test('should generate CSV correctly', async () => {
     const jobId = await exportService.createJob('user123', 'test@example.com', 'CSV');
-    
+
     await new Promise(resolve => setTimeout(resolve, 2500));
 
     const job = exportService.getJob(jobId);

@@ -18,6 +18,7 @@ doctest = false
 [dependencies]
 soroban-sdk = "23.0.3"
 stellar-registry = "0.0.4"
+stellar-save-common = { workspace = true }
 
 [dev-dependencies]
 stellar-xdr = { version = "23.0.0", features = ["curr", "serde"] }

@@ -20,7 +20,7 @@ async function runTests() {
   console.log('Testing user management...');
   const users = adminService.getUsers();
   const userId = users[0].id;
-  
+
   const user = adminService.getUserById(userId);
   if (user && user.id === userId) {
     console.log('✅ Get user by ID passed');

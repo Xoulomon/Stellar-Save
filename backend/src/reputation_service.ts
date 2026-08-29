@@ -5,7 +5,8 @@
  * Updated incrementally as contribution events are indexed.
  */
 
-import { prisma } from './prisma_client';
+import { logger } from './logger';
+import { memberReputationRepository } from './modules/reputation/reputation.repository';
 
 export interface ReputationRecord {
   address: string;
@@ -20,9 +21,26 @@ export interface ReputationRecord {
  * Returns a default record (score 0, no history) if not found.
  */
 export async function getMemberReputation(address: string): Promise<ReputationRecord> {
-  const record = await prisma.memberReputation.findUnique({ where: { address } });
+  const emptyRecord = (): ReputationRecord => ({
+    address,
+    score: 0,
+    totalContributions: 0,
+    onTimeContributions: 0,
+    updatedAt: new Date().toISOString(),
+  });
+
+  let record;
+  try {
+    record = await memberReputationRepository.findByAddress(address);
+  } catch (error) {
+    // Reputation is a display-time signal — degrade to a neutral record rather
+    // than failing the caller if the store is unreachable.
+    logger.warn('reputation lookup failed; returning default', { address, error: String(error) });
+    return emptyRecord();
+  }
+
   if (!record) {
-    return { address, score: 0, totalContributions: 0, onTimeContributions: 0, updatedAt: new Date().toISOString() };
+    return emptyRecord();
   }
 
   return {
@@ -40,16 +58,16 @@ export async function getMemberReputation(address: string): Promise<ReputationRe
  * @param onTime   Whether the contribution was on time
  */
 export async function recordContribution(address: string, onTime: boolean): Promise<void> {
-  const existing = await prisma.memberReputation.findUnique({ where: { address } });
+  const existing = await memberReputationRepository.findByAddress(address);
 
   const totalContributions = (existing?.totalContributions ?? 0) + 1;
   const onTimeContributions = (existing?.onTimeContributions ?? 0) + (onTime ? 1 : 0);
   const score = totalContributions > 0 ? onTimeContributions / totalContributions : 0;
 
-  await prisma.memberReputation.upsert({
-    where: { address },
-    create: { address, totalContributions, onTimeContributions, score },
-    update: { totalContributions, onTimeContributions, score },
+  await memberReputationRepository.upsertTotals(address, {
+    totalContributions,
+    onTimeContributions,
+    score,
   });
 }
 

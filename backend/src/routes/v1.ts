@@ -204,11 +204,19 @@ export function createV1Router(services: V1Services): Router {
     }
   });
 
-  router.get('/backup', (_req, res) => res.json(backupService.listJobs()));
+  router.get('/backup', (req, res) => {
+    const pageParams = parseOffsetParams(req.query, { limit: 20 });
+    const allJobs = backupService.listJobs();
+    const jobs = paginateArray(allJobs, pageParams);
+    res.json(paginate(jobs, allJobs.length, pageParams));
+  });
 
   router.get('/backup/alerts', (req, res) => {
     const unacknowledgedOnly = req.query.unacknowledgedOnly === 'true';
-    res.json(backupMonitor.getAlerts(unacknowledgedOnly));
+    const pageParams = parseOffsetParams(req.query, { limit: 20 });
+    const allAlerts = backupMonitor.getAlerts(unacknowledgedOnly);
+    const alerts = paginateArray(allAlerts, pageParams);
+    res.json(paginate(alerts, allAlerts.length, pageParams));
   });
 
   router.post('/backup/alerts/:alertId/acknowledge', (req, res, next) => {
@@ -236,11 +244,19 @@ export function createV1Router(services: V1Services): Router {
     }
   });
 
-  router.get('/backup/drills', (_req, res) => res.json(backupRestoreDrill.listRuns()));
+  router.get('/backup/drills', (req, res) => {
+    const pageParams = parseOffsetParams(req.query, { limit: 20 });
+    const allRuns = backupRestoreDrill.listRuns();
+    const runs = paginateArray(allRuns, pageParams);
+    res.json(paginate(runs, allRuns.length, pageParams));
+  });
 
   router.get('/backup/drills/alerts', (req, res) => {
     const unacknowledgedOnly = req.query.unacknowledgedOnly === 'true';
-    res.json(backupRestoreDrill.listAlerts(unacknowledgedOnly));
+    const pageParams = parseOffsetParams(req.query, { limit: 20 });
+    const allAlerts = backupRestoreDrill.listAlerts(unacknowledgedOnly);
+    const alerts = paginateArray(allAlerts, pageParams);
+    res.json(paginate(alerts, allAlerts.length, pageParams));
   });
 
   router.post('/backup/drills/alerts/:alertId/acknowledge', (req, res, next) => {
@@ -545,10 +561,12 @@ export function createV1Router(services: V1Services): Router {
     }
   });
 
-  router.get('/admin/users', adminAuthMiddleware, async (_req, res, next) => {
+  router.get('/admin/users', adminAuthMiddleware, async (req, res, next) => {
     try {
-      const users = adminService.getUsers();
-      res.json({ users });
+      const pageParams = parseOffsetParams(req.query, { limit: 20 });
+      const allUsers = adminService.getUsers();
+      const users = paginateArray(allUsers, pageParams);
+      res.json(paginate({ users }, allUsers.length, pageParams));
     } catch (error) {
       logger.error('Failed to fetch users', { error: String(error) });
       next(new AppError('ADMIN_FETCH_FAILED', 'Failed to fetch users', 500));
@@ -584,10 +602,12 @@ export function createV1Router(services: V1Services): Router {
     }
   });
 
-  router.get('/admin/groups', adminAuthMiddleware, async (_req, res, next) => {
+  router.get('/admin/groups', adminAuthMiddleware, async (req, res, next) => {
     try {
+      const pageParams = parseOffsetParams(req.query, { limit: 20 });
       const { mockGroups } = await import('../mock_data');
-      res.json({ groups: mockGroups });
+      const groups = paginateArray(mockGroups, pageParams);
+      res.json(paginate({ groups }, mockGroups.length, pageParams));
     } catch (error) {
       logger.error('Failed to fetch groups', { error: String(error) });
       next(new AppError('ADMIN_FETCH_FAILED', 'Failed to fetch groups', 500));
@@ -611,10 +631,12 @@ export function createV1Router(services: V1Services): Router {
     }
   });
 
-  router.get('/admin/audit-logs', adminAuthMiddleware, async (_req, res, next) => {
+  router.get('/admin/audit-logs', adminAuthMiddleware, async (req, res, next) => {
     try {
-      const logs = adminService.getAuditLogs();
-      res.json({ logs });
+      const pageParams = parseOffsetParams(req.query, { limit: 20 });
+      const allLogs = adminService.getAuditLogs();
+      const logs = paginateArray(allLogs, pageParams);
+      res.json(paginate({ logs }, allLogs.length, pageParams));
     } catch (error) {
       logger.error('Failed to fetch audit logs', { error: String(error) });
       next(new AppError('ADMIN_FETCH_FAILED', 'Failed to fetch audit logs', 500));
@@ -637,8 +659,10 @@ export function createV1Router(services: V1Services): Router {
 
   router.get('/api-keys', apiKeyAuthMiddleware, async (req: any, res: any, next: NextFunction) => {
     try {
-      const keys = await apiKeyService.getKeysForUser(req.apiKey.userId);
-      res.json({ keys });
+      const pageParams = parseOffsetParams(req.query, { limit: 20 });
+      const allKeys = await apiKeyService.getKeysForUser(req.apiKey.userId);
+      const keys = paginateArray(allKeys, pageParams);
+      res.json(paginate({ keys }, allKeys.length, pageParams));
     } catch (error) {
       logger.error('Failed to fetch API keys', { error: String(error) });
       next(new AppError('API_KEY_FETCH_FAILED', 'Failed to fetch API keys', 500));

@@ -1,6 +1,6 @@
 /**
  * Security Headers Middleware (Issue #1103)
- * 
+ *
  * Implements Content Security Policy (CSP) and other security headers
  * to prevent XSS, clickjacking, and other client-side attacks.
  */

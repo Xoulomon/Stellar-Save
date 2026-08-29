@@ -4,10 +4,23 @@
 /// It encapsulates all direct env.storage() calls related to group state, improving testability and
 /// reducing duplication across the codebase.
 
+use crate::constants::{TTL_EXTEND_TO_LEDGERS, TTL_THRESHOLD_LEDGERS};
 use crate::error::StellarSaveError;
 use crate::group::{Group, TokenConfig};
 use crate::storage::{StorageKey, StorageKeyBuilder};
 use soroban_sdk::{Address, Env, Vec};
+
+/// Bumps the TTL of a persistent storage entry if it is at risk of archival.
+///
+/// Calls `extend_ttl` only when the entry's current live-until ledger is below
+/// `TTL_THRESHOLD_LEDGERS`, extending it to `TTL_EXTEND_TO_LEDGERS`.  This
+/// avoids paying rent-bump costs on every access when the entry is already
+/// long-lived (Issue #75).
+fn bump_ttl(env: &Env, key: &StorageKey) {
+    env.storage()
+        .persistent()
+        .extend_ttl(key, TTL_THRESHOLD_LEDGERS, TTL_EXTEND_TO_LEDGERS);
+}
 
 /// Repository for managing group storage operations.
 ///
@@ -27,10 +40,14 @@ impl GroupRepository {
     /// * `Err(StellarSaveError::GroupNotFound)` - If the group does not exist
     pub fn get_group(env: &Env, group_id: u64) -> Result<Group, StellarSaveError> {
         let group_key = StorageKeyBuilder::group_data(group_id);
-        env.storage()
+        let group = env
+            .storage()
             .persistent()
             .get::<_, Group>(&group_key)
-            .ok_or(StellarSaveError::GroupNotFound)
+            .ok_or(StellarSaveError::GroupNotFound)?;
+        // Bump TTL on every access so long-lived groups are never archived (Issue #75)
+        bump_ttl(env, &group_key);
+        Ok(group)
     }
 
     /// Saves a group to persistent storage.
@@ -41,6 +58,8 @@ impl GroupRepository {
     pub fn save_group(env: &Env, group: &Group) {
         let group_key = StorageKeyBuilder::group_data(group.id);
         env.storage().persistent().set(&group_key, group);
+        // Bump TTL after every write to keep critical group data live (Issue #75)
+        bump_ttl(env, &group_key);
     }
 
     /// Retrieves the token configuration for a group.
@@ -54,10 +73,14 @@ impl GroupRepository {
     /// * `Err(StellarSaveError::InvalidToken)` - If the configuration does not exist
     pub fn get_token_config(env: &Env, group_id: u64) -> Result<TokenConfig, StellarSaveError> {
         let token_config_key = StorageKeyBuilder::group_token_config(group_id);
-        env.storage()
+        let config = env
+            .storage()
             .persistent()
             .get::<_, TokenConfig>(&token_config_key)
-            .ok_or(StellarSaveError::InvalidToken)
+            .ok_or(StellarSaveError::InvalidToken)?;
+        // Bump TTL on every read to keep the token config live (Issue #75)
+        bump_ttl(env, &token_config_key);
+        Ok(config)
     }
 
     /// Saves the token configuration for a group.
@@ -71,6 +94,8 @@ impl GroupRepository {
         env.storage()
             .persistent()
             .set(&token_config_key, token_config);
+        // Bump TTL after every write (Issue #75)
+        bump_ttl(env, &token_config_key);
     }
 
     /// Retrieves the list of members for a group.
@@ -276,5 +301,52 @@ mod tests {
         assert!(retrieved.is_some());
         let retrieved_members = retrieved.unwrap();
         assert_eq!(retrieved_members.len(), 2);
+    }
+
+    // Issue #75: Verify TTL bump is applied on save/read of critical entries
+    #[test]
+    fn test_ttl_bump_on_group_save_and_read() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+
+        let group = Group::new(
+            &env,
+            1,
+            creator,
+            1_000_000,
+            604800,
+            5,
+            2,
+            1234567890,
+            0,
+        );
+
+        // Save triggers bump_ttl — should not panic
+        GroupRepository::save_group(&env, &group);
+
+        // Read triggers bump_ttl — should not panic and return the group
+        let retrieved = GroupRepository::get_group(&env, 1);
+        assert!(retrieved.is_ok());
+        assert_eq!(retrieved.unwrap().id, 1);
+    }
+
+    // Issue #75: Verify TTL bump is applied on token config save/read
+    #[test]
+    fn test_ttl_bump_on_token_config_save_and_read() {
+        let env = Env::default();
+        let token_address = Address::generate(&env);
+
+        let config = TokenConfig {
+            token_address: token_address.clone(),
+            token_decimals: 7,
+        };
+
+        // Save triggers bump_ttl — should not panic
+        GroupRepository::save_token_config(&env, 1, &config);
+
+        // Read triggers bump_ttl — should not panic and return the config
+        let retrieved = GroupRepository::get_token_config(&env, 1);
+        assert!(retrieved.is_ok());
+        assert_eq!(retrieved.unwrap().token_address, token_address);
     }
 }

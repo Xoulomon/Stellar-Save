@@ -44,18 +44,18 @@ export default function NotFoundPage() {
             component="img"
             src={NotFoundIllustration}
             alt="404 Illustration"
-            sx={{ 
-              width: "100%", 
+            sx={{
+              width: "100%",
               maxWidth: 380,
-              mb: 2 
+              mb: 2
             }}
           />
 
           {/* Content */}
           <Box sx={{ position: "relative", top: "-30px" }}>
-            <Typography 
-              variant="h1" 
-              component="h1" 
+            <Typography
+              variant="h1"
+              component="h1"
               fontWeight={700}
               sx={{ fontSize: { xs: "4.5rem", md: "6rem" }, color: "text.primary" }}
             >
@@ -66,29 +66,29 @@ export default function NotFoundPage() {
               Page Not Found
             </Typography>
 
-            <Typography 
-              color="text.secondary" 
+            <Typography
+              color="text.secondary"
               sx={{ mb: 5, maxWidth: 420, mx: "auto" }}
             >
               Oops! The page you're looking for doesn't exist or has been moved.
             </Typography>
 
             {/* Action Buttons */}
-            <Stack 
-              direction={{ xs: "column", sm: "row" }} 
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
               spacing={2}
               justifyContent="center"
             >
-              <AppButton 
-                onClick={handleGoHome} 
+              <AppButton
+                onClick={handleGoHome}
                 size="large"
                 variant="contained"
               >
                 Go Back Home
               </AppButton>
 
-              <AppButton 
-                onClick={handleGoToAbout} 
+              <AppButton
+                onClick={handleGoToAbout}
                 size="large"
                 variant="outlined"
               >

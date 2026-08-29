@@ -22,9 +22,9 @@ describe('Config - Database URL Construction', () => {
 
   it('should use DATABASE_URL when provided directly', async () => {
     process.env.DATABASE_URL = 'postgresql://user:pass@localhost:5432/testdb';
-    
+
     const { config } = await import('../config');
-    
+
     expect(config.database.url).toBe('postgresql://user:pass@localhost:5432/testdb');
   });
 
@@ -35,9 +35,9 @@ describe('Config - Database URL Construction', () => {
     process.env.DB_HOST = 'rds.amazonaws.com';
     process.env.DB_PORT = '5432';
     process.env.DB_NAME = 'stellarsave';
-    
+
     const { config } = await import('../config');
-    
+
     expect(config.database.url).toBe(
       'postgresql://dbuser:dbpass123@rds.amazonaws.com:5432/stellarsave'
     );
@@ -50,9 +50,9 @@ describe('Config - Database URL Construction', () => {
     process.env.DB_HOST = 'component.host';
     process.env.DB_PORT = '5432';
     process.env.DB_NAME = 'component';
-    
+
     const { config } = await import('../config');
-    
+
     expect(config.database.url).toBe('postgresql://direct:url@host:5432/db');
   });
 
@@ -63,9 +63,9 @@ describe('Config - Database URL Construction', () => {
     delete process.env.DB_HOST;
     delete process.env.DB_PORT;
     delete process.env.DB_NAME;
-    
+
     const { config } = await import('../config');
-    
+
     expect(config.database.url).toBe('postgresql://user:pass@localhost:5432/stellar_save');
   });
 
@@ -74,9 +74,9 @@ describe('Config - Database URL Construction', () => {
     process.env.DB_USERNAME = 'user';
     process.env.DB_PASSWORD = 'pass';
     // Missing DB_HOST, DB_PORT, DB_NAME
-    
+
     const { config } = await import('../config');
-    
+
     expect(config.database.url).toBe('postgresql://user:pass@localhost:5432/stellar_save');
   });
 
@@ -87,9 +87,9 @@ describe('Config - Database URL Construction', () => {
     process.env.DB_HOST = 'localhost';
     process.env.DB_PORT = '5432';
     process.env.DB_NAME = 'db';
-    
+
     const { config } = await import('../config');
-    
+
     expect(config.database.url).toBe('postgresql://user:p@ss!w0rd#123@localhost:5432/db');
   });
 });

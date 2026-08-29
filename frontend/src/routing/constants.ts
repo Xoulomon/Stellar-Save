@@ -43,7 +43,14 @@ export const ROUTES = {
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];
 
 /**
- * Helper to build parameterized routes
+ * Helper to build parameterized routes.
+ *
+ * Rules:
+ *  - Only routes that require dynamic path segments live here.
+ *  - Static routes (no params) should be referenced via ROUTES directly.
+ *  - Removed: deposit() and withdraw() — they generated stale /ramp/* paths
+ *    that diverged from ROUTES.DEPOSIT (/deposit) and ROUTES.WITHDRAW (/withdraw).
+ *    Use ROUTES.DEPOSIT / ROUTES.WITHDRAW directly instead.
  */
 export const buildRoute = {
   groupDetail: (groupId: string) => `/groups/${groupId}`,
@@ -52,7 +59,6 @@ export const buildRoute = {
   groupMembers: (groupId: string) => `/groups/${groupId}/members`,
   groupJoin: (inviteCode: string) => `/join/${inviteCode}`,
   appDownload: (inviteCode: string) => `/app/${inviteCode}`,
+  profile: (address: string) => `/profile/${address}`,
   memberProfile: (address: string) => `/members/${address}`,
-  deposit: () => `/ramp/deposit`,
-  withdraw: () => `/ramp/withdraw`,
 } as const;

@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { V1Services } from './v1';
 import { randomBytes } from 'crypto';
 
@@ -7,6 +7,9 @@ import { prisma } from '../prisma_client';
 import { logger } from '../logger';
 import { config } from '../config';
 import { readinessCheckCache } from '../redis';
+import { ValidationMiddleware } from '../middleware/validation';
+import { groupInvitationSchema } from '../middleware/validation.schemas';
+import { AppError } from '../lib/errors';
 
 /**
  * Transforms a v1 response shape into v2 shape.
@@ -65,14 +68,12 @@ export function createV2Router(services: V1Services): Router {
 
   // Group invitation email
   // POST /api/groups/:groupId/invite
-  router.post('/groups/:groupId/invite', async (req: Request, res: Response) => {
-    try {
-      const { groupId } = req.params;
-      const { email } = req.body as { email?: string };
-
-      if (!groupId) return res.status(400).json(migrateV1ToV2({ error: 'groupId is required' }));
-      if (!email || typeof email !== 'string')
-        return res.status(400).json(migrateV1ToV2({ error: 'email is required' }));
+  router.post(
+    '/groups/:groupId/invite',
+    ValidationMiddleware.validateBody(groupInvitationSchema),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const { groupId, email } = req.body;
 
       // Generate token for join link
       const joinToken = randomBytes(32).toString('hex');
@@ -118,7 +119,7 @@ export function createV2Router(services: V1Services): Router {
       );
     } catch (err: any) {
       logger.error('Failed to send group invitation', { error: err?.message || String(err) });
-      res.status(500).json(migrateV1ToV2({ error: 'Failed to send invitation' }));
+      next(new AppError('GROUP_INVITATION_FAILED', 'Failed to send invitation', 500));
     }
   });
 
@@ -139,12 +140,11 @@ export function createV2Router(services: V1Services): Router {
   });
 
   // All other v2 routes are stubs — return 501 with migration hint
-  router.use((req: Request, res: Response) => {
-    res.status(501).json({
-      error: 'Not implemented in v2 yet',
+  router.use((req: Request, res: Response, next: NextFunction) => {
+    next(new AppError('NOT_IMPLEMENTED', 'Not implemented in v2 yet', 501, {
       hint: `Try the v1 equivalent: /api/v1${req.path}`,
       apiVersion: 'v2',
-    });
+    }));
   });
 
   return router;

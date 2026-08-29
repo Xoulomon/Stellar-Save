@@ -27,17 +27,14 @@ Thresholds are enforced in two complementary places:
 | Workspace  | Lines | Branches | Functions | Statements | Enforced by |
 |------------|-------|----------|-----------|------------|-------------|
 | frontend   | 80%   | 70%      | 80%       | 80%        | `frontend/vitest.config.ts` (`coverage.thresholds`) + Codecov flag `frontend` |
-| contracts  | 85%   | —        | —         | —          | `tarpaulin.toml` (`fail-under = 85`) + Codecov flag `contracts` |
-| backend    | 60%   | 50%      | 60%       | 60%        | `backend/jest.config.js` (`coverageThreshold`) + Codecov flag `backend` |
+| contracts  | 90%   | —        | —         | —          | `tarpaulin.toml` (`fail-under = 90`) + `contracts/cargo-llvm-cov.toml` + Codecov flag `contracts` |
+| backend    | 85%   | 85%      | 85%       | 85%        | `backend/jest.config.js` (`coverageThreshold`) + Codecov flag `backend` |
 
 ### Why these numbers
 
-- **contracts (85%)** — the smart contracts are the highest-risk component, so
-  they carry the strictest gate, aligned with the existing `tarpaulin.toml`.
-- **frontend (80%)** — matches the thresholds already configured in the vitest
-  coverage block.
-- **backend (60%)** — a conservative baseline chosen because the backend test
-  suite is still maturing. Raise this over time as backend coverage grows.
+- **contracts (90%)** — smart contracts are the highest-risk component, enforced at 90%+ via tarpaulin and cargo-llvm-cov baseline.
+- **frontend (80%)** — matches the thresholds configured in vitest coverage.
+- **backend (85%)** — established minimum unit & integration test coverage baseline across backend services.
 
 The previous global Codecov target of 95% was unrealistic across all three
 workspaces simultaneously and has been replaced with the per-flag targets above
@@ -67,8 +64,9 @@ while any coverage check is failing.
 ## Running coverage locally
 
 ```bash
-# Contracts (Rust) — produces HTML + Cobertura XML in ./coverage
+# Contracts (Rust) — tarpaulin & cargo-llvm-cov
 cargo tarpaulin --config tarpaulin.toml
+cargo llvm-cov --config contracts/cargo-llvm-cov.toml --html
 
 # Frontend (vitest) — produces ./frontend/coverage (lcov.info, cobertura, html)
 cd frontend && npm run test:coverage

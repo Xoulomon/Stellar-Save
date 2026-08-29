@@ -10,8 +10,14 @@ import {
   Alert,
   IconButton,
 } from '@mui/material';
+<<<<<<< HEAD
 import { useState, useEffect } from 'react';
 
+=======
+import { Button } from '../Button';
+import { copyToClipboard } from '../../lib/clipboard';
+import type { TransactionTemplate, TransactionBuilderStep } from '../../types/transactionBuilder';
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import { saveTemplate, generateShareCode } from '../../services/transactionBuilderService';
 import { Button } from '../Button';
 
@@ -60,21 +66,9 @@ export function SaveTemplateModal({ open, onClose, steps, template }: SaveTempla
   };
 
   const handleCopyShareCode = async () => {
-    try {
-      await navigator.clipboard.writeText(shareCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // fallback
-      const input = document.createElement('input');
-      input.value = shareCode;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    await copyToClipboard(shareCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleClose = () => {

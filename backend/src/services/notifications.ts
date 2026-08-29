@@ -11,6 +11,7 @@
 import * as sgMail from '@sendgrid/mail';
 import { prisma } from '../prisma_client';
 import { logger } from '../logger';
+import { notificationPreferenceRepository } from '../modules/notifications/notification-preference.repository';
 import { config } from '../config';
 import { calculateReminderSchedules } from './reminder_scheduler';
 
@@ -132,9 +133,7 @@ export async function sendContributionReminder(
   const appUrl = config.urls.app;
 
   try {
-    const prefs = await prisma.notificationPreference.findUnique({
-      where: { userId: member.userId },
-    });
+    const prefs = await notificationPreferenceRepository.findByUserId(member.userId);
 
     if (prefs && (!prefs.emailNotifications || !prefs.contributionReminders)) {
       logger.info('Skipping reminder — user opted out', { userId: member.userId, groupId });
@@ -247,9 +246,7 @@ export async function scheduleContributionReminders(
 
   for (const member of members) {
     // Fetch user preferences if available to pass to pure scheduler
-    const prefsRecord = await prisma.notificationPreference.findUnique({
-      where: { userId: member.userId },
-    });
+    const prefsRecord = await notificationPreferenceRepository.findByUserId(member.userId);
 
     const slots = calculateReminderSchedules({
       deadline,

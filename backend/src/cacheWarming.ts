@@ -10,14 +10,14 @@ const warmData = {
 
 export const startWarmingJob = async () => {
   console.log('🔥 Starting cache warming job...');
-  
+
   for (const [endpoint, data] of Object.entries(warmData)) {
     await set(`cache:${endpoint}`, data, 3600);
     console.log(`Warmed: ${endpoint}`);
   }
-  
+
   console.log('✅ Cache warming completed');
-  
+
   setInterval(async () => {
     console.log('🔄 Running scheduled cache warming...');
     for (const [endpoint, data] of Object.entries(warmData)) {

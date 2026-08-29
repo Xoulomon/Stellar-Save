@@ -1,5 +1,9 @@
 import React, { useCallback } from 'react';
+<<<<<<< HEAD
 
+=======
+import { shareOrCopy } from '../lib/clipboard';
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import type { MemberBadge } from '../hooks/useMemberBadges';
 import './BadgeGallery.css';
 
@@ -76,16 +80,8 @@ interface BadgeCardProps {
 
 function BadgeCard({ badge, walletAddress }: BadgeCardProps) {
   const handleShare = useCallback(() => {
-    const text = buildShareText(badge, walletAddress);
-
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      // Native share sheet (mobile / Safari 15+)
-      navigator.share({ text }).catch(() => {
-        // User cancelled — not an error
-      });
-    } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(text).catch(() => undefined);
-    }
+    // Native share sheet (mobile / Safari 15+) with a clipboard fallback.
+    void shareOrCopy({ text: buildShareText(badge, walletAddress) });
   }, [badge, walletAddress]);
 
   return (

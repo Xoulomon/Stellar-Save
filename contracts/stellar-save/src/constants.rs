@@ -157,6 +157,20 @@ pub const AUTO_PAUSE_DISPUTE_THRESHOLD_PCT: u32 = 50;
 /// Unit: count
 pub const MAX_CONTRIBUTION_HISTORY_PER_PAGE: u32 = 50;
 
+// ─── Storage TTL / Rent-bump Constants (Issue #75) ───────────────────────────
+
+/// Minimum number of ledgers an entry must remain live before a TTL bump is
+/// triggered.  Set to ~30 days at ~5 s per ledger.
+///
+/// Unit: ledgers
+pub const TTL_THRESHOLD_LEDGERS: u32 = 518_400; // 30 days
+
+/// Target TTL (live_until_ledger_seq extension) for critical persistent entries
+/// after a bump.  Set to ~365 days at ~5 s per ledger.
+///
+/// Unit: ledgers
+pub const TTL_EXTEND_TO_LEDGERS: u32 = 6_307_200; // 365 days
+
 #[cfg(test)]
 mod tests {
     use super::*;

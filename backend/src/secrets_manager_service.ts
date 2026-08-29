@@ -1,6 +1,6 @@
 /**
  * Secrets Manager Service (Issue #1105)
- * 
+ *
  * AWS Secrets Manager integration with automatic rotation support.
  * Removes hardcoded secrets from environment files and provides
  * centralized secret management with audit logging.
@@ -247,7 +247,7 @@ export class SecretsManagerService {
     try {
       // First get the ARN
       const metadata = await this.getSecretMetadata(secretName);
-      
+
       if (!metadata.arn) {
         throw new Error('Secret ARN not found');
       }
@@ -378,10 +378,10 @@ export async function initializeSecrets(): Promise<void> {
   for (const { name, envVar } of secretConfigs) {
     try {
       const secret = await secretsManager.getSecret(name);
-      
+
       // Override environment variable with secret from AWS
       process.env[envVar] = secret.value;
-      
+
       logger.info('Secret loaded from AWS', { secretName: name });
     } catch (error) {
       logger.warn('Failed to load secret from AWS, using environment variable', {

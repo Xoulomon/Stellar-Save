@@ -1,3 +1,5 @@
+import { logger } from './logger';
+
 export interface ShutdownServer {
   close(callback: (err?: Error) => void): void;
 }
@@ -22,8 +24,8 @@ export function createGracefulShutdown(
 ): (signal: string) => void {
   const timeoutMs = options.timeoutMs ?? 10000;
   const exit = options.exit ?? ((code: number) => process.exit(code));
-  const log = options.log ?? console.log;
-  const logError = options.logError ?? console.error;
+  const log = options.log ?? ((msg: string) => logger.info(msg));
+  const logError = options.logError ?? ((msg: string, err?: unknown) => logger.error(msg, err));
   let isShuttingDown = false;
 
   return function gracefulShutdown(signal: string): void {

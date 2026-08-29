@@ -1,6 +1,6 @@
 /**
  * Frontend utilities index - re-exports for easy imports.
- * 
+ *
  * Usage: import { calculateCycleProgress, errorHandler } from '@/utils';
  */
 

@@ -6,7 +6,7 @@ test.describe('Accessibility Tests', () => {
     await page.goto('/');
     const results = await new AxeBuilder({ page }).analyze();
     if (results.violations.length > 0) {
-      const criticalViolations = results.violations.filter(v => 
+      const criticalViolations = results.violations.filter(v =>
         ['critical', 'serious'].includes(v.impact || '')
       );
       if (criticalViolations.length > 0) {
@@ -19,7 +19,7 @@ test.describe('Accessibility Tests', () => {
     await page.goto('/dashboard');
     const results = await new AxeBuilder({ page }).analyze();
     if (results.violations.length > 0) {
-      const criticalViolations = results.violations.filter(v => 
+      const criticalViolations = results.violations.filter(v =>
         ['critical', 'serious'].includes(v.impact || '')
       );
       if (criticalViolations.length > 0) {

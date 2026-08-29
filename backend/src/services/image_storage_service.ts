@@ -12,14 +12,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { config } from '../config';
 import { logger } from '../logger';
+import { ImageValidationError } from '../lib/errors';
 
-export class ImageValidationError extends Error {
-  readonly code = 'IMAGE_VALIDATION_ERROR';
-  constructor(message: string) {
-    super(message);
-    this.name = 'ImageValidationError';
-  }
-}
+export { ImageValidationError };
 
 export interface ImageUploadOptions {
   filename: string;

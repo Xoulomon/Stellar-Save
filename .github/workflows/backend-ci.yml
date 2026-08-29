@@ -32,5 +32,11 @@ jobs:
       - name: Dependency audit
         run: npm audit --audit-level=high
 
+      - name: GraphQL schema breaking-change check
+        # Fails if the committed snapshot diverges from the live schema or if
+        # any breaking change is present (ALLOW_BREAKING_SCHEMA is never set
+        # here, so the gate is unconditional).
+        run: npm run schema:check
+
       - name: Test
         run: npm test

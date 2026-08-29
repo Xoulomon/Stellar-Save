@@ -16,16 +16,12 @@ export function createGroupsRouter(service: GroupsService = new GroupsService(ne
     res.json(groups);
   });
 
-  router.get('/groups/:id', async (req, res) => {
+  router.get('/groups/:id', async (req, res, next) => {
     try {
       const group = await service.getGroupById(req.params.id);
       res.json(group);
     } catch (error) {
-      if (error instanceof AppError) {
-        res.status(error.statusCode).json({ error: error.message });
-        return;
-      }
-      throw error;
+      next(error);
     }
   });
 

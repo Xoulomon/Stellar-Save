@@ -5,6 +5,7 @@ import { eventsIndexedTotal, sorobanRpcCallsTotal } from './metrics';
 import { GroupStateCache, isStateMutatingEvent } from './lib/cache';
 import { CONTRACT_EVENT_TOPICS } from '../../packages/events-schema/generated/events';
 import { fetchWithCorrelationId } from './lib/http';
+import { logger } from './logger';
 
 // Typed topic constants — must exist in the canonical schema
 const PAYOUT_EVENT_TYPES: string[] = ['payout_executed'];
@@ -60,21 +61,21 @@ export class ContractEventIndexer {
 
   async start(lastLedger?: number) {
     if (this.isRunning) {
-      console.log('Indexer is already running');
+      logger.info('Indexer is already running');
       return;
     }
 
     this.isRunning = true;
-    console.log('Starting contract event indexer...');
+    logger.info('Starting contract event indexer...');
 
     try {
       const startLedger = lastLedger ?? await this.loadStartLedger();
       this.streamEvents(startLedger).catch(err => {
-        console.error('Fatal error in stream loop:', err);
+        logger.error('Fatal error in stream loop:', err);
         this.isRunning = false;
       });
     } catch (error) {
-      console.error('Error starting indexer:', error);
+      logger.error('Error starting indexer:', error);
       this.isRunning = false;
     }
   }
@@ -82,7 +83,7 @@ export class ContractEventIndexer {
   async stop() {
     this.isRunning = false;
     await this.prisma.$disconnect();
-    console.log('Indexer stopped');
+    logger.info('Indexer stopped');
   }
 
   async getEvents(options: {
@@ -134,7 +135,7 @@ export class ContractEventIndexer {
     // startLedger sequence number (Horizon accepts ledger seq as a cursor).
     let cursor: string = stored?.lastCursor || String(startLedger);
 
-    console.log(`[ContractEventIndexer] Starting from cursor=${cursor}`);
+    logger.info(`[ContractEventIndexer] Starting from cursor=${cursor}`);
 
     while (this.isRunning) {
       // Each poll iteration is its own root span. Event-handling work below
@@ -150,13 +151,17 @@ export class ContractEventIndexer {
           url.searchParams.set('order', 'asc');
           url.searchParams.set('limit', String(PAGE_LIMIT));
 
-          const response = await fetchWithCorrelationId(url.toString());
-          sorobanRpcCallsTotal.inc({ method: 'getEvents', status: response.ok ? 'success' : 'error' });
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status} from ${url}`);
-          }
-
-          const data: any = await response.json();
+          // Guarded by the Horizon breaker so a degraded endpoint backs the poll
+          // loop off immediately instead of burning the full request timeout on
+          // every iteration (#1511).
+          const data: any = await withHorizonCircuit(async () => {
+            const response = await fetchWithCorrelationId(url.toString());
+            sorobanRpcCallsTotal.inc({ method: 'getEvents', status: response.ok ? 'success' : 'error' });
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status} from ${url}`);
+            }
+            return response.json();
+          });
           const records: any[] = data._embedded?.records ?? [];
           span.setAttribute('indexer.records', records.length);
 
@@ -181,7 +186,7 @@ export class ContractEventIndexer {
           return 0;
         },
       ).catch((error) => {
-        console.error('[ContractEventIndexer] Poll error:', error);
+        logger.error('[ContractEventIndexer] Poll error:', error);
         return ERROR_BACKOFF_MS;
       });
 
@@ -210,13 +215,13 @@ export class ContractEventIndexer {
   private async loadStartLedger(): Promise<number> {
     const stored = await this.loadCursorRecord();
     if (stored && stored.lastLedger > 0) {
-      console.log(`[ContractEventIndexer] Resuming from persisted ledger ${stored.lastLedger}`);
+      logger.info(`[ContractEventIndexer] Resuming from persisted ledger ${stored.lastLedger}`);
       return stored.lastLedger;
     }
 
     const latestLedger = await this.server.ledgers().order('desc').limit(1).call();
     const seq: number = latestLedger.records[0].sequence;
-    console.log(`[ContractEventIndexer] No prior cursor; starting from current tip ledger ${seq}`);
+    logger.info(`[ContractEventIndexer] No prior cursor; starting from current tip ledger ${seq}`);
     return seq;
   }
 
@@ -229,7 +234,7 @@ export class ContractEventIndexer {
         create: { contractId: this.contractId, lastCursor, lastLedger },
       });
     } catch (err) {
-      console.error('[ContractEventIndexer] Failed to persist cursor:', err);
+      logger.error('[ContractEventIndexer] Failed to persist cursor:', err);
     }
   }
 
@@ -252,7 +257,7 @@ export class ContractEventIndexer {
             },
           }),
       );
-      console.log(`Stored event: ${event.type} in ledger ${event.ledger}`);
+      logger.info(`Stored event: ${event.type} in ledger ${event.ledger}`);
       eventsIndexedTotal.inc({ event_type: event.type || 'unknown' });
 
       // Bust cache for state-mutating events
@@ -288,7 +293,7 @@ export class ContractEventIndexer {
         }
       }
     } catch (error) {
-      console.error('[ContractEventIndexer] Error storing event:', error);
+      logger.error('[ContractEventIndexer] Error storing event:', error);
     }
   }
 
@@ -310,7 +315,7 @@ export class ContractEventIndexer {
         data: { eventType, txHash: event.transactionHash ?? event.txHash, groupId, amount },
       };
       await this.webPush.sendToMembers(members, payload);
-      console.log(`Push notification sent for payout event (ledger ${event.ledger ?? event.ledgerSeq})`);
+      logger.info(`Push notification sent for payout event (ledger ${event.ledger ?? event.ledgerSeq})`);
       return;
     }
 
@@ -325,14 +330,14 @@ export class ContractEventIndexer {
         data: { eventType, txHash: event.transactionHash ?? event.txHash, groupId, amount },
       };
       await this.webPush.sendToMembers(members, payload);
-      console.log(`Push notification sent for missed-contribution event (ledger ${event.ledger ?? event.ledgerSeq})`);
+      logger.info(`Push notification sent for missed-contribution event (ledger ${event.ledger ?? event.ledgerSeq})`);
     }
   }
 
   async stop() {
     this.isRunning = false;
     await this.prisma.$disconnect();
-    console.log('Indexer stopped');
+    logger.info('Indexer stopped');
   }
 
   async readinessCheckDatabase(): Promise<DependencyHealth> {
@@ -355,13 +360,15 @@ export class ContractEventIndexer {
     const start = Date.now();
     try {
       // Use Horizon SDK as a reachability check (latest ledger is cheap enough)
-      await this.server.ledgers().order('desc').limit(1).call();
+      await withHorizonCircuit(() => this.server.ledgers().order('desc').limit(1).call());
       return { up: true, latencyMs: Date.now() - start };
     } catch (err) {
       return {
         up: false,
         latencyMs: Date.now() - start,
-        error: err instanceof Error ? err.message : String(err),
+        error: isCircuitOpenError(err)
+          ? 'Horizon circuit breaker is OPEN'
+          : err instanceof Error ? err.message : String(err),
       };
     }
   }

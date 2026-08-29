@@ -68,3 +68,47 @@ FROM   events
 WHERE  member_address = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'
   AND  event_type     = 'PayoutExecuted'
 ORDER BY created_at DESC;
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- Issue #42 — queries covered by 002_add_missing_indexes.sql
+-- Run each block BEFORE applying 002 (seq scan / sort expected) and AFTER
+-- (index scan expected). Compare Planning Time + Execution Time.
+-- ═════════════════════════════════════════════════════════════════════════════
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- QUERY 3: Indexer idempotency check  ->  idx_events_transaction_hash
+-- ─────────────────────────────────────────────────────────────────────────────
+EXPLAIN ANALYZE
+SELECT 1
+FROM   events
+WHERE  transaction_hash = 'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f901'
+LIMIT  1;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- QUERY 4: Indexer resume-from-ledger / reorg scan  ->  idx_events_ledger_sequence
+-- ─────────────────────────────────────────────────────────────────────────────
+EXPLAIN ANALYZE
+SELECT id, group_id, event_type, ledger_sequence, transaction_hash
+FROM   events
+WHERE  ledger_sequence >= 900000
+ORDER BY ledger_sequence ASC
+LIMIT  500;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- QUERY 5: Per-group cycle payout lookup  ->  idx_events_group_cycle
+-- ─────────────────────────────────────────────────────────────────────────────
+EXPLAIN ANALYZE
+SELECT member_address, event_type, amount, created_at
+FROM   events
+WHERE  group_id = 42
+  AND  cycle    = 7;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- QUERY 6: Platform-wide activity feed  ->  idx_events_type_created
+-- ─────────────────────────────────────────────────────────────────────────────
+EXPLAIN ANALYZE
+SELECT group_id, member_address, event_type, amount, created_at
+FROM   events
+WHERE  event_type = 'ContributionMade'
+ORDER BY created_at DESC
+LIMIT  100;

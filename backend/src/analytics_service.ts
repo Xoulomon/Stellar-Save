@@ -1,4 +1,5 @@
 import * as redis from './redis';
+import { logger } from './logger';
 //import type { PrismaClient } from '@prisma/client';
 
 export interface GroupCycleStats {
@@ -154,7 +155,7 @@ export class AnalyticsService {
       await this.cacheClient.set(cacheKey, stats, this.cacheTTL);
       return stats;
     } catch (error) {
-      console.error('Error fetching platform stats:', error);
+      logger.error('Error fetching platform stats:', error);
       throw error;
     }
   }
@@ -201,7 +202,7 @@ export class AnalyticsService {
       await this.cacheClient.set(cacheKey, stats, this.cacheTTL);
       return stats;
     } catch (error) {
-      console.error('Error fetching user stats:', error);
+      logger.error('Error fetching user stats:', error);
       throw error;
     }
   }
@@ -249,7 +250,7 @@ export class AnalyticsService {
       await this.cacheClient.set(cacheKey, stats, this.cacheTTL);
       return stats;
     } catch (error) {
-      console.error('Error fetching group stats:', error);
+      logger.error('Error fetching group stats:', error);
       throw error;
     }
   }
@@ -289,7 +290,7 @@ export class AnalyticsService {
         churnCount: metric.churnCount,
       }));
     } catch (error) {
-      console.error('Error fetching group cycle stats:', error);
+      logger.error('Error fetching group cycle stats:', error);
       throw error;
     }
   }
@@ -337,7 +338,7 @@ export class AnalyticsService {
       await this.cacheClient.set(cacheKey, trends, this.cacheTTL);
       return trends;
     } catch (error) {
-      console.error('Error fetching platform trends:', error);
+      logger.error('Error fetching platform trends:', error);
       throw error;
     }
   }
@@ -390,7 +391,7 @@ export class AnalyticsService {
       await this.cacheClient.set(cacheKey, eventStats, this.cacheTTL);
       return eventStats;
     } catch (error) {
-      console.error('Error fetching event stats:', error);
+      logger.error('Error fetching event stats:', error);
       throw error;
     }
   }
@@ -421,7 +422,7 @@ export class AnalyticsService {
       // Invalidate event stats cache
       await redis.delPattern('event_stats:*');
     } catch (error) {
-      console.error('Error recording analytics event:', error);
+      logger.error('Error recording analytics event:', error);
       // Don't throw - analytics tracking should never break the app
     }
   }
@@ -609,7 +610,7 @@ export class AnalyticsService {
         generatedAt: report.createdAt,
       };
     } catch (error) {
-      console.error('Error generating report:', error);
+      logger.error('Error generating report:', error);
       throw error;
     }
   }
@@ -638,7 +639,7 @@ export class AnalyticsService {
         generatedAt: r.createdAt,
       }));
     } catch (error) {
-      console.error('Error fetching reports:', error);
+      logger.error('Error fetching reports:', error);
       throw error;
     }
   }
@@ -710,7 +711,7 @@ export class AnalyticsService {
       await this.cacheClient.set(CACHE_KEY, stats, CACHE_TTL);
       return stats;
     } catch (error) {
-      console.error('Error fetching groups overview stats:', error);
+      logger.error('Error fetching groups overview stats:', error);
       throw error;
     }
   }
@@ -722,7 +723,7 @@ export class AnalyticsService {
     try {
       await redis.delPattern(pattern);
     } catch (error) {
-      console.error('Error clearing cache:', error);
+      logger.error('Error clearing cache:', error);
     }
   }
 

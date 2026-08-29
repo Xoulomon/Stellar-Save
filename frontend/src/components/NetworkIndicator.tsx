@@ -21,20 +21,30 @@ export function NetworkIndicator() {
       <button
         className={`network-indicator network-${currentNetwork}`}
         onClick={() => setShowSwitcher(!showSwitcher)}
+        aria-label={`Current network: ${currentNetwork}. Click to switch network`}
+        aria-expanded={showSwitcher}
+        aria-haspopup="listbox"
       >
-        <span className="network-dot" />
+        <span className="network-dot" aria-hidden="true" />
         <span className="network-name">{currentNetwork}</span>
       </button>
 
       {showSwitcher && (
-        <div className="network-switcher">
+        <div
+          className="network-switcher"
+          role="listbox"
+          aria-label="Select network"
+        >
           {NETWORKS.map((net) => (
             <button
               key={net}
               className={`network-option ${net === currentNetwork ? 'active' : ''}`}
               onClick={() => handleNetworkSwitch(net)}
+              role="option"
+              aria-selected={net === currentNetwork}
+              aria-label={`Switch to ${net}`}
             >
-              <span className={`network-dot network-${net}`} />
+              <span className={`network-dot network-${net}`} aria-hidden="true" />
               <span>{net}</span>
             </button>
           ))}

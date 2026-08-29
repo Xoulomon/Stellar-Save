@@ -9,13 +9,13 @@ module.exports = {
   ],
   coverageDirectory: 'coverage',
   // Minimum coverage gate for the backend workspace (see docs/test-coverage.md).
-  // Conservative baseline; raise as backend test coverage grows.
+  // Enforced baseline at 85%+ (Issue #1535).
   coverageThreshold: {
     global: {
-      lines: 60,
-      functions: 60,
-      branches: 50,
-      statements: 60,
+      lines: 85,
+      functions: 85,
+      branches: 85,
+      statements: 85,
     },
   },
   setupFilesAfterEnv: [],
