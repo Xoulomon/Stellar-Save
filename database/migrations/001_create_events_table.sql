@@ -1,6 +1,12 @@
 -- Migration: 001_create_events_table.sql
 -- Creates the events table for off-chain indexing of Soroban contract events.
 -- This table powers the analytics dashboard and leaderboard queries.
+--
+-- Apply:  psql -U <user> -d <dbname> -f database/migrations/001_create_events_table.sql
+
+BEGIN;
+
+-- ─── UP MIGRATION ─────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS events (
     id               BIGSERIAL PRIMARY KEY,
@@ -34,3 +40,13 @@ CREATE INDEX IF NOT EXISTS idx_events_member_history
 COMMENT ON TABLE  events                          IS 'Off-chain index of Soroban contract events for analytics.';
 COMMENT ON INDEX  idx_events_cycle_analytics      IS 'Speeds up cycle analytics dashboard queries (group_id, event_type, created_at).';
 COMMENT ON INDEX  idx_events_member_history       IS 'Speeds up member history queries (member_address, event_type).';
+
+COMMIT;
+
+-- ─── DOWN MIGRATION (Rollback) ────────────────────────────────────────────────
+-- To rollback: psql -U <user> -d <dbname> -f database/migrations/001_create_events_table.down.sql
+--
+-- Or manually execute:
+--   DROP INDEX IF EXISTS idx_events_member_history;
+--   DROP INDEX IF EXISTS idx_events_cycle_analytics;
+--   DROP TABLE IF EXISTS events;
