@@ -15,40 +15,10 @@
  */
 import { test } from '@playwright/test';
 import percySnapshot from '@percy/playwright';
-
-// === Helpers
-
-/** Disable CSS transitions/animations for deterministic snapshots. */
-async function freezeAnimations(page: import('@playwright/test').Page) {
-  await page.addStyleTag({
-    content: `*, *::before, *::after {
-      animation-duration: 0s !important;
-      transition-duration: 0s !important;
-    }`,
-  });
-}
-
-/** Force dark color-scheme on the page without relying on OS emulation. */
-async function enableDarkMode(page: import('@playwright/test').Page) {
-  await page.addStyleTag({ content: ':root { color-scheme: dark; }' });
-  await page.emulateMedia({ colorScheme: 'dark' });
-}
-
-/**
- * Inject a mock connected-wallet flag so ProtectedRoute allows access
- * to authenticated screens without a real wallet extension.
- */
-async function mockWalletConnected(page: import('@playwright/test').Page) {
-  await page.evaluate(() => {
-    sessionStorage.setItem('__mock_wallet_connected__', 'true');
-  });
-}
+import { enableDarkMode, freezeAnimations, mockWalletConnected } from './helpers';
 
 /** Take both light and dark snapshots with a single call. */
-async function snapshotBothModes(
-  page: import('@playwright/test').Page,
-  name: string,
-) {
+async function snapshotBothModes(page: import('@playwright/test').Page, name: string) {
   await percySnapshot(page, `${name} - light`);
   await enableDarkMode(page);
   await percySnapshot(page, `${name} - dark`);
