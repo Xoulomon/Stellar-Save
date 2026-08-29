@@ -14,6 +14,7 @@ import {
   Divider,
 } from '@mui/material';
 import { QRCode } from './QRCode';
+import { shareOrCopy } from '../lib/clipboard';
 import {
   generateInviteLink,
   buildShareUrls,
@@ -67,8 +68,8 @@ export const InviteModal: React.FC<InviteModalProps> = ({ open, onClose, groupId
   };
 
   const handleNativeShare = async () => {
-    if (navigator.share) {
-      await navigator.share({ title: `Join ${groupName}`, url: inviteLink });
+    const result = await shareOrCopy({ title: `Join ${groupName}`, url: inviteLink });
+    if (result !== 'unsupported') {
       trackInviteShare(groupId);
       setShareCount(getInviteShareCount(groupId));
     }
