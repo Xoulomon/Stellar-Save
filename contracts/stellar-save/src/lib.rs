@@ -41,6 +41,7 @@ pub mod token;
 pub mod types;
 
 // mod auto_contribution_tests;
+pub mod cei_tests;
 pub mod gas_benchmark;
 pub mod insurance_integration_tests;
 pub mod test_utils;

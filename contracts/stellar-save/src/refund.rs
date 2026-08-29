@@ -90,22 +90,21 @@ pub fn request_refund(
     let amount = contribution.amount;
     let now = env.ledger().timestamp();
 
-    // Transfer funds back to the contributor via the group's token contract
+    // Load the token config before mutating state so a misconfigured group
+    // fails during the checks phase rather than half-way through the effects.
     let token_config_key = StorageKeyBuilder::group_token_config(group_id);
     let token_config: crate::group::TokenConfig = env
         .storage()
         .persistent()
         .get(&token_config_key)
         .ok_or(StellarSaveError::GroupNotFound)?;
-    let token_client =
-        soroban_sdk::token::TokenClient::new(env, &token_config.token_address);
-    token_client.transfer(
-        &env.current_contract_address(),
-        &contribution.member_address,
-        &amount,
-    );
 
-    // Persist the refund record
+    // ── Effects ──────────────────────────────────────────────────────────────
+    // Checks-effects-interactions: the refund record is persisted *before* the
+    // token transfer. The token contract is caller-supplied, so a malicious
+    // implementation can call back into this function during `transfer`; with
+    // the record already written, the `has(&refund_key)` check above rejects
+    // the reentrant call with AlreadyRefunded instead of paying out twice.
     let record = RefundRecord {
         group_id,
         member: contribution.member_address.clone(),
@@ -119,10 +118,21 @@ pub fn request_refund(
     EventEmitter::emit_refund_issued(
         env,
         group_id,
-        contribution.member_address,
+        contribution.member_address.clone(),
         amount,
         cycle,
         now,
+    );
+
+    // ── Interaction ──────────────────────────────────────────────────────────
+    // Transfer funds back to the contributor via the group's token contract.
+    // If this traps, Soroban reverts the record written above atomically.
+    let token_client =
+        soroban_sdk::token::TokenClient::new(env, &token_config.token_address);
+    token_client.transfer(
+        &env.current_contract_address(),
+        &contribution.member_address,
+        &amount,
     );
 
     Ok(record)
