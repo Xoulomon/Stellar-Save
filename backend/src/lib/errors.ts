@@ -67,6 +67,8 @@ export class ImageValidationError extends AppError {
   }
 }
 
+export { AppError as ApiError };
+
 export function toEnvelope(err: unknown, correlationId: string): ErrorEnvelope {
   const timestamp = new Date().toISOString();
   if (err instanceof AppError) {

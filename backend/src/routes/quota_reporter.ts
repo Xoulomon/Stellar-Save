@@ -1,16 +1,17 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { jwtAuthMiddleware } from '../auth_middleware';
 import { getQuotaUsage, getTierConfig, getConfiguredTiers } from '../redis_rate_limiter';
+import { AppError } from '../lib/errors';
 
 export function createQuotaReporterRouter(): Router {
   const router = Router();
 
-  router.get('/usage', jwtAuthMiddleware, async (req: Request, res: Response) => {
+  router.get('/usage', jwtAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
     const r = req as any;
     const userId = r.userId || r.user?.id;
 
     if (!userId) {
-      res.status(401).json({ error: 'Authentication required' });
+      next(new AppError('UNAUTHORIZED', 'Authentication required', 401));
       return;
     }
 

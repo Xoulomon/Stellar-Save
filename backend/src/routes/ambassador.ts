@@ -1,5 +1,6 @@
-import { Router } from 'express';
+import { Router, NextFunction } from 'express';
 import { jwtAuthMiddleware, adminAuthMiddleware } from '../auth_middleware';
+import { AppError } from '../lib/errors';
 import {
   getAmbassadorLeaderboard,
   getAmbassadorProfile,
@@ -17,14 +18,14 @@ export function createAmbassadorRouter(): Router {
   });
 
   // GET /ambassadors/:address — public
-  router.get('/:address', (req, res) => {
+  router.get('/:address', (req, res, next: NextFunction) => {
     const profile = getAmbassadorProfile(req.params.address);
-    if (!profile) return res.status(404).json({ error: 'Ambassador not found' });
+    if (!profile) return next(new AppError('AMBASSADOR_NOT_FOUND', 'Ambassador not found', 404));
     return res.json(profile);
   });
 
   // POST /ambassadors/evaluate — JWT protected
-  router.post('/evaluate', jwtAuthMiddleware, (req, res) => {
+  router.post('/evaluate', jwtAuthMiddleware, (req, res, next: NextFunction) => {
     const { address, reputationScore, contributions, referrals } = req.body as {
       address: string;
       reputationScore: number;
@@ -33,7 +34,7 @@ export function createAmbassadorRouter(): Router {
     };
 
     if (!address || reputationScore == null || contributions == null || referrals == null) {
-      return res.status(400).json({ error: 'Missing required fields: address, reputationScore, contributions, referrals' });
+      return next(new AppError('MISSING_FIELDS', 'Missing required fields: address, reputationScore, contributions, referrals', 400));
     }
 
     const tier = evaluateAmbassadorStatus(address, reputationScore, contributions, referrals);
@@ -44,16 +45,16 @@ export function createAmbassadorRouter(): Router {
   });
 
   // POST /ambassadors/:address/reward — admin protected
-  router.post('/:address/reward', adminAuthMiddleware, (req, res) => {
+  router.post('/:address/reward', adminAuthMiddleware, (req, res, next: NextFunction) => {
     const { amount } = req.body as { amount: number };
     if (amount == null || amount <= 0) {
-      return res.status(400).json({ error: 'amount must be a positive number' });
+      return next(new AppError('INVALID_AMOUNT', 'amount must be a positive number', 400));
     }
     try {
       distributeRewards(req.params.address, amount);
       return res.json({ success: true });
     } catch (err: unknown) {
-      return res.status(404).json({ error: err instanceof Error ? err.message : 'Unknown error' });
+      return next(new AppError('AMBASSADOR_REWARD_FAILED', err instanceof Error ? err.message : 'Unknown error', 404));
     }
   });
 
