@@ -24,7 +24,7 @@ mod migration_matrix {
         group::{Group, GroupStatus, TokenConfig},
         migration::{get_schema_version, V1, V2},
         migrations::v1_to_v2,
-        storage::{GroupKey, StorageKey, StorageKeyBuilder},
+        storage::{StorageKey, StorageKeyBuilder},
         types::MemberProfile,
         ContractConfig,
     };
@@ -108,9 +108,8 @@ mod migration_matrix {
     }
 
     fn seed_payout(env: &Env, group_id: u64, cycle: u32, recipient: &Address, amount: i128) {
-        use crate::storage::PayoutKey;
         env.storage().persistent().set(
-            &StorageKey::Payout(PayoutKey::Recipient(group_id, cycle)),
+            &StorageKey::PayRecip(group_id, cycle),
             recipient,
         );
         env.storage()
@@ -230,11 +229,10 @@ mod migration_matrix {
 
         v1_to_v2::apply(&env, &admin, xlm);
 
-        use crate::storage::PayoutKey;
         let stored_recipient: Address = env
             .storage()
             .persistent()
-            .get(&StorageKey::Payout(PayoutKey::Recipient(1, 0)))
+            .get(&StorageKey::PayRecip(1, 0))
             .expect("payout recipient must survive v1→v2 apply");
         assert_eq!(stored_recipient, recipient);
 
@@ -318,11 +316,10 @@ mod migration_matrix {
         assert_eq!(total, 20_000_000);
 
         // Payout tracking intact
-        use crate::storage::PayoutKey;
         let payout_recipient: Address = env
             .storage()
             .persistent()
-            .get(&StorageKey::Payout(PayoutKey::Recipient(1, 0)))
+            .get(&StorageKey::PayRecip(1, 0))
             .expect("payout recipient must survive round-trip");
         assert_eq!(payout_recipient, member_a);
     }
@@ -362,7 +359,7 @@ mod migration_matrix {
             assert!(
                 env.storage()
                     .persistent()
-                    .has(&StorageKey::Group(GroupKey::TokenConfig(id))),
+                    .has(&StorageKey::GrpTok(id)),
                 "group {id} must have TokenConfig after migration"
             );
         }
@@ -393,7 +390,7 @@ mod migration_matrix {
 
         // Group 1 has a pre-existing custom TokenConfig.
         env.storage().persistent().set(
-            &StorageKey::Group(GroupKey::TokenConfig(1)),
+            &StorageKey::GrpTok(1),
             &TokenConfig {
                 token_address: custom_token.clone(),
                 token_decimals: 6,
@@ -407,7 +404,7 @@ mod migration_matrix {
         let cfg1: TokenConfig = env
             .storage()
             .persistent()
-            .get(&StorageKey::Group(GroupKey::TokenConfig(1)))
+            .get(&StorageKey::GrpTok(1))
             .unwrap();
         assert_eq!(cfg1.token_address, custom_token);
         assert_eq!(cfg1.token_decimals, 6);
@@ -416,7 +413,7 @@ mod migration_matrix {
         let cfg2: TokenConfig = env
             .storage()
             .persistent()
-            .get(&StorageKey::Group(GroupKey::TokenConfig(2)))
+            .get(&StorageKey::GrpTok(2))
             .unwrap();
         assert_eq!(cfg2.token_address, xlm);
         assert_eq!(cfg2.token_decimals, 7);

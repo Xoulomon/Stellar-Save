@@ -15,7 +15,7 @@ mod migration_tests {
         group::{Group, GroupStatus, TokenConfig},
         migration::{get_schema_version, load_migration_record, V1, V2},
         migrations::v1_to_v2,
-        storage::{GroupKey, StorageKey, StorageKeyBuilder},
+        storage::{StorageKey, StorageKeyBuilder},
         ContractConfig,
     };
 
@@ -78,7 +78,7 @@ mod migration_tests {
     fn has_token_config(env: &Env, group_id: u64) -> bool {
         env.storage()
             .persistent()
-            .has(&StorageKey::Group(GroupKey::TokenConfig(group_id)))
+            .has(&StorageKey::GrpTok(group_id))
     }
 
     // ── Tests ─────────────────────────────────────────────────────────────────
@@ -121,7 +121,7 @@ mod migration_tests {
         };
         env.storage()
             .persistent()
-            .set(&StorageKey::Group(GroupKey::TokenConfig(1)), &custom_config);
+            .set(&StorageKey::GrpTok(1), &custom_config);
 
         v1_to_v2::apply(&env, &admin, xlm.clone());
 
@@ -129,7 +129,7 @@ mod migration_tests {
         let stored: TokenConfig = env
             .storage()
             .persistent()
-            .get(&StorageKey::Group(GroupKey::TokenConfig(1)))
+            .get(&StorageKey::GrpTok(1))
             .unwrap();
         assert_eq!(stored.token_address, custom_token);
         assert_eq!(stored.token_decimals, 6);
@@ -138,7 +138,7 @@ mod migration_tests {
         let stored2: TokenConfig = env
             .storage()
             .persistent()
-            .get(&StorageKey::Group(GroupKey::TokenConfig(2)))
+            .get(&StorageKey::GrpTok(2))
             .unwrap();
         assert_eq!(stored2.token_address, xlm);
         assert_eq!(stored2.token_decimals, 7);
@@ -157,7 +157,7 @@ mod migration_tests {
         // Pre-seed TokenConfig for group 1 (should survive rollback).
         let custom_token = Address::generate(&env);
         env.storage().persistent().set(
-            &StorageKey::Group(GroupKey::TokenConfig(1)),
+            &StorageKey::GrpTok(1),
             &TokenConfig {
                 token_address: custom_token.clone(),
                 token_decimals: 6,

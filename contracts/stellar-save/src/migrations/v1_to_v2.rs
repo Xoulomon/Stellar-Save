@@ -23,7 +23,7 @@ use crate::{
     migration::{
         save_migration_record, set_schema_version, MigrationRecord, V1, V2,
     },
-    storage::{GroupKey, StorageKey, StorageKeyBuilder},
+    storage::{StorageKey, StorageKeyBuilder},
 };
 
 /// Key that stores the `Vec<u64>` of group IDs that had `TokenConfig` backfilled.
@@ -50,7 +50,7 @@ pub fn apply(env: &Env, admin: &Address, xlm_token_address: Address) {
     let mut backfilled: Vec<u64> = Vec::new(env);
 
     for group_id in 1..=total {
-        let token_key = StorageKey::Group(GroupKey::TokenConfig(group_id));
+        let token_key = StorageKey::GrpTok(group_id);
         if !env.storage().persistent().has(&token_key) {
             let default_config = TokenConfig {
                 token_address: xlm_token_address.clone(),
@@ -93,7 +93,7 @@ pub fn rollback(env: &Env, admin: &Address) {
         .unwrap_or_else(|| Vec::new(env));
 
     for group_id in backfilled.iter() {
-        let token_key = StorageKey::Group(GroupKey::TokenConfig(group_id));
+        let token_key = StorageKey::GrpTok(group_id);
         env.storage().persistent().remove(&token_key);
     }
 
