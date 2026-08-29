@@ -9,7 +9,8 @@
  * can be built and tested without a live contract.
  */
 
-import { Router } from 'express';
+import { Router, NextFunction } from 'express';
+import { AppError } from '../lib/errors';
 
 export interface InsuranceClaim {
   id: string;
@@ -79,12 +80,12 @@ export function createInsuranceRouter(): Router {
   });
 
   // POST /api/v1/groups/:groupId/insurance/claim
-  router.post('/claim', (req, res) => {
+  router.post('/claim', (req, res, next: NextFunction) => {
     const groupId = req.params['groupId'] as string;
     const pool = getOrCreate(groupId);
 
     if (!pool.enabled) {
-      return res.status(400).json({ error: 'Insurance pool is not enabled for this group.' });
+      return next(new AppError('INSURANCE_NOT_ENABLED', 'Insurance pool is not enabled for this group.', 400));
     }
 
     const { claimant, amount, reason } = req.body as {
@@ -94,11 +95,11 @@ export function createInsuranceRouter(): Router {
     };
 
     if (!claimant || !amount || !reason) {
-      return res.status(400).json({ error: 'claimant, amount, and reason are required.' });
+      return next(new AppError('MISSING_FIELDS', 'claimant, amount, and reason are required.', 400));
     }
 
     if (amount > pool.balance) {
-      return res.status(400).json({ error: 'Insufficient insurance pool balance.' });
+      return next(new AppError('INSUFFICIENT_BALANCE', 'Insufficient insurance pool balance.', 400));
     }
 
     const claim: InsuranceClaim = {

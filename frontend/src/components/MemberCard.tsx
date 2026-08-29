@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import { copyToClipboard } from "../lib/clipboard"
 import { MemberCardData, MemberStatus } from "../types/contribution"
 
 function formatAddress(address: string): string {
@@ -55,7 +56,7 @@ export function MemberCard({ member, isCurrentUser = false, compact = false, onC
 
   const handleCopyAddress = (e: React.MouseEvent) => {
     e.stopPropagation()
-    navigator.clipboard.writeText(member.address)
+    void copyToClipboard(member.address)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

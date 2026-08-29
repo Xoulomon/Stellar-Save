@@ -1,0 +1,33 @@
+# Fragments
+
+fragment MemberFields on Member {
+  id
+  address
+  name
+  joinedAt
+  groupIds
+}
+
+fragment MemberWithGroups on Member {
+  ...MemberFields
+  groups {
+    id
+    name
+    contributionAmount
+    status
+  }
+}
+
+# Queries
+
+query GetMembers {
+  members {
+    ...MemberFields
+  }
+}
+
+query GetMember($id: ID!) {
+  member(id: $id) {
+    ...MemberWithGroups
+  }
+}

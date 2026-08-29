@@ -55,18 +55,18 @@ impl GuessTheNumber {
         if guessed_it {
             let balance = xlm_client.balance(&contract_address);
             if balance == 0 {
-                return Err(Error::NoBalanceToTransfer);
+                return Err(Error::InsufficientBalance);
             }
             // Methods `try_*` will return an error if the method fails
             // `.map_err` lets us convert the error to our custom Error type
             let _ = xlm_client
                 .try_transfer(&contract_address, &guesser, &balance)
-                .map_err(|_| Error::FailedToTransferToGuesser)?;
+                .map_err(|_| Error::TransferFailed)?;
         } else {
             guesser.require_auth();
             let _ = xlm_client
                 .try_transfer(&guesser, &contract_address, &xlm::to_stroops(1))
-                .map_err(|_| Error::FailedToTransferFromGuesser)?;
+                .map_err(|_| Error::TransferFailed)?;
         }
         Ok(guessed_it)
     }

@@ -17,7 +17,7 @@ export interface Group {
   currency?: string;
   createdAt?: Date;
   avatar?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 type SortField = 'name' | 'memberCount' | 'createdAt';
@@ -109,28 +109,30 @@ export function GroupList({
   const sortedGroups = useMemo(() => {
     const sorted = [...filteredGroups];
 
+    const direction = sortConfig.order === 'asc' ? 1 : -1;
+
     sorted.sort((a, b) => {
-      let aValue: any = a[sortConfig.field];
-      let bValue: any = b[sortConfig.field];
+      const rawA = a[sortConfig.field];
+      const rawB = b[sortConfig.field];
 
-      // Handle undefined values
-      if (aValue === undefined) return 1;
-      if (bValue === undefined) return -1;
+      // Handle undefined values — always sort them last.
+      if (rawA === undefined) return 1;
+      if (rawB === undefined) return -1;
 
-      // Handle dates
-      if (aValue instanceof Date && bValue instanceof Date) {
-        aValue = aValue.getTime();
-        bValue = bValue.getTime();
+      // Normalize dates to their timestamp so they compare numerically.
+      const aValue = rawA instanceof Date ? rawA.getTime() : rawA;
+      const bValue = rawB instanceof Date ? rawB.getTime() : rawB;
+
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return (aValue - bValue) * direction;
       }
 
-      // Handle strings (case-insensitive)
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
-      }
+      // Fall back to a case-insensitive string comparison for everything else.
+      const aStr = String(aValue).toLowerCase();
+      const bStr = String(bValue).toLowerCase();
 
-      if (aValue < bValue) return sortConfig.order === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.order === 'asc' ? 1 : -1;
+      if (aStr < bStr) return -1 * direction;
+      if (aStr > bStr) return 1 * direction;
       return 0;
     });
 

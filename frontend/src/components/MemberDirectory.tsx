@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import { Link } from 'react-router-dom';
+import { copyToClipboard } from '../lib/clipboard';
 import type { MemberProfile, MemberDirectoryFilters, MemberSortOption } from '../types/member';
 import { DEFAULT_MEMBER_FILTERS } from '../types/member';
 import { formatAddress } from '../utils/formatAddress';
@@ -71,7 +72,7 @@ function MemberDirectoryCard({ member, isCurrentUser, groupId }: MemberCardProps
   const handleCopy = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    void navigator.clipboard.writeText(member.address);
+    void copyToClipboard(member.address);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

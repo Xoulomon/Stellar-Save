@@ -237,6 +237,54 @@ paths:
           $ref: '#/components/responses/Forbidden'
 
   # ── Health ────────────────────────────────────────────────────────────────
+  /healthz:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      description: |
+        Standardized liveness probe. Returns 200 as long as the process is
+        running and the event loop is responsive. Never touches the database or
+        the Soroban RPC endpoint, so a degraded dependency cannot trigger a
+        restart loop.
+
+        Mounted ahead of the rate limiter and therefore never throttled.
+      operationId: healthz
+      responses:
+        '200':
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivenessResponse'
+
+  /readyz:
+    get:
+      tags: [Health]
+      summary: Readiness probe
+      description: |
+        Standardized readiness probe. Verifies PostgreSQL connectivity
+        (`SELECT 1`) and Soroban RPC connectivity (JSON-RPC `getHealth`) in
+        parallel.
+
+        Returns 200 with `status: ready` only when both dependencies report
+        `up: true`; otherwise 503 with `status: not_ready`. The response body is
+        identical in both cases, so a failing dependency can be identified from
+        `checks.<name>.error`.
+      operationId: readyz
+      responses:
+        '200':
+          description: All dependencies reachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '503':
+          description: One or more dependencies are unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+
   /api/v1/health:
     get:
       tags: [Health]
@@ -1839,6 +1887,59 @@ components:
             status:
               type: string
               enum: [ready, not_ready]
+
+    LivenessResponse:
+      type: object
+      required: [status, uptimeSeconds, timestamp]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        uptimeSeconds:
+          type: number
+          description: Process uptime in seconds
+          example: 1834.21
+        timestamp:
+          type: string
+          format: date-time
+
+    DependencyStatus:
+      type: object
+      required: [up, latencyMs]
+      properties:
+        up:
+          type: boolean
+        latencyMs:
+          type: integer
+          description: Wall-clock duration of the probe
+          example: 4
+        error:
+          type: string
+          description: Present only when `up` is false
+          example: 'connect ECONNREFUSED 127.0.0.1:5432'
+
+    ReadinessResponse:
+      type: object
+      required: [status, responseTimeMs, timestamp, checks]
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+        responseTimeMs:
+          type: integer
+          description: Total time spent running all dependency probes
+          example: 12
+        timestamp:
+          type: string
+          format: date-time
+        checks:
+          type: object
+          required: [database, rpc]
+          properties:
+            database:
+              $ref: '#/components/schemas/DependencyStatus'
+            rpc:
+              $ref: '#/components/schemas/DependencyStatus'
 
     UserProfile:
       type: object

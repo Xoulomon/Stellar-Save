@@ -1,6 +1,7 @@
 import { rpc as SorobanRpc } from '@stellar/stellar-sdk';
 import { withSpan } from '../tracing';
 import { config } from '../config';
+import { withSorobanCircuit } from './rpc_circuit_breaker';
 
 export interface SorobanPoolConfig {
   rpcUrl: string;
@@ -69,6 +70,11 @@ export class SorobanClientPool {
    * Run `fn` with a pooled Soroban RPC client, wrapped in an OpenTelemetry span
    * so contract-execution latency (simulate / invoke) shows up in the trace.
    *
+   * The call also passes through the shared Soroban circuit breaker (#1511).
+   * The breaker sits inside the acquire/release pair so a fast-failed call still
+   * returns its client to the pool, and outside `fn` so its timeout covers the
+   * whole RPC round trip rather than only the connection.
+   *
    * Full in-wasm contract tracing is not possible, so this span around the host
    * RPC call is the distributed-tracing boundary for contract execution. Pass
    * the contract function name as `op` (e.g. `contribute`) to label the span and
@@ -87,7 +93,7 @@ export class SorobanClientPool {
       async () => {
         const client = await this.acquire();
         try {
-          return await fn(client);
+          return await withSorobanCircuit(() => fn(client));
         } finally {
           this.release(client);
         }

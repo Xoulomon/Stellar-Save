@@ -63,7 +63,7 @@ fn guess() {
     // Now we test a wrong guess but the user has no funds so  we get an error
     assert_eq!(
         client.try_guess(&3, &bob).unwrap_err(),
-        Ok(Error::FailedToTransferFromGuesser)
+        Ok(Error::TransferFailed)
     );
 
     // Now we test a correct guess, the balance should go up by the initial 1 XLM + the 1 XLM from the contract
@@ -72,7 +72,7 @@ fn guess() {
 
     assert_eq!(
         client.try_guess(&4, &alice).unwrap_err(),
-        Ok(Error::NoBalanceToTransfer)
+        Ok(Error::InsufficientBalance)
     );
 }
 
