@@ -1,7 +1,7 @@
 import 'vitest';
 
 declare module 'jest-axe' {
-  import { ReactElement } from 'react';
+  import type { ReactElement } from 'react';
 
   export interface AxeResults {
     violations: Array<{

@@ -12,8 +12,8 @@
  * To update baselines: approve the changes in the Percy dashboard at
  *   https://percy.io
  */
-import { test } from '@playwright/test';
 import percySnapshot from '@percy/playwright';
+import { test } from '@playwright/test';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

@@ -1,6 +1,8 @@
-import React from 'react';
 import { Box, Typography, Paper, LinearProgress, Stack, Chip } from '@mui/material';
+import React from 'react';
+
 import { Skeleton } from '../Skeleton/Skeleton';
+
 import type { DashboardGroup } from '../../types/dashboard';
 
 interface Props { group?: DashboardGroup; isLoading?: boolean; }

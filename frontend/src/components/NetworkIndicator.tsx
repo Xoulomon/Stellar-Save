@@ -1,4 +1,5 @@
 import { useState } from 'react';
+
 import { useWallet } from '../hooks/useWallet';
 import './NetworkIndicator.css';
 

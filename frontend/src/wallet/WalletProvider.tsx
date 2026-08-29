@@ -1,9 +1,11 @@
-import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { StellarWalletsKit, Networks } from '@creit.tech/stellar-wallets-kit';
-import { FreighterModule, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit/modules/freighter';
 import { AlbedoModule } from '@creit.tech/stellar-wallets-kit/modules/albedo';
+import { FreighterModule, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit/modules/freighter';
 import { LobstrModule } from '@creit.tech/stellar-wallets-kit/modules/lobstr';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
+
 import type { WalletContextValue, WalletDescriptor, WalletConnectionStatus } from './types';
+import type { ReactNode } from 'react';
 
 StellarWalletsKit.init({
   modules: [new FreighterModule(), new AlbedoModule(), new LobstrModule()],

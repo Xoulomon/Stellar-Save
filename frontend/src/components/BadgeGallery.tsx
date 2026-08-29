@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+
 import type { MemberBadge } from '../hooks/useMemberBadges';
 import './BadgeGallery.css';
 

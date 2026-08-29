@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+
 import type { UserStats } from './useUserProfile';
 
 export interface MemberProfile {

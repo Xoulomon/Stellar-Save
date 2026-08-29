@@ -1,9 +1,10 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { ContributionScheduler } from '../components/ContributionScheduler';
-import * as useScheduledContributionsModule from '../hooks/useScheduledContributions';
 import * as useBalanceModule from '../hooks/useBalance';
+import * as useScheduledContributionsModule from '../hooks/useScheduledContributions';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 

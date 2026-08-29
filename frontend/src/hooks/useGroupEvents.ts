@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
+
 import { useEventService } from './useEventService';
 import { useEventTrigger } from './useEventTrigger';
-import { AppEvent, ContributionMadeEvent, PayoutExecutedEvent, GroupPausedEvent } from '../types/events';
 import { useToast } from '../components/Toast';
+
+import type { AppEvent, ContributionMadeEvent, PayoutExecutedEvent, GroupPausedEvent } from '../types/events';
 
 /**
  * Custom hook to subscribe to Soroban contract events and trigger

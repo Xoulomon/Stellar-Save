@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { ErrorBoundary } from '../components/ErrorBoundary/ErrorBoundary';
 
 // Component that throws on demand
@@ -176,7 +177,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('shows retry count and disables retry after max attempts', () => {
-    let throwNext = true;
+    const throwNext = true;
     function ControlledBomb() {
       if (throwNext) throw new Error('Test explosion');
       return <div>Safe content</div>;

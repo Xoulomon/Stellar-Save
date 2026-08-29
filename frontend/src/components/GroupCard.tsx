@@ -1,16 +1,18 @@
-import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { buildRoute } from '../routing/constants';
-import { fetchGroup } from '../utils/groupApi';
-import type { GroupDetail } from '../types/group';
-import { queryKeys } from '../lib/queryKeys';
-import { STALE_TIME } from '../lib/queryClient';
-import { GroupCardSkeleton } from './Skeleton/GroupCardSkeleton';
-import { usePrefetchGroup } from '../hooks/useGroup';
+import { Link } from 'react-router-dom';
+
+import { GroupCardActions } from './GroupCardActions';
 import { GroupCardHeader } from './GroupCardHeader';
 import { GroupCardStats } from './GroupCardStats';
-import { GroupCardActions } from './GroupCardActions';
+import { usePrefetchGroup } from '../hooks/useGroup';
+import { STALE_TIME } from '../lib/queryClient';
+import { buildRoute } from '../routing/constants';
+import { fetchGroup } from '../utils/groupApi';
+import { GroupCardSkeleton } from './Skeleton/GroupCardSkeleton';
+import { queryKeys } from '../lib/queryKeys';
 import { formatXlm, computeNextPayout } from '../utils/groupCardUtils';
+
+import type { GroupDetail } from '../types/group';
 
 type Status = 'active' | 'completed' | 'pending' | 'complete';
 

@@ -1,6 +1,8 @@
 import { Box, Card, CardContent, LinearProgress, Skeleton, Typography } from '@mui/material';
-import { AppLayout } from '../ui';
+
 import { useAnalytics } from '../hooks/useAnalytics';
+import { AppLayout } from '../ui';
+
 import type { ContributionDataPoint, MemberComparisonItem } from '../types/analytics';
 
 // ─── Stat card ────────────────────────────────────────────────────────────────

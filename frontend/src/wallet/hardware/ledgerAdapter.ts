@@ -1,5 +1,6 @@
-import type { HardwareDeviceInfo, HardwareAccount, TxApprovalRequest } from './types';
 import { scanForDevices, connectToDevice, fetchAccounts, signWithHardwareWallet } from './hardwareService';
+
+import type { HardwareDeviceInfo, HardwareAccount, TxApprovalRequest } from './types';
 
 export class LedgerAdapter {
   readonly type = 'ledger' as const;

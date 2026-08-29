@@ -1,5 +1,6 @@
 import React, { useState } from "react"
-import { MemberCardData, MemberStatus } from "../types/contribution"
+
+import type { MemberCardData, MemberStatus } from "../types/contribution"
 
 function formatAddress(address: string): string {
   return `${address.slice(0, 6)}...${address.slice(-4)}`

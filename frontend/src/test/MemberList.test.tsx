@@ -1,7 +1,10 @@
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemberList, Member } from '../components/MemberList';
+import { describe, it, expect } from 'vitest';
+
+import { MemberList } from '../components/MemberList';
+
+import type { Member } from '../components/MemberList';
 
 const mockMembers: Member[] = [
   {

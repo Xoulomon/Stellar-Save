@@ -18,16 +18,18 @@
  */
 import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { WalletButton } from '../../components/WalletButton';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import {
   walletHarnesses,
   rejectingHarnesses,
   notInstalledHarnesses,
   type MockWalletKit,
 } from './wallet-harness';
+import { WalletButton } from '../../components/WalletButton';
+import { WalletProvider } from '../../wallet/WalletProvider';
 
 // === Module-level mock for StellarWalletsKit
 
@@ -72,8 +74,6 @@ vi.mock('@creit.tech/stellar-wallets-kit/modules/lobstr', () => ({
 }));
 
 // === Helpers
-
-import { WalletProvider } from '../../wallet/WalletProvider';
 
 function renderWalletButton() {
   return render(

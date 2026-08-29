@@ -1,4 +1,9 @@
-import { useState, useEffect } from 'react';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ErrorIcon from '@mui/icons-material/Error';
+import InfoIcon from '@mui/icons-material/Info';
+import WifiIcon from '@mui/icons-material/Wifi';
+import WifiOffIcon from '@mui/icons-material/WifiOff';
 import {
   Box,
   Typography,
@@ -8,14 +13,10 @@ import {
   Stack,
   CircularProgress,
 } from '@mui/material';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
-import WifiIcon from '@mui/icons-material/Wifi';
-import WifiOffIcon from '@mui/icons-material/WifiOff';
-import InfoIcon from '@mui/icons-material/Info';
-import { useWallet } from '../hooks/useWallet';
+import { useState, useEffect } from 'react';
+
 import { useClipboard } from '../hooks/useClipboard';
+import { useWallet } from '../hooks/useWallet';
 
 /**
  * WalletStatusIndicator — Persistent wallet connection status display

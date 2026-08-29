@@ -1,9 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import type { ContributeButtonProps } from "../types/contribution";
+
 import { ContributionSuccessModal } from "./ContributionSuccessModal";
-import { useTransaction, explorerUrl } from "../hooks/useTransaction";
 import { useContract } from "../hooks/useContract";
 import { useFocusTrap } from "../hooks/useFocusTrap";
+import { useTransaction, explorerUrl } from "../hooks/useTransaction";
+
+import type { ContributeButtonProps } from "../types/contribution";
 
 // ── Confirmation Modal ──────────────────────────────────────────────────────
 

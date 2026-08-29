@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
+
 import { useBalance } from './useBalance';
+
 import type { DashboardGroup } from '../types/dashboard';
 
 export interface BalanceWarning {

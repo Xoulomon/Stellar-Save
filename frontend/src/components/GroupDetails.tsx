@@ -1,9 +1,11 @@
 import { useState } from 'react';
+
 import './GroupDetails.css';
-import { Card } from './Card';
 import { Badge } from './Badge';
-import { Tabs, type Tab } from './Tabs';
+import { Card } from './Card';
 import { OverviewPanel, MembersPanel, ContributionsPanel, PayoutSchedulePanel } from './panels';
+import { Tabs, type Tab } from './Tabs';
+
 import type { DetailedGroup, GroupMember, GroupContribution, GroupCycle } from '../utils/groupApi';
 
 interface GroupDetailsProps {

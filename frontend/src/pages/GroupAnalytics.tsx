@@ -1,8 +1,9 @@
 import { Box, Card, CardContent, Typography, Skeleton } from '@mui/material';
 import { useParams } from 'react-router-dom';
-import { AppLayout } from '../ui';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
 import { useGroupAnalytics } from '../hooks/useGroupAnalytics';
+import { AppLayout } from '../ui';
 
 export default function GroupAnalytics() {
   const { groupId } = useParams<{ groupId: string }>();

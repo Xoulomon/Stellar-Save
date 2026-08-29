@@ -1,4 +1,3 @@
-import { useState, useCallback } from 'react';
 import {
   Box,
   Stack,
@@ -8,21 +7,24 @@ import {
   Alert,
   Snackbar,
 } from '@mui/material';
+import { useState, useCallback } from 'react';
+
 import { Button } from '../Button';
-import { TransactionStepCard } from './TransactionStepCard';
-import { SimulationPanel } from './SimulationPanel';
 import { SaveTemplateModal } from './SaveTemplateModal';
+import { SimulationPanel } from './SimulationPanel';
+import { TransactionStepCard } from './TransactionStepCard';
+import {
+  createStep,
+  simulateTransaction,
+  loadTemplates,
+} from '../../services/transactionBuilderService';
+
 import type {
   TransactionBuilderStep,
   StepOperationType,
   SimulationResult,
   TransactionTemplate,
 } from '../../types/transactionBuilder';
-import {
-  createStep,
-  simulateTransaction,
-  loadTemplates,
-} from '../../services/transactionBuilderService';
 
 interface TransactionBuilderProps {
   initialSteps?: TransactionBuilderStep[];

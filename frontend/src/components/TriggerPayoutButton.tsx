@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Button as MuiButton,
   Dialog,
@@ -8,10 +7,12 @@ import {
   Typography,
   CircularProgress,
 } from '@mui/material';
+import { useState } from 'react';
+
 import { Button } from './Button';
 import { useToast } from './Toast/useToast';
-import { useErrorToast } from '../hooks/useErrorToast';
 import { useContract } from '../hooks/useContract';
+import { useErrorToast } from '../hooks/useErrorToast';
 import { useTransaction, explorerUrl } from '../hooks/useTransaction';
 
 export interface TriggerPayoutButtonProps {

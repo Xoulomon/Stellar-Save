@@ -1,7 +1,8 @@
-import React from "react";
 import { Box, Typography, Button, Alert, AlertTitle, Collapse } from "@mui/material";
-import { AppCard } from "../../ui/components/AppCard";
+import React from "react";
+
 import { AppButton } from "../../ui/components/AppButton";
+import { AppCard } from "../../ui/components/AppCard";
 import "./ErrorBoundary.css";
 
 export interface ErrorBoundaryProps {

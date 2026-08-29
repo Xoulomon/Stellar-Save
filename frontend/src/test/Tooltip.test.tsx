@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+
 import { Tooltip } from '../components/Tooltip';
 
 afterEach(() => {

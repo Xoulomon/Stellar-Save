@@ -1,6 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { Tabs, Tab } from '../components/Tabs';
+import { describe, it, expect, vi } from 'vitest';
+
+import { Tabs } from '../components/Tabs';
+
+import type { Tab } from '../components/Tabs';
 
 describe('Tabs', () => {
   const mockTabs: Tab[] = [

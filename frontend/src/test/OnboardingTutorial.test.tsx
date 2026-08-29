@@ -1,10 +1,12 @@
-import { useState } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { axe, toHaveNoViolations } from "jest-axe";
-import { OnboardingTutorial, useOnboardingTutorial } from "../components/OnboardingTutorial";
 import { renderHook, act } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { axe, toHaveNoViolations } from "jest-axe";
+import { useState } from "react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+import { OnboardingTutorial, useOnboardingTutorial } from "../components/OnboardingTutorial";
+
 
 expect.extend(toHaveNoViolations);
 

@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
+
 import { Card } from './Card';
-import { SearchBar } from './SearchBar';
-import { Pagination } from './Pagination';
 import { Dropdown } from './Dropdown';
 import { EmptyState } from './EmptyState/EmptyState';
+import { Pagination } from './Pagination';
+import { SearchBar } from './SearchBar';
 import { GroupSkeleton } from './Skeleton/GroupSkeleton';
 import './GroupList.css';
 

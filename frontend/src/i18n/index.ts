@@ -1,11 +1,12 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import en from './locales/en.json';
-import fr from './locales/fr.json';
-import yo from './locales/yo.json';
+
 import ar from './locales/ar.json';
+import en from './locales/en.json';
 import fa from './locales/fa.json';
+import fr from './locales/fr.json';
 import sw from './locales/sw.json';
+import yo from './locales/yo.json';
 
 export const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English' },

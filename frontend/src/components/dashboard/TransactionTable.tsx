@@ -1,6 +1,8 @@
-import React from 'react';
 import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip } from '@mui/material';
+import React from 'react';
+
 import { Skeleton } from '../Skeleton/Skeleton';
+
 import type { Transaction } from '../../types/dashboard';
 
 interface Props { transactions: Transaction[]; isLoading?: boolean; }

@@ -1,3 +1,4 @@
+import CloseIcon from '@mui/icons-material/Close';
 import {
   Dialog,
   DialogTitle,
@@ -10,7 +11,7 @@ import {
   Typography,
   IconButton,
 } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
+
 import { useWallet } from '../hooks/useWallet';
 
 const WALLET_ICONS: Record<string, string> = {

@@ -1,12 +1,13 @@
+import { Stack, Typography } from '@mui/material';
 import { useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Stack, Typography } from '@mui/material';
-import { AppCard, AppLayout } from '../ui';
-import { GroupList } from '../components/GroupList';
+
 import { Button } from '../components/Button';
-import { useGroupsQuery } from '../hooks/useGroupsQuery';
+import { GroupList } from '../components/GroupList';
 import { StaleDataBanner } from '../components/StaleDataBanner';
+import { useGroupsQuery } from '../hooks/useGroupsQuery';
 import { ROUTES } from '../routing/constants';
+import { AppCard, AppLayout } from '../ui';
 
 /**
  * Groups page — search, filter by token type and amount range,

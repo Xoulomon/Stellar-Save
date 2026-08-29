@@ -1,7 +1,8 @@
 import React from 'react';
-import ROSCAExplanation from '../components/about/ROSCAExplanation';
-import HowItWorks from '../components/about/HowItWorks';
+
 import FAQ from '../components/about/FAQ';
+import HowItWorks from '../components/about/HowItWorks';
+import ROSCAExplanation from '../components/about/ROSCAExplanation';
 
 const AboutPage: React.FC = () => {
   return (

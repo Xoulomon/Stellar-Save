@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
+
 import { CycleProgress } from '../components/CycleProgress';
 
 const futureDate = new Date(Date.now() + 1000 * 60 * 60 * 24 * 3); // 3 days from now

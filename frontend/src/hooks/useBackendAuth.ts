@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { useWallet } from './useWallet';
 import { api, setToken } from '../utils/api';
 

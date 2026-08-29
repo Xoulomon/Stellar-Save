@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect } from 'vitest';
 import { useRef } from 'react';
+import { describe, it, expect } from 'vitest';
+
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
 function TrapContainer({ active }: { active: boolean }) {

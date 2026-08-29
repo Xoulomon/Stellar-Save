@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
 import { Horizon } from '@stellar/stellar-sdk';
+import { useState, useEffect } from 'react';
+
 import { useWallet } from './useWallet';
+
 import type { Transaction } from '../types/transaction';
 
 export interface UserStats {

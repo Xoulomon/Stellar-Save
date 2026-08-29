@@ -1,4 +1,5 @@
 import { Box, Button, Chip, Typography } from '@mui/material';
+
 import type { GroupTemplate } from '../../types/template';
 
 interface TemplateCardProps {

@@ -1,7 +1,8 @@
 import { Box, Stack, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { AppButton, AppCard } from "../ui";
+
 import NotFoundIllustration from "../svg/page-not-found.svg";
+import { AppButton, AppCard } from "../ui";
 
 /**
  * 404 Not Found page component

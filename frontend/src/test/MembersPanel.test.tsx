@@ -1,6 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+
 import { MembersPanel } from '../components/panels/MembersPanel';
+
 import type { GroupMember } from '../utils/groupApi';
 
 const mockMembers: GroupMember[] = [

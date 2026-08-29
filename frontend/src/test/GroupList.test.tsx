@@ -1,6 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { GroupList, Group } from '../components/GroupList';
+import { describe, it, expect, vi } from 'vitest';
+
+import { GroupList } from '../components/GroupList';
+
+import type { Group } from '../components/GroupList';
 
 const mockGroups: Group[] = [
   {

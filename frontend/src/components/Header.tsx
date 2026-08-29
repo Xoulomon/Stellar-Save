@@ -8,8 +8,11 @@
  * - Dark mode toggle button (sun/moon icon) — Issue #772
  * - Wallet connect button
  */
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import CloseIcon from '@mui/icons-material/Close';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
+import MenuIcon from '@mui/icons-material/Menu';
+import StarIcon from '@mui/icons-material/Star';
 import {
   AppBar,
   Box,
@@ -26,15 +29,13 @@ import {
   Divider,
   Tooltip,
 } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import CloseIcon from '@mui/icons-material/Close';
-import LightModeIcon from '@mui/icons-material/LightMode';
-import DarkModeIcon from '@mui/icons-material/DarkMode';
-import StarIcon from '@mui/icons-material/Star';
-import { ROUTES } from '../routing/constants';
+import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+
+import { OfflineIndicator } from './OfflineIndicator';
 import { WalletButton } from './WalletButton';
 import { useThemeMode } from '../context/ThemeContext';
-import { OfflineIndicator } from './OfflineIndicator';
+import { ROUTES } from '../routing/constants';
 
 const DRAWER_WIDTH = 260;
 

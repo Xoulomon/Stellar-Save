@@ -1,4 +1,3 @@
-import { useParams } from 'react-router-dom';
 import {
   Alert,
   Avatar,
@@ -12,14 +11,16 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { AppLayout } from '../ui';
-import { UserStats } from '../components/UserStats';
-import { StreakDisplay } from '../components/StreakDisplay';
+import { useParams } from 'react-router-dom';
+
 import { BadgeGallery } from '../components/BadgeGallery';
 import { Spinner } from '../components/Spinner';
-import { useMemberProfile } from '../hooks/useMemberProfile';
-import { useMemberBadges } from '../hooks/useMemberBadges';
+import { StreakDisplay } from '../components/StreakDisplay';
+import { UserStats } from '../components/UserStats';
 import { useClipboard } from '../hooks/useClipboard';
+import { useMemberBadges } from '../hooks/useMemberBadges';
+import { useMemberProfile } from '../hooks/useMemberProfile';
+import { AppLayout } from '../ui';
 
 function ReputationBadge({ score }: { score: number }) {
   const color =

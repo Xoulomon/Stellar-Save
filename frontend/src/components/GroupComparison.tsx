@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import type { PublicGroup } from '../types/group';
+
 import { Button } from './Button';
 import { GroupBadge } from './GroupBadge';
+
+import type { PublicGroup } from '../types/group';
 import './GroupComparison.css';
 
 const MAX_GROUPS = 3;

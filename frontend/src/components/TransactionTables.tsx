@@ -1,8 +1,11 @@
-import React from 'react';
 import { Skeleton } from '@mui/material';
-import type { Transaction } from '../types/transaction';
+import React from 'react';
+
+
 import { Badge } from './Badge';
 import { Button } from './Button';
+
+import type { Transaction } from '../types/transaction';
 
 interface Props {
   transactions: Transaction[];

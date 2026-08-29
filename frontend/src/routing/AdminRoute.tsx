@@ -1,7 +1,8 @@
 import { Navigate } from 'react-router-dom';
+
+import { ROUTES } from './constants';
 import { useWallet } from '../hooks/useWallet';
 import { isAdminAddress } from '../utils/adminApi';
-import { ROUTES } from './constants';
 
 interface AdminRouteProps {
   children: React.ReactNode;
