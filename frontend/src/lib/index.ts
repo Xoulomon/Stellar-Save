@@ -1,5 +1,9 @@
 // lib/index.ts - Barrel exports for lib directory
 
+// ── Typed, validated environment config (single source of truth) ─────────────
+export { env, envSchema, parseEnv, EnvValidationError } from './env';
+export type { Env, StellarNetwork } from './env';
+
 // ── Shared SDK types & contract bindings (single source of truth) ─────────────
 export type {
   Group,

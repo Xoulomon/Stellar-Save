@@ -13,15 +13,12 @@ import type {
   SimulationResult,
   TransactionTemplate,
 } from '../types/transactionBuilder';
+import { env } from '../lib/env';
 
-const RPC_URL =
-  (import.meta.env['VITE_STELLAR_RPC_URL'] as string | undefined) ??
-  'https://soroban-testnet.stellar.org';
+const RPC_URL = env.VITE_STELLAR_RPC_URL;
 
 const NETWORK_PASSPHRASE =
-  (import.meta.env['VITE_STELLAR_NETWORK'] as string | undefined) === 'mainnet'
-    ? Networks.PUBLIC
-    : Networks.TESTNET;
+  env.VITE_STELLAR_NETWORK === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
 
 const TEMPLATES_STORAGE_KEY = 'stellar-save:tx-templates';
 const DUMMY_ADDRESS = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN';

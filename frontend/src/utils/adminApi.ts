@@ -6,7 +6,9 @@
  * route from non-admins before any API call is made.
  */
 
-const API_BASE = (import.meta.env['VITE_API_BASE_URL'] as string | undefined) ?? '/api/v1';
+import { env } from '../lib/env';
+
+const API_BASE = env.VITE_API_BASE_URL;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -139,7 +141,7 @@ export async function fetchAuditLogs(): Promise<AuditLog[]> {
  * Server-side auth is the real gate — this is a UI-only optimistic guard.
  */
 export function isAdminAddress(address: string): boolean {
-  const raw = (import.meta.env['VITE_ADMIN_ADDRESSES'] as string | undefined) ?? '';
+  const raw = env.VITE_ADMIN_ADDRESSES;
   if (!raw) return false;
   return raw.split(',').map((a) => a.trim()).includes(address);
 }

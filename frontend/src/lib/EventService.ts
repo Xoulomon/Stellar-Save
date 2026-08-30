@@ -15,7 +15,7 @@
 import { scValToNative, xdr } from '@stellar/stellar-sdk';
 
 import { server, CONTRACT_ID } from './contractClient';
-
+import { env } from './env';
 import type {
   AppEvent,
   EventType,
@@ -30,8 +30,7 @@ export const PAGE_SIZE = 20;
 
 // ─── Tunables ────────────────────────────────────────────────────────────────
 
-const SSE_BASE_URL: string =
-  (import.meta.env['VITE_API_BASE_URL'] as string | undefined) ?? '/api/v1';
+const SSE_BASE_URL: string = env.VITE_API_BASE_URL;
 const DEBOUNCE_MS = 300;          // coalesce bursts within 300 ms
 const POLL_INTERVAL_MS = 10_000;  // fallback polling interval
 const SSE_RECONNECT_BASE_MS = 2_000;
