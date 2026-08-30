@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
 import "./GroupComments.css";
 
 export interface Comment {
@@ -45,6 +45,13 @@ function shortAddress(address: string): string {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
+interface CommentFormValues {
+  content: string;
+}
+
+const MAX_LENGTH = 500;
+
+// See src/components/FORMS.md for the react-hook-form conventions used here.
 export function GroupComments({
   comments,
   currentUserAddress,
@@ -52,15 +59,16 @@ export function GroupComments({
   onPost,
   onDelete,
 }: GroupCommentsProps) {
-  const [draft, setDraft] = useState("");
-  const MAX_LENGTH = 500;
+  const { register, handleSubmit, watch, reset } = useForm<CommentFormValues>({
+    defaultValues: { content: "" },
+  });
+  const draft = watch("content");
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = draft.trim();
+  const onValid = ({ content }: CommentFormValues) => {
+    const trimmed = content.trim();
     if (!trimmed || !currentUserAddress) return;
     onPost(trimmed);
-    setDraft("");
+    reset({ content: "" });
   };
 
   const canModerate = (comment: Comment) =>
@@ -129,13 +137,12 @@ export function GroupComments({
       {currentUserAddress ? (
         <form
           className="group-comments-form"
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(onValid)}
           aria-label="Post a comment"
         >
           <textarea
             className="group-comments-input"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            {...register("content")}
             placeholder="Write a comment… (supports **bold**, *italic*, `code`)"
             maxLength={MAX_LENGTH}
             rows={3}
