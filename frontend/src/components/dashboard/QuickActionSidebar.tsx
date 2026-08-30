@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Box, Typography, Button, Stack, Paper, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import AddIcon from '@mui/icons-material/Add';
 import PaymentIcon from '@mui/icons-material/Payment';
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import { Box, Typography, Button, Stack, Paper, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '../Toast/useToast';
+
 import { ROUTES } from '../../routing/constants';
+import { useToast } from '../Toast/useToast';
 
 type ActionId = 'join' | 'contribute' | 'deposit' | 'withdraw';
 

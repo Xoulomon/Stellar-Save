@@ -1,8 +1,9 @@
 import js from '@eslint/js';
-import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
+import globals from 'globals';
 import tseslint from 'typescript-eslint';
+
 import base from '../eslint.config.base.js';
 
 export default tseslint.config(
@@ -21,15 +22,6 @@ export default tseslint.config(
     },
     rules: {
       'no-console': ['warn', { allow: ['warn', 'error'] }],
-      'import/no-cycle': ['error', { maxDepth: 'infinity' }],
-      'import/order': [
-        'error',
-        {
-          groups: ['builtin', 'external', 'internal', ['parent', 'sibling'], 'index', 'object', 'type'],
-          'newlines-between': 'always',
-          alphabetize: { order: 'asc', caseInsensitive: true },
-        },
-      ],
     },
   },
   {

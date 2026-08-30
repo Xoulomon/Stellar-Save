@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
 import { useReminderPreferences } from '../hooks/useReminderPreferences';
 import * as reminderPrefs from '../notifications/reminderPreferences';
 

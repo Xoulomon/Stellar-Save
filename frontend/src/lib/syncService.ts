@@ -26,6 +26,7 @@ import {
   type SyncQueueItem,
 } from './db';
 import { fetchGroup, fetchGroups, type DetailedGroup } from '../utils/groupApi';
+
 import type { PublicGroup } from '../types/group';
 
 const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes

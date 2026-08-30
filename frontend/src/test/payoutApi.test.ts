@@ -6,8 +6,8 @@
  * Property tests use fast-check with a minimum of 100 iterations each.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fc from 'fast-check';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ─── Mock contractClient ──────────────────────────────────────────────────────
 
@@ -40,6 +40,7 @@ vi.mock('../lib/contractClient', () => {
   };
 });
 
+import * as contractClient from '../lib/contractClient';
 import {
   executePayout,
   getPayoutQueue,
@@ -47,7 +48,6 @@ import {
   getNextRecipient,
 } from '../utils/payoutApi';
 
-import * as contractClient from '../lib/contractClient';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

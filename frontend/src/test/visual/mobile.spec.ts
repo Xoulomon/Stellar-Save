@@ -13,8 +13,8 @@
  * To update baselines: approve the diff in the Percy dashboard.
  * See docs/visual-regression.md for the full baseline-update workflow.
  */
-import { test } from '@playwright/test';
 import percySnapshot from '@percy/playwright';
+import { test } from '@playwright/test';
 
 // === Helpers
 

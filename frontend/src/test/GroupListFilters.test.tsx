@@ -1,6 +1,8 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { GroupList } from '../components/GroupList';
+
 import type { Group } from '../components/GroupList';
 
 const groups: Group[] = [

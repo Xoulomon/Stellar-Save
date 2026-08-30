@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+
 import type { AnalyticsData } from '../types/analytics';
 
 const MOCK_DATA: Omit<AnalyticsData, 'isLoading' | 'error'> = {

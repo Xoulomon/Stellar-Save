@@ -1,10 +1,11 @@
-import React from 'react';
+import GroupsIcon from '@mui/icons-material/Groups';
+import PaidIcon from '@mui/icons-material/Paid';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Typography, Box, Chip, Button, Stack, Divider,
 } from '@mui/material';
-import GroupsIcon from '@mui/icons-material/Groups';
-import PaidIcon from '@mui/icons-material/Paid';
+import React from 'react';
+
 import type { PublicGroup } from '../types/group';
 
 interface Props {

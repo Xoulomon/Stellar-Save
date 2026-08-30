@@ -1,10 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit/modules/freighter';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { WalletProvider, WalletContext } from './WalletProvider';
-import { FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit/modules/freighter';
-import type { WalletContextValue } from './types';
 import React, { useContext } from 'react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+import { WalletProvider, WalletContext } from './WalletProvider';
+
+
+import type { WalletContextValue } from './types';
+
 
 // Mock StellarWalletsKit
 vi.mock('@creit.tech/stellar-wallets-kit', () => ({

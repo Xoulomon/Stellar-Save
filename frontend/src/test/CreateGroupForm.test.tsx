@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
+
 import { CreateGroupForm } from '../components/CreateGroupForm';
 
 // Navigates through all 5 steps with valid data (insurance disabled)

@@ -188,7 +188,7 @@ pub fn require_creator(env: &Env, group: &Group) -> Result<(), ContractError> {
 - Keep components under ~150 lines; extract sub-components when they grow larger
 - Use semantic HTML for accessibility (`<button>`, `<nav>`, `<main>`, etc.)
 - Run `npm run lint` before committing — ESLint is enforced in CI
-- **Import Ordering**: Maintain structured imports sorted alphabetically in groups: `builtin`, `external`, `internal`, `parent`/`sibling`, `index`, `type`
+- **Import Ordering**: enforced by `eslint-plugin-import` (`import/order`, error). Groups are separated by a blank line, imports sorted alphabetically (case-insensitive) within each group: `builtin` → `external` → `internal` → `parent`/`sibling` (`../`, `./`) → `index` → `type`. See the `import/order` rule in `eslint.config.base.js`.
 - **Circular Dependencies**: Circular dependencies are strictly forbidden (`import/no-cycle`). Ensure modules are strictly decoupled and acyclic
 
 Prettier config (`.prettierrc`):

@@ -6,8 +6,10 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { api } from '../utils/api';
+
 import { useBackendAuth } from './useBackendAuth';
+import { api } from '../utils/api';
+
 import type { KycStatusResult } from '../types/ramp';
 
 export function useKycStatus(): {

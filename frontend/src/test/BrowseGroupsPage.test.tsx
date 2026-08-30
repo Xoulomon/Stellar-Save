@@ -1,12 +1,14 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
+
 import BrowseGroupsPage from '../pages/BrowseGroupsPage';
-import { routeConfig } from '../routing/routes';
 import { ROUTES } from '../routing/constants';
+import { routeConfig } from '../routing/routes';
 import { fetchGroups } from '../utils/groupApi';
+
 import type { PublicGroup } from '../utils/groupApi';
 
 vi.mock('../ui', () => ({

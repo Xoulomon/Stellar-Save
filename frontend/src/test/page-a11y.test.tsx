@@ -1,10 +1,10 @@
 import { render } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect } from 'vitest';
 
-import { ProfilePage } from '../pages/ProfilePage';
 import { BrowseGroupsPage } from '../pages/BrowseGroupsPage';
+import { ProfilePage } from '../pages/ProfilePage';
 import { WalletContext } from '../wallet/WalletProvider';
 
 expect.extend(toHaveNoViolations);

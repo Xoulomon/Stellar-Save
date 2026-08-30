@@ -1,8 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import MemberProfilePage from '../pages/MemberProfilePage';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { computeReputationScore } from '../hooks/useMemberProfile';
+import MemberProfilePage from '../pages/MemberProfilePage';
+
 import type { UserStats } from '../hooks/useUserProfile';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────

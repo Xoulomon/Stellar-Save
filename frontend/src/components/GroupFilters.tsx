@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Input } from './Input';
-import { Dropdown } from './Dropdown';
+
 import { Button } from './Button';
+import { Dropdown } from './Dropdown';
+import { Input } from './Input';
 import './GroupFilters.css';
 
 export type GroupStatus = 'all' | 'active' | 'completed' | 'pending';

@@ -6,12 +6,14 @@
  */
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import CreateGroupPage from '../../pages/CreateGroupPage';
-import { WalletContext } from '../../wallet/WalletProvider';
-import type { WalletContextValue } from '../../wallet/types';
 import { createGroup } from '../../utils/groupApi';
+import { WalletContext } from '../../wallet/WalletProvider';
+
+import type { WalletContextValue } from '../../wallet/types';
 
 // Mock heavy UI wrappers to keep tests focused on flow logic
 vi.mock('../../ui', () => ({

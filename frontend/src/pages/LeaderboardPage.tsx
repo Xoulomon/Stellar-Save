@@ -1,9 +1,10 @@
 import { Stack, Typography, Box } from '@mui/material';
-import { AppLayout, AppCard } from '../ui';
+
+import { Button } from '../components/Button';
 import { Leaderboard } from '../components/Leaderboard';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { useWallet } from '../hooks/useWallet';
-import { Button } from '../components/Button';
+import { AppLayout, AppCard } from '../ui';
 
 export default function LeaderboardPage() {
   const { data, isLoading, error, period, setPeriod, refresh } = useLeaderboard('all-time');

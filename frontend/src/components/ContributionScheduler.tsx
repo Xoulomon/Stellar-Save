@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Alert,
   Box,
@@ -10,6 +9,8 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import { useState } from 'react';
+
 // Minimal inline SVG icons to avoid @mui/icons-material dependency
 const DeleteIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -31,11 +32,11 @@ const CancelIcon = () => (
     <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z" />
   </svg>
 );
+import { useBalance } from '../hooks/useBalance';
 import {
   useScheduledContributions,
   type ScheduledContribution,
 } from '../hooks/useScheduledContributions';
-import { useBalance } from '../hooks/useBalance';
 
 interface Props {
   groupId: string;

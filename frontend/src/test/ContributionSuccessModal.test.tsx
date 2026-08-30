@@ -1,8 +1,9 @@
-import { useState } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { axe, toHaveNoViolations } from 'jest-axe';
+import { useState } from 'react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { ContributionSuccessModal } from '../components/ContributionSuccessModal';
 
 expect.extend(toHaveNoViolations);

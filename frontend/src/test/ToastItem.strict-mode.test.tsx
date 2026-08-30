@@ -1,7 +1,9 @@
-import React, { StrictMode } from 'react';
 import { act, render } from '@testing-library/react';
+import React, { StrictMode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
 import ToastItem from '../components/Toast/ToastItem';
+
 import type { Toast } from '../components/Toast/types';
 
 describe('ToastItem Strict Mode', () => {

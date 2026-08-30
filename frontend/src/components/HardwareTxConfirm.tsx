@@ -1,4 +1,3 @@
-import { useState, useCallback } from 'react';
 import {
   Box,
   Stack,
@@ -15,9 +14,12 @@ import {
   Divider,
   Chip,
 } from '@mui/material';
+import { useState, useCallback } from 'react';
+
 import { Button } from './Button';
-import type { TxApprovalRequest, TxApprovalStatus, HardwareWalletState } from '../wallet/hardware/types';
 import { HARDWARE_WALLET_I18N } from '../wallet/hardware/types';
+
+import type { TxApprovalRequest, TxApprovalStatus, HardwareWalletState } from '../wallet/hardware/types';
 
 interface HardwareTxConfirmProps {
   open: boolean;

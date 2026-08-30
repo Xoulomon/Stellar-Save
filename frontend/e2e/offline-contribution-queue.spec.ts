@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+
 import { injectMockWallet } from './helpers/stellar-standalone';
 
 /**

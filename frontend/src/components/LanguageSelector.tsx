@@ -1,5 +1,7 @@
 import { FormControl, InputLabel, MenuItem, Select } from '@mui/material';
+
 import { useI18n } from '../hooks/useI18n';
+
 import type { LanguageCode } from '../i18n';
 
 export function LanguageSelector() {

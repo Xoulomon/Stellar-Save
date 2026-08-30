@@ -9,12 +9,10 @@
  * The "Recovery Status" section lets the account owner see the progress of an
  * active recovery request (remaining approvals needed).
  */
-import { useState, useEffect } from 'react';
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-} from '@tanstack/react-query';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import DeleteIcon from '@mui/icons-material/Delete';
+import HowToRegIcon from '@mui/icons-material/HowToReg';
+import ShieldIcon from '@mui/icons-material/Shield';
 import {
   Stack,
   Typography,
@@ -27,19 +25,23 @@ import {
   Tooltip,
   IconButton,
 } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import ShieldIcon from '@mui/icons-material/Shield';
-import HowToRegIcon from '@mui/icons-material/HowToReg';
-import { AppLayout, AppCard } from '../ui';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+
 import { Button } from '../components/Button';
 import { useWallet } from '../hooks/useWallet';
+import { AppLayout, AppCard } from '../ui';
 import {
   fetchGuardianConfig,
   setGuardians,
   fetchIncomingRequests,
   approveRecovery,
 } from '../utils/recoveryApi';
+
 import type { RecoveryRequest } from '../utils/recoveryApi';
 
 // ── Query keys ────────────────────────────────────────────────────────────────

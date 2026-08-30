@@ -1,5 +1,7 @@
 import { lazy } from "react";
+
 import { ROUTES } from "./constants";
+
 import type { RouteConfig } from "./types";
 
 const AdminDashboardPage = lazy(() => import("../pages/AdminDashboardPage"));

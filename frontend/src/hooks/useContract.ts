@@ -15,8 +15,10 @@
  */
 
 import { useCallback, useState } from 'react';
+
 import { useWallet } from './useWallet';
 import { stellarSaveClient, ContractError, parseContractError } from '../lib/client';
+
 import type {
   CreateGroupParams,
   JoinGroupParams,
