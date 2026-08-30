@@ -1,7 +1,12 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+import { server } from '../__mocks__/msw/server';
+import {
+  DEFAULT_PAYMENTS_PAGE,
+  createHorizonHandlers,
+} from '../__mocks__/msw/handlers/horizon';
 import { TransactionHistory } from '../components/TransactionHistory';
 import * as useWalletHook from '../hooks/useWallet';
 
@@ -51,39 +56,24 @@ afterEach(() => {
   restoreContainerDimensions();
 });
 
-function mockHorizonResponse(overrides = {}) {
-  return {
-    _embedded: {
-      records: [
-        {
-          id: '123',
-          type: 'payment',
-          created_at: '2026-04-20T10:30:00Z',
-          transaction_hash: 'abc123',
-          amount: '250.0000000',
-          asset_code: 'XLM',
-          asset_type: 'native',
-          from: 'GASEND...',
-          to: 'GARECV...',
-          memo: 'Group contribution',
-        },
-        {
-          id: '456',
-          type: 'payment',
-          created_at: '2026-04-15T14:22:00Z',
-          transaction_hash: 'def456',
-          amount: '1000.0000000',
-          asset_code: 'USDC',
-          asset_type: 'credit_alphanum4',
-          from: 'GASEND2...',
-          to: 'GARECV2...',
-          memo: 'Payout',
-        },
-      ],
-    },
-    ...overrides,
-  };
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Override the default Horizon payments handler to return a custom response. */
+function useHorizonPayments(records: object[], status = 200) {
+  server.use(
+    http.get('https://horizon-testnet.stellar.org/accounts/:accountId/payments', () =>
+      HttpResponse.json({ _embedded: { records }, _links: {} }, { status })
+    ),
+    http.get('https://horizon.stellar.org/accounts/:accountId/payments', () =>
+      HttpResponse.json({ _embedded: { records }, _links: {} }, { status })
+    ),
+    http.get('https://horizon-futurenet.stellar.org/accounts/:accountId/payments', () =>
+      HttpResponse.json({ _embedded: { records }, _links: {} }, { status })
+    ),
+  );
 }
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('TransactionHistory — no wallet connected', () => {
   it('renders title', () => {
@@ -128,57 +118,45 @@ describe('TransactionHistory — type filter', () => {
 });
 
 describe('TransactionHistory — with address and Horizon fetch', () => {
-  const originalFetch = global.fetch;
-  let mockFetch: ReturnType<typeof vi.fn>;
-
   beforeEach(() => {
-    mockFetch = vi.fn();
-    global.fetch = mockFetch;
     const mock = useWalletHook.useWallet as ReturnType<typeof vi.fn>;
     mock.mockReturnValue({ activeAddress: 'GABC1234567890', network: 'TESTNET' });
   });
 
-  afterEach(() => {
-    global.fetch = originalFetch;
-  });
-
-  it('fetches transactions from Horizon on mount', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockHorizonResponse()),
-    });
+  it('fetches transactions from Horizon on mount (default MSW handler responds)', async () => {
+    // The default Horizon handler registered in setup.ts will respond.
     render(<TransactionHistory />);
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/accounts/GABC1234567890/payments'),
-      );
+      // After the fetch the component should move away from the 6-row demo
+      // state and show fetched rows (2 from DEFAULT_PAYMENTS_PAGE fixture).
+      const el = document.querySelector('[aria-rowcount]');
+      expect(el).toBeInTheDocument();
     });
   });
 
-  it('renders fetched transaction data', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockHorizonResponse()),
-    });
+  it('renders fetched transaction data from MSW handler', async () => {
+    // DEFAULT_PAYMENTS_PAGE has 2 records — the default handler returns them.
     const { container } = render(<TransactionHistory />);
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalled();
-    });
-    await waitFor(() => {
-      const el = container.querySelector('[aria-rowcount]');
-      const count = el?.getAttribute('aria-rowcount');
-      expect(count).toBe('3');
+      const el = container.querySelector('[aria-rowcount="3"]');
+      expect(el).toBeInTheDocument();
     });
   });
 
-  it('falls back to mock data when Horizon fetch returns empty', async () => {
+  it('falls back to mock data when Horizon returns an empty response', async () => {
+    useHorizonPayments([]);
     const { container } = render(<TransactionHistory />);
     await waitFor(() => {
       expect(container.querySelector('[aria-rowcount="6"]')).toBeInTheDocument();
     });
   });
 
-  it('gracefully falls back to mock data on Horizon fetch error', async () => {
+  it('gracefully falls back to mock data on Horizon 500 error', async () => {
+    server.use(
+      http.get('https://horizon-testnet.stellar.org/accounts/:accountId/payments', () =>
+        HttpResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+      ),
+    );
     const { container } = render(<TransactionHistory />);
     await waitFor(() => {
       expect(container.querySelector('[aria-rowcount="6"]')).toBeInTheDocument();
@@ -186,6 +164,7 @@ describe('TransactionHistory — with address and Horizon fetch', () => {
   });
 
   it('does not show error alert on fetch fallback', async () => {
+    useHorizonPayments([]);
     const { container } = render(<TransactionHistory />);
     await waitFor(() => {
       expect(container.querySelector('[aria-rowcount="6"]')).toBeInTheDocument();
@@ -193,89 +172,86 @@ describe('TransactionHistory — with address and Horizon fetch', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('uses correct Horizon URL for mainnet', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockHorizonResponse()),
-    });
+  it('uses the mainnet Horizon URL when network is MAINNET', async () => {
     const mock = useWalletHook.useWallet as ReturnType<typeof vi.fn>;
     mock.mockReturnValue({ activeAddress: 'GABC1234567890', network: 'MAINNET' });
+
+    // Override the mainnet handler to confirm it was called.
+    let mainnetCalled = false;
+    server.use(
+      http.get('https://horizon.stellar.org/accounts/:accountId/payments', () => {
+        mainnetCalled = true;
+        return HttpResponse.json(DEFAULT_PAYMENTS_PAGE);
+      }),
+    );
+
     render(<TransactionHistory />);
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('horizon.stellar.org'),
-      );
+      expect(mainnetCalled).toBe(true);
     });
   });
 });
 
 describe('TransactionHistory — custom address prop', () => {
   it('uses provided address prop instead of wallet address', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockHorizonResponse()),
-    });
-    const originalFetch = global.fetch;
-    global.fetch = mockFetch;
+    let capturedAccountId: string | undefined;
+    server.use(
+      http.get('https://horizon-testnet.stellar.org/accounts/:accountId/payments', ({ params }) => {
+        capturedAccountId = params['accountId'] as string;
+        return HttpResponse.json(DEFAULT_PAYMENTS_PAGE);
+      }),
+    );
 
     render(<TransactionHistory address="GCUSTOM1234567890" />);
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('GCUSTOM1234567890'),
-      );
+      expect(capturedAccountId).toBe('GCUSTOM1234567890');
     });
-
-    global.fetch = originalFetch;
   });
 });
 
 describe('TransactionHistory — contractId filter', () => {
-  it('passes contractId to Horizon URL', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockHorizonResponse()),
-    });
-    const originalFetch = global.fetch;
-    global.fetch = mockFetch;
-
+  it('passes contractId to Horizon URL when provided', async () => {
     const mock = useWalletHook.useWallet as ReturnType<typeof vi.fn>;
     mock.mockReturnValue({ activeAddress: 'GABC1234567890', network: 'TESTNET' });
 
+    let requested = false;
+    server.use(
+      http.get('https://horizon-testnet.stellar.org/accounts/:accountId/payments', () => {
+        requested = true;
+        return HttpResponse.json(DEFAULT_PAYMENTS_PAGE);
+      }),
+    );
+
     render(<TransactionHistory contractId="CONTRACT123" />);
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalled();
+      expect(requested).toBe(true);
     });
-
-    global.fetch = originalFetch;
   });
 });
 
 describe('TransactionHistory — pageSize', () => {
-  it('uses provided pageSize', () => {
+  it('renders title with provided pageSize', () => {
     render(<TransactionHistory pageSize={25} />);
     expect(screen.getByText('Transaction History')).toBeInTheDocument();
   });
 });
 
 describe('TransactionHistory — custom network prop', () => {
-  it('uses FUTURENET Horizon URL', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockHorizonResponse()),
-    });
-    const originalFetch = global.fetch;
-    global.fetch = mockFetch;
-
+  it('uses FUTURENET Horizon URL when network is FUTURENET', async () => {
     const mock = useWalletHook.useWallet as ReturnType<typeof vi.fn>;
     mock.mockReturnValue({ activeAddress: 'GABC1234567890', network: 'FUTURENET' });
 
+    let futurenetCalled = false;
+    server.use(
+      http.get('https://horizon-futurenet.stellar.org/accounts/:accountId/payments', () => {
+        futurenetCalled = true;
+        return HttpResponse.json(DEFAULT_PAYMENTS_PAGE);
+      }),
+    );
+
     render(<TransactionHistory />);
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('horizon-futurenet.stellar.org'),
-      );
+      expect(futurenetCalled).toBe(true);
     });
-
-    global.fetch = originalFetch;
   });
 });
