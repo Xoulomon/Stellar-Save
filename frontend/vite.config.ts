@@ -1,7 +1,8 @@
-import react from '@vitejs/plugin-react'
-import { visualizer } from 'rollup-plugin-visualizer'
-import { defineConfig } from 'vite'
-import { imagetools } from 'vite-imagetools'
+import { fileURLToPath } from 'node:url';
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { imagetools } from 'vite-imagetools';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 const CSP = [
   "default-src 'self'",
@@ -14,49 +15,52 @@ const CSP = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  "report-uri /api/csp-report",
-].join('; ')
+  'report-uri /api/csp-report',
+].join('; ');
+
+const visualGallery = process.env['VITE_VISUAL_GALLERY'] === 'true';
+const visualGalleryInput = fileURLToPath(new URL('./visual-gallery.html', import.meta.url));
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     imagetools(),
-    // Writes dist/stats.html — open after `npm run build:analyze`
-    visualizer({ filename: 'dist/stats.html', gzipSize: true, brotliSize: true }),
+    ...(!visualGallery
+      ? [visualizer({ filename: 'dist/stats.html', gzipSize: true, brotliSize: true })]
+      : []),
   ],
   server: {
     headers: {
       'Content-Security-Policy': CSP,
     },
   },
-  build: {
-    chunkSizeWarningLimit: 100,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-mui': ['@mui/material', '@emotion/react', '@emotion/styled'],
-          'vendor-stellar': ['@stellar/stellar-sdk', '@stellar/freighter-api'],
-          'vendor-i18n': ['i18next', 'react-i18next'],
-          // Heavy route chunks split out to reduce initial bundle size.
-          // Each entry is resolved from the page module; tree-shaking keeps
-          // page-specific dependencies (recharts, MUI X Data Grid, etc.) out
-          // of the initial load path.
-          'route-analytics': [
-            './src/pages/AnalyticsDashboardPage.tsx',
-            './src/pages/PlatformAnalyticsDashboard.tsx',
-            './src/pages/GroupAnalytics.tsx',
-            './src/pages/GroupComparisonPage.tsx',
-          ],
-          'route-admin': [
-            './src/pages/FeedbackAdminPage.tsx',
-          ],
-          'route-charts': [
-            'recharts',
-          ],
+  build: visualGallery
+    ? {
+        chunkSizeWarningLimit: 500,
+        rollupOptions: {
+          input: visualGalleryInput,
+        },
+      }
+    : {
+        chunkSizeWarningLimit: 100,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+              'vendor-mui': ['@mui/material', '@emotion/react', '@emotion/styled'],
+              'vendor-stellar': ['@stellar/stellar-sdk', '@stellar/freighter-api'],
+              'vendor-i18n': ['i18next', 'react-i18next'],
+              'route-analytics': [
+                './src/pages/AnalyticsDashboardPage.tsx',
+                './src/pages/PlatformAnalyticsDashboard.tsx',
+                './src/pages/GroupAnalytics.tsx',
+                './src/pages/GroupComparisonPage.tsx',
+              ],
+              'route-admin': ['./src/pages/FeedbackAdminPage.tsx'],
+              'route-charts': ['recharts'],
+            },
+          },
         },
       },
-    },
-  },
-})
+});
