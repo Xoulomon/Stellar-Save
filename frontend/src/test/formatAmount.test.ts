@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { formatAmount } from '../utils/formatAmount';
 
 describe('formatAmount', () => {

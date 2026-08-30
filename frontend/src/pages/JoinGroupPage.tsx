@@ -1,6 +1,7 @@
+import { Box, Typography, Button, Stack } from '@mui/material';
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Button, Stack } from '@mui/material';
+
 import { buildRoute } from '../routing/constants';
 
 // Inline SVG to avoid @mui/icons-material dependency

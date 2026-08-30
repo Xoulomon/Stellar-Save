@@ -6,7 +6,9 @@
  * contract. This module wraps those endpoints.
  */
 
-const API_BASE = (import.meta.env['VITE_API_BASE_URL'] as string | undefined) ?? '/api/v1';
+import { env } from '../lib/env';
+
+const API_BASE = env.VITE_API_BASE_URL;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

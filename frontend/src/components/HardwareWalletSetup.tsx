@@ -1,4 +1,3 @@
-import { useState, useCallback } from 'react';
 import {
   Box,
   Stack,
@@ -14,10 +13,14 @@ import {
   RadioGroup,
   FormControlLabel,
 } from '@mui/material';
+import { useState, useCallback } from 'react';
+
 import { Button } from './Button';
-import type { HardwareWalletType, HardwareDeviceInfo, ConnectionStatus } from '../wallet/hardware/types';
-import { HARDWARE_WALLET_I18N } from '../wallet/hardware/types';
 import { scanForDevices, connectToDevice, fetchAccounts, updatePersistedState } from '../wallet/hardware/hardwareService';
+import { HARDWARE_WALLET_I18N } from '../wallet/hardware/types';
+
+import type { HardwareWalletType, HardwareDeviceInfo, ConnectionStatus } from '../wallet/hardware/types';
+
 
 interface HardwareWalletSetupProps {
   onComplete: () => void;

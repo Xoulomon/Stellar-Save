@@ -1,7 +1,9 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { useContributions } from '../hooks/useContributions';
 import * as groupApi from '../utils/groupApi';
+
 import type { DetailedGroup } from '../utils/groupApi';
 
 const mockGroup: DetailedGroup = {

@@ -1,5 +1,7 @@
 import { Stack, Typography, FormControlLabel, Switch, Box } from '@mui/material';
+
 import { useReminderPreferences } from '../hooks/useReminderPreferences';
+
 import type { ReminderTiming, NotificationChannel } from '../notifications/reminderPreferences';
 import './ReminderPreferencesSection.css';
 

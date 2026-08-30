@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import { getExplorerTxUrl } from '../utils/explorerUrl';
 import './ContributionSuccessModal.css';
 

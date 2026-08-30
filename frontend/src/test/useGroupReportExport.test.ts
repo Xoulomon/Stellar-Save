@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
+
 import {
   buildGroupContributionsCSV,
   buildGroupReportPDFHtml,
 } from '../hooks/useGroupReportExport';
+
 import type { DetailedGroup } from '../utils/groupApi';
 
 const mockGroup: DetailedGroup = {

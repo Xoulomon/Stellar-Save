@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+
 import { fetchLeaderboard } from '../utils/leaderboardApi';
+
 import type { LeaderboardData, TimePeriod } from '../types/leaderboard';
 
 interface CacheEntry { data: LeaderboardData; fetchedAt: number }

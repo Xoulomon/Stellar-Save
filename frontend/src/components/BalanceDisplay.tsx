@@ -1,6 +1,6 @@
-import { useBalance } from "../hooks/useBalance";
 import { Card } from "./Card";
 import { Spinner } from "./Spinner";
+import { useBalance } from "../hooks/useBalance";
 import "./BalanceDisplay.css";
 
 export interface BalanceDisplayProps {

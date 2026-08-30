@@ -2,7 +2,6 @@
  * OfflineIndicator.tsx — Shows connection status and sync queue
  */
 
-import { Box, Chip, Tooltip, Typography } from '@mui/material';
 import {
   CloudOff,
   CloudQueue,
@@ -10,6 +9,8 @@ import {
   Sync,
   Warning,
 } from '@mui/icons-material';
+import { Box, Chip, Tooltip, Typography } from '@mui/material';
+
 import { useSyncStatus } from '../hooks/offline';
 import { formatDistanceToNow } from '../utils/formatDate';
 

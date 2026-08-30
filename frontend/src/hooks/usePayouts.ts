@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { useContract } from './useContract';
+
 import type { PayoutEntry, PayoutQueueData, PayoutStatus } from '../types/contribution';
 
 interface UsePayoutsReturn {

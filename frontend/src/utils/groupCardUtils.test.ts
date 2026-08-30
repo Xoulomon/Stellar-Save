@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { formatXlm, computeNextPayout, formatDate } from './groupCardUtils';
 
 describe('formatXlm', () => {

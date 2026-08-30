@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createGroup } from '../utils/groupApi';
-import type { GroupData } from '../utils/groupApi';
+
 import { queryKeys } from '../lib/queryKeys';
+import { createGroup } from '../utils/groupApi';
+
+import type { GroupData } from '../utils/groupApi';
 
 /**
  * Write side of the group list. Separated from useGroupsQuery so a component

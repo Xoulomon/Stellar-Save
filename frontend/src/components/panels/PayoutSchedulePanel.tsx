@@ -1,6 +1,7 @@
-import { Card } from '../Card';
-import { Badge } from '../Badge';
 import { formatAmount, formatDateRange } from '../../utils/format';
+import { Badge } from '../Badge';
+import { Card } from '../Card';
+
 import type { GroupCycle } from '../../utils/groupApi';
 
 interface PayoutSchedulePanelProps {

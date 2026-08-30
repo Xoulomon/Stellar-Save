@@ -1,6 +1,8 @@
-import React from 'react';
 import { Box, Typography, Paper, Stack, Divider } from '@mui/material';
+import React from 'react';
+
 import { Skeleton } from '../Skeleton/Skeleton';
+
 import type { DashboardStats } from '../../types/dashboard';
 
 interface Props { stats: DashboardStats; isLoading?: boolean; }

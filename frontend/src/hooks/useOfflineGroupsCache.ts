@@ -1,8 +1,11 @@
 import { useCallback, useState } from 'react';
-import { fetchGroups } from '../utils/groupApi';
-import { getCachedGroupsListWithStatus, cacheGroupsList } from '../lib/db';
-import type { GroupFilters, PublicGroup } from '../types/group';
+
 import { useIsOnline } from './offline';
+import { getCachedGroupsListWithStatus, cacheGroupsList } from '../lib/db';
+import { fetchGroups } from '../utils/groupApi';
+
+import type { GroupFilters, PublicGroup } from '../types/group';
+
 
 /**
  * Offline-cache fallback for the group list, kept out of the query hook so the

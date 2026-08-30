@@ -1,6 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+
 import { GroupDetails } from '../components/GroupDetails';
+
 import type { GroupInfo, GroupMember, Contribution, CycleInfo } from '../components/GroupDetails';
 
 const group: GroupInfo = {

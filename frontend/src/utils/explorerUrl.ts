@@ -5,7 +5,7 @@
  * VITE_STELLAR_NETWORK → one of: testnet | mainnet | futurenet | standalone
  */
 
-type StellarNetwork = 'testnet' | 'mainnet' | 'futurenet' | 'standalone';
+import { env, type StellarNetwork } from '../lib/env';
 
 /** Maps Stellar network names to stellar.expert path segments. */
 const EXPLORER_NETWORKS: Record<StellarNetwork, string> = {
@@ -16,8 +16,8 @@ const EXPLORER_NETWORKS: Record<StellarNetwork, string> = {
 };
 
 function resolveNetwork(): StellarNetwork {
-  const raw = (import.meta.env['VITE_STELLAR_NETWORK'] as string | undefined) ?? 'testnet';
-  return (raw in EXPLORER_NETWORKS ? raw : 'testnet') as StellarNetwork;
+  // Already validated against this exact set of values by env.ts.
+  return env.VITE_STELLAR_NETWORK;
 }
 
 const BASE = 'https://stellar.expert/explorer';

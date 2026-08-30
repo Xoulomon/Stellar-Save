@@ -1,6 +1,8 @@
-import React from 'react';
 import { Box, Stack } from '@mui/material';
+import React from 'react';
+
 import ToastItem from './ToastItem';
+
 import type { Toast } from './types';
 
 interface ToastContainerProps {

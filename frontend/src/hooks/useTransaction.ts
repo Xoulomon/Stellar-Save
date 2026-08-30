@@ -12,6 +12,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { env } from '../lib/env';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,8 +36,7 @@ export interface UseTransactionReturn {
 
 // ─── Network config (for explorer links) ─────────────────────────────────────
 
-export const STELLAR_NETWORK: string =
-  (import.meta.env['VITE_STELLAR_NETWORK'] as string | undefined) ?? 'testnet';
+export const STELLAR_NETWORK: string = env.VITE_STELLAR_NETWORK;
 
 export function explorerUrl(txHash: string): string {
   const net = STELLAR_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';

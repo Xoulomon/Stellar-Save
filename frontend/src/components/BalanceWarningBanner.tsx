@@ -1,5 +1,6 @@
-import { useState } from 'react';
 import { Alert, AlertTitle, Box, Button, Collapse, Link, Stack, Typography } from '@mui/material';
+import { useState } from 'react';
+
 import type { BalanceWarning } from '../hooks/useBalanceWarning';
 
 interface Props {

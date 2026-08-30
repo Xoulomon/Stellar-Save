@@ -1,6 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+
 import { useTabsController } from '../useTabsController';
+
 import type { Tab } from '../../components/Tabs';
 
 const mockTabs: Tab[] = [

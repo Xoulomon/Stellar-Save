@@ -6,7 +6,9 @@ import {
   Divider,
   LinearProgress,
 } from '@mui/material';
+
 import { getExplorerTxUrl } from '../utils/explorerUrl';
+
 import type { PayoutEntry, PayoutQueueData } from '../types/contribution';
 
 // ── Types ─────────────────────────────────────────────────────────────────────

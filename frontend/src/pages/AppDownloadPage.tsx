@@ -1,9 +1,9 @@
+import AndroidIcon from '@mui/icons-material/Android';
+import AppleIcon from '@mui/icons-material/Apple';
+import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
+import { Box, Typography, Stack, Button, Card, CardContent } from '@mui/material';
 import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Stack, Button, Card, CardContent } from '@mui/material';
-import AppleIcon from '@mui/icons-material/Apple';
-import AndroidIcon from '@mui/icons-material/Android';
-import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
 
 /**
  * AppDownloadPage - Web fallback landing page for deep links

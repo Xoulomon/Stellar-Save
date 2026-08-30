@@ -8,9 +8,10 @@
  *   <NotificationToggle />
  */
 
-import { Switch, FormControlLabel, Typography, Box, Tooltip } from '@mui/material';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import NotificationsOffIcon from '@mui/icons-material/NotificationsOff';
+import { Switch, FormControlLabel, Typography, Box, Tooltip } from '@mui/material';
+
 import { usePushNotifications } from '../hooks/usePushNotifications';
 
 export function NotificationToggle() {
