@@ -12,7 +12,8 @@
  * Singleton — import `eventService` at the bottom of this file.
  */
 
-import { SorobanRpc, scValToNative, xdr } from '@stellar/stellar-sdk';
+import { scValToNative, xdr } from '@stellar/stellar-sdk';
+
 import { server, CONTRACT_ID } from './contractClient';
 import { env } from './env';
 import type {
@@ -23,6 +24,7 @@ import type {
   PayoutExecutedEvent,
   GroupPausedEvent,
 } from '../types/events';
+import type { SorobanRpc} from '@stellar/stellar-sdk';
 
 export const PAGE_SIZE = 20;
 

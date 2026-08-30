@@ -1,6 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+
 import { ContributionsPanel } from '../components/panels/ContributionsPanel';
+
 import type { GroupContribution } from '../utils/groupApi';
 
 const mockContributions: GroupContribution[] = [

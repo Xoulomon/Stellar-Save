@@ -1,6 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { GroupComparison } from '../components/GroupComparison';
+
 import type { PublicGroup } from '../types/group';
 
 const mockGroups: PublicGroup[] = [

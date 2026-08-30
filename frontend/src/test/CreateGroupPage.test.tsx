@@ -1,12 +1,13 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import CreateGroupPage from '../pages/CreateGroupPage';
-import { routeConfig } from '../routing/routes';
-import { ROUTES } from '../routing/constants';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { queryKeys } from '../lib/queryKeys';
+import CreateGroupPage from '../pages/CreateGroupPage';
+import { ROUTES } from '../routing/constants';
+import { routeConfig } from '../routing/routes';
 
 // Mock wallet so the form doesn't block on "connect wallet"
 vi.mock('../hooks/useWallet', () => ({

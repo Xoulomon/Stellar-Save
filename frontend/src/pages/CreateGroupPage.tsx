@@ -1,12 +1,14 @@
+import { useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+
 import { CreateGroupForm } from '../components/CreateGroupForm';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { useWallet } from '../hooks/useWallet';
-import { updateInsuranceSettings } from '../utils/insuranceApi';
 import { queryKeys } from '../lib/queryKeys';
+import { updateInsuranceSettings } from '../utils/insuranceApi';
+
 import type { GroupData } from '../utils/groupApi';
 
 const CreateGroupPage: React.FC = () => {

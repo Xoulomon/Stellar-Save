@@ -1,6 +1,7 @@
+import { formatAmount, formatDate } from '../../utils/format';
 import { Badge } from '../Badge';
 import { GroupMetrics } from '../GroupMetrics';
-import { formatAmount, formatDate } from '../../utils/format';
+
 import type { DetailedGroup, GroupContribution, GroupCycle } from '../../utils/groupApi';
 
 interface OverviewPanelProps {

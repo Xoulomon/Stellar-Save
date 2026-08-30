@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
 import { Box, Container, Typography } from '@mui/material';
-import { AppLayout } from '../ui/layout/AppLayout';
+import { useMemo } from 'react';
+
 import { TransactionBuilder } from '../components/TransactionBuilder/TransactionBuilder';
 import { useWallet } from '../hooks/useWallet';
+import { AppLayout } from '../ui/layout/AppLayout';
 
 export default function TransactionBuilderPage() {
   const { activeAddress } = useWallet();

@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 const RPC_URL = process.env['STELLAR_RPC_URL'] ?? 'http://localhost:8000/soroban/rpc';
 const HORIZON_URL = process.env['HORIZON_URL'] ?? 'http://localhost:8000';

@@ -1,7 +1,8 @@
 import React from 'react';
-import { AppLayout } from '../ui';
-import { KycGate } from '../components/KycGate';
+
 import { FiatRampScreen } from '../components/FiatRampScreen';
+import { KycGate } from '../components/KycGate';
+import { AppLayout } from '../ui';
 
 export default function WithdrawPage() {
   return (

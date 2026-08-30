@@ -1,11 +1,14 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+
+
 import { useGroup, usePrefetchGroup } from '../hooks/useGroup';
 import { queryKeys } from '../lib/queryKeys';
 import * as groupApi from '../utils/groupApi';
+
 import type { DetailedGroup } from '../utils/groupApi';
+import type { ReactNode } from 'react';
 
 const mockGroup: DetailedGroup = {
   id: 'g1',

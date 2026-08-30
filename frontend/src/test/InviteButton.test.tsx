@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+
 import { InviteButton } from '../components/InviteButton';
 
 // Mock InviteModal to isolate InviteButton behaviour

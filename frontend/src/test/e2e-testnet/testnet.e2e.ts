@@ -14,6 +14,9 @@
  */
 
 import 'dotenv/config';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+
 import {
   Keypair,
   Networks,
@@ -25,8 +28,6 @@ import {
   Address,
   Contract,
 } from '@stellar/stellar-sdk';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
 
 // ── Load .env.testnet ─────────────────────────────────────────────────────────
 

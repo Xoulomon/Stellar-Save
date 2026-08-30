@@ -3,9 +3,11 @@
 
 mod contract;
 pub mod error;
+pub mod policy;
 
-pub use contract::{require_admin, require_allowlisted, ExampleContract};
+pub use contract::ExampleContract;
 pub use error::Error;
+pub use policy::{require_admin, require_allowlisted};
 
 #[cfg(test)]
 mod test;

@@ -1,9 +1,11 @@
-import React from 'react';
-import type { Transaction } from '../types/transaction';
-import { Button } from './Button';
-import { Badge } from './Badge';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, Box, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, Box, IconButton } from '@mui/material';
+import React from 'react';
+
+import { Badge } from './Badge';
+import { Button } from './Button';
+
+import type { Transaction } from '../types/transaction';
 
 interface Props {
   transaction: Transaction | null;

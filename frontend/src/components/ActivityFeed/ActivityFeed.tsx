@@ -6,9 +6,11 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
-import { Skeleton } from '../Skeleton/Skeleton';
-import { EmptyState } from '../EmptyState/EmptyState';
+
 import { useActivityFeed } from '../../hooks/useActivityFeed';
+import { EmptyState } from '../EmptyState/EmptyState';
+import { Skeleton } from '../Skeleton/Skeleton';
+
 import type { ActivityItem, ActivityFeedFilter } from '../../hooks/useActivityFeed';
 import type { AppEvent, EventType } from '../../types/events';
 import './ActivityFeed.css';

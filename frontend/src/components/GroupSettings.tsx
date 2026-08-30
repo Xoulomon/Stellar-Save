@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -8,10 +7,13 @@ import {
   Typography,
   CircularProgress,
 } from '@mui/material';
+import { useState } from 'react';
+
 import { Button } from './Button';
-import { useWallet } from '../hooks/useWallet';
 import { useContract } from '../hooks/useContract';
 import { useTransaction, explorerUrl } from '../hooks/useTransaction';
+import { useWallet } from '../hooks/useWallet';
+
 import type { GroupDetail } from '../types/group';
 
 const NAME_MIN = 3;

@@ -1,7 +1,13 @@
+<<<<<<< HEAD
+import { Horizon } from '@stellar/stellar-sdk';
+import { useState, useEffect, useCallback, useRef } from 'react';
+
+=======
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { stellarService } from '../lib/stellarService';
 import type { AccountBalance } from '../lib/stellarService';
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import { useWallet } from './useWallet';
 
 export type { AccountBalance as Balance };

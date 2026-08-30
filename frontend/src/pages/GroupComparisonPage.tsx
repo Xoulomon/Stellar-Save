@@ -1,7 +1,7 @@
-import { AppCard, AppLayout } from '../ui';
 import { GroupComparison } from '../components/GroupComparison';
-import { useGroupsQuery } from '../hooks/useGroupsQuery';
 import { Spinner } from '../components/Spinner';
+import { useGroupsQuery } from '../hooks/useGroupsQuery';
+import { AppCard, AppLayout } from '../ui';
 
 export default function GroupComparisonPage() {
   const { groups, isLoading, error, refresh } = useGroupsQuery({ initialPageSize: 50 });

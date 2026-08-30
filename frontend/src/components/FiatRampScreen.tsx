@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Box,
   Typography,
@@ -15,9 +14,12 @@ import {
   Divider,
   Link,
 } from '@mui/material';
-import { useWallet } from '../hooks/useWallet';
+import { useState } from 'react';
+
 import { useBackendAuth } from '../hooks/useBackendAuth';
 import { useRamp, useRampTransactionPoller } from '../hooks/useRamp';
+import { useWallet } from '../hooks/useWallet';
+
 import type { RampTransaction, RampTransactionType } from '../types/ramp';
 
 export interface FiatRampScreenProps {

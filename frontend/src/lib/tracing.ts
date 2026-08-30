@@ -111,7 +111,7 @@ export async function startTracing(): Promise<void> {
     );
   } catch (err) {
     started = false;
-    // eslint-disable-next-line no-console
+     
     console.warn('[tracing] web tracing init failed; continuing without it', err);
   }
 }

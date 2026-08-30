@@ -1,4 +1,5 @@
 import { Box, Stack, Typography, Chip, Alert, CircularProgress, Divider } from '@mui/material';
+
 import type { SimulationResult } from '../../types/transactionBuilder';
 
 interface SimulationPanelProps {

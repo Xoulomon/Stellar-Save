@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Typography, Fab } from '@mui/material';
+import { useState } from 'react';
 
 const CATEGORIES = [
   { value: 'bug', label: '🐛 Bug report' },

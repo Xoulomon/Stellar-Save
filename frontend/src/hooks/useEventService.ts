@@ -6,6 +6,7 @@
  */
 
 import React, { useEffect, useCallback } from 'react';
+
 import { EventService, type AppEvent, type EventType } from '../lib';
 
 export interface UseEventServiceReturn {

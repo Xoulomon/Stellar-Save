@@ -1,6 +1,8 @@
 import React from 'react';
-import type { TransactionFilters as FilterType, TransactionType } from '../types/transaction';
+
 import { Badge } from './Badge';
+
+import type { TransactionFilters as FilterType, TransactionType } from '../types/transaction';
 
 interface Props {
   filters: FilterType;
