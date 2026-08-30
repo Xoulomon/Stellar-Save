@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
-import { useGroup } from './useGroup';
+
 import { useContributions } from './useContributions';
+import { useGroup } from './useGroup';
+
 import type { CycleRate, GroupAnalyticsResult } from '../types/analytics';
 import type { GroupCycle, GroupContribution } from '../utils/groupApi';
 

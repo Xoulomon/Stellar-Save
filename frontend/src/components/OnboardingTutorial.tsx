@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useLocalStorage } from "../hooks/useLocalStorage";
+
 import { useFocusTrap } from "../hooks/useFocusTrap";
+import { useLocalStorage } from "../hooks/useLocalStorage";
 import "./OnboardingTutorial.css";
 
 const STORAGE_KEY = "stellar-save-onboarding-complete";

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import type { PublicGroup, GroupDetail } from '../types/group';
 
 describe('Group Metadata Types', () => {

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+
 import { initSyncService, stopSyncService } from '../../lib/syncService';
 
 /**

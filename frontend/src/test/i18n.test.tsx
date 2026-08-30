@@ -2,10 +2,11 @@ import { renderHook, act } from '@testing-library/react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach } from 'vitest';
+
+import { LanguageSelector } from '../components/LanguageSelector';
+import { useI18n } from '../hooks/useI18n';
 import i18n from '../i18n';
 import { SUPPORTED_LANGUAGES } from '../i18n';
-import { useI18n } from '../hooks/useI18n';
-import { LanguageSelector } from '../components/LanguageSelector';
 
 // Reset to English before each test
 beforeEach(async () => {

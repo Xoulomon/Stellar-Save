@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
+
 import { OverviewPanel } from '../components/panels/OverviewPanel';
+
 import type { DetailedGroup, GroupContribution, GroupCycle } from '../utils/groupApi';
 
 const mockGroup: DetailedGroup = {

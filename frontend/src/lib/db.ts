@@ -5,6 +5,7 @@
  */
 
 import { openDB, type IDBPDatabase } from 'idb';
+
 import type { PublicGroup } from '../types/group';
 import type { DetailedGroup, GroupContribution, GroupMember } from '../utils/groupApi';
 

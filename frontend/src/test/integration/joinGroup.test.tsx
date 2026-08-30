@@ -7,8 +7,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { JoinGroupButton } from '../../components/JoinGroupButton';
 import { WalletContext } from '../../wallet/WalletProvider';
+
 import type { WalletContextValue } from '../../wallet/types';
 
 const connectedWallet: WalletContextValue = {

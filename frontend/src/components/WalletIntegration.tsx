@@ -1,4 +1,3 @@
-import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Stack,
@@ -12,11 +11,13 @@ import {
   Divider,
   CircularProgress,
 } from '@mui/material';
+import { useState, useEffect, useCallback } from 'react';
+
 import { Button } from './Button';
 import { WalletSelectModal } from './WalletSelectModal';
-import { useWallet } from '../hooks/useWallet';
 import { useBalance } from '../hooks/useBalance';
 import { useClipboard } from '../hooks/useClipboard';
+import { useWallet } from '../hooks/useWallet';
 
 // ── Wallet status indicator ──────────────────────────────────────────────────
 

@@ -1,11 +1,12 @@
-import React from 'react';
-import {
-  Drawer, Box, Typography, Stack, Chip, Divider, Button, IconButton,
-} from '@mui/material';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import CloseIcon from '@mui/icons-material/Close';
 import GroupsIcon from '@mui/icons-material/Groups';
 import PaidIcon from '@mui/icons-material/Paid';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import {
+  Drawer, Box, Typography, Stack, Chip, Divider, Button, IconButton,
+} from '@mui/material';
+import React from 'react';
+
 import type { PublicGroup } from '../types/group';
 
 interface Props {

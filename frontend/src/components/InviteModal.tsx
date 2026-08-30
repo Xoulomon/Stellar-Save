@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -13,15 +12,20 @@ import {
   IconButton,
   Divider,
 } from '@mui/material';
+import React, { useState } from 'react';
+
 import { QRCode } from './QRCode';
+<<<<<<< HEAD
+import { useClipboard } from '../hooks/useClipboard';
+=======
 import { shareOrCopy } from '../lib/clipboard';
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import {
   generateInviteLink,
   buildShareUrls,
   trackInviteShare,
   getInviteShareCount,
 } from '../utils/invitation';
-import { useClipboard } from '../hooks/useClipboard';
 
 // Inline SVG icons to avoid @mui/icons-material dependency
 const ContentCopyIcon = () => (

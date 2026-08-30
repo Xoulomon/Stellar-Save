@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
 import {
   initDB,
   cacheGroup,
@@ -16,8 +17,9 @@ import {
   clearAllCache,
   clearSyncQueue,
 } from '../lib/db';
-import type { DetailedGroup } from '../utils/groupApi';
+
 import type { PublicGroup } from '../types/group';
+import type { DetailedGroup } from '../utils/groupApi';
 
 describe('Offline Database', () => {
   beforeEach(async () => {

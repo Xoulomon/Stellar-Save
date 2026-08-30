@@ -7,6 +7,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+
 import { useInterval } from '../hooks/useInterval';
 import { getContributionDeadline } from '../lib/contractClient';
 import './CountdownTimer.css';

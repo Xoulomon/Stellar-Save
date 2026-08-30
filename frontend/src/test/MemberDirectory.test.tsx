@@ -1,8 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, vi } from 'vitest';
+
 import { MemberDirectory } from '../components/MemberDirectory';
+
 import type { MemberProfile } from '../types/member';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { errorHandler, formatErrorMessage } from '../utils/errorHandler';
 
 function formatAmount(amount: number): string {

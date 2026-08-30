@@ -12,7 +12,9 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { EventService } from '../lib/EventService';
+
 import type { AppEvent, EventType } from '../types/events';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import type { DetailedGroup } from '../utils/groupApi';
+
 import { useGroupReportExport } from '../hooks/useGroupReportExport';
+
+import type { DetailedGroup } from '../utils/groupApi';
 
 interface Props {
   group: DetailedGroup;

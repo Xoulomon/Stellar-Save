@@ -1,7 +1,9 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { useQueueAction } from '../useQueueAction';
 import { useSyncStatus } from '../useSyncStatus';
+
 import type { ConnectionStatus, SyncStatus } from '../../../lib/syncService';
 
 // In-memory fake queue shared between the mocked syncService and db modules,

@@ -20,18 +20,19 @@
  */
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { axe, toHaveNoViolations } from 'jest-axe';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { ContributeButton } from '../components/ContributeButton';
+import { GroupSettings } from '../components/GroupSettings';
 import { JoinGroupModal } from '../components/JoinGroupModal';
 import { TemplatePreviewModal } from '../components/templates/TemplatePreviewModal';
 import { SaveTemplateModal } from '../components/TransactionBuilder/SaveTemplateModal';
 import TransactionDetailModal from '../components/TransactionDetailModal';
 import { WalletSelectModal } from '../components/WalletSelectModal';
-import { ContributeButton } from '../components/ContributeButton';
-import { GroupSettings } from '../components/GroupSettings';
-import { useWallet } from '../hooks/useWallet';
 import { useContract } from '../hooks/useContract';
+import { useWallet } from '../hooks/useWallet';
+
 import type { PublicGroup, GroupDetail } from '../types/group';
 import type { GroupTemplate } from '../types/template';
 import type { Transaction } from '../types/transaction';

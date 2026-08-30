@@ -1,6 +1,9 @@
-import { useEffect, ReactNode } from 'react';
+import { useEffect } from 'react';
+
 import i18n from '../i18n';
 import { isRTL, getDir } from '../utils/rtl';
+
+import type { ReactNode } from 'react';
 
 interface RTLProviderProps {
   children: ReactNode;

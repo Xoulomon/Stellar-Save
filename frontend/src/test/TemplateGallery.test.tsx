@@ -1,8 +1,11 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, vi } from 'vitest';
+
 import { TemplateCard } from '../components/templates/TemplateCard';
+import TemplateGalleryPage from '../pages/TemplateGalleryPage';
 import { GROUP_TEMPLATES } from '../types/template';
+
 import type { GroupTemplate } from '../types/template';
 
 const template: GroupTemplate = GROUP_TEMPLATES[0]; // Weekly Saver
@@ -69,7 +72,6 @@ describe('GROUP_TEMPLATES', () => {
 });
 
 // ─── TemplateGalleryPage smoke test ──────────────────────────────────────────
-import TemplateGalleryPage from '../pages/TemplateGalleryPage';
 
 // Minimal AppLayout mock
 vi.mock('../ui', () => ({

@@ -6,6 +6,7 @@
  * and submission to the RPC node.
  */
 
+import * as freighterApi from '@stellar/freighter-api';
 import {
   Contract,
   Networks,
@@ -17,7 +18,6 @@ import {
   xdr,
   Address,
 } from '@stellar/stellar-sdk';
-import * as freighterApi from '@stellar/freighter-api';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 

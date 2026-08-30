@@ -1,8 +1,11 @@
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { App, URLOpenListenerEvent } from '@capacitor/app';
-import { Capacitor } from '@capacitor/core';
+
 import { parseDeepLinkUrl } from '../utils/deepLinking';
+
+import type { URLOpenListenerEvent } from '@capacitor/app';
 
 /**
  * Deep link handler hook

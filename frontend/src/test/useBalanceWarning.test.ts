@@ -1,13 +1,14 @@
-import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+
+import { useBalance } from '../hooks/useBalance';
 import { useBalanceWarning } from '../hooks/useBalanceWarning';
+
 import type { DashboardGroup } from '../types/dashboard';
 
 vi.mock('../hooks/useBalance', () => ({
   useBalance: vi.fn(),
 }));
-
-import { useBalance } from '../hooks/useBalance';
 
 const mockUseBalance = useBalance as ReturnType<typeof vi.fn>;
 

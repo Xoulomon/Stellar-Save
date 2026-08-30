@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { ROUTES, buildRoute } from '../routing/constants';
 
 describe('ROUTES constants', () => {

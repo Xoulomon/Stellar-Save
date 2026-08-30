@@ -1,7 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchGroup } from '../utils/groupApi';
-import { queryKeys } from '../lib/queryKeys';
+
 import { STALE_TIME } from '../lib/queryClient';
+import { queryKeys } from '../lib/queryKeys';
+import { fetchGroup } from '../utils/groupApi';
+
 import type { DetailedGroup } from '../utils/groupApi';
 
 export interface UseGroupReturn {
