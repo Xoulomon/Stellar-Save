@@ -13,3 +13,5 @@ pub use token::{DataKey, ExampleContract};
 mod test;
 #[cfg(test)]
 mod test_utils;
+#[cfg(test)]
+mod benchmark_tests;

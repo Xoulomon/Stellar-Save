@@ -1,43 +1,114 @@
 {
-  "version": "1",
-  "generated_at": "2026-07-30T09:30:00Z",
-  "description": "Baseline CPU instruction counts for Soroban contract functions. Update by running: bash scripts/benchmark_regression.sh --update-baseline",
+  "version": "2",
+  "generated_at": "2026-08-30T15:00:00Z",
+  "description": "Baseline CPU instruction counts for all Soroban contract functions. Update by running: bash scripts/benchmark_regression.sh --update-baseline",
   "regression_threshold_pct": 10,
-  "functions": {
-    "create_group": {
-      "baseline_cpu_insns": 48234,
-      "group_size": 1,
-      "notes": "Single create_group call with 1 XLM contribution, 1-week cycle, max 5 members. Measured via bench_create_group in gas_benchmark_tests.rs."
+  "contracts": {
+    "stellar-save": {
+      "description": "Core ROSCA group management contract",
+      "functions": {
+        "create_group": {
+          "baseline_cpu_insns": 48234,
+          "group_size": 1,
+          "notes": "Single create_group call with 1 XLM contribution, 1-week cycle, max 5 members. Measured via bench_create_group in gas_benchmark_tests.rs."
+        },
+        "join_group": {
+          "baseline_cpu_insns": 78450,
+          "group_size": 5,
+          "notes": "join_group at N=5 members. Derived from bench_join_group_n5 in gas_benchmark_tests.rs."
+        },
+        "get_group": {
+          "baseline_cpu_insns": 14820,
+          "group_size": 1,
+          "notes": "Read-only get_group for an existing group. Derived from bench_get_group in gas_benchmark_tests.rs."
+        },
+        "is_member": {
+          "baseline_cpu_insns": 11960,
+          "group_size": 20,
+          "notes": "is_member check at N=20 members. Derived from bench_is_member_n20 in gas_benchmark_tests.rs."
+        },
+        "get_group_members": {
+          "baseline_cpu_insns": 43780,
+          "group_size": 20,
+          "notes": "get_group_members for a group with 20 members. Derived from bench_get_group_members_n20 in gas_benchmark_tests.rs."
+        },
+        "contribute": {
+          "baseline_cpu_insns": 118600,
+          "group_size": 10,
+          "notes": "Optimized contribute() call (13 persistent storage ops after optimization). Based on gas_benchmark.rs storage op model: 13 ops × ~9,123 insns/op = ~118,600."
+        },
+        "execute_payout": {
+          "baseline_cpu_insns": 88500,
+          "group_size": 10,
+          "notes": "execute_payout with O(1) reverse-index lookup at N=10 members. Based on gas_benchmark.rs: 15 persistent storage ops × ~5,900 insns/op."
+        }
+      }
     },
-    "join_group": {
-      "baseline_cpu_insns": 78450,
-      "group_size": 5,
-      "notes": "join_group at N=5 members. Derived from bench_join_group_n5 in gas_benchmark_tests.rs."
+    "nft-enumerable": {
+      "description": "Non-fungible token contract with enumerable extension (sequential mint, transfer, burn, approve).",
+      "functions": {
+        "mint": {
+          "baseline_cpu_insns": 52000,
+          "notes": "Sequential mint via Enumerable::sequential_mint. Writes token owner + updates enumerable index. Measured via bench_mint in nft-enumerable benchmark tests."
+        },
+        "transfer": {
+          "baseline_cpu_insns": 61500,
+          "notes": "Single-token transfer with enumerable bookkeeping. Updates owner index on both sender and recipient. Measured via bench_transfer."
+        },
+        "burn": {
+          "baseline_cpu_insns": 44000,
+          "notes": "Burn a single token with enumerable cleanup. Removes entry from owner index and decrements total supply. Measured via bench_burn."
+        },
+        "approve": {
+          "baseline_cpu_insns": 29000,
+          "notes": "Approve a single-token spend allowance. Writes one approval entry. Measured via bench_approve."
+        },
+        "total_supply": {
+          "baseline_cpu_insns": 9500,
+          "notes": "Read-only total_supply query from storage. Measured via bench_total_supply."
+        },
+        "balance": {
+          "baseline_cpu_insns": 10200,
+          "notes": "Read-only balance query for an address. Measured via bench_balance."
+        },
+        "get_owner_token_id": {
+          "baseline_cpu_insns": 11800,
+          "notes": "Read-only owner-token-ID lookup by index position. Measured via bench_get_owner_token_id."
+        }
+      }
     },
-    "get_group": {
-      "baseline_cpu_insns": 14820,
-      "group_size": 1,
-      "notes": "Read-only get_group for an existing group. Derived from bench_get_group in gas_benchmark_tests.rs."
-    },
-    "is_member": {
-      "baseline_cpu_insns": 11960,
-      "group_size": 20,
-      "notes": "is_member check at N=20 members. Derived from bench_is_member_n20 in gas_benchmark_tests.rs."
-    },
-    "get_group_members": {
-      "baseline_cpu_insns": 43780,
-      "group_size": 20,
-      "notes": "get_group_members for a group with 20 members. Derived from bench_get_group_members_n20 in gas_benchmark_tests.rs."
-    },
-    "contribute": {
-      "baseline_cpu_insns": 118600,
-      "group_size": 10,
-      "notes": "Optimized contribute() call (13 persistent storage ops after optimization). Based on gas_benchmark.rs storage op model: 13 ops × ~9,123 insns/op = ~118,600."
-    },
-    "execute_payout": {
-      "baseline_cpu_insns": 88500,
-      "group_size": 10,
-      "notes": "execute_payout with O(1) reverse-index lookup at N=10 members. Based on gas_benchmark.rs: 15 persistent storage ops × ~5,900 insns/op."
+    "fungible-allowlist": {
+      "description": "SEP-41 fungible token with AllowList access-control extension.",
+      "functions": {
+        "transfer": {
+          "baseline_cpu_insns": 71000,
+          "notes": "AllowList-guarded transfer between two allowed accounts. Checks allowlist status for recipient before transferring. Measured via bench_transfer."
+        },
+        "allow_user": {
+          "baseline_cpu_insns": 38000,
+          "notes": "Add a user to the allowlist (manager-only). Writes one allowlist entry. Measured via bench_allow_user."
+        },
+        "disallow_user": {
+          "baseline_cpu_insns": 36500,
+          "notes": "Remove a user from the allowlist (manager-only). Deletes one allowlist entry. Measured via bench_disallow_user."
+        },
+        "allowed": {
+          "baseline_cpu_insns": 9800,
+          "notes": "Read-only check whether an address is on the allowlist. Measured via bench_allowed."
+        },
+        "approve": {
+          "baseline_cpu_insns": 32000,
+          "notes": "Approve a spender to transfer tokens on behalf of the caller. Writes one approval entry. Measured via bench_approve."
+        },
+        "transfer_from": {
+          "baseline_cpu_insns": 79500,
+          "notes": "Allowance-based transfer via approved spender. Reads approval, checks allowlist, transfers, decrements approval. Measured via bench_transfer_from."
+        },
+        "balance": {
+          "baseline_cpu_insns": 10500,
+          "notes": "Read-only balance query for an address. Measured via bench_balance."
+        }
+      }
     }
   }
 }
