@@ -1,10 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { WalletStatusIndicator } from '../components/WalletStatusIndicator';
-import * as useWalletHook from '../hooks/useWallet';
-import * as useClipboardHook from '../hooks/useClipboard';
 import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+import { WalletStatusIndicator } from '../components/WalletStatusIndicator';
+import * as useClipboardHook from '../hooks/useClipboard';
+import * as useWalletHook from '../hooks/useWallet';
+
 
 vi.mock('../hooks/useWallet');
 vi.mock('../hooks/useClipboard');

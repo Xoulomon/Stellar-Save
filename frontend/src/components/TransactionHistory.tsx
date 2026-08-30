@@ -7,7 +7,6 @@
  * - Horizon API fetch filtered by account and contract ID
  * - Loading and empty states
  */
-import { useMemo, useState, useEffect } from 'react';
 import {
   Box,
   Chip,
@@ -25,8 +24,12 @@ import {
   type GridSortModel,
   type GridRenderCellParams,
 } from '@mui/x-data-grid';
-import type { Transaction, TransactionType } from '../types/transaction';
+import { useMemo, useState, useEffect } from 'react';
+
 import { useWallet } from '../hooks/useWallet';
+
+import type { Transaction, TransactionType } from '../types/transaction';
+
 
 // ── Horizon fetch ─────────────────────────────────────────────────────────────
 

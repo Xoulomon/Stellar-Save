@@ -6,23 +6,25 @@
  * - Timelock countdown for passed-but-not-yet-executed proposals
  * - Vote action restricted to connected governor wallets (read-only for others)
  */
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import HowToVoteIcon from '@mui/icons-material/HowToVote';
+import LockClockIcon from '@mui/icons-material/LockClock';
 import {
   Stack, Typography, Box, Chip, Alert, LinearProgress,
   Dialog, DialogTitle, DialogContent, DialogActions,
   Divider, Tooltip,
 } from '@mui/material';
-import HowToVoteIcon from '@mui/icons-material/HowToVote';
-import LockClockIcon from '@mui/icons-material/LockClock';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { AppCard, AppLayout } from '../ui';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+
 import { Button } from '../components/Button';
 import { useWallet } from '../hooks/useWallet';
 import { queryKeys } from '../lib/queryKeys';
+import { AppCard, AppLayout } from '../ui';
 import {
   fetchProposals, fetchGovernors, castVote,
 } from '../utils/governanceApi';
+
 import type { Proposal, ProposalStatus } from '../utils/governanceApi';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

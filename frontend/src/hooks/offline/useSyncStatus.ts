@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
+
+import { getSyncQueueCount } from '../../lib/db';
 import {
   syncAll,
   onSyncStatusChange,
@@ -8,7 +10,6 @@ import {
   type SyncStatus,
   type ConnectionStatus,
 } from '../../lib/syncService';
-import { getSyncQueueCount } from '../../lib/db';
 
 /**
  * Hook to monitor sync status

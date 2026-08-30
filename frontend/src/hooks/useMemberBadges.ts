@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useAsyncData, mockDelay } from './useAsyncData';
 
 // ── Badge types mirroring the on-chain contract definitions ──────────────────
 
@@ -115,42 +115,16 @@ function mockBadgesForAddress(address: string): MemberBadge[] {
  * @param address - Stellar wallet address to query badges for
  */
 export function useMemberBadges(address: string | undefined): UseMemberBadgesReturn {
-  const [badges, setBadges] = useState<MemberBadge[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [tick, setTick] = useState(0);
+  // TODO: Replace with a real contract call:
+  //   client.get_member_badges({ member: address }).then(mapContractBadges)
+  const { data, isLoading, error, refetch } = useAsyncData<MemberBadge[]>(
+    () =>
+      mockDelay(() => mockBadgesForAddress(address as string), 350).catch(() => {
+        throw new Error('Failed to load badges. Please try again.');
+      }),
+    [address],
+    { enabled: !!address },
+  );
 
-  const refetch = () => setTick((t) => t + 1);
-
-  useEffect(() => {
-    if (!address) {
-      setBadges([]);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    // TODO: Replace with real contract call:
-    //   const client = getContractClient();
-    //   client.get_member_badges({ member: address })
-    //     .then((result) => setBadges(mapContractBadges(result)))
-    //     .catch((err) => setError(err.message))
-    //     .finally(() => setIsLoading(false));
-    const timer = setTimeout(() => {
-      try {
-        setBadges(mockBadgesForAddress(address));
-      } catch (err) {
-        setError('Failed to load badges. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    }, 350);
-
-    return () => clearTimeout(timer);
-  }, [address, tick]);
-
-  return { badges, isLoading, error, refetch };
+  return { badges: data ?? [], isLoading, error, refetch };
 }

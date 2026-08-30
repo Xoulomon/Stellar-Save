@@ -1,5 +1,7 @@
 import { useRef } from "react"
+
 import { getExplorerTxUrl } from "../utils/explorerUrl"
+
 import type { PayoutQueueData, PayoutEntry, PayoutStatus } from "../types/contribution"
 
 function formatAddress(address: string): string {

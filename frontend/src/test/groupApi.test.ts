@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { createGroup, fetchGroups, fetchGroup } from '../utils/groupApi';
 
 describe('groupApi stubs', () => {

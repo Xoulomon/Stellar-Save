@@ -1,4 +1,3 @@
-import { useState, useCallback } from 'react';
 import {
   Box,
   Stack,
@@ -12,11 +11,15 @@ import {
   DialogTitle,
   DialogContent,
 } from '@mui/material';
+import { useState, useCallback } from 'react';
+
 import { Button } from './Button';
 import { HardwareWalletSetup } from './HardwareWalletSetup';
-import type { HardwareAccount, HardwareDeviceInfo, HardwareWalletState } from '../wallet/hardware/types';
-import { HARDWARE_WALLET_I18N } from '../wallet/hardware/types';
 import { disconnectDevice, updatePersistedState } from '../wallet/hardware/hardwareService';
+import { HARDWARE_WALLET_I18N } from '../wallet/hardware/types';
+
+import type { HardwareAccount, HardwareDeviceInfo, HardwareWalletState } from '../wallet/hardware/types';
+
 
 interface HardwareWalletManageProps {
   state: HardwareWalletState;

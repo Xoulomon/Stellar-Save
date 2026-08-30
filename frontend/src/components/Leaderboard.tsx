@@ -1,12 +1,15 @@
-import { useState } from 'react';
-import type { SyntheticEvent } from 'react';
 import {
   Box, Stack, Typography, Tabs, Tab,
   Skeleton, Alert, Chip, Tooltip,
 } from '@mui/material';
-import type { LeaderboardGroup, LeaderboardMember, TimePeriod } from '../types/leaderboard';
+import { useState } from 'react';
+
+
 import { formatAddress } from '../utils/formatAddress';
 import { formatAmount } from '../utils/formatAmount';
+
+import type { LeaderboardGroup, LeaderboardMember, TimePeriod } from '../types/leaderboard';
+import type { SyntheticEvent } from 'react';
 
 // ── Period selector ───────────────────────────────────────────────────────────
 

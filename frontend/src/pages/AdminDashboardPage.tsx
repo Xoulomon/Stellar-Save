@@ -11,8 +11,10 @@
  * Access is guarded by AdminRoute — non-admin wallets are redirected before
  * this component mounts.
  */
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import DeleteIcon from '@mui/icons-material/Delete';
+import FlagIcon from '@mui/icons-material/Flag';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import {
   Stack,
   Typography,
@@ -33,10 +35,8 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import FlagIcon from '@mui/icons-material/Flag';
-import DeleteIcon from '@mui/icons-material/Delete';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -49,9 +49,10 @@ import {
   Bar,
   Legend,
 } from 'recharts';
-import { AppLayout, AppCard } from '../ui';
+
 import { Button } from '../components/Button';
 import { useWallet } from '../hooks/useWallet';
+import { AppLayout, AppCard } from '../ui';
 import {
   fetchPlatformStats,
   fetchAdminUsers,
@@ -61,6 +62,7 @@ import {
   deleteAdminUser,
   updateAdminUser,
 } from '../utils/adminApi';
+
 import type { AdminUser, AdminGroup, AuditLog } from '../utils/adminApi';
 
 // ── Query keys ────────────────────────────────────────────────────────────────

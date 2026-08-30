@@ -14,27 +14,29 @@
  *   - Keyboard navigation across interactive components
  *   - Screen reader attributes (roles, labels, live regions)
  */
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe, toHaveNoViolations } from 'jest-axe';
+import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { WalletContext } from '../wallet/WalletProvider';
-import type { WalletContextValue } from '../wallet/types';
-import { WalletButton } from '../components/WalletButton';
-import { CreateGroupForm } from '../components/CreateGroupForm';
-import { JoinGroupButton } from '../components/JoinGroupButton';
-import { ContributeButton } from '../components/ContributeButton';
-import { Input } from '../components/Input';
+
 import { Button } from '../components/Button';
-import { Tabs } from '../components/Tabs';
+import { ContributeButton } from '../components/ContributeButton';
+import { CreateGroupForm } from '../components/CreateGroupForm';
+import { Input } from '../components/Input';
+import { JoinGroupButton } from '../components/JoinGroupButton';
 import { Pagination } from '../components/Pagination';
 import { SearchBar } from '../components/SearchBar';
 import { Spinner, FullPageLoader } from '../components/Spinner';
+import { Tabs } from '../components/Tabs';
+import { WalletButton } from '../components/WalletButton';
+import ErrorPage from '../pages/ErrorPage';
 import LandingPage from '../pages/LandingPage';
 import NotFoundPage from '../pages/NotFoundPage';
-import ErrorPage from '../pages/ErrorPage';
 import SettingsPage from '../pages/SettingsPage';
+import { WalletContext } from '../wallet/WalletProvider';
+
+import type { WalletContextValue } from '../wallet/types';
 
 expect.extend(toHaveNoViolations);
 

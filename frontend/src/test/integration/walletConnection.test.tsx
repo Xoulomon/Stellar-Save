@@ -57,10 +57,12 @@
  */
 import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { WalletProvider } from '../../wallet/WalletProvider';
-import { WalletButton } from '../../components/WalletButton';
 import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { WalletButton } from '../../components/WalletButton';
+import { freighterAdapter } from '../../wallet/freighterAdapter';
+import { WalletProvider } from '../../wallet/WalletProvider';
 
 // Mock the freighter adapter so no real extension is needed.
 // This mock lives at the module boundary — the key cross-boundary aspect that
@@ -77,7 +79,6 @@ vi.mock('../../wallet/freighterAdapter', () => ({
   },
 }));
 
-import { freighterAdapter } from '../../wallet/freighterAdapter';
 const mockAdapter = vi.mocked(freighterAdapter);
 
 function renderWalletButton() {

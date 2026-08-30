@@ -1,6 +1,7 @@
+import { formatAmount, formatDate } from '../../utils/format';
 import { Avatar } from '../Avatar';
 import { Badge } from '../Badge';
-import { formatAmount, formatDate } from '../../utils/format';
+
 import type { GroupContribution } from '../../utils/groupApi';
 
 interface ContributionsPanelProps {

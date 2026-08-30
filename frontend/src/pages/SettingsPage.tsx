@@ -1,11 +1,12 @@
 import { Stack, Typography, Divider } from '@mui/material';
 import { Link } from 'react-router-dom';
-import { AppCard, AppLayout } from '../ui';
-import { ThemeToggle } from '../components/ThemeToggle';
+
 import { LanguageSelector } from '../components/LanguageSelector';
-import { useTheme } from '../hooks/useTheme';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { useI18n } from '../hooks/useI18n';
+import { useTheme } from '../hooks/useTheme';
 import { ROUTES } from '../routing/constants';
+import { AppCard, AppLayout } from '../ui';
 
 /**
  * Settings page - application settings

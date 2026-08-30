@@ -1,20 +1,28 @@
+import { Stack, Typography } from '@mui/material';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Stack, Typography } from '@mui/material';
-import { AppCard, AppLayout } from '../ui';
+
+import { Button } from '../components/Button';
+import { EmptyState } from '../components/EmptyState/EmptyState';
 import { GroupCard } from '../components/GroupCard';
 import { GroupFilters } from '../components/GroupFilters';
-import { SearchBar } from '../components/SearchBar';
 import { JoinGroupModal } from '../components/JoinGroupModal';
+import { SearchBar } from '../components/SearchBar';
+import { GroupCardSkeleton } from '../components/Skeleton/GroupCardSkeleton';
 import { ToastProvider } from '../components/Toast/ToastProvider';
 import { useToast } from '../components/Toast/useToast';
+<<<<<<< HEAD
+=======
 import { Button } from '../components/Button';
 import { GroupCardSkeleton } from '../components/Skeleton/GroupCardSkeleton';
 import { EmptyState } from '../components/EmptyState/EmptyState';
 import { ErrorState } from '../components/ErrorState';
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import { useDiscoveryFeed } from '../hooks/useDiscoveryFeed';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { ROUTES } from '../routing/constants';
+import { AppCard, AppLayout } from '../ui';
+
 import type { PublicGroup } from '../types/group';
 import type { GroupFilters as GroupFiltersType } from '../types/group';
 import './BrowseGroupsPage.css';

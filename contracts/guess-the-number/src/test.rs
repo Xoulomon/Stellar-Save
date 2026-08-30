@@ -155,3 +155,131 @@ where
         invoke,
     }]);
 }
+
+// ── Negative-path tests for invalid guesses (issue #1530) ────────────────────
+
+/// Out-of-bounds guess: value 0.
+///
+/// The contract does NOT perform explicit range validation on the guess input.
+/// A value of 0 can never equal the random number (which is always in 1..=10),
+/// so it is treated as an ordinary wrong guess: 1 XLM is deducted from the
+/// guesser and `false` is returned.  This test documents that behaviour so
+/// that any future change to add explicit bounds checking will require a
+/// deliberate update here.
+#[test]
+fn test_out_of_bounds_guess_low() {
+    let env = &Env::default();
+    let (_, sac, client) = init_test(env);
+    env.mock_all_auths();
+
+    let alice = Address::generate(env);
+    sac.mint(&alice, &xlm::to_stroops(2));
+
+    // Guess of 0 is out of the valid 1..=10 range.
+    // No range validation exists; it is treated as a wrong guess.
+    let result = client.guess(&0, &alice);
+    assert!(!result, "guess(0) should return false (wrong guess, not a panic)");
+
+    // The user should have been charged 1 XLM for the wrong guess.
+    assert_eq!(
+        sac.balance(&alice),
+        xlm::to_stroops(1),
+        "user should be charged 1 XLM for an out-of-bounds guess of 0"
+    );
+}
+
+/// Out-of-bounds guess: value 11.
+///
+/// Same reasoning as `test_out_of_bounds_guess_low`: 11 is outside the 1..=10
+/// range but the contract currently has no bounds check.  It is treated as a
+/// wrong guess and costs the user 1 XLM.
+#[test]
+fn test_out_of_bounds_guess_high() {
+    let env = &Env::default();
+    let (_, sac, client) = init_test(env);
+    env.mock_all_auths();
+
+    let alice = Address::generate(env);
+    sac.mint(&alice, &xlm::to_stroops(2));
+
+    // Guess of 11 is out of the valid 1..=10 range.
+    let result = client.guess(&11, &alice);
+    assert!(!result, "guess(11) should return false (wrong guess, not a panic)");
+
+    // The user should have been charged 1 XLM for the wrong guess.
+    assert_eq!(
+        sac.balance(&alice),
+        xlm::to_stroops(1),
+        "user should be charged 1 XLM for an out-of-bounds guess of 11"
+    );
+}
+
+/// Post-game-end: attempting a correct guess after the contract balance is 0
+/// must return `Error::InsufficientBalance`.
+///
+/// Sequence:
+/// 1. Alice wins the game (correct guess = 4), draining the contract to 0.
+/// 2. Bob then makes the same correct guess; since the pot is empty the
+///    contract must return `InsufficientBalance` rather than trying to pay out.
+#[test]
+fn test_guess_after_balance_drained() {
+    let env = &Env::default();
+    let (_, sac, client) = init_test(env);
+    env.mock_all_auths();
+
+    // Fund Alice and Bob.
+    let alice = Address::generate(env);
+    let bob = Address::generate(env);
+    sac.mint(&alice, &xlm::to_stroops(5));
+    sac.mint(&bob, &xlm::to_stroops(5));
+
+    // Alice wins: the correct answer is 4 in the default seeded environment.
+    assert!(client.guess(&4, &alice), "alice should win with the correct guess");
+    assert_eq!(
+        sac.balance(&client.address),
+        0,
+        "contract balance should be 0 after alice wins"
+    );
+
+    // Bob now attempts the same correct guess with an empty contract pot.
+    assert_eq!(
+        client.try_guess(&4, &bob).unwrap_err(),
+        Ok(Error::InsufficientBalance),
+        "a correct guess against an empty contract should return InsufficientBalance"
+    );
+}
+
+/// Repeated wrong guesses drain the user's balance one XLM at a time.
+///
+/// This verifies that there is no deduplication or "you already guessed that"
+/// protection: each wrong guess always costs 1 XLM regardless of whether the
+/// same value was tried before.
+#[test]
+fn test_repeated_wrong_guesses_drain_user() {
+    let env = &Env::default();
+    let (_, sac, client) = init_test(env);
+    env.mock_all_auths();
+
+    let alice = Address::generate(env);
+    // Give Alice exactly 3 XLM so we can make three wrong guesses.
+    sac.mint(&alice, &xlm::to_stroops(3));
+
+    // All three guesses are wrong (correct answer is 4).
+    assert!(!client.guess(&1, &alice));
+    assert_eq!(sac.balance(&alice), xlm::to_stroops(2), "after 1st wrong guess");
+
+    // Duplicate guess: same wrong value guessed again — still costs 1 XLM.
+    assert!(!client.guess(&1, &alice));
+    assert_eq!(sac.balance(&alice), xlm::to_stroops(1), "after 2nd wrong guess (duplicate)");
+
+    // Another different wrong guess.
+    assert!(!client.guess(&2, &alice));
+    assert_eq!(sac.balance(&alice), xlm::to_stroops(0), "after 3rd wrong guess");
+
+    // Alice is now out of funds; the next wrong guess must fail with TransferFailed.
+    assert_eq!(
+        client.try_guess(&1, &alice).unwrap_err(),
+        Ok(Error::TransferFailed),
+        "user with zero balance should receive TransferFailed on a wrong guess"
+    );
+}

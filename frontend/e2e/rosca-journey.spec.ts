@@ -1,5 +1,8 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+
 import { injectMockWallet, TEST_ACCOUNTS } from './helpers/stellar-standalone';
+
+import type { Page } from '@playwright/test';
 
 /**
  * Full ROSCA user journey: create group → join → contribute (all members) → payout

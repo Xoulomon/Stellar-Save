@@ -1,8 +1,10 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import JoinViaInvite from '../pages/JoinViaInvite';
 import { WalletContext } from '../wallet/WalletProvider';
+
 import type { WalletContextValue } from '../wallet/types';
 
 // Suppress navigate-after-unmount warnings in tests

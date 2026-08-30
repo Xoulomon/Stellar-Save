@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Stack,
   Typography,
@@ -8,9 +7,11 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
+import { useState } from 'react';
+
+import { useWallet } from '../../hooks/useWallet';
 import { AppCard, AppLayout } from '../../ui';
 import { AppButton } from '../../ui/components/AppButton';
-import { useWallet } from '../../hooks/useWallet';
 
 interface NotificationPrefs {
   emailNotifications: boolean;

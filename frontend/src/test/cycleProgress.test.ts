@@ -1,6 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
+<<<<<<< HEAD
+
+import { 
+  calculateCycleProgress, 
+=======
 import {
   calculateCycleProgress,
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
   calculateCycleProgressFromDeadline,
   type CycleProgressResult
 } from '../utils/cycleProgress';

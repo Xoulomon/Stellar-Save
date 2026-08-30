@@ -1,4 +1,3 @@
-import { useState, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -17,10 +16,12 @@ import {
   IconButton,
   Collapse,
 } from '@mui/material';
+import { useState, useCallback } from 'react';
+
 import { Button } from './Button';
+import { getExplorerTxUrl } from '../utils/explorerUrl';
 import { formatAddress } from '../utils/formatAddress';
 import { formatAmount } from '../utils/formatAmount';
-import { getExplorerTxUrl } from '../utils/explorerUrl';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

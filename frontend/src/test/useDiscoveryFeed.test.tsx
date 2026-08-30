@@ -1,10 +1,13 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+
+
 import { useDiscoveryFeed } from '../hooks/useDiscoveryFeed';
 import * as groupApi from '../utils/groupApi';
+
 import type { PublicGroup } from '../types/group';
+import type { ReactNode } from 'react';
 
 const mockGroups: PublicGroup[] = [
   {

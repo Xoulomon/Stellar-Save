@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
+
 import "./StreakDisplay.css";
 import {
   fetchReferralRewards,

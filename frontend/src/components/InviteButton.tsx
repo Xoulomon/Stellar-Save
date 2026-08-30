@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
 import { Button } from '@mui/material';
+import React, { useState } from 'react';
+
 import { InviteModal } from './InviteModal';
 
 // Inline SVG to avoid @mui/icons-material dependency

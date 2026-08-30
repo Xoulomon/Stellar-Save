@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+import { Skeleton } from '@mui/material';
+import React from 'react';
+
+
+=======
 /**
  * TransactionTables — migrated to DataTable
  *
@@ -7,10 +13,13 @@
 import React from 'react';
 
 import type { Transaction } from '../types/transaction';
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import { Badge } from './Badge';
 import { Button } from './Button';
 import { DataTable } from './DataTable/DataTable';
 import type { DataTableColumn } from './DataTable/DataTable';
+
+import type { Transaction } from '../types/transaction';
 
 interface Props {
   transactions: Transaction[];

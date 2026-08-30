@@ -1,6 +1,9 @@
-import { ReactNode, Component, ErrorInfo } from 'react';
-import { Card } from './Card';
+import { Component } from 'react';
+
 import { Button } from './Button';
+import { Card } from './Card';
+
+import type { ReactNode, ErrorInfo } from 'react';
 
 interface Props {
   children: ReactNode;

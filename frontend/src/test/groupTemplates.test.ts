@@ -14,10 +14,7 @@
  * Target: ≥ 90 % line coverage on template-related modules.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import {
-  GROUP_TEMPLATES,
-  type GroupTemplate,
-} from '../types/template';
+
 import {
   saveTemplate,
   loadTemplates,
@@ -26,6 +23,11 @@ import {
   decodeShareCode,
   createStep,
 } from '../services/transactionBuilderService';
+import {
+  GROUP_TEMPLATES,
+  type GroupTemplate,
+} from '../types/template';
+
 import type {
   TransactionTemplate,
   TransactionBuilderStep,

@@ -1,9 +1,10 @@
-import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+
 import { Button } from './Button';
-import { useWallet } from '../hooks/useWallet';
 import { useContract } from '../hooks/useContract';
 import { useTransaction, explorerUrl } from '../hooks/useTransaction';
+import { useWallet } from '../hooks/useWallet';
 import { queryKeys } from '../lib/queryKeys';
 
 interface JoinGroupButtonProps {

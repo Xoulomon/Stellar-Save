@@ -8,7 +8,9 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
+
 import { api } from '../utils/api';
+
 import type { RampTransaction, RampTransactionType, RampInitResponse } from '../types/ramp';
 
 export interface UseRampResult {

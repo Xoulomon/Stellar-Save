@@ -2,8 +2,8 @@
  * StaleDataBanner.tsx — Shows warning when viewing stale/cached data
  */
 
-import { Alert, AlertTitle, Button } from '@mui/material';
 import { Refresh } from '@mui/icons-material';
+import { Alert, AlertTitle, Button } from '@mui/material';
 
 interface StaleDataBannerProps {
   isStale?: boolean;

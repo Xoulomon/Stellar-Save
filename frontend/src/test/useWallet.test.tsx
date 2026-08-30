@@ -1,8 +1,10 @@
 import { renderHook } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
 import React from 'react';
+import { describe, it, expect } from 'vitest';
+
 import { useWallet } from '../hooks/useWallet';
 import { WalletContext } from '../wallet/WalletProvider';
+
 import type { WalletContextValue } from '../wallet/types';
 
 const mockContextValue: WalletContextValue = {

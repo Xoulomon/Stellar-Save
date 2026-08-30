@@ -2,19 +2,21 @@
  * InsurancePanel — Issue #1012
  * Shows current insurance pool balance and claim history for a group.
  */
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import SecurityIcon from '@mui/icons-material/Security';
 import {
   Box, Typography, Chip, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, Alert,
   Dialog, DialogTitle, DialogContent, DialogActions,
   LinearProgress,
 } from '@mui/material';
-import SecurityIcon from '@mui/icons-material/Security';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+
 import { Button } from './Button';
 import { Input } from './Input';
 import { queryKeys } from '../lib/queryKeys';
 import { fetchInsurancePool, fileClaim } from '../utils/insuranceApi';
+
 import type { InsuranceClaim } from '../utils/insuranceApi';
 
 interface InsurancePanelProps {

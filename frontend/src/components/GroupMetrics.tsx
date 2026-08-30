@@ -1,5 +1,6 @@
 import './GroupMetrics.css';
 import { Card } from './Card';
+
 import type { DetailedGroup, GroupContribution, GroupCycle } from '../utils/groupApi';
 
 type Trend = 'improving' | 'declining';
