@@ -1,4 +1,3 @@
-import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Alert,
   AlertTitle,
@@ -7,6 +6,8 @@ import {
   Stack,
   keyframes,
 } from '@mui/material';
+import React, { useCallback, useEffect, useRef } from 'react';
+
 import type { Toast } from './types';
 
 const slideIn = keyframes`

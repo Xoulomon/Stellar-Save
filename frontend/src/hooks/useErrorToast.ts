@@ -1,5 +1,7 @@
 import { useCallback } from 'react';
+
 import { useToast } from '../components/Toast/useToast';
+
 import type { ToastAction } from '../components/Toast/types';
 
 /**

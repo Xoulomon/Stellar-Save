@@ -1,0 +1,87 @@
+.visual-gallery {
+  min-height: 100vh;
+  padding: 1.5rem;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+}
+
+.visual-gallery__title {
+  margin: 0 0 1.5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.visual-gallery__section {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-paper);
+}
+
+.visual-gallery__heading {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.visual-gallery__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.visual-gallery__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 28rem;
+}
+
+.visual-gallery__cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.visual-gallery__caption {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+}
+
+.visual-gallery__tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.visual-gallery__dialog-frame {
+  position: relative;
+  height: 420px;
+  overflow: hidden;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+/* Contain the fixed dialog backdrop so it cannot overlay other sections. */
+.visual-gallery__dialog-frame .dialog-backdrop {
+  position: absolute;
+  z-index: 1;
+}
+
+.visual-gallery__toasts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 26rem;
+}
+
+.visual-gallery__group-card {
+  max-width: 22rem;
+}

@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
+
 import { PayoutSchedulePanel } from '../components/panels/PayoutSchedulePanel';
+
 import type { GroupCycle } from '../utils/groupApi';
 
 const mockCycles: GroupCycle[] = [

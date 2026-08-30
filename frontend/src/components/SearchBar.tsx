@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+
 import './SearchBar.css';
 import { useDebounce } from '../hooks/useDebounce';
 import { filterSuggestions } from '../utils/searchUtils';

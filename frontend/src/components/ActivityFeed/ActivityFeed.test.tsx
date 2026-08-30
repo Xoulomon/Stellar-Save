@@ -7,9 +7,11 @@
  * The EventService is mocked so tests run without a live Stellar RPC node.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { ActivityFeed } from './ActivityFeed';
+
 import type { AppEvent } from '../../types/events';
 
 // ─── Mock EventService ────────────────────────────────────────────────────────

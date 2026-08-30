@@ -4,8 +4,8 @@
  * Now uses the new TransactionHistory component which wraps MUI DataGrid
  * with Horizon API fetching, sorting, and pagination.
  */
-import { AppLayout } from '../ui';
 import { TransactionHistory } from '../components/TransactionHistory';
+import { AppLayout } from '../ui';
 
 export default function TransactionHistoryPage() {
   return (

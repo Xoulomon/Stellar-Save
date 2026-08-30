@@ -1,7 +1,9 @@
-import React from 'react';
-import { Box, Typography, Paper, Stack, Avatar, Chip } from '@mui/material';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import { Box, Typography, Paper, Stack, Avatar, Chip } from '@mui/material';
+import React from 'react';
+
 import { Skeleton } from '../Skeleton/Skeleton';
+
 import type { PayoutItem } from '../../types/dashboard';
 
 interface Props { payouts: PayoutItem[]; isLoading?: boolean; }

@@ -1,12 +1,15 @@
+import { Box, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
-import { AppLayout } from '../ui';
+
 import { TemplateCard } from '../components/templates/TemplateCard';
 import { TemplatePreviewModal } from '../components/templates/TemplatePreviewModal';
-import { GROUP_TEMPLATES } from '../types/template';
-import type { GroupTemplate } from '../types/template';
 import { ROUTES } from '../routing/constants';
+import { GROUP_TEMPLATES } from '../types/template';
+import { AppLayout } from '../ui';
+
+import type { GroupTemplate } from '../types/template';
+
 
 type CategoryFilter = 'all' | GroupTemplate['category'];
 

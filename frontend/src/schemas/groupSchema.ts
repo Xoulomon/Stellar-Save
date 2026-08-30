@@ -23,9 +23,13 @@ const GROUP_DESCRIPTION_MAX = 500;
 const MIN_CONTRIBUTION_XLM = 0.1; // 0.1 XLM
 const MAX_CONTRIBUTION_XLM = 1_000_000; // 1M XLM
 
-// Member count constraints (must match contract minimums)
+// Member count constraints.
+// MAX_MEMBERS_LIMIT must stay ≤ the backend `memberCount` schema cap (20) defined in
+// backend/src/lib/validation.ts. The smart contract is the ultimate source of truth;
+// the backend enforces this limit at the API boundary, so the frontend must not
+// allow a value the API would reject.
 const MIN_MEMBERS = 2;
-const MAX_MEMBERS_LIMIT = 100;
+const MAX_MEMBERS_LIMIT = 20;
 
 // Cycle duration options (in seconds)
 const VALID_CYCLE_DURATIONS = [604800, 1209600, 2592000]; // 1 week, 2 weeks, 1 month

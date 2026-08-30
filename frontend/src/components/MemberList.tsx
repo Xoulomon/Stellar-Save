@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
+
 import './MemberList.css';
-import { Card } from './Card';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
+import { Card } from './Card';
 
 type SortField = 'address' | 'contribution' | 'payout';
 type SortOrder = 'asc' | 'desc';

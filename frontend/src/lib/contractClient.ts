@@ -6,6 +6,7 @@
  * and submission to the RPC node.
  */
 
+import * as freighterApi from '@stellar/freighter-api';
 import {
   Contract,
   Networks,
@@ -18,20 +19,16 @@ import {
   Address,
 } from '@stellar/stellar-sdk';
 import * as freighterApi from '@stellar/freighter-api';
+import { env } from './env';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-const RPC_URL: string =
-  (import.meta.env['VITE_STELLAR_RPC_URL'] as string | undefined) ??
-  'https://soroban-testnet.stellar.org';
+const RPC_URL: string = env.VITE_STELLAR_RPC_URL;
 
 const NETWORK_PASSPHRASE: string =
-  (import.meta.env['VITE_STELLAR_NETWORK'] as string | undefined) === 'mainnet'
-    ? Networks.PUBLIC
-    : Networks.TESTNET;
+  env.VITE_STELLAR_NETWORK === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
 
-export const CONTRACT_ID: string =
-  (import.meta.env['VITE_STELLAR_SAVE_CONTRACT_ID'] as string | undefined) ?? '';
+export const CONTRACT_ID: string = env.VITE_STELLAR_SAVE_CONTRACT_ID;
 
 // Soroban RPC server instance (singleton)
 export const server = new SorobanRpc.Server(RPC_URL, { allowHttp: false });

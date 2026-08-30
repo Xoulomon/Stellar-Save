@@ -1,5 +1,7 @@
-import { useRef, useState, useEffect, KeyboardEvent } from 'react';
+import { useRef, useState, useEffect } from 'react';
+
 import type { Tab } from '../components/Tabs';
+import type { KeyboardEvent } from 'react';
 
 export interface UseTabsControllerOptions {
   tabs: Tab[];

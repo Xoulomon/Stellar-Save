@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import type { Transaction } from '../types/transaction';
+
 import { useTransactionExport } from '../hooks/useTransactionExport';
+
+import type { Transaction } from '../types/transaction';
 
 interface Props {
   transactions: Transaction[];

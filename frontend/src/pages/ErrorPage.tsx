@@ -1,8 +1,9 @@
 import { Box, Stack, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { AppButton, AppCard } from "../ui";
+
 import ErrorIllustrationPng from "../img/something_went_wrong.png";
 import ErrorIllustrationWebp from "../img/something_went_wrong.png?format=webp&as=url";
+import { AppButton, AppCard } from "../ui";
 
 export default function ErrorPage() {
   const handleRetryClick = () => {

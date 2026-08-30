@@ -1,4 +1,3 @@
-import { useMemo, useState, type ReactNode } from "react";
 import {
   AppBar,
   Box,
@@ -13,6 +12,8 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
+import { useMemo, useState, type ReactNode } from "react";
+
 import { WalletStatusIndicator } from "../../components/WalletStatusIndicator";
 
 export interface LayoutNavItem {

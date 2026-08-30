@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Box,
   Card,
@@ -13,8 +12,12 @@ import {
   Switch,
   FormControlLabel,
 } from '@mui/material';
-import type { TransactionBuilderStep, StepOperationType } from '../../types/transactionBuilder';
+import { useState } from 'react';
+
 import { STEP_TYPE_META } from '../../types/transactionBuilder';
+
+import type { TransactionBuilderStep, StepOperationType } from '../../types/transactionBuilder';
+
 
 interface TransactionStepCardProps {
   step: TransactionBuilderStep;

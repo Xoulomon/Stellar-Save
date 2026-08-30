@@ -1,4 +1,8 @@
-import { useState } from 'react';
+import CheckIcon from '@mui/icons-material/Check';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CloseIcon from '@mui/icons-material/Close';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import EditIcon from '@mui/icons-material/Edit';
 import {
   Stack,
   Typography,
@@ -17,19 +21,17 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import CheckIcon from '@mui/icons-material/Check';
-import CloseIcon from '@mui/icons-material/Close';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { AppCard, AppLayout } from '../ui';
+import { useState } from 'react';
+
 import { Button } from '../components/Button';
-import { UserStats } from '../components/UserStats';
 import TransactionTable from '../components/TransactionTables';
-import { useWallet } from '../hooks/useWallet';
-import { useUserProfile } from '../hooks/useUserProfile';
-import { useTransactions } from '../hooks/useTransactions';
+import { UserStats } from '../components/UserStats';
 import { useClipboard } from '../hooks/useClipboard';
+import { useTransactions } from '../hooks/useTransactions';
+import { useUserProfile } from '../hooks/useUserProfile';
+import { useWallet } from '../hooks/useWallet';
+import { AppCard, AppLayout } from '../ui';
+
 import type { Transaction } from '../types/transaction';
 
 // ── Tab config ───────────────────────────────────────────────────────────────

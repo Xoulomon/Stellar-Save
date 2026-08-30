@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { AmbassadorBadge } from './AmbassadorBadge';
 
 interface AmbassadorEntry {

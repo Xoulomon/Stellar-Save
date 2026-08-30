@@ -1,5 +1,5 @@
 declare module 'jest-axe' {
-  import { ReactElement } from 'react';
+  import type { ReactElement } from 'react';
 
   interface AxeNode {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

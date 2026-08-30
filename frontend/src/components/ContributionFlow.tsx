@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Box,
   Stack,
@@ -13,9 +12,12 @@ import {
   Divider,
   Chip,
 } from '@mui/material';
+import { useState } from 'react';
+
 import { Button } from './Button';
 import { ContributionSuccessModal } from './ContributionSuccessModal';
 import { getExplorerTxUrl } from '../utils/explorerUrl';
+
 import type { TransactionStatus } from '../types/contribution';
 
 // ── Types ────────────────────────────────────────────────────────────────────

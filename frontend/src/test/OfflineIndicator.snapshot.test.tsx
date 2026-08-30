@@ -6,6 +6,7 @@
  */
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+
 import { OfflineIndicator } from '../components/OfflineIndicator';
 
 const mockUseSyncStatus = vi.fn();

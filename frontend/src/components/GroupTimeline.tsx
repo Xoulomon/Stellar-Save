@@ -1,10 +1,10 @@
-import { useMemo, type KeyboardEvent } from "react";
 import {
   AccessTime,
   PersonAdd,
   TrendingUp,
   CreditCard,
 } from "@mui/icons-material";
+import { useMemo, type KeyboardEvent } from "react";
 import "./GroupTimeline.css";
 
 export type TimelineEventType = "contribution" | "payout" | "member_join";

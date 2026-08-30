@@ -12,6 +12,7 @@
 //! code at or above `100`, which is why `stellar-save`'s domain enum (codes
 //! `1000+`) can coexist with this one without collision.
 
+pub mod constants;
 pub mod error;
 
 pub use error::{CommonResult, Error, ErrorCategory};

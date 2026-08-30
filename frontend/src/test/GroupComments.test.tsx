@@ -1,6 +1,8 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
+
 import { GroupComments } from "../components/GroupComments";
+
 import type { Comment } from "../components/GroupComments";
 
 const CREATOR = "GCREATOR1234";

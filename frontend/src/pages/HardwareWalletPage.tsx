@@ -1,4 +1,3 @@
-import { useState, useMemo } from 'react';
 import {
   Box,
   Container,
@@ -13,15 +12,19 @@ import {
   DialogTitle,
   DialogContent,
 } from '@mui/material';
+import { useState, useMemo } from 'react';
+
 import { Button } from '../components/Button';
-import { AppLayout } from '../ui/layout/AppLayout';
+import { HardwareTxConfirm } from '../components/HardwareTxConfirm';
 import { HardwareWalletManage } from '../components/HardwareWalletManage';
 import { HardwareWalletSetup } from '../components/HardwareWalletSetup';
-import { HardwareTxConfirm } from '../components/HardwareTxConfirm';
 import { useWallet } from '../hooks/useWallet';
-import type { HardwareWalletState, TxApprovalRequest } from '../wallet/hardware/types';
+import { AppLayout } from '../ui/layout/AppLayout';
 import { createInitialState, buildApprovalRequest } from '../wallet/hardware/hardwareService';
 import { signWithHardwareWallet } from '../wallet/hardware/hardwareService';
+
+import type { HardwareWalletState, TxApprovalRequest } from '../wallet/hardware/types';
+
 
 export default function HardwareWalletPage() {
   const { activeAddress } = useWallet();

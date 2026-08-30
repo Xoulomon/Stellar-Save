@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { useWallet } from './useWallet';
 import {
   requestNotificationPermission,
@@ -24,6 +25,7 @@ import {
   isNotificationsEnabled,
   setNotificationsEnabled,
 } from '../notifications';
+
 import type { ContributionReminder, NotificationPermissionStatus } from '../notifications';
 
 export interface UsePushNotificationsReturn {

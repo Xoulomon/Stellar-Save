@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useWallet } from '../hooks/useWallet';
+
 import { Button } from './Button';
+import { useWallet } from '../hooks/useWallet';
 
 export const Navbar: React.FC = () => {
   const { activeAddress, status, connect, disconnect } = useWallet();

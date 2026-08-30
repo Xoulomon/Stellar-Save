@@ -48,16 +48,16 @@ Stellar Network (on-chain storage + Horizon API)
 
 **Smart contract modules** (`contracts/stellar-save/src/`):
 
-| Module | Responsibility |
-|---|---|
-| `lib.rs` | Contract entry points and public API |
-| `group.rs` | Group creation and configuration |
-| `contribution.rs` | Contribution logic and tracking |
-| `payout.rs` / `payout_executor.rs` | Payout rotation and distribution |
-| `storage.rs` | On-chain data layout |
-| `security.rs` | Authorization and access control |
-| `error.rs` | Typed error variants |
-| `events.rs` | Soroban event emission |
+| Module                             | Responsibility                       |
+| ---------------------------------- | ------------------------------------ |
+| `lib.rs`                           | Contract entry points and public API |
+| `group.rs`                         | Group creation and configuration     |
+| `contribution.rs`                  | Contribution logic and tracking      |
+| `payout.rs` / `payout_executor.rs` | Payout rotation and distribution     |
+| `storage.rs`                       | On-chain data layout                 |
+| `security.rs`                      | Authorization and access control     |
+| `error.rs`                         | Typed error variants                 |
+| `events.rs`                        | Soroban event emission               |
 
 **Frontend** (`frontend/src/`): React 19 + TypeScript SPA using MUI, React Router, and `@stellar/stellar-sdk`.
 
@@ -69,12 +69,12 @@ For full architecture details see [docs/architecture.md](docs/architecture.md).
 
 ### Prerequisites
 
-| Tool | Version | Install |
-|---|---|---|
-| Rust | 1.81.0 (pinned) | [rustup.rs](https://rustup.rs) |
-| Soroban / Stellar CLI | latest | [Stellar CLI docs](https://developers.stellar.org/docs/tools/stellar-cli) |
-| Node.js | 18+ | [nodejs.org](https://nodejs.org) |
-| npm | 9+ | bundled with Node.js |
+| Tool                  | Version         | Install                                                                   |
+| --------------------- | --------------- | ------------------------------------------------------------------------- |
+| Rust                  | 1.81.0 (pinned) | [rustup.rs](https://rustup.rs)                                            |
+| Soroban / Stellar CLI | latest          | [Stellar CLI docs](https://developers.stellar.org/docs/tools/stellar-cli) |
+| Node.js               | 18+             | [nodejs.org](https://nodejs.org)                                          |
+| npm                   | 9+              | bundled with Node.js                                                      |
 
 The Rust toolchain version is pinned in `rust-toolchain.toml`. Running any `cargo` command will install it automatically via rustup.
 
@@ -188,10 +188,11 @@ pub fn require_creator(env: &Env, group: &Group) -> Result<(), ContractError> {
 - Keep components under ~150 lines; extract sub-components when they grow larger
 - Use semantic HTML for accessibility (`<button>`, `<nav>`, `<main>`, etc.)
 - Run `npm run lint` before committing — ESLint is enforced in CI
-- **Import Ordering**: Maintain structured imports sorted alphabetically in groups: `builtin`, `external`, `internal`, `parent`/`sibling`, `index`, `type`
+- **Import Ordering**: enforced by `eslint-plugin-import` (`import/order`, error). Groups are separated by a blank line, imports sorted alphabetically (case-insensitive) within each group: `builtin` → `external` → `internal` → `parent`/`sibling` (`../`, `./`) → `index` → `type`. See the `import/order` rule in `eslint.config.base.js`.
 - **Circular Dependencies**: Circular dependencies are strictly forbidden (`import/no-cycle`). Ensure modules are strictly decoupled and acyclic
 
 Prettier config (`.prettierrc`):
+
 - Single quotes, semicolons, trailing commas (ES5), 100-char print width, 2-space indent
 
 ```tsx
@@ -261,18 +262,18 @@ git commit --allow-empty -m "chore: test commitlint hook"
 
 ### Allowed types
 
-| Type | Use for |
-|---|---|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation only |
-| `style` | Formatting, whitespace (no logic change) |
+| Type       | Use for                                     |
+| ---------- | ------------------------------------------- |
+| `feat`     | New feature                                 |
+| `fix`      | Bug fix                                     |
+| `docs`     | Documentation only                          |
+| `style`    | Formatting, whitespace (no logic change)    |
 | `refactor` | Code restructuring without behaviour change |
-| `perf` | Performance improvement |
-| `test` | Adding or updating tests |
-| `chore` | Build process, dependency updates, tooling |
-| `ci` | CI/CD configuration changes |
-| `revert` | Reverting a previous commit |
+| `perf`     | Performance improvement                     |
+| `test`     | Adding or updating tests                    |
+| `chore`    | Build process, dependency updates, tooling  |
+| `ci`       | CI/CD configuration changes                 |
+| `revert`   | Reverting a previous commit                 |
 
 ### Rules
 
@@ -301,12 +302,12 @@ style(css): remove unused Vite default classes from App.css
 
 ### Common rejection messages
 
-| Error | Fix |
-|---|---|
-| `subject may not be empty` | Add a description after the colon |
-| `type must be one of [feat, fix, ...]` | Use an allowed type listed above |
-| `subject must not be sentence-case` | Start description with lowercase |
-| `header must not be longer than 100 characters` | Shorten the subject line |
+| Error                                           | Fix                               |
+| ----------------------------------------------- | --------------------------------- |
+| `subject may not be empty`                      | Add a description after the colon |
+| `type must be one of [feat, fix, ...]`          | Use an allowed type listed above  |
+| `subject must not be sentence-case`             | Start description with lowercase  |
+| `header must not be longer than 100 characters` | Shorten the subject line          |
 
 ---
 
@@ -331,6 +332,7 @@ cd frontend && npm test run
 ### Smart Contract Tests (Rust)
 
 All new public functions must have tests covering:
+
 - The happy path
 - Expected error cases (use `assert_eq!(result, Err(ContractError::...))`)
 - Edge cases (boundary values, empty inputs, etc.)
@@ -364,15 +366,15 @@ cargo tarpaulin --config contracts/stellar-save/tarpaulin.toml
 fn test_contribute_success() {
     let env = Env::default();
     let contract = create_contract(&env);
-    
+
     // Setup
     let group_id = contract.create_group(1000, 30, 100);
     let member = Address::random(&env);
     contract.join_group(group_id, member.clone(), None);
-    
+
     // Execute
     let result = contract.contribute(group_id, member.clone(), 1000);
-    
+
     // Assert
     assert!(result.is_ok());
 }
@@ -381,12 +383,12 @@ fn test_contribute_success() {
 fn test_contribute_insufficient_balance() {
     let env = Env::default();
     let contract = create_contract(&env);
-    
+
     // Setup
     let group_id = contract.create_group(1000, 30, 100);
     let member = Address::random(&env);
     contract.join_group(group_id, member.clone(), None);
-    
+
     // Execute & Assert
     let result = contract.contribute(group_id, member.clone(), 500);
     assert_eq!(result, Err(ContractError::InsufficientBalance));
@@ -423,8 +425,14 @@ npm run test:coverage
 # Accessibility checks (jest-axe / vitest-axe)
 npm run test:a11y
 
-# Visual regression tests (Percy)
+# Visual regression tests (Percy page snapshots; needs PERCY_TOKEN)
 npm run test:visual
+
+# Component screenshot baselines (committed PNGs; no Percy token)
+npm run test:visual:components
+
+# After an intentional visual change, regenerate PNG baselines and commit them
+npm run test:visual:components:update
 
 # Mutation testing (Stryker)
 npm run test:mutation
@@ -440,21 +448,21 @@ import { useContractCall } from './useContractCall';
 describe('useContractCall', () => {
   it('should fetch group data successfully', async () => {
     const { result } = renderHook(() => useContractCall('get_group', [123]));
-    
+
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     });
-    
+
     expect(result.current.data).toBeDefined();
   });
 
   it('should handle errors gracefully', async () => {
     const { result } = renderHook(() => useContractCall('invalid_method', []));
-    
+
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     });
-    
+
     expect(result.current.error).toBeDefined();
   });
 });
@@ -463,6 +471,7 @@ describe('useContractCall', () => {
 **Test files location:**
 
 Test files live alongside source files:
+
 - `src/hooks/useContractCall.ts` → `src/hooks/useContractCall.test.ts`
 - `src/components/GroupCard.tsx` → `src/components/GroupCard.test.tsx`
 
@@ -490,6 +499,7 @@ npm test -- --coverage
 ### CI/CD Pipeline
 
 All tests run automatically on:
+
 - **Pull requests** — must pass before merge
 - **Push to main** — must pass before deployment
 - **Scheduled** — nightly runs for extended test suites
@@ -523,11 +533,11 @@ git push --no-verify
 
 See [docs/dependency-update-policy.md](docs/dependency-update-policy.md) for the full triage process. In short:
 
-| Severity | Required action |
-|---|---|
-| CRITICAL | Must fix or receive explicit maintainer approval before merge |
-| HIGH | Must fix or document accepted risk in `.cargo/audit.toml` / `npm audit` allowlist |
-| MODERATE / LOW | Log and track; do not block push |
+| Severity       | Required action                                                                   |
+| -------------- | --------------------------------------------------------------------------------- |
+| CRITICAL       | Must fix or receive explicit maintainer approval before merge                     |
+| HIGH           | Must fix or document accepted risk in `.cargo/audit.toml` / `npm audit` allowlist |
+| MODERATE / LOW | Log and track; do not block push                                                  |
 
 The script exits non-zero only on HIGH or CRITICAL findings. Lower-severity advisories are reported but do not fail the check.
 
@@ -543,15 +553,15 @@ Always branch from `main` and use descriptive names following this format:
 <type>/<description>
 ```
 
-| Type | Use for | Example |
-|---|---|---|
-| `feat/` | New feature | `feat/penalty-mechanism` |
-| `fix/` | Bug fix | `fix/wallet-timeout` |
-| `docs/` | Documentation | `docs/contributing-guide` |
-| `refactor/` | Code restructuring | `refactor/storage-layout` |
-| `test/` | Tests only | `test/payout-edge-cases` |
-| `perf/` | Performance | `perf/gas-optimization` |
-| `chore/` | Tooling, deps | `chore/update-soroban-sdk` |
+| Type        | Use for            | Example                    |
+| ----------- | ------------------ | -------------------------- |
+| `feat/`     | New feature        | `feat/penalty-mechanism`   |
+| `fix/`      | Bug fix            | `fix/wallet-timeout`       |
+| `docs/`     | Documentation      | `docs/contributing-guide`  |
+| `refactor/` | Code restructuring | `refactor/storage-layout`  |
+| `test/`     | Tests only         | `test/payout-edge-cases`   |
+| `perf/`     | Performance        | `perf/gas-optimization`    |
+| `chore/`    | Tooling, deps      | `chore/update-soroban-sdk` |
 
 **Example workflow:**
 
@@ -575,6 +585,7 @@ Follow Conventional Commits format:
 ```
 
 **Examples:**
+
 - `feat(contract): implement penalty for missed contributions`
 - `fix(frontend): resolve wallet connection timeout on mobile`
 - `docs: expand contributing guide with development workflow`
@@ -586,9 +597,11 @@ Fill in all sections:
 
 ```markdown
 ## Description
+
 Brief summary of changes
 
 ## Type of Change
+
 - [ ] New feature
 - [ ] Bug fix
 - [ ] Documentation
@@ -596,9 +609,11 @@ Brief summary of changes
 - [ ] Breaking change
 
 ## How to Test
+
 Step-by-step instructions to verify the changes
 
 ## Checklist
+
 - [ ] Tests pass locally
 - [ ] Code follows style guidelines
 - [ ] Documentation updated
@@ -619,12 +634,14 @@ Step-by-step instructions to verify the changes
 ### Code Review Guidelines
 
 **For reviewers:**
+
 - Check that tests are comprehensive
 - Verify code follows style guidelines
 - Ensure commit messages are clear
 - Test locally if possible
 
 **For authors:**
+
 - Respond to all comments
 - Push fixes as new commits (don't amend)
 - Request re-review after addressing feedback
@@ -636,11 +653,11 @@ Step-by-step instructions to verify the changes
 
 Stellar-Save participates in **Drips Wave** — a contributor funding program. Funded issues are labelled `wave-ready` on GitHub and categorised by effort:
 
-| Label | Points | Examples |
-|---|---|---|
-| `trivial` | 100 | Documentation fixes, simple tests, minor UI copy |
-| `medium` | 150 | Helper functions, validation logic, moderate features |
-| `high` | 200 | Core features, complex integrations, security enhancements |
+| Label     | Points | Examples                                                   |
+| --------- | ------ | ---------------------------------------------------------- |
+| `trivial` | 100    | Documentation fixes, simple tests, minor UI copy           |
+| `medium`  | 150    | Helper functions, validation logic, moderate features      |
+| `high`    | 200    | Core features, complex integrations, security enhancements |
 
 ### How to Claim a Wave-Ready Issue
 
@@ -659,6 +676,7 @@ Stellar-Save participates in **Drips Wave** — a contributor funding program. F
 ### Wave-Ready Issue Categories
 
 **Trivial (100 points)** — Good for first-time contributors
+
 - Documentation improvements
 - Simple test additions
 - Minor UI/UX fixes
@@ -666,6 +684,7 @@ Stellar-Save participates in **Drips Wave** — a contributor funding program. F
 - Example code
 
 **Medium (150 points)** — Intermediate difficulty
+
 - Helper functions and utilities
 - Validation logic
 - Moderate feature additions
@@ -673,6 +692,7 @@ Stellar-Save participates in **Drips Wave** — a contributor funding program. F
 - Bug fixes with moderate complexity
 
 **High (200 points)** — Advanced contributors
+
 - Core feature implementations
 - Complex integrations
 - Security enhancements

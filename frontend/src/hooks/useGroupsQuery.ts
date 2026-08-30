@@ -1,15 +1,18 @@
-import { useCallback, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '../lib/queryKeys';
+import { useCallback, useMemo, useState } from 'react';
+
+import { useOfflineGroupsCache } from './useOfflineGroupsCache';
 import { STALE_TIME } from '../lib/queryClient';
+import { queryKeys } from '../lib/queryKeys';
+import { DEFAULT_GROUP_FILTERS } from '../types/group';
+
 import type {
   GroupFilters,
   PaginationMeta,
   PublicGroup,
   UseGroupsReturn,
 } from '../types/group';
-import { DEFAULT_GROUP_FILTERS } from '../types/group';
-import { useOfflineGroupsCache } from './useOfflineGroupsCache';
+
 
 // === Filtering / sorting helpers
 

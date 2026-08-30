@@ -1,6 +1,7 @@
+import { formatAmount } from '../../utils/format';
 import { Avatar } from '../Avatar';
 import { Badge } from '../Badge';
-import { formatAmount } from '../../utils/format';
+
 import type { GroupMember } from '../../utils/groupApi';
 
 interface MembersPanelProps {
