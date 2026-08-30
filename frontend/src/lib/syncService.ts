@@ -153,7 +153,7 @@ export async function syncAll(): Promise<void> {
     await updateSyncMetadata({ lastSync: new Date(), isOnline: true });
 
     notifySyncStatus('idle');
-  } catch (error) {
+  } catch {
     notifySyncStatus('error');
   } finally {
     isCurrentlySyncing = false;

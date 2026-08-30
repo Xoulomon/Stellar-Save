@@ -27,14 +27,15 @@ export const DashboardGroupCard: React.FC<Props> = ({ group, isLoading }) => {
   }
 
   const progress = (group.currentCycle / group.totalCycles) * 100;
-  const statusColor = group.status === 'active' ? 'success' : group.status === 'pending' ? 'warning' : 'default';
+  const statusColor: 'success' | 'warning' | 'default' =
+    group.status === 'active' ? 'success' : group.status === 'pending' ? 'warning' : 'default';
 
   return (
     <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', transition: 'all 0.2s', '&:hover': { borderColor: 'primary.main', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' } }}>
       <Stack spacing={2}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="subtitle1" fontWeight="bold" noWrap sx={{ maxWidth: '60%' }}>{group.name}</Typography>
-          <Chip label={group.status.toUpperCase()} size="small" color={statusColor as any} variant="soft" sx={{ fontWeight: 'bold', fontSize: '0.65rem' }} />
+          <Chip label={group.status.toUpperCase()} size="small" color={statusColor} variant="soft" sx={{ fontWeight: 'bold', fontSize: '0.65rem' }} />
         </Box>
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>

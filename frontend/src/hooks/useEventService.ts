@@ -5,7 +5,7 @@
  * Provides typed event listeners and auto-start on mount.
  */
 
-import React, { useEffect, useCallback } from 'react';
+import  { useEffect, useCallback } from 'react';
 
 import { EventService, type AppEvent, type EventType } from '../lib';
 

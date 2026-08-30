@@ -18,7 +18,7 @@ import type { AppEvent } from '../../types/events';
 
 // vi.mock is hoisted to the top of the file by vitest, so we must use
 // vi.hoisted() to declare variables that are referenced inside the factory.
-const { mockFetchEvents, mockStartWatching, mockOn, mockServiceInstance } =
+const { mockFetchEvents, mockServiceInstance } =
   vi.hoisted(() => {
     const listeners: Array<{ type: string; cb: (e: AppEvent) => void }> = [];
 

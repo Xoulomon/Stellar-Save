@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -82,10 +82,6 @@ describe('SettingsPage Integration - Reminder Preferences', () => {
     render(<SettingsPage />);
 
     // Enable reminders (should be on by default)
-    const reminderToggle = screen.getByRole('checkbox', {
-      name: /Enable contribution reminders/,
-    });
-
     // By default should have reminder preferences in localStorage
     // after toggling a setting
     const oneHourOption = screen.getByDisplayValue('1h');

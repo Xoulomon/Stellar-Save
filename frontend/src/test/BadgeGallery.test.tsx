@@ -76,7 +76,7 @@ describe('BadgeGallery', () => {
 
     const times = screen.getAllByRole('time');
     expect(times.length).toBe(mockBadges.length);
-    times.forEach((time, idx) => {
+    times.forEach((time) => {
       expect(time).toHaveAttribute('datetime');
       expect(time.getAttribute('datetime')).toContain('T'); // ISO format check
     });

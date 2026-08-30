@@ -1,21 +1,12 @@
-import { Box } from '@mui/material';
 import { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-<<<<<<< HEAD
-
-=======
 import { Box } from '@mui/material';
 import { Skeleton } from '../components/Skeleton/Skeleton';
 import { RouteBoundary } from './RouteBoundary';
 import { routeConfig } from './routes';
 import { ProtectedRoute } from './ProtectedRoute';
->>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import { AdminRoute } from './AdminRoute';
 import { ROUTES } from './constants';
-import { ProtectedRoute } from './ProtectedRoute';
-import { routeConfig } from './routes';
-import { RouteErrorBoundary } from '../components/RouteErrorBoundary';
-import { Skeleton } from '../components/Skeleton/Skeleton';
 
 /** Skeleton fallback shown while a lazy route chunk is downloading. */
 function RouteLoadingFallback() {

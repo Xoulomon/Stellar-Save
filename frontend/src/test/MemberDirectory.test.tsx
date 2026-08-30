@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi } from 'vitest';
@@ -233,7 +233,7 @@ describe('MemberDirectory – payout filter', () => {
 describe('MemberDirectory – sorting', () => {
   it('sorts by most contributions by default (Alice first)', () => {
     renderWithRouter(<MemberDirectory members={MEMBERS} />);
-    const cards = screen.getAllByText(/Contributions/i);
+    screen.getAllByText(/Contributions/i);
     // Alice has 6 contributions, should appear first
     expect(screen.getByText('Alice Okonkwo')).toBeInTheDocument();
   });

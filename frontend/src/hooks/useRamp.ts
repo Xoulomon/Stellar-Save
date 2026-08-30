@@ -49,7 +49,7 @@ export function useRamp(): UseRampResult {
   }, []);
 
   const pollStatus = useCallback(
-    async (id: string, intervalMs = 2000): Promise<RampTransaction | null> => {
+    async (id: string, _intervalMs = 2000): Promise<RampTransaction | null> => {
       setError(null);
       try {
         return await api.get<RampTransaction>(`/ramp/${encodeURIComponent(id)}/status`);

@@ -312,7 +312,7 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const { activeAddress } = useWallet();
   const { profile, isLoading: profileLoading } = useUserProfile(activeAddress ?? undefined);
-  const { transactions, isLoading: transactionsLoading } = useTransactions();
+  const { transactions } = useTransactions();
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [displayName, setDisplayName] = useState('Stellar Saver');
   const [editingName, setEditingName] = useState(false);
@@ -327,7 +327,7 @@ export default function ProfilePage() {
 
   const transactions = profile?.timeline ?? [];
 
-  const handleTransactionClick = (tx: Transaction) => {
+  const handleTransactionClick = (_tx: Transaction) => {
     // Transaction click handler
   };
 

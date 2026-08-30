@@ -3,7 +3,6 @@ import { lazy, Suspense } from "react";
 
 import "./App.css";
 import { CardSkeleton } from "./components/Skeleton";
-import { useOfflineSyncInit } from "./hooks/offline";
 import { useDeepLink } from "./hooks/useDeepLink";
 
 const AppRouter = lazy(() =>

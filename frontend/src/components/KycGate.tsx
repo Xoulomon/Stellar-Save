@@ -1,5 +1,5 @@
 import LockIcon from '@mui/icons-material/Lock';
-import { Box, Typography, Alert, Button, CircularProgress, Stack } from '@mui/material';
+import { Box, Typography, Alert, CircularProgress, Stack } from '@mui/material';
 
 import { useKycStatus } from '../hooks/useKyc';
 

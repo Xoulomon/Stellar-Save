@@ -7,7 +7,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { WalletProvider, WalletContext } from './WalletProvider';
 
 
-import type { WalletContextValue } from './types';
 
 
 // Mock StellarWalletsKit
@@ -96,7 +95,7 @@ describe('WalletProvider', () => {
     localStorage.setItem('swk_wallet', FREIGHTER_ID);
 
     const { StellarWalletsKit } = await import('@creit.tech/stellar-wallets-kit');
-    (StellarWalletsKit.refreshSupportedWallets as any).mockResolvedValue([
+    vi.mocked(StellarWalletsKit.refreshSupportedWallets).mockResolvedValue([
       { id: FREIGHTER_ID, name: 'Freighter', isAvailable: true },
     ]);
 
@@ -114,7 +113,7 @@ describe('WalletProvider', () => {
 
   it('should list available wallets', async () => {
     const { StellarWalletsKit } = await import('@creit.tech/stellar-wallets-kit');
-    (StellarWalletsKit.refreshSupportedWallets as any).mockResolvedValue([
+    vi.mocked(StellarWalletsKit.refreshSupportedWallets).mockResolvedValue([
       { id: FREIGHTER_ID, name: 'Freighter', isAvailable: true },
       { id: 'albedo', name: 'Albedo', isAvailable: false },
       { id: 'lobstr', name: 'Lobstr', isAvailable: true },
@@ -133,11 +132,11 @@ describe('WalletProvider', () => {
 
   it('should handle connect action', async () => {
     const { StellarWalletsKit } = await import('@creit.tech/stellar-wallets-kit');
-    (StellarWalletsKit.refreshSupportedWallets as any).mockResolvedValue([
+    vi.mocked(StellarWalletsKit.refreshSupportedWallets).mockResolvedValue([
       { id: FREIGHTER_ID, name: 'Freighter', isAvailable: true },
     ]);
-    (StellarWalletsKit.getAddress as any).mockResolvedValue({ address: 'GCONNECTED' });
-    (StellarWalletsKit.getNetwork as any).mockResolvedValue({
+    vi.mocked(StellarWalletsKit.getAddress).mockResolvedValue({ address: 'GCONNECTED' });
+    vi.mocked(StellarWalletsKit.getNetwork).mockResolvedValue({
       networkPassphrase: 'Test SDF Network ; September 2015',
     });
 
@@ -160,11 +159,11 @@ describe('WalletProvider', () => {
 
   it('should handle disconnect action', async () => {
     const { StellarWalletsKit } = await import('@creit.tech/stellar-wallets-kit');
-    (StellarWalletsKit.refreshSupportedWallets as any).mockResolvedValue([
+    vi.mocked(StellarWalletsKit.refreshSupportedWallets).mockResolvedValue([
       { id: FREIGHTER_ID, name: 'Freighter', isAvailable: true },
     ]);
-    (StellarWalletsKit.getAddress as any).mockResolvedValue({ address: 'GTEST' });
-    (StellarWalletsKit.getNetwork as any).mockResolvedValue({ networkPassphrase: 'test' });
+    vi.mocked(StellarWalletsKit.getAddress).mockResolvedValue({ address: 'GTEST' });
+    vi.mocked(StellarWalletsKit.getNetwork).mockResolvedValue({ networkPassphrase: 'test' });
 
     render(
       <WalletProvider>
@@ -196,11 +195,11 @@ describe('WalletProvider', () => {
 
   it('should clear localStorage on disconnect', async () => {
     const { StellarWalletsKit } = await import('@creit.tech/stellar-wallets-kit');
-    (StellarWalletsKit.refreshSupportedWallets as any).mockResolvedValue([
+    vi.mocked(StellarWalletsKit.refreshSupportedWallets).mockResolvedValue([
       { id: FREIGHTER_ID, name: 'Freighter', isAvailable: true },
     ]);
-    (StellarWalletsKit.getAddress as any).mockResolvedValue({ address: 'GTEST' });
-    (StellarWalletsKit.getNetwork as any).mockResolvedValue({ networkPassphrase: 'test' });
+    vi.mocked(StellarWalletsKit.getAddress).mockResolvedValue({ address: 'GTEST' });
+    vi.mocked(StellarWalletsKit.getNetwork).mockResolvedValue({ networkPassphrase: 'test' });
 
     render(
       <WalletProvider>
@@ -228,10 +227,10 @@ describe('WalletProvider', () => {
 
   it('should handle connect error', async () => {
     const { StellarWalletsKit } = await import('@creit.tech/stellar-wallets-kit');
-    (StellarWalletsKit.refreshSupportedWallets as any).mockResolvedValue([
+    vi.mocked(StellarWalletsKit.refreshSupportedWallets).mockResolvedValue([
       { id: FREIGHTER_ID, name: 'Freighter', isAvailable: true },
     ]);
-    (StellarWalletsKit.getAddress as any).mockRejectedValue(new Error('Connection failed'));
+    vi.mocked(StellarWalletsKit.getAddress).mockRejectedValue(new Error('Connection failed'));
 
     render(
       <WalletProvider>
@@ -252,11 +251,11 @@ describe('WalletProvider', () => {
 
   it('should update network on successful connect', async () => {
     const { StellarWalletsKit } = await import('@creit.tech/stellar-wallets-kit');
-    (StellarWalletsKit.refreshSupportedWallets as any).mockResolvedValue([
+    vi.mocked(StellarWalletsKit.refreshSupportedWallets).mockResolvedValue([
       { id: FREIGHTER_ID, name: 'Freighter', isAvailable: true },
     ]);
-    (StellarWalletsKit.getAddress as any).mockResolvedValue({ address: 'GTEST' });
-    (StellarWalletsKit.getNetwork as any).mockResolvedValue({
+    vi.mocked(StellarWalletsKit.getAddress).mockResolvedValue({ address: 'GTEST' });
+    vi.mocked(StellarWalletsKit.getNetwork).mockResolvedValue({
       networkPassphrase: 'Public Global Stellar Network ; September 2015',
     });
 
@@ -277,7 +276,7 @@ describe('WalletProvider', () => {
 
   it('should maintain selected wallet ID', async () => {
     const { StellarWalletsKit } = await import('@creit.tech/stellar-wallets-kit');
-    (StellarWalletsKit.refreshSupportedWallets as any).mockResolvedValue([
+    vi.mocked(StellarWalletsKit.refreshSupportedWallets).mockResolvedValue([
       { id: FREIGHTER_ID, name: 'Freighter', isAvailable: true },
       { id: 'albedo', name: 'Albedo', isAvailable: true },
     ]);
@@ -293,12 +292,12 @@ describe('WalletProvider', () => {
 
   it('should provide sign transaction method', async () => {
     const { StellarWalletsKit } = await import('@creit.tech/stellar-wallets-kit');
-    (StellarWalletsKit.refreshSupportedWallets as any).mockResolvedValue([
+    vi.mocked(StellarWalletsKit.refreshSupportedWallets).mockResolvedValue([
       { id: FREIGHTER_ID, name: 'Freighter', isAvailable: true },
     ]);
-    (StellarWalletsKit.getAddress as any).mockResolvedValue({ address: 'GTEST' });
-    (StellarWalletsKit.getNetwork as any).mockResolvedValue({ networkPassphrase: 'test' });
-    (StellarWalletsKit.signTransaction as any).mockResolvedValue({
+    vi.mocked(StellarWalletsKit.getAddress).mockResolvedValue({ address: 'GTEST' });
+    vi.mocked(StellarWalletsKit.getNetwork).mockResolvedValue({ networkPassphrase: 'test' });
+    vi.mocked(StellarWalletsKit.signTransaction).mockResolvedValue({
       signedTxXdr: 'signed-xdr-data',
     });
 

@@ -55,7 +55,7 @@ const mockGroup: GroupDetail = {
 
 beforeEach(() => {
   clearMembersCache();
-  vi.spyOn(groupApi, 'fetchGroup').mockResolvedValue(mockGroup as any);
+  vi.spyOn(groupApi, 'fetchGroup').mockResolvedValue(mockGroup as never);
 });
 
 afterEach(() => {
@@ -100,7 +100,7 @@ describe('useMembers', () => {
   });
 
   it('refresh re-fetches data', async () => {
-    const fetchSpy = vi.spyOn(groupApi, 'fetchGroup').mockResolvedValue(mockGroup as any);
+    const fetchSpy = vi.spyOn(groupApi, 'fetchGroup').mockResolvedValue(mockGroup as never);
     const { result } = renderHook(() => useMembers('g1', { autoRefresh: false }));
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -115,7 +115,7 @@ describe('useMembers', () => {
 
   it('does not auto-refresh when disabled', async () => {
     vi.useFakeTimers();
-    const fetchSpy = vi.spyOn(groupApi, 'fetchGroup').mockResolvedValue(mockGroup as any);
+    const fetchSpy = vi.spyOn(groupApi, 'fetchGroup').mockResolvedValue(mockGroup as never);
     renderHook(() => useMembers('g1', { autoRefresh: false }));
 
     await act(async () => {

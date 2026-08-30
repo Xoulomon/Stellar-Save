@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { NotificationTransport } from '../notifications/NotificationTransport';
 import { NotificationUI } from '../notifications/NotificationUI';
-import type { NotificationMessage, TransportNotification, DeliveryChannel } from '../notifications/types';
+import type { NotificationMessage, TransportNotification, DeliveryChannel, DeliveryResult } from '../notifications/types';
 import * as notificationPermission from '../notifications/notificationPermission';
 import * as swRegistration from '../notifications/serviceWorkerRegistration';
 
@@ -87,7 +87,7 @@ describe('Notification System Integration', () => {
 
       const deliveryTracker: string[] = [];
 
-      const callback = (result: any) => {
+      const callback = (result: DeliveryResult) => {
         deliveryTracker.push(`${result.channel}:${result.success ? 'ok' : 'fail'}`);
       };
 

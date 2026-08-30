@@ -22,15 +22,8 @@ export default tseslint.config(
     },
     rules: {
       'no-console': ['warn', { allow: ['warn', 'error'] }],
-    },
-  },
-  {
-    // Incremental `no-explicit-any` enforcement. The top level of the component
-    // library is now free of `any`; the rule is upgraded to an error there so
-    // regressions are blocked. Subdirectories are migrated folder-by-folder.
-    files: ['src/components/*.{ts,tsx}'],
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-explicit-any': ['error', { fixToUnknown: true }],
     },
   },
   {

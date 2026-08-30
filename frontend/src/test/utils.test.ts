@@ -35,7 +35,7 @@ describe('Utils', () => {
     });
 
     it('handles Stellar SDK codes', () => {
-      const result = errorHandler({ code: 'not_found', message: 'Account not found' } as any);
+      const result = errorHandler({ code: 'not_found', message: 'Account not found' } as never);
       expect(result.message).toBe('Account or resource not found.');
       expect(result.code).toBe('not_found');
     });

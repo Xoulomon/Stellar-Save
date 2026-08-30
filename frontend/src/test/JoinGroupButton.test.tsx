@@ -7,10 +7,12 @@ import { JoinGroupButton } from '../components/JoinGroupButton';
 import * as useWalletModule from '../hooks/useWallet';
 import { queryKeys } from '../lib/queryKeys';
 
-// Prevent Vite from transforming WalletProvider (which imports the broken @creit.tech package)
-vi.mock('../wallet/WalletProvider', () => ({ WalletContext: { Provider: ({ children }: any) => children } }));
+import type { WalletContextValue } from '../wallet/types';
 
-const baseWallet = {
+// Prevent Vite from transforming WalletProvider (which imports the broken @creit.tech package)
+vi.mock('../wallet/WalletProvider', () => ({ WalletContext: { Provider: ({ children }: { children: React.ReactNode }) => children } }));
+
+const baseWallet: WalletContextValue = {
   wallets: [],
   selectedWalletId: 'freighter',
   status: 'connected' as const,
@@ -24,6 +26,7 @@ const baseWallet = {
   switchWallet: vi.fn(),
   switchAccount: vi.fn(),
   signTransaction: vi.fn(),
+  signMessage: vi.fn(),
 };
 
 vi.mock('../hooks/useWallet');
@@ -37,7 +40,7 @@ function renderWithClient(ui: React.ReactElement, queryClient = new QueryClient(
 
 describe('JoinGroupButton', () => {
   beforeEach(() => {
-    vi.mocked(useWalletModule.useWallet).mockReturnValue(baseWallet as any);
+    vi.mocked(useWalletModule.useWallet).mockReturnValue(baseWallet);
   });
 
   it('shows "Already Joined" when user is member', () => {
@@ -56,7 +59,7 @@ describe('JoinGroupButton', () => {
   });
 
   it('shows "Connect Wallet" when wallet not connected', () => {
-    vi.mocked(useWalletModule.useWallet).mockReturnValue({ ...baseWallet, status: 'idle' } as any);
+    vi.mocked(useWalletModule.useWallet).mockReturnValue({ ...baseWallet, status: 'idle' });
     renderWithClient(<JoinGroupButton groupId={1} maxMembers={10} currentMembers={5} isActive={false} />);
     expect(screen.getByText('Connect Wallet')).toBeInTheDocument();
   });

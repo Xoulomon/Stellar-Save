@@ -43,13 +43,12 @@ const groupMock = {
 
 describe('usePayouts', () => {
   let getPayoutScheduleSpy: ReturnType<typeof vi.spyOn>;
-  let getGroupSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     getPayoutScheduleSpy = vi.spyOn(contractHook, 'useContract').mockReturnValue({
       getPayoutSchedule: vi.fn().mockResolvedValue(scheduleMock),
       getGroup: vi.fn().mockResolvedValue(groupMock),
-    } as any);
+    } as never);
   });
 
   afterEach(() => {
@@ -91,7 +90,7 @@ describe('usePayouts', () => {
     getPayoutScheduleSpy.mockReturnValue({
       getPayoutSchedule: vi.fn().mockRejectedValue(new Error('Contract unavailable')),
       getGroup: vi.fn().mockResolvedValue(groupMock),
-    } as any);
+    } as never);
 
     const { result } = renderHook(() => usePayouts('2'));
 
@@ -109,7 +108,7 @@ describe('usePayouts', () => {
     vi.spyOn(contractHook, 'useContract').mockReturnValue({
       getPayoutSchedule: getPayoutScheduleFunc,
       getGroup: getGroupFunc,
-    } as any);
+    } as never);
 
     const { result } = renderHook(() => usePayouts('3'));
     await waitFor(() => expect(result.current.isLoading).toBe(false));

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -8,21 +9,11 @@ import {
   Typography,
   Box,
   Alert,
-  IconButton,
 } from '@mui/material';
-<<<<<<< HEAD
-import { useState, useEffect } from 'react';
-
-=======
 import { Button } from '../Button';
 import { copyToClipboard } from '../../lib/clipboard';
 import type { TransactionTemplate, TransactionBuilderStep } from '../../types/transactionBuilder';
->>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import { saveTemplate, generateShareCode } from '../../services/transactionBuilderService';
-import { Button } from '../Button';
-
-import type { TransactionTemplate, TransactionBuilderStep } from '../../types/transactionBuilder';
-
 
 interface SaveTemplateModalProps {
   open: boolean;

@@ -1,4 +1,4 @@
-import { Box, Typography, Button, Alert, AlertTitle, Collapse } from "@mui/material";
+import { Box, Typography, Alert, AlertTitle, Collapse } from "@mui/material";
 import React from "react";
 
 import { AppButton } from "../../ui/components/AppButton";

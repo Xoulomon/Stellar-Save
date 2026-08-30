@@ -11,7 +11,7 @@ export function NetworkIndicator() {
 
   const currentNetwork = network || 'testnet';
 
-  const handleNetworkSwitch = (newNetwork: string) => {
+  const handleNetworkSwitch = (_newNetwork: string) => {
     // TODO: Implement network switching logic
     setShowSwitcher(false);
   };

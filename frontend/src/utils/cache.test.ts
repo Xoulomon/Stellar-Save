@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { CacheService, type CacheOptions } from './cache';
+import { CacheService } from './cache';
 
 describe('CacheService', () => {
   let cache: CacheService<string>;
@@ -64,10 +64,6 @@ describe('CacheService', () => {
   });
 
   it('falls back to memory on storage error', () => {
-    const mockLocalStorage = Object.keys(localStorage).reduce((acc, key) => {
-      acc[key] = localStorage.getItem(key);
-      return acc;
-    }, {} as any);
     // Simulate quota exceeded
     vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
       throw new Error('quota');
