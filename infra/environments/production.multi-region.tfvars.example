@@ -1,0 +1,42 @@
+# infra/environments/production.multi-region.tfvars.example
+#
+# Example variable values that enable multi-region failover and geo-routing for
+# the production environment. Copy to production.multi-region.tfvars and fill in
+# the real values, then:
+#
+#   cd infra/envs/production
+#   terraform plan  -var-file=../../environments/production.multi-region.tfvars
+#   terraform apply -var-file=../../environments/production.multi-region.tfvars
+#
+# Leaving these unset keeps production single-region (the default behavior).
+
+# ── Primary region (existing single-region values) ────────────────────────────
+aws_region          = "us-east-1"
+acm_certificate_arn = "arn:aws:acm:us-east-1:000000000000:certificate/REPLACE_ME"
+listener_arn        = "arn:aws:elasticloadbalancing:us-east-1:000000000000:listener/app/REPLACE_ME"
+
+# Primary-region RDS wiring
+vpc_id                     = "vpc-aaaaaaaa"
+private_subnet_ids         = ["subnet-aaa1", "subnet-aaa2"]
+backend_security_group_ids = ["sg-backend-primary"]
+db_username                = "REPLACE_ME"
+db_password                = "REPLACE_ME"
+
+# ── Multi-region routing (Route53) ────────────────────────────────────────────
+enable_multi_region  = true
+secondary_aws_region = "eu-west-1"
+hosted_zone_id       = "ZXXXXXXXXXXXXX"
+routing_record_name  = "api.stellar-save.app"
+routing_policy       = "latency" # or "geolocation"
+
+# Per-region application endpoints (ALB DNS name or CloudFront domain)
+primary_endpoint_domain   = "alb-primary-us-east-1.elb.amazonaws.com"
+secondary_endpoint_domain = "alb-secondary-eu-west-1.elb.amazonaws.com"
+
+# ── Cross-region RDS read replica (secondary region) ──────────────────────────
+enable_cross_region_replica = true
+replica_vpc_id              = "vpc-bbbbbbbb"
+replica_subnet_ids          = ["subnet-bbb1", "subnet-bbb2"]
+replica_security_group_ids  = ["sg-backend-secondary"]
+# Optional: a CMK in the secondary region. Leave empty to use the default RDS key.
+replica_kms_key_id = ""

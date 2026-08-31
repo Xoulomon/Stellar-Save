@@ -1,65 +1,59 @@
-# Development Scripts
+# Development & Deployment Scripts
 
-Helper scripts for common development tasks.
+Helper scripts for building, testing, auditing, and deploying smart contracts across environments.
+
+## Prerequisites
+
+- **Rust Toolchain**: `1.81.0` (pinned via `rust-toolchain.toml`)
+- **WASM Target**: `wasm32-unknown-unknown` (`rustup target add wasm32-unknown-unknown`)
+- **Stellar CLI**: Installed and available in PATH (`cargo install --locked stellar-cli`)
+- **Node.js & npm**: Node.js 18+ for test suite and root hooks
 
 ## Available Scripts
 
 ### `build.sh`
-Compiles all smart contracts for WASM target.
+Compiles all Soroban smart contracts in the workspace for the `wasm32-unknown-unknown` target in release mode.
 
 ```bash
 ./scripts/build.sh
 ```
 
 ### `test.sh`
-Runs all tests (contracts + frontend).
+Executes the comprehensive repository test suite covering contract tests (`cargo test`) and frontend tests (`npm test`).
 
 ```bash
 ./scripts/test.sh
 ```
 
 ### `deploy_testnet.sh`
-Deploys contracts to Stellar testnet.
+Deploys compiled WASM smart contract binaries to the Stellar Testnet.
 
 ```bash
+# Configure testnet identity (one-time)
+stellar keys generate deployer --network testnet
+
+# Run deployment script
 ./scripts/deploy_testnet.sh
 ```
 
-**Environment Variables:**
-- `STELLAR_NETWORK` - Network name (default: testnet)
-- `STELLAR_RPC_URL` - RPC endpoint (default: https://soroban-testnet.stellar.org)
+**Environment Overrides:**
+- `STELLAR_NETWORK`: Network identifier (default: `testnet`).
+- `STELLAR_RPC_URL`: Soroban RPC endpoint (default: `https://soroban-testnet.stellar.org`).
 
 ### `deploy_mainnet.sh`
-Deploys contracts to Stellar mainnet with confirmation prompt.
+Deploys compiled smart contracts to Stellar Mainnet with interactive safety confirmation prompts.
 
 ```bash
 ./scripts/deploy_mainnet.sh
 ```
 
-**Environment Variables:**
-- `STELLAR_NETWORK` - Network name (default: mainnet)
-- `STELLAR_RPC_URL` - RPC endpoint (default: https://soroban-rpc.mainnet.stellar.gateway.fm)
+**Environment Overrides:**
+- `STELLAR_NETWORK`: Network identifier (default: `mainnet`).
+- `STELLAR_RPC_URL`: Mainnet Soroban RPC endpoint.
 
-## Prerequisites
+### `pre-push-audit.sh`
+Performs vulnerability audits on Rust (`cargo audit`) and Node (`npm audit`) dependencies prior to code pushes.
 
-- Rust toolchain with `wasm32-unknown-unknown` target
-- Stellar CLI (`stellar`)
-- Node.js and npm (for frontend tests)
-- Configured Stellar account (for deployments)
-
-## Setup
-
-Install Stellar CLI:
 ```bash
-cargo install --locked stellar-cli
-```
-
-Add WASM target:
-```bash
-rustup target add wasm32-unknown-unknown
-```
-
-Configure network identity:
-```bash
-stellar keys generate default --network testnet
+./scripts/pre-push-audit.sh
 ```

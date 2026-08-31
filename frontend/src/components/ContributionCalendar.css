@@ -1,0 +1,54 @@
+.contribution-calendar {
+  width: 100%;
+}
+
+/* Override rbc defaults to match app theme */
+.contribution-calendar .rbc-calendar {
+  font-family: inherit;
+}
+
+.contribution-calendar .rbc-toolbar button {
+  color: var(--color-text);
+  border-color: var(--color-border);
+  border-radius: 6px;
+}
+
+.contribution-calendar .rbc-toolbar button.rbc-active,
+.contribution-calendar .rbc-toolbar button:hover {
+  background: var(--color-primary);
+  /* Fixed white text on a solid --color-primary fill — stays AA-compliant in both themes. */
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+.contribution-calendar .rbc-today {
+  background: var(--color-primary-light);
+}
+
+.contribution-calendar .rbc-event {
+  border-radius: 4px;
+  font-size: 0.8rem;
+  padding: 1px 4px;
+}
+
+/* Event status colours */
+.cal-event--completed {
+  background-color: var(--color-success) !important;
+  border-color: color-mix(in srgb, var(--color-success) 80%, black) !important;
+}
+
+.cal-event--pending {
+  background-color: var(--color-warning) !important;
+  border-color: color-mix(in srgb, var(--color-warning) 80%, black) !important;
+}
+
+.cal-event--failed {
+  background-color: var(--color-danger) !important;
+  border-color: var(--color-danger-hover) !important;
+}
+
+.cal-event--deadline {
+  background-color: var(--color-primary) !important;
+  border-color: var(--color-primary-hover) !important;
+}

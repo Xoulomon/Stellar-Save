@@ -18,41 +18,45 @@
 
 /* Variants */
 .btn-primary {
-  background-color: #646cff;
+  background-color: var(--color-primary);
+  /* Fixed white text on a solid --color-primary fill — stays AA-compliant in both themes. */
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   color: #fff;
-  border-color: #646cff;
+  border-color: var(--color-primary);
 }
 .btn-primary:hover:not(:disabled) {
-  background-color: #535bf2;
-  border-color: #535bf2;
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
 }
 
 .btn-secondary {
-  background-color: #1a1a1a;
-  color: rgba(255, 255, 255, 0.87);
-  border-color: #646cff;
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border-color: var(--color-primary);
 }
 .btn-secondary:hover:not(:disabled) {
-  background-color: #2a2a2a;
+  background-color: var(--color-surface-hover);
 }
 
 .btn-danger {
-  background-color: #e53e3e;
+  background-color: var(--color-danger);
+  /* Fixed white text on a solid --color-danger fill — stays AA-compliant in both themes. */
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   color: #fff;
-  border-color: #e53e3e;
+  border-color: var(--color-danger);
 }
 .btn-danger:hover:not(:disabled) {
-  background-color: #c53030;
-  border-color: #c53030;
+  background-color: var(--color-danger-hover);
+  border-color: var(--color-danger-hover);
 }
 
 .btn-ghost {
   background-color: transparent;
-  color: #646cff;
+  color: var(--color-primary);
   border-color: transparent;
 }
 .btn-ghost:hover:not(:disabled) {
-  background-color: rgba(100, 108, 255, 0.1);
+  background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 /* Sizes */
@@ -82,7 +86,7 @@
   opacity: 0.8;
 }
 
-/* Spinner */
+/* Spinner — uses @keyframes spin defined globally in Spinner.css */
 .btn-spinner {
   width: 1em;
   height: 1em;
@@ -90,10 +94,4 @@
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }

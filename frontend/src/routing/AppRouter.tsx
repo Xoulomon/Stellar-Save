@@ -1,24 +1,34 @@
+import { Box } from '@mui/material';
 import { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Box, CircularProgress } from '@mui/material';
+<<<<<<< HEAD
+
+=======
+import { Box } from '@mui/material';
+import { Skeleton } from '../components/Skeleton/Skeleton';
+import { RouteBoundary } from './RouteBoundary';
 import { routeConfig } from './routes';
 import { ProtectedRoute } from './ProtectedRoute';
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
+import { AdminRoute } from './AdminRoute';
 import { ROUTES } from './constants';
+import { ProtectedRoute } from './ProtectedRoute';
+import { routeConfig } from './routes';
+import { RouteErrorBoundary } from '../components/RouteErrorBoundary';
+import { Skeleton } from '../components/Skeleton/Skeleton';
 
-/**
- * Loading fallback component for lazy-loaded routes
- */
+/** Skeleton fallback shown while a lazy route chunk is downloading. */
 function RouteLoadingFallback() {
   return (
     <Box
-      sx={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '400px',
-      }}
+      role="status"
+      aria-label="Loading page"
+      sx={{ p: { xs: 2, md: 3 }, maxWidth: 960, mx: 'auto', mt: 3 }}
     >
-      <CircularProgress />
+      <Skeleton variant="rect" width="40%" height={32} style={{ marginBottom: 16 }} />
+      <Skeleton variant="rect" width="100%" height={120} style={{ marginBottom: 12 }} />
+      <Skeleton variant="rect" width="100%" height={80} style={{ marginBottom: 12 }} />
+      <Skeleton variant="rect" width="60%" height={24} />
     </Box>
   );
 }
@@ -33,17 +43,34 @@ export function AppRouter() {
       <Routes>
         {routeConfig.map((route) => {
           const Component = route.component;
-          const element = route.protected ? (
-            <ProtectedRoute>
-              <Component />
-            </ProtectedRoute>
-          ) : (
-            <Component />
-          );
+          let element: JSX.Element;
+          if (route.adminOnly) {
+            element = (
+              <RouteBoundary>
+                <AdminRoute>
+                  <Component />
+                </AdminRoute>
+              </RouteBoundary>
+            );
+          } else if (route.protected) {
+            element = (
+              <RouteBoundary>
+                <ProtectedRoute>
+                  <Component />
+                </ProtectedRoute>
+              </RouteBoundary>
+            );
+          } else {
+            element = (
+              <RouteBoundary>
+                <Component />
+              </RouteBoundary>
+            );
+          }
 
           return <Route key={route.path} path={route.path} element={element} />;
         })}
-        
+
         {/* Catch-all route for undefined paths */}
         <Route path="*" element={<Navigate to={ROUTES.NOT_FOUND} replace />} />
       </Routes>

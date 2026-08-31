@@ -2,6 +2,11 @@
 
 A React hook for fetching and managing Stellar account XLM balance with auto-refresh and error handling.
 
+> **Refresh strategy:** This hook is polling-only — balance updates are driven
+> exclusively by the `refreshInterval` timer below. There is no websocket
+> subscription and no legacy fallback path; `setupRefreshInterval` starts a
+> single `setInterval` and nothing else.
+
 ## Features
 
 - ✅ Fetches XLM balance from Stellar Horizon API

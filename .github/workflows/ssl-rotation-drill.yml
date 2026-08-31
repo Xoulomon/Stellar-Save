@@ -1,0 +1,251 @@
+name: SSL Certificate Rotation Drill
+
+on:
+  schedule:
+    - cron: '0 3 1 * *'  # Monthly on the 1st at 3am UTC
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Staging target hostname'
+        required: false
+        default: 'localhost'
+      port:
+        description: 'HTTPS port'
+        required: false
+        default: '443'
+      duration:
+        description: 'Load probe duration in seconds'
+        required: false
+        default: '60'
+      rps:
+        description: 'Requests per second during probe'
+        required: false
+        default: '10'
+      dry_run:
+        description: 'Dry run (skip live rotation)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  drill:
+    name: SSL Rotation Drill
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y nginx openssl curl
+
+      - name: Generate old (pre-rotation) self-signed certificate
+        if: github.event.inputs.dry_run != 'true'
+        run: |
+          sudo mkdir -p /etc/nginx/ssl
+          sudo openssl req -x509 -newkey rsa:2048 -nodes \
+            -keyout /etc/nginx/ssl/server.key \
+            -out    /etc/nginx/ssl/server.crt \
+            -days 1 \
+            -subj "/CN=staging-old.stellar-save.local/O=StellarSave/C=US" 2>/dev/null
+          echo "Old cert generated:"
+          openssl x509 -noout -subject -fingerprint -sha256 -in /etc/nginx/ssl/server.crt
+
+      - name: Generate new (post-rotation) self-signed certificate
+        if: github.event.inputs.dry_run != 'true'
+        run: |
+          mkdir -p /tmp/ssl-new
+          openssl req -x509 -newkey rsa:2048 -nodes \
+            -keyout /tmp/ssl-new/key.pem \
+            -out    /tmp/ssl-new/cert.pem \
+            -days 90 \
+            -subj "/CN=staging-new.stellar-save.local/O=StellarSave/C=US" 2>/dev/null
+          echo "New cert generated:"
+          openssl x509 -noout -subject -fingerprint -sha256 -in /tmp/ssl-new/cert.pem
+
+      - name: Configure and start nginx staging simulation
+        if: github.event.inputs.dry_run != 'true'
+        run: |
+          sudo tee /etc/nginx/sites-available/staging-ssl > /dev/null << 'NGINXCONF'
+          server {
+            listen 443 ssl;
+            server_name localhost;
+            ssl_certificate     /etc/nginx/ssl/server.crt;
+            ssl_certificate_key /etc/nginx/ssl/server.key;
+            location /health {
+              return 200 "ok\n";
+              add_header Content-Type text/plain;
+            }
+            location / {
+              return 200 "staging\n";
+              add_header Content-Type text/plain;
+            }
+          }
+          NGINXCONF
+          sudo rm -f /etc/nginx/sites-enabled/default
+          sudo ln -sf /etc/nginx/sites-available/staging-ssl /etc/nginx/sites-enabled/staging-ssl
+          sudo nginx -t
+          sudo systemctl start nginx
+          sleep 2
+          curl -sk https://localhost/health -o /dev/null && echo "nginx is up"
+
+      - name: Run SSL rotation drill
+        env:
+          DRILL_TARGET: ${{ github.event.inputs.target || 'localhost' }}
+          DRILL_PORT: ${{ github.event.inputs.port || '443' }}
+          DRILL_DURATION: ${{ github.event.inputs.duration || '60' }}
+          DRILL_RPS: ${{ github.event.inputs.rps || '10' }}
+          DRILL_NEW_CERT: /tmp/ssl-new/cert.pem
+          DRILL_NEW_KEY: /tmp/ssl-new/key.pem
+          DRILL_CERT_DEST: /etc/nginx/ssl/server.crt
+          DRILL_KEY_DEST: /etc/nginx/ssl/server.key
+          DRILL_ROTATION_CMD: >-
+            sudo cp /tmp/ssl-new/cert.pem /etc/nginx/ssl/server.crt &&
+            sudo cp /tmp/ssl-new/key.pem  /etc/nginx/ssl/server.key &&
+            sudo nginx -t &&
+            sudo kill -HUP $(cat /var/run/nginx.pid)
+        run: |
+          DRY_FLAG=""
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            DRY_FLAG="--dry-run"
+          fi
+          bash scripts/ssl_rotation_drill.sh \
+            --target   "${DRILL_TARGET}" \
+            --port     "${DRILL_PORT}" \
+            --duration "${DRILL_DURATION}" \
+            --rps      "${DRILL_RPS}" \
+            --cert     "${DRILL_NEW_CERT}" \
+            --key      "${DRILL_NEW_KEY}" \
+            ${DRY_FLAG}
+
+      - name: Upload drill report artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ssl-drill-report-${{ github.run_id }}
+          path: ssl_drill_report.json
+          retention-days: 90
+
+      - name: Append drill result to documentation
+        if: always()
+        run: |
+          REPORT="ssl_drill_report.json"
+          if [ ! -f "$REPORT" ]; then
+            echo '{"drill_date":"unknown","status":"failed","target":"unknown","rotation_duration_ms":0,"load_probe":{"total_requests":0,"failed_requests":0,"zero_downtime_confirmed":false},"certificate":{"before":{"cn":"N/A","expires":"N/A","sha256_fingerprint":""},"after":{"cn":"N/A","expires":"N/A","sha256_fingerprint":""},"cert_changed":false}}' > "$REPORT"
+          fi
+          python3 - << 'PYEOF'
+          import json, sys
+          with open("ssl_drill_report.json") as f:
+              r = json.load(f)
+          probe = r.get("load_probe", {})
+          cert  = r.get("certificate", {})
+          icon  = "✅" if r.get("status") == "passed" else "❌"
+          row = (
+              f"| {r.get('drill_date','?')} "
+              f"| {icon} {r.get('status','?').upper()} "
+              f"| {probe.get('zero_downtime_confirmed','?')} "
+              f"| {r.get('rotation_duration_ms','?')}ms "
+              f"| {cert.get('cert_changed','?')} "
+              f"| {cert.get('after',{}).get('cn','N/A')} "
+              f"| {probe.get('total_requests','?')} sent / {probe.get('failed_requests','?')} failed |"
+          )
+          doc = "docs/ssl-certificate-rotation.md"
+          with open(doc) as f:
+              content = f.read()
+          marker = "<!-- drill-results-table-end -->"
+          if marker in content:
+              content = content.replace(marker, row + "\n" + marker)
+          else:
+              content += "\n" + row + "\n"
+          with open(doc, "w") as f:
+              f.write(content)
+          print("Doc updated with row:", row)
+          PYEOF
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/ssl-certificate-rotation.md ssl_drill_report.json 2>/dev/null || true
+          git diff --cached --quiet || git commit \
+            -m "docs(ssl): update rotation drill results [skip ci]"
+          git push origin HEAD:${{ github.ref_name }} 2>/dev/null || true
+
+      - name: Post drill summary to tracking issue
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let r = {};
+            try { r = JSON.parse(fs.readFileSync('ssl_drill_report.json', 'utf8')); } catch {}
+            const probe   = r.load_probe   || {};
+            const cert    = r.certificate  || {};
+            const asserts = r.assertions   || {};
+            const icon    = r.status === 'passed' ? '✅' : '❌';
+
+            const body = [
+              `## ${icon} SSL Rotation Drill — ${r.drill_date || new Date().toISOString()}`,
+              '',
+              `**Status:** \`${(r.status||'unknown').toUpperCase()}\` | **Target:** \`${r.target||'?'}\` | **Run:** [#${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`,
+              '',
+              '### Load Probe',
+              '| Metric | Value |',
+              '|--------|-------|',
+              `| Total requests | ${probe.total_requests ?? 'N/A'} |`,
+              `| Failed requests | ${probe.failed_requests ?? 'N/A'} |`,
+              `| Zero downtime | ${probe.zero_downtime_confirmed ? '✅ Yes' : '❌ No'} |`,
+              `| Rotation duration | ${r.rotation_duration_ms ?? 'N/A'}ms |`,
+              '',
+              '### Certificate',
+              '| | CN | Expires |',
+              '|-|----|---------|',
+              `| Before | \`${cert.before?.cn||'N/A'}\` | ${cert.before?.expires||'N/A'} |`,
+              `| After  | \`${cert.after?.cn||'N/A'}\`  | ${cert.after?.expires||'N/A'} |`,
+              `| Changed | ${cert.cert_changed ? '✅ Yes' : '❌ No'} | |`,
+              '',
+              '### Assertions',
+              '| Assertion | Result |',
+              '|-----------|--------|',
+              `| Zero failed requests | ${asserts.zero_failed_requests ? '✅ Pass' : '❌ Fail'} |`,
+              `| New cert served post-rotation | ${asserts.new_cert_served ? '✅ Pass' : '❌ Fail'} |`,
+              `| Old cert no longer served | ${asserts.old_cert_gone ? '✅ Pass' : '❌ Fail'} |`,
+            ].join('\n');
+
+            const label = 'ssl-drill';
+            try {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner, repo: context.repo.repo,
+                name: label, color: '0075ca',
+              });
+            } catch {}
+
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              labels: label, state: 'open',
+            });
+
+            if (existing.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.data[0].number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title: '🔐 SSL Certificate Rotation Drill Results',
+                body, labels: [label],
+              });
+            }
+
+      - name: Fail if drill did not pass
+        if: always()
+        run: |
+          STATUS=$(python3 -c "import json; print(json.load(open('ssl_drill_report.json'))['status'])" 2>/dev/null || echo "failed")
+          if [ "$STATUS" != "passed" ]; then
+            echo "Drill failed with status: $STATUS"
+            exit 1
+          fi
+          echo "Drill passed."

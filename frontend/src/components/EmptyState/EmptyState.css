@@ -4,7 +4,7 @@
   align-items: center;
   text-align: center;
   padding: 24px;
-  color: var(--text-color, #102a43);
+  color: var(--color-text-primary);
 }
 
 .empty-state__illustration {
@@ -20,11 +20,13 @@
 
 .empty-state__description {
   margin: 0 0 16px 0;
-  color: var(--muted-color, #506672);
+  color: var(--color-text-secondary);
 }
 
 .empty-state__action {
-  background-color: var(--primary, #0369a1);
+  background-color: var(--color-primary);
+  /* Fixed white text on a solid --color-primary fill — stays AA-compliant in both themes. */
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   color: #fff;
   border: none;
   padding: 8px 14px;

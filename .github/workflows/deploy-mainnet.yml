@@ -1,0 +1,121 @@
+name: Mainnet Deployment
+
+# Trigger manually or on push to main (still requires human approval via environment gate)
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy-mainnet" to confirm'
+        required: true
+  push:
+    branches:
+      - main
+
+jobs:
+  # ── 1. Build & verify ────────────────────────────────────────────────────────
+  build:
+    name: Build contracts
+    runs-on: ubuntu-latest
+    outputs:
+      wasm-sha256: ${{ steps.hash.outputs.sha256 }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate manual confirmation (workflow_dispatch only)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "deploy-mainnet" ]; then
+            echo "Confirmation string incorrect. Aborting."
+            exit 1
+          fi
+
+      - name: Install Rust + wasm32 target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build WASM (release)
+        run: |
+          cargo build \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            --target wasm32-unknown-unknown \
+            --release
+
+      - name: Compute WASM SHA-256
+        id: hash
+        run: |
+          WASM=target/wasm32-unknown-unknown/release/stellar_save.wasm
+          SHA=$(sha256sum "$WASM" | awk '{print $1}')
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "WASM SHA-256: $SHA"
+
+      - name: Upload WASM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stellar-save-wasm
+          path: target/wasm32-unknown-unknown/release/stellar_save.wasm
+          retention-days: 30
+
+  # ── 2. Manual approval gate ──────────────────────────────────────────────────
+  # The "mainnet" GitHub Environment must be configured with required reviewers
+  # in Settings → Environments → mainnet → Required reviewers.
+  approve:
+    name: Await mainnet approval
+    needs: build
+    runs-on: ubuntu-latest
+    environment: mainnet          # ← triggers the environment protection rule
+    steps:
+      - name: Approval granted
+        run: |
+          echo "Deployment approved by ${{ github.actor }}"
+          echo "WASM SHA-256 to deploy: ${{ needs.build.outputs.wasm-sha256 }}"
+
+  # ── 3. Deploy ────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to mainnet
+    needs: [build, approve]
+    runs-on: ubuntu-latest
+    environment: mainnet
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download WASM artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: stellar-save-wasm
+          path: target/wasm32-unknown-unknown/release/
+
+      - name: Install Stellar CLI
+        run: |
+          curl -sSfL https://github.com/stellar/stellar-cli/releases/latest/download/stellar-cli-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz -C /usr/local/bin
+
+      - name: Write deployer key
+        run: |
+          mkdir -p ~/.config/stellar
+          echo "${{ secrets.MAINNET_DEPLOYER_KEY }}" > ~/.config/stellar/identity_mainnet.toml
+        env:
+          MAINNET_DEPLOYER_KEY: ${{ secrets.MAINNET_DEPLOYER_KEY }}
+
+      - name: Deploy contract
+        run: |
+          AUTO_CONFIRM_MAINNET=true \
+          STELLAR_NETWORK=mainnet \
+          STELLAR_RPC_URL=${{ secrets.MAINNET_RPC_URL }} \
+          ./scripts/deploy_mainnet.sh
+        env:
+          MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
+
+      - name: Post deployment summary
+        run: |
+          echo "## ✅ Mainnet Deployment Complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "| | |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Deployed by | ${{ github.actor }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Commit | ${{ github.sha }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| WASM SHA-256 | ${{ needs.build.outputs.wasm-sha256 }} |" >> "$GITHUB_STEP_SUMMARY"

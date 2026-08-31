@@ -1,0 +1,45 @@
+name: Continuous Fuzzing
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # Daily at 3 AM UTC
+  workflow_dispatch:
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rust-src
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz
+
+      - name: Run fuzzing with persistent corpus
+        working-directory: ./contracts
+        run: |
+          cargo fuzz run main_fuzz -- -max_total_time=1800 -timeout=5
+
+      - name: Upload corpus & crashes
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fuzz-corpus
+          path: |
+            contracts/fuzz/corpus/
+            contracts/fuzz/artifacts/
+
+      - name: Check for crashes
+        if: always()
+        run: |
+          if [ -d "contracts/fuzz/artifacts/main_fuzz" ] && [ "$(ls -A contracts/fuzz/artifacts/main_fuzz)" ]; then
+            echo "❌ Crash found during fuzzing!"
+            echo "Check artifacts for reproducer."
+            exit 1
+          fi

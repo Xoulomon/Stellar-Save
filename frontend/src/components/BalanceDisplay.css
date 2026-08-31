@@ -14,7 +14,7 @@
   margin: 0;
   font-size: 1.125rem;
   font-weight: 600;
-  color: var(--text-primary, #1a1a1a);
+  color: var(--color-text-primary);
 }
 
 .balance-display__refresh {
@@ -30,7 +30,7 @@
 }
 
 .balance-display__refresh:hover:not(:disabled) {
-  background-color: var(--bg-hover, #f5f5f5);
+  background-color: var(--color-surface-hover);
 }
 
 .balance-display__refresh:disabled {
@@ -44,23 +44,15 @@
   transition: transform 0.3s ease;
 }
 
+/* spin keyframe is defined globally in Spinner.css */
 .balance-display__refresh-icon.spinning {
   animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .balance-display__empty {
   text-align: center;
   padding: 2rem 1rem;
-  color: var(--text-secondary, #666);
+  color: var(--color-text-secondary);
 }
 
 .balance-display__error {
@@ -68,8 +60,8 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem;
-  background-color: var(--error-bg, #fee);
-  border: 1px solid var(--error-border, #fcc);
+  background-color: var(--color-danger-bg);
+  border: 1px solid var(--color-danger);
   border-radius: 0.5rem;
   margin-bottom: 1rem;
 }
@@ -79,7 +71,7 @@
 }
 
 .balance-display__error-message {
-  color: var(--error-text, #c00);
+  color: var(--color-danger-text);
   font-size: 0.875rem;
   flex: 1;
 }
@@ -90,7 +82,7 @@
   align-items: center;
   gap: 1rem;
   padding: 2rem 1rem;
-  color: var(--text-secondary, #666);
+  color: var(--color-text-secondary);
 }
 
 .balance-display__main {
@@ -107,22 +99,22 @@
 .balance-display__amount {
   font-size: 2rem;
   font-weight: 700;
-  color: var(--text-primary, #1a1a1a);
+  color: var(--color-text-primary);
 }
 
 .balance-display__currency {
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--text-secondary, #666);
+  color: var(--color-text-secondary);
 }
 
 .balance-display__timestamp {
   font-size: 0.75rem;
-  color: var(--text-tertiary, #999);
+  color: var(--color-text-secondary);
 }
 
 .balance-display__all-balances {
-  border-top: 1px solid var(--border-color, #e0e0e0);
+  border-top: 1px solid var(--color-border);
   padding-top: 1rem;
 }
 
@@ -130,7 +122,7 @@
   margin: 0 0 0.75rem 0;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--text-secondary, #666);
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -146,18 +138,18 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem;
-  background-color: var(--bg-secondary, #f9f9f9);
+  background-color: var(--color-bg-secondary);
   border-radius: 0.375rem;
 }
 
 .balance-display__asset-code {
   font-weight: 600;
-  color: var(--text-primary, #1a1a1a);
+  color: var(--color-text-primary);
 }
 
 .balance-display__asset-balance {
   font-weight: 500;
-  color: var(--text-secondary, #666);
+  color: var(--color-text-secondary);
 }
 
 /* Responsive adjustments */

@@ -1,0 +1,62 @@
+// ========== NORMALIZED TRANSACTION MODELS (Issue #1508) ==========
+//
+// This section defines a normalized transaction schema that separates
+// transaction metadata from on-chain data to prevent denormalization drift.
+//
+// Problem: Current schema may duplicate transaction fields across multiple
+// models (IndexedTransaction, RampTransaction), risking data inconsistency.
+//
+// Solution: Create a unified Transaction model with proper foreign keys
+// and separate on-chain data into linked records.
+
+model Transaction {
+  id               String    @id @default(cuid())
+  // Transaction identity and type
+  type             String    // 'contribution' | 'payout' | 'ramp-deposit' | 'ramp-withdraw'
+  status           String    @default("pending") // pending | confirmed | failed | reverted
+
+  // Stellar on-chain reference (NOT denormalized — fetched from IndexedTransaction)
+  stellarTxHash    String?   @unique
+
+  // Ramp-specific reference (NOT denormalized — fetched from RampTransaction)
+  rampTxId         String?   @unique
+
+  // Business context (foreign keys, not denormalized data)
+  groupId          String?
+  userId           String?
+  walletAddress    String?
+
+  // Amounts (canonical — cached data goes in linked records)
+  amountStroops    BigInt    @default(0)  // Stroops (1 XLM = 10M stroops)
+  amountXlm        Decimal   @db.Decimal(18, 8)
+  feePaid          Int       @default(0)  // In stroops
+
+  // Timeline
+  submittedAt      DateTime  @default(now())
+  confirmedAt      DateTime?
+  settledAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Links to on-chain data (lazy-loaded, not duplicated)
+  indexedTransaction IndexedTransaction?
+  rampTransaction    RampTransaction?
+
+  @@index([userId])
+  @@index([groupId])
+  @@index([walletAddress])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@index([confirmedAt])
+}
+
+// Note: IndexedTransaction and RampTransaction should be keyed to Transaction
+// via stellarTxHash and rampTxId respectively, not duplicated.
+//
+// Migration plan:
+// 1. Add Transaction model (this schema)
+// 2. Backfill Transaction records from IndexedTransaction and RampTransaction
+// 3. Add foreign key references: IndexedTransaction.transactionId, RampTransaction.transactionId
+// 4. Remove denormalized fields from metrics models (use COUNT() queries instead)
+// 5. Create views for analytics (or cached snapshots via separate AnalyticsSnapshot model)

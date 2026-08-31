@@ -1,0 +1,134 @@
+name: Turbo CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'design/**'
+      - 'LICENSE'
+
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+jobs:
+  # ── TypeScript packages: build / lint / test (turbo affected) ───────────────
+  ts:
+    name: TS Build · Lint · Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2          # needed for turbo affected
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build affected packages
+        run: pnpm turbo run build --filter=...[HEAD^1]
+
+      - name: Lint affected packages
+        run: pnpm turbo run lint --filter=...[HEAD^1]
+
+      - name: Test affected packages
+        run: pnpm turbo run test --filter=...[HEAD^1]
+
+      - name: Typecheck affected packages
+        run: pnpm turbo run typecheck --filter=...[HEAD^1]
+
+      - name: Upload frontend coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+          retention-days: 14
+
+  # ── Rust contracts (unchanged from before) ──────────────────────────────────
+  contracts:
+    name: Contract Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Test + coverage
+        run: |
+          cargo llvm-cov \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            --lcov --output-path lcov.info \
+            -- --test-threads=1
+
+      - name: Check coverage ≥ 95%
+        run: |
+          cargo llvm-cov \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            --summary-only -- --test-threads=1 2>&1 | tee cov.txt
+          python3 -c "
+          import re, sys
+          m = re.search(r'Lines\s+([\d.]+)%', open('cov.txt').read())
+          cov = float(m.group(1)) if m else 0
+          sys.exit(0 if cov >= 95 else 1)
+          "
+
+      - uses: codecov/codecov-action@v4
+        with:
+          files: lcov.info
+          flags: contracts
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  # ── Build gate (must pass before deploy) ────────────────────────────────────
+  build-gate:
+    name: Build Gate
+    needs: [ts, contracts]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Full build (all packages)
+        run: pnpm turbo run build
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build Soroban contract
+        run: |
+          cargo build \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            --target wasm32-unknown-unknown --release

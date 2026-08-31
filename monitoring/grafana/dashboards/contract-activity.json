@@ -1,0 +1,49 @@
+{
+  "title": "Contract Activity",
+  "uid": "contract-activity",
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Contributions per Day",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "increase(events_indexed_total{event_type=\"contribution\"}[1d])",
+        "legendFormat": "contributions"
+      }]
+    },
+    {
+      "id": 2,
+      "title": "Active Groups",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "sum(increase(events_indexed_total{event_type=\"group_created\"}[30d])) - sum(increase(events_indexed_total{event_type=\"group_completed\"}[30d]))",
+        "legendFormat": "active groups"
+      }]
+    },
+    {
+      "id": 3,
+      "title": "Payout Volume",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "increase(events_indexed_total{event_type=\"payout\"}[1h])",
+        "legendFormat": "payouts/hr"
+      }]
+    },
+    {
+      "id": 4,
+      "title": "Error Rate (%)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "100 * sum(rate(http_requests_total{app=\"stellar-save-backend\",status_code=~\"5..\"}[5m])) / sum(rate(http_requests_total{app=\"stellar-save-backend\"}[5m]))",
+        "legendFormat": "error %"
+      }]
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+.group-metrics {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.group-metrics-header h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: var(--color-text-primary);
+}
+
+.group-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.group-metric-item {
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.group-metric-label {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.group-metric-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.group-metric-trend {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.group-metric-trend-improving {
+  color: var(--color-success);
+}
+
+.group-metric-trend-declining {
+  color: var(--color-danger);
+}
+

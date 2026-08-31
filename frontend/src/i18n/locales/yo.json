@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "dashboard": "Pẹpẹ iṣẹ",
+    "groups": "Àwọn ẹgbẹ",
+    "profile": "Profaili",
+    "settings": "Ètò",
+    "leaderboard": "Àkójọ olori"
+  },
+  "settings": {
+    "title": "Ètò",
+    "subtitle": "Ṣeto àwọn aṣayan rẹ",
+    "appearance": "Irisi",
+    "appearanceDesc": "Yan bí Stellar Save ṣe dára fún ọ.",
+    "language": "Èdè",
+    "languageDesc": "Yan èdè tí o fẹ́.",
+    "theme": {
+      "light": "Imọlẹ",
+      "dark": "Òkunkun",
+      "system": "Ètò"
+    }
+  },
+  "scheduler": {
+    "title": "Ṣeto ilowosi",
+    "amount": "Iye (XLM)",
+    "dateTime": "Ọjọ́ àti àkókò tí a gbèrò",
+    "note": "Àkọsílẹ̀ (àṣàyàn)",
+    "schedule": "Ṣeto",
+    "scheduled": "Ti ṣeto",
+    "save": "Fipamọ",
+    "cancel": "Fagilé",
+    "edit": "Ṣatunkọ",
+    "balanceWarning": "Iye owó rẹ ({{balance}} XLM) le ma tó láti bo gbogbo àwọn ilowosi tí a gbèrò ({{total}} XLM lapapọ).",
+    "validation": {
+      "positiveAmount": "Iye gbọdọ jẹ́ nọ́mbà rere.",
+      "selectDate": "Jọwọ yan ọjọ́ àti àkókò.",
+      "futureDate": "Ọjọ́ tí a gbèrò gbọdọ jẹ́ ọjọ́ iwájú."
+    }
+  },
+  "common": {
+    "loading": "Ń gbé...",
+    "error": "Àṣìṣe kan wáyé.",
+    "save": "Fipamọ",
+    "cancel": "Fagilé",
+    "edit": "Ṣatunkọ",
+    "delete": "Parẹ",
+    "confirm": "Jẹrisi"
+  }
+}

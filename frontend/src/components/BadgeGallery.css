@@ -1,0 +1,185 @@
+/* BadgeGallery.css — Soulbound badge gallery grid */
+
+.badge-gallery {
+  width: 100%;
+}
+
+/* ── Grid layout ──────────────────────────────────────────────────────────── */
+
+.badge-gallery__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Individual badge card ────────────────────────────────────────────────── */
+
+.badge-gallery__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 12px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-paper);
+  cursor: default;
+  text-align: center;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.badge-gallery__card:hover,
+.badge-gallery__card:focus-within {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px var(--color-shadow);
+  outline: none;
+}
+
+.badge-gallery__card:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+
+/* ── Badge artwork ────────────────────────────────────────────────────────── */
+
+.badge-gallery__artwork {
+  font-size: 2.5rem;
+  line-height: 1;
+  user-select: none;
+  /* Ensure emoji renders at consistent size cross-platform */
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+}
+
+/* ── Badge name ───────────────────────────────────────────────────────────── */
+
+.badge-gallery__name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--color-text-primary);
+  margin: 0;
+  word-break: break-word;
+}
+
+
+/* ── Earned date ──────────────────────────────────────────────────────────── */
+
+.badge-gallery__date {
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1;
+}
+
+/* ── Share button (appears on hover/focus) ────────────────────────────────── */
+
+.badge-gallery__share {
+  display: none;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 6px;
+  font-size: 0.65rem;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-primary);
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.badge-gallery__card:hover .badge-gallery__share,
+.badge-gallery__card:focus-within .badge-gallery__share {
+  display: block;
+}
+
+.badge-gallery__share:hover {
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.badge-gallery__share:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+
+.badge-gallery__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 24px;
+  text-align: center;
+  border-radius: 12px;
+  border: 1px dashed var(--color-border);
+  background: var(--color-bg-secondary);
+}
+
+
+.badge-gallery__empty-icon {
+  font-size: 3rem;
+  line-height: 1;
+  opacity: 0.5;
+}
+
+.badge-gallery__empty-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.badge-gallery__empty-body {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+  max-width: 260px;
+}
+
+
+/* ── Loading state ────────────────────────────────────────────────────────── */
+
+.badge-gallery__loading {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.badge-gallery__skeleton {
+  width: 140px;
+  height: 110px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, var(--color-bg-secondary) 25%, var(--color-border) 50%, var(--color-bg-secondary) 75%);
+  background-size: 200% 100%;
+  animation: badge-shimmer 1.4s infinite;
+}
+
+@keyframes badge-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+
+/* ── Section header ───────────────────────────────────────────────────────── */
+
+.badge-gallery__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.badge-gallery__count {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}

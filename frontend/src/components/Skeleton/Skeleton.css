@@ -1,6 +1,9 @@
 :root {
-  --skeleton-bg: #e9ecef;
-  --skeleton-highlight: rgba(255, 255, 255, 0.6);
+  /* Component-scoped tokens that delegate to the theme-reactive tokens in src/index.css,
+     rather than fixed hex values — otherwise the skeleton placeholder would stay light-gray
+     even in dark mode. */
+  --skeleton-bg: var(--color-bg-secondary);
+  --skeleton-highlight: color-mix(in srgb, var(--color-text-primary) 20%, transparent);
 }
 
 .skeleton {

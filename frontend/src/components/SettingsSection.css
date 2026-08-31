@@ -5,7 +5,7 @@
 .settings-title {
   font-size: 1.5rem;
   font-weight: 600;
-  color: var(--color-text-primary, #111827);
+  color: var(--color-text-primary);
   margin-bottom: 1.5rem;
 }
 
@@ -25,22 +25,22 @@
 .setting-label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--color-text-primary, #111827);
+  color: var(--color-text-primary);
 }
 
 .settings-select {
   padding: 0.75rem;
-  border: 1px solid var(--color-border, #d1d5db);
+  border: 1px solid var(--color-border);
   border-radius: 0.5rem;
-  background: var(--color-bg-input, #ffffff);
-  color: var(--color-text-primary, #111827);
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
   font-size: 0.875rem;
 }
 
 .settings-select:focus {
   outline: none;
-  border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 .checkbox-group {
@@ -54,21 +54,21 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: var(--color-text-primary, #111827);
+  color: var(--color-text-primary);
   cursor: pointer;
 }
 
 .checkbox-label input[type="checkbox"] {
   width: 1rem;
   height: 1rem;
-  accent-color: var(--color-primary, #3b82f6);
+  accent-color: var(--color-primary);
 }
 
 .settings-actions {
   display: flex;
   justify-content: flex-end;
   padding-top: 1rem;
-  border-top: 1px solid var(--color-border, #e5e7eb);
+  border-top: 1px solid var(--color-border);
 }
 
 /* Responsive adjustments */

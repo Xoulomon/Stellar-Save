@@ -22,14 +22,14 @@
 
 .tabs-horizontal .tabs-list {
   flex-direction: row;
-  border-bottom: 2px solid #333;
+  border-bottom: 2px solid var(--color-border);
   overflow-x: auto;
   scrollbar-width: thin;
 }
 
 .tabs-vertical .tabs-list {
   flex-direction: column;
-  border-right: 2px solid #333;
+  border-right: 2px solid var(--color-border);
   min-width: 200px;
 }
 
@@ -37,7 +37,7 @@
 .tabs-trigger {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-secondary);
   cursor: pointer;
   font-family: inherit;
   font-size: 0.95em;
@@ -53,18 +53,18 @@
 }
 
 .tabs-trigger:hover:not(.tabs-trigger-disabled) {
-  color: rgba(255, 255, 255, 0.9);
-  background-color: rgba(100, 108, 255, 0.1);
+  color: var(--color-text-primary);
+  background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 .tabs-trigger:focus-visible {
-  outline: 2px solid #646cff;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
 .tabs-trigger-active {
-  color: #646cff;
+  color: var(--color-primary);
 }
 
 .tabs-trigger-disabled {
@@ -80,7 +80,7 @@
 
 /* Default Variant */
 .tabs-default .tabs-trigger-active {
-  background-color: rgba(100, 108, 255, 0.15);
+  background-color: color-mix(in srgb, var(--color-primary) 15%, transparent);
 }
 
 .tabs-default.tabs-horizontal .tabs-trigger-active::after {
@@ -90,7 +90,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background-color: #646cff;
+  background-color: var(--color-primary);
 }
 
 .tabs-default.tabs-vertical .tabs-trigger-active::after {
@@ -100,7 +100,7 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background-color: #646cff;
+  background-color: var(--color-primary);
 }
 
 /* Pills Variant */
@@ -114,12 +114,14 @@
 }
 
 .tabs-pills .tabs-trigger-active {
-  background-color: #646cff;
+  background-color: var(--color-primary);
+  /* Fixed white text on a solid --color-primary fill — stays AA-compliant in both themes. */
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   color: #fff;
 }
 
 .tabs-pills .tabs-trigger-active:hover {
-  background-color: #535bf2;
+  background-color: var(--color-primary-hover);
 }
 
 /* Underline Variant */
@@ -129,11 +131,11 @@
 }
 
 .tabs-underline.tabs-horizontal .tabs-list {
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .tabs-underline.tabs-vertical .tabs-list {
-  border-right: 1px solid #333;
+  border-right: 1px solid var(--color-border);
 }
 
 .tabs-underline .tabs-trigger {
@@ -147,7 +149,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background-color: #646cff;
+  background-color: var(--color-primary);
 }
 
 .tabs-underline.tabs-vertical .tabs-trigger-active::after {
@@ -157,7 +159,7 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background-color: #646cff;
+  background-color: var(--color-primary);
 }
 
 /* Tab Content */
@@ -180,7 +182,7 @@
   .tabs-vertical .tabs-list {
     flex-direction: row;
     border-right: none;
-    border-bottom: 2px solid #333;
+    border-bottom: 2px solid var(--color-border);
     min-width: auto;
     overflow-x: auto;
   }
@@ -190,7 +192,6 @@
   }
 
   .tabs-vertical .tabs-trigger-active::after {
-    right: auto;
     top: auto;
     bottom: -2px;
     left: 0;
@@ -200,23 +201,3 @@
   }
 }
 
-/* Light Mode */
-@media (prefers-color-scheme: light) {
-  .tabs-trigger {
-    color: rgba(0, 0, 0, 0.7);
-  }
-
-  .tabs-trigger:hover:not(.tabs-trigger-disabled) {
-    color: rgba(0, 0, 0, 0.9);
-  }
-
-  .tabs-horizontal .tabs-list,
-  .tabs-vertical .tabs-list {
-    border-color: #e0e0e0;
-  }
-
-  .tabs-underline.tabs-horizontal .tabs-list,
-  .tabs-underline.tabs-vertical .tabs-list {
-    border-color: #e0e0e0;
-  }
-}

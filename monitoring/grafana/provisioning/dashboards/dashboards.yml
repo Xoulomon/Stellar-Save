@@ -1,0 +1,15 @@
+apiVersion: 1
+
+# Load every dashboard JSON mounted into /var/lib/grafana/dashboards
+# (backend.json, contract-activity.json, costs.json, distributed-tracing.json …).
+providers:
+  - name: stellar-save
+    orgId: 1
+    folder: Stellar-Save
+    type: file
+    disableDeletion: false
+    editable: true
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

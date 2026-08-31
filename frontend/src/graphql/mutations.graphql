@@ -1,0 +1,15 @@
+mutation SetPreferences(
+  $userId: ID!
+  $minContribution: Float
+  $maxContribution: Float
+  $preferredDuration: Int
+  $tags: [String!]!
+) {
+  setPreferences(
+    userId: $userId
+    minContribution: $minContribution
+    maxContribution: $maxContribution
+    preferredDuration: $preferredDuration
+    tags: $tags
+  )
+}

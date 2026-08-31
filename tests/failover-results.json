@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-07-30T09:43:18.676024Z",
+  "dry_run": true,
+  "rto_threshold_seconds": 150,
+  "failover_time_seconds": 10,
+  "dns_shifted": true,
+  "health_endpoint_continuous": true,
+  "primary_recovered": true,
+  "passed": true,
+  "primary_region": "us-east-1",
+  "secondary_region": "eu-west-1",
+  "tests_passed": 8,
+  "tests_failed": 0
+}

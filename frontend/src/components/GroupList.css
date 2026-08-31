@@ -19,24 +19,24 @@
 
 .group-list-sort-button {
   padding: 0.5rem 1rem;
-  background: #fff;
-  border: 1px solid #e0e0e0;
+  background: var(--color-bg-paper);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #333;
+  color: var(--color-text-primary);
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
 }
 
 .group-list-sort-button:hover {
-  background: #f5f5f5;
-  border-color: #d0d0d0;
+  background: var(--color-surface-hover);
+  border-color: var(--color-border);
 }
 
 .group-list-sort-button:active {
-  background: #e8e8e8;
+  background: var(--color-bg-secondary);
 }
 
 .group-list-content {
@@ -57,7 +57,7 @@
 
 .group-list-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px var(--color-shadow);
 }
 
 .group-list-item-content {
@@ -77,12 +77,16 @@
 }
 
 .group-list-item-avatar-placeholder {
+  /* Decorative generated-avatar gradient — intentionally a fixed brand accent rather than
+     a theme token, the same way a user's avatar photo wouldn't change with theme either. */
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
   font-weight: 600;
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   color: #fff;
 }
 
@@ -95,7 +99,7 @@
   margin: 0 0 0.25rem 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -104,7 +108,7 @@
 .group-list-item-description {
   margin: 0 0 0.5rem 0;
   font-size: 0.875rem;
-  color: #666;
+  color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -114,7 +118,7 @@
   display: flex;
   gap: 1rem;
   font-size: 0.75rem;
-  color: #999;
+  color: var(--color-text-secondary);
 }
 
 .group-list-item-members,
@@ -126,7 +130,7 @@
 .group-list-pagination {
   margin-top: auto;
   padding-top: 1rem;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--color-border);
 }
 
 /* Responsive design */

@@ -1,0 +1,16 @@
+{
+  "name": "@stellar-save/events-schema",
+  "version": "1.0.0",
+  "description": "Canonical event schema and generated types for Stellar-Save contract events",
+  "main": "generated/events.ts",
+  "scripts": {
+    "codegen": "node codegen.js",
+    "check-drift": "node check-drift.js"
+  },
+  "files": [
+    "schema.json",
+    "generated/",
+    "codegen.js",
+    "check-drift.js"
+  ]
+}

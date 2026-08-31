@@ -6,10 +6,15 @@
 export interface ParsedError {
   message: string;
   code?: string;
-  isUserAction?: boolean; // User-cancelled/re-rejectable
+  isUserAction?: boolean;
   isNetworkError?: boolean;
   isWalletError?: boolean;
-  action?: string; // Suggested action e.g. "switch network"
+  action?: string;
+}
+
+interface ErrorWithCode extends Error {
+  code?: string;
+  data?: Record<string, unknown>;
 }
 
 // Known Stellar/Freighter error patterns
@@ -52,7 +57,7 @@ export function errorHandler(error: unknown): ParsedError {
     };
   }
 
-  const errObj = error as Error & { code?: string; data?: any };
+  const errObj = error as ErrorWithCode;
 
   // Check known patterns
   for (const [type, patterns] of Object.entries(KNOWN_ERRORS)) {
@@ -129,7 +134,7 @@ function getUserFriendlyError(type: string, err: Error): ParsedError {
   };
 }
 
-function handleStellarCode(err: Error & { code?: string; data?: any }): ParsedError {
+function handleStellarCode(err: ErrorWithCode): ParsedError {
   if (!err.code) {
     return {
       message: 'Unknown Stellar SDK error. Please try again.',
@@ -157,9 +162,8 @@ function handleStellarCode(err: Error & { code?: string; data?: any }): ParsedEr
 }
 
 function extractTechnicalDetails(err: Error): Partial<ParsedError> {
-  return {
-    code: (err as any).code || undefined
-  };
+  const code = (err as ErrorWithCode).code;
+  return code !== undefined ? { code } : {};
 }
 
 // Common usage example

@@ -1,4 +1,7 @@
 import { useRef } from "react"
+
+import { getExplorerTxUrl } from "../utils/explorerUrl"
+
 import type { PayoutQueueData, PayoutEntry, PayoutStatus } from "../types/contribution"
 
 function formatAddress(address: string): string {
@@ -70,7 +73,7 @@ function PayoutRow({
         </p>
         {entry.txHash && (
           <a
-            href={`https://stellar.expert/explorer/testnet/tx/${entry.txHash}`}
+            href={getExplorerTxUrl(entry.txHash)}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-indigo-500 hover:underline"
@@ -91,7 +94,7 @@ function PayoutRow({
   )
 }
 
-interface PayoutQueueProps {
+export interface PayoutQueueProps {
   data: PayoutQueueData
   maxHeight?: number
 }

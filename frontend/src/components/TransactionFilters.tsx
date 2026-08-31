@@ -1,6 +1,8 @@
 import React from 'react';
-import type { TransactionFilters as FilterType, TransactionType } from '../types/transaction';
+
 import { Badge } from './Badge';
+
+import type { TransactionFilters as FilterType, TransactionType } from '../types/transaction';
 
 interface Props {
   filters: FilterType;
@@ -29,6 +31,13 @@ const TransactionFilters: React.FC<Props> = ({ filters, onChange }) => {
     onChange({ ...filters, status: newStatuses });
   };
 
+  const handleFilterKeyDown = (e: React.KeyboardEvent, handler: () => void) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handler();
+    }
+  };
+
   return (
     <div className="flex flex-wrap gap-4 bg-gray-900 p-4 rounded-xl border border-gray-800">
       <div>
@@ -40,7 +49,12 @@ const TransactionFilters: React.FC<Props> = ({ filters, onChange }) => {
               <div
                 key={t}
                 onClick={() => toggleType(t)}
+                onKeyDown={(e) => handleFilterKeyDown(e, () => toggleType(t))}
                 className="cursor-pointer"
+                role="button"
+                tabIndex={0}
+                aria-pressed={isActive}
+                aria-label={`Filter by type ${t}${isActive ? ', active' : ''}`}
               >
                 <Badge variant={isActive ? 'primary' : 'secondary'}>
                   {t}
@@ -60,7 +74,12 @@ const TransactionFilters: React.FC<Props> = ({ filters, onChange }) => {
               <div
                 key={s}
                 onClick={() => toggleStatus(s)}
+                onKeyDown={(e) => handleFilterKeyDown(e, () => toggleStatus(s))}
                 className="cursor-pointer"
+                role="button"
+                tabIndex={0}
+                aria-pressed={isActive}
+                aria-label={`Filter by status ${s}${isActive ? ', active' : ''}`}
               >
                 <Badge variant={isActive ? 'success' : 'secondary'}>
                   {s}

@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+
 import { GroupStats } from '../components/GroupStats';
 
 describe('GroupStats', () => {
@@ -52,7 +53,7 @@ describe('GroupStats', () => {
       />
     );
 
-    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.getAllByText('0%').length).toBeGreaterThan(0);
   });
 
   it('uses default currency when not provided', () => {

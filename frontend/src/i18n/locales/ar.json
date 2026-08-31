@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "groups": "المجموعات",
+    "profile": "الملف الشخصي",
+    "settings": "الإعدادات",
+    "leaderboard": "لوحة المتصدرين"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "subtitle": "تكوين تفضيلاتك",
+    "appearance": "المظهر",
+    "appearanceDesc": "اختر كيف يبدو Stellar Save لك.",
+    "language": "اللغة",
+    "languageDesc": "اختر لغتك المفضلة.",
+    "theme": {
+      "light": "فاتح",
+      "dark": "داكن",
+      "system": "النظام"
+    }
+  },
+  "scheduler": {
+    "title": "جدولة مساهمة",
+    "amount": "المبلغ (XLM)",
+    "dateTime": "التاريخ والوقت المجدول",
+    "note": "ملاحظة (اختياري)",
+    "schedule": "جدولة",
+    "scheduled": "مجدول",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "edit": "تعديل",
+    "balanceWarning": "رصيدك ({{balance}} XLM) قد لا يكفي لتغطية جميع المساهمات المجدولة ({{total}} XLM إجمالاً).",
+    "validation": {
+      "positiveAmount": "يجب أن يكون المبلغ رقماً موجباً.",
+      "selectDate": "يرجى اختيار تاريخ ووقت.",
+      "futureDate": "يجب أن يكون التاريخ المجدول في المستقبل."
+    }
+  },
+  "common": {
+    "loading": "جاري التحميل...",
+    "error": "حدث خطأ.",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "confirm": "تأكيد"
+  }
+}

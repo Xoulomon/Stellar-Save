@@ -18,7 +18,7 @@
   margin: 0;
   font-size: 1.75rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.87);
+  color: var(--color-text-primary);
 }
 
 /* Overview Section */
@@ -42,7 +42,7 @@
 
 .group-details-info-label {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -50,25 +50,25 @@
 .group-details-info-value {
   font-size: 1.125rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.87);
+  color: var(--color-text-primary);
   text-transform: capitalize;
 }
 
 .group-details-description {
   padding: 1rem;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--color-bg-secondary);
   border-radius: 8px;
 }
 
 .group-details-description h4 {
   margin: 0 0 0.5rem 0;
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.87);
+  color: var(--color-text-primary);
 }
 
 .group-details-description p {
   margin: 0;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-secondary);
   line-height: 1.6;
 }
 
@@ -88,33 +88,33 @@
 .group-details-progress-header h4 {
   margin: 0;
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.87);
+  color: var(--color-text-primary);
 }
 
 .group-details-progress-text {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #646cff;
+  color: var(--color-primary);
 }
 
 .group-details-progress-bar {
   width: 100%;
   height: 8px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--color-border);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .group-details-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #646cff 0%, #535bf2 100%);
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
 
 .group-details-progress-percentage {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-secondary);
   text-align: right;
 }
 
@@ -139,12 +139,12 @@
 .group-details-cycle-header h4 {
   margin: 0;
   font-size: 1.125rem;
-  color: rgba(255, 255, 255, 0.87);
+  color: var(--color-text-primary);
 }
 
 .group-details-cycle-dates {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-secondary);
   margin-bottom: 1rem;
 }
 
@@ -157,14 +157,14 @@
 .group-details-cycle-amount {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #646cff;
+  color: var(--color-primary);
   text-align: right;
 }
 
 .group-details-cycle-history h4 {
   margin: 0 0 1rem 0;
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.87);
+  color: var(--color-text-primary);
 }
 
 .group-details-cycle-list {
@@ -175,14 +175,14 @@
 
 .group-details-cycle-item {
   padding: 1rem;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--color-bg-secondary);
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-border);
   transition: border-color 0.25s;
 }
 
 .group-details-cycle-item:hover {
-  border-color: rgba(100, 108, 255, 0.5);
+  border-color: var(--color-primary);
 }
 
 .group-details-cycle-item-header {
@@ -194,19 +194,19 @@
 
 .group-details-cycle-number {
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.87);
+  color: var(--color-text-primary);
 }
 
 .group-details-cycle-item-dates {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-secondary);
   margin-bottom: 0.5rem;
 }
 
 .group-details-cycle-item-amount {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #646cff;
+  color: var(--color-primary);
 }
 
 /* Members Section */
@@ -219,7 +219,7 @@
 .group-details-members-header h4 {
   margin: 0;
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.87);
+  color: var(--color-text-primary);
 }
 
 .group-details-members-list {
@@ -233,9 +233,9 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--color-bg-secondary);
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-border);
   transition: border-color 0.25s, transform 0.25s;
 }
 
@@ -244,7 +244,7 @@
 }
 
 .group-details-member-clickable:hover {
-  border-color: #646cff;
+  border-color: var(--color-primary);
   transform: translateY(-2px);
 }
 
@@ -255,13 +255,13 @@
 
 .group-details-member-name {
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.87);
+  color: var(--color-text-primary);
   margin-bottom: 0.25rem;
 }
 
 .group-details-member-address {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-secondary);
   font-family: monospace;
 }
 
@@ -275,7 +275,7 @@
 .group-details-member-contributions {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #646cff;
+  color: var(--color-primary);
 }
 
 /* Contributions Section */
@@ -288,7 +288,7 @@
 .group-details-contributions-header h4 {
   margin: 0;
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.87);
+  color: var(--color-text-primary);
 }
 
 .group-details-contributions-list {
@@ -302,9 +302,9 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--color-bg-secondary);
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-border);
   transition: border-color 0.25s, transform 0.25s;
 }
 
@@ -313,7 +313,7 @@
 }
 
 .group-details-contribution-clickable:hover {
-  border-color: #646cff;
+  border-color: var(--color-primary);
   transform: translateY(-2px);
 }
 
@@ -333,12 +333,12 @@
 
 .group-details-contribution-member {
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.87);
+  color: var(--color-text-primary);
 }
 
 .group-details-contribution-date {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-secondary);
 }
 
 .group-details-contribution-details {
@@ -351,7 +351,7 @@
 .group-details-contribution-amount {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #646cff;
+  color: var(--color-primary);
 }
 
 /* Responsive */
@@ -398,70 +398,3 @@
   }
 }
 
-/* Light mode */
-@media (prefers-color-scheme: light) {
-  .group-details-title {
-    color: rgba(0, 0, 0, 0.87);
-  }
-
-  .group-details-info-label {
-    color: rgba(0, 0, 0, 0.6);
-  }
-
-  .group-details-info-value {
-    color: rgba(0, 0, 0, 0.87);
-  }
-
-  .group-details-description {
-    background-color: rgba(0, 0, 0, 0.05);
-  }
-
-  .group-details-description h4 {
-    color: rgba(0, 0, 0, 0.87);
-  }
-
-  .group-details-description p {
-    color: rgba(0, 0, 0, 0.7);
-  }
-
-  .group-details-progress-bar {
-    background-color: rgba(0, 0, 0, 0.1);
-  }
-
-  .group-details-progress-percentage {
-    color: rgba(0, 0, 0, 0.6);
-  }
-
-  .group-details-cycle-header h4,
-  .group-details-cycle-history h4,
-  .group-details-members-header h4,
-  .group-details-contributions-header h4 {
-    color: rgba(0, 0, 0, 0.87);
-  }
-
-  .group-details-cycle-dates,
-  .group-details-cycle-item-dates {
-    color: rgba(0, 0, 0, 0.6);
-  }
-
-  .group-details-cycle-number {
-    color: rgba(0, 0, 0, 0.87);
-  }
-
-  .group-details-cycle-item,
-  .group-details-member-item,
-  .group-details-contribution-item {
-    background-color: rgba(0, 0, 0, 0.05);
-    border-color: rgba(0, 0, 0, 0.1);
-  }
-
-  .group-details-member-name,
-  .group-details-contribution-member {
-    color: rgba(0, 0, 0, 0.87);
-  }
-
-  .group-details-member-address,
-  .group-details-contribution-date {
-    color: rgba(0, 0, 0, 0.6);
-  }
-}

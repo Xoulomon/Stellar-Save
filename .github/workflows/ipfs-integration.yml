@@ -1,0 +1,52 @@
+name: IPFS Integration Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/src/ipfs/**'
+      - 'backend/test/integration/ipfs.test.ts'
+      - 'backend/test/helpers/ipfs-test-node.ts'
+      - 'backend/test/helpers/in-memory-redis.ts'
+      - '.github/workflows/ipfs-integration.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/src/ipfs/**'
+      - 'backend/test/integration/ipfs.test.ts'
+      - 'backend/test/helpers/ipfs-test-node.ts'
+      - 'backend/test/helpers/in-memory-redis.ts'
+      - '.github/workflows/ipfs-integration.yml'
+
+jobs:
+  ipfs-integration-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run IPFS integration tests
+        env:
+          NODE_ENV: test
+          REDIS_HOST: ""
+        run: |
+          # The IPFS integration suite runs against an in-process IPFS HTTP RPC
+          # double and an in-memory Redis double, so no external services are
+          # required.
+          npx jest --config jest.integration.config.js --runInBand --testPathPattern=ipfs

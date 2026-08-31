@@ -4,14 +4,14 @@
 
 .member-list-header {
   padding: 1rem;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .member-list-title {
   margin: 0;
   font-size: 1.125rem;
   font-weight: 600;
-  color: var(--color-text-primary, #111827);
+  color: var(--color-text-primary);
 }
 
 .member-list-table {
@@ -23,8 +23,8 @@
   grid-template-columns: 2fr 1fr 1fr;
   gap: 1rem;
   padding: 0.75rem 1rem;
-  background-color: var(--color-bg-secondary, #f9fafb);
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  background-color: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .sort-button {
@@ -33,7 +33,7 @@
   padding: 0;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   text-align: left;
   cursor: pointer;
   transition: color 0.2s;
@@ -42,7 +42,7 @@
 }
 
 .sort-button:hover {
-  color: var(--color-text-primary, #111827);
+  color: var(--color-text-primary);
 }
 
 .member-list-body {
@@ -55,12 +55,12 @@
   grid-template-columns: 2fr 1fr 1fr;
   gap: 1rem;
   padding: 1rem;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  border-bottom: 1px solid var(--color-border);
   transition: background-color 0.2s;
 }
 
 .member-row:hover {
-  background-color: var(--color-bg-secondary, #f9fafb);
+  background-color: var(--color-bg-secondary);
 }
 
 .member-row:last-child {
@@ -76,7 +76,7 @@
 .member-address {
   font-size: 0.875rem;
   font-family: monospace;
-  color: var(--color-text-primary, #111827);
+  color: var(--color-text-primary);
 }
 
 .member-status {
@@ -87,7 +87,7 @@
 .member-list-empty {
   padding: 2rem;
   text-align: center;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   font-size: 0.875rem;
 }
 
@@ -138,7 +138,7 @@
   .member-status::before {
     content: attr(data-label);
     font-size: 0.75rem;
-    color: var(--color-text-secondary, #6b7280);
+    color: var(--color-text-secondary);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;

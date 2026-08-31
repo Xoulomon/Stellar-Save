@@ -1,0 +1,321 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "StellarSave Contract Events",
+  "description": "Canonical event schema shared by contract, indexer, and clients. DO NOT edit generated files — edit this file and run codegen.",
+  "version": "1",
+  "events": {
+    "group_created": {
+      "topic": "group_created",
+      "fields": {
+        "group_id": "u64",
+        "creator": "address",
+        "contribution_amount": "i128",
+        "cycle_duration": "u64",
+        "max_members": "u32",
+        "created_at": "u64"
+      }
+    },
+    "member_joined": {
+      "topic": "member_joined",
+      "fields": {
+        "group_id": "u64",
+        "member": "address",
+        "member_count": "u32",
+        "joined_at": "u64"
+      }
+    },
+    "member_left": {
+      "topic": "member_left",
+      "fields": {
+        "group_id": "u64",
+        "member": "address",
+        "member_count": "u32",
+        "left_at": "u64"
+      }
+    },
+    "member_removed": {
+      "topic": "member_removed",
+      "fields": {
+        "group_id": "u64",
+        "member": "address",
+        "removed_by": "address",
+        "member_count": "u32",
+        "removed_at": "u64"
+      }
+    },
+    "contribution_made": {
+      "topic": "contribution_made",
+      "fields": {
+        "group_id": "u64",
+        "contributor": "address",
+        "amount": "i128",
+        "cycle": "u32",
+        "cycle_total": "i128",
+        "contributed_at": "u64"
+      }
+    },
+    "payout_executed": {
+      "topic": "payout_executed",
+      "fields": {
+        "group_id": "u64",
+        "recipient": "address",
+        "amount": "i128",
+        "cycle": "u32",
+        "executed_at": "u64"
+      }
+    },
+    "contribution_missed": {
+      "topic": "contribution_missed",
+      "fields": {
+        "group_id": "u64",
+        "member": "address",
+        "cycle": "u32",
+        "penalty_applied": "i128",
+        "missed_at": "u64"
+      }
+    },
+    "group_completed": {
+      "topic": "group_completed",
+      "fields": {
+        "group_id": "u64",
+        "creator": "address",
+        "total_cycles": "u32",
+        "total_distributed": "i128",
+        "completed_at": "u64"
+      }
+    },
+    "group_status_changed": {
+      "topic": "group_status_changed",
+      "fields": {
+        "group_id": "u64",
+        "old_status": "u32",
+        "new_status": "u32",
+        "changed_by": "address",
+        "changed_at": "u64"
+      }
+    },
+    "grace_period_contribution": {
+      "topic": "grace_period_contribution",
+      "fields": {
+        "group_id": "u64",
+        "contributor": "address",
+        "amount": "i128",
+        "cycle": "u32",
+        "seconds_late": "u64",
+        "contributed_at": "u64"
+      }
+    },
+    "group_metadata_updated": {
+      "topic": "group_metadata_updated",
+      "fields": {
+        "group_id": "u64",
+        "updated_by": "address",
+        "name": "string",
+        "description": "string",
+        "image_url": "string",
+        "updated_at": "u64"
+      }
+    },
+    "contract_paused": {
+      "topic": "contract_paused",
+      "fields": {
+        "admin": "address",
+        "timestamp": "u64"
+      }
+    },
+    "contract_unpaused": {
+      "topic": "contract_unpaused",
+      "fields": {
+        "admin": "address",
+        "timestamp": "u64"
+      }
+    },
+    "cycle_advanced": {
+      "topic": "cycle_advanced",
+      "fields": {
+        "group_id": "u64",
+        "old_cycle": "u32",
+        "new_cycle": "u32",
+        "payout_executed": "bool",
+        "defaulted": "bool",
+        "advanced_at": "u64"
+      }
+    },
+    "group_paused": {
+      "topic": "group_paused",
+      "fields": {
+        "group_id": "u64",
+        "paused_by": "address",
+        "paused_at": "u64"
+      }
+    },
+    "group_unpaused": {
+      "topic": "group_unpaused",
+      "fields": {
+        "group_id": "u64",
+        "unpaused_by": "address",
+        "unpaused_at": "u64"
+      }
+    },
+    "contribution_verified": {
+      "topic": "contribution_verified",
+      "fields": {
+        "group_id": "u64",
+        "contributor": "address",
+        "cycle": "u32",
+        "verified_at": "u64"
+      }
+    },
+    "contribution_amount_proposed": {
+      "topic": "contribution_amount_proposed",
+      "fields": {
+        "group_id": "u64",
+        "proposed_by": "address",
+        "old_amount": "i128",
+        "new_amount": "i128",
+        "proposed_at": "u64"
+      }
+    },
+    "contribution_amount_changed": {
+      "topic": "contribution_amount_changed",
+      "fields": {
+        "group_id": "u64",
+        "old_amount": "i128",
+        "new_amount": "i128",
+        "effective_cycle": "u32",
+        "changed_at": "u64"
+      }
+    },
+    "penalty_applied": {
+      "topic": "penalty_applied",
+      "fields": {
+        "group_id": "u64",
+        "member": "address",
+        "amount": "i128",
+        "cycle_id": "u32",
+        "applied_at": "u64"
+      }
+    },
+    "penalty_recovered": {
+      "topic": "penalty_recovered",
+      "fields": {
+        "group_id": "u64",
+        "member": "address",
+        "cycle_id": "u32",
+        "recovered_at": "u64"
+      }
+    },
+    "milestone_reached": {
+      "topic": "milestone_reached",
+      "fields": {
+        "group_id": "u64",
+        "member": "address",
+        "threshold": "u32",
+        "reached_at_cycle": "u32"
+      }
+    },
+    "member_invited": {
+      "topic": "member_invited",
+      "fields": {
+        "group_id": "u64",
+        "invited": "address",
+        "invited_by": "address",
+        "invited_at": "u64"
+      }
+    },
+    "invitation_revoked": {
+      "topic": "invitation_revoked",
+      "fields": {
+        "group_id": "u64",
+        "revoked": "address",
+        "revoked_by": "address",
+        "revoked_at": "u64"
+      }
+    },
+    "groups_merged": {
+      "topic": "groups_merged",
+      "fields": {
+        "merged_group_id": "u64",
+        "source_group_id_1": "u64",
+        "source_group_id_2": "u64",
+        "member_count": "u32",
+        "combined_balance": "i128",
+        "merged_at": "u64"
+      }
+    },
+    "reward_claimed": {
+      "topic": "reward_claimed",
+      "fields": {
+        "group_id": "u64",
+        "member": "address",
+        "amount": "i128",
+        "claimed_at": "u64"
+      }
+    },
+    "group_archived": {
+      "topic": "group_archived",
+      "fields": {
+        "group_id": "u64",
+        "archived_by": "address",
+        "archived_at": "u64"
+      }
+    },
+    "auto_contribution_executed": {
+      "topic": "auto_contribution_executed",
+      "fields": {
+        "group_id": "u64",
+        "member": "address",
+        "amount": "i128",
+        "cycle": "u32",
+        "executed_at": "u64"
+      }
+    },
+    "auto_contribution_failed": {
+      "topic": "auto_contribution_failed",
+      "fields": {
+        "group_id": "u64",
+        "member": "address",
+        "cycle": "u32",
+        "failed_at": "u64"
+      }
+    },
+    "group_rated": {
+      "topic": "group_rated",
+      "fields": {
+        "group_id": "u64",
+        "member": "address",
+        "stars": "u32",
+        "comment": "string",
+        "rated_at": "u64"
+      }
+    },
+    "fee_paid": {
+      "topic": "fee_paid",
+      "fields": {
+        "creator": "address",
+        "treasury": "address",
+        "amount": "i128",
+        "paid_at": "u64"
+      }
+    },
+    "refund_issued": {
+      "topic": "refund_issued",
+      "fields": {
+        "group_id": "u64",
+        "member": "address",
+        "amount": "i128",
+        "cycle": "u32",
+        "refunded_at": "u64"
+      }
+    },
+    "member_referred": {
+      "topic": "member_referred",
+      "fields": {
+        "group_id": "u64",
+        "invitee": "address",
+        "referrer": "address",
+        "referred_at": "u64"
+      }
+    }
+  }
+}

@@ -58,26 +58,28 @@
 /* ===== Color Variants ===== */
 /* Primary - Blue */
 .spinner-primary .spinner-track {
-  border-color: #646cff;
+  border-color: var(--color-primary);
 }
 
 /* Secondary - Dark */
 .spinner-secondary .spinner-track {
-  border-color: #1a1a1a;
+  border-color: var(--color-text-secondary);
 }
 
 /* Danger - Red */
 .spinner-danger .spinner-track {
-  border-color: #e53e3e;
+  border-color: var(--color-danger);
 }
 
 /* Success - Green */
 .spinner-success .spinner-track {
-  border-color: #38a169;
+  border-color: var(--color-success);
 }
 
-/* White - For dark backgrounds */
+/* White - For dark/colored backgrounds regardless of app theme (e.g. inside a filled
+   primary button), so this is intentionally fixed rather than theme-reactive. */
 .spinner-white .spinner-track {
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   border-color: #ffffff;
 }
 
@@ -98,6 +100,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Full-page modal scrim — intentionally a fixed black tint (not theme-reactive) so it
+     dims the page consistently in both themes, the same way a typical modal backdrop does. */
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   background-color: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(2px);
   z-index: 9999;
@@ -109,18 +114,12 @@
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background-color: rgba(255, 255, 255, 0.95);
+  background-color: color-mix(in srgb, var(--color-bg-paper) 95%, transparent);
+  color: var(--color-text-primary);
   border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 40px var(--color-shadow);
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .full-page-loader-content {
-    background-color: rgba(26, 26, 26, 0.95);
-    color: rgba(255, 255, 255, 0.87);
-  }
-}
 
 /* Overlay fade-in animation */
 @keyframes fadeInOverlay {

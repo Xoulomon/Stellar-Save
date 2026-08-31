@@ -32,30 +32,30 @@ Add `validate_max_members` to `StellarSaveContract` in `lib.rs`, following the s
     - `test_validate_max_members_no_config` — no config stored → `Ok(())`
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6_
 
-  - [ ]* 4.2 Write property test for Property 1 — below-minimum values are rejected
+  - [x]* 4.2 Write property test for Property 1 — below-minimum values are rejected
     - **Property 1: Below-minimum values are rejected**
     - **Validates: Requirements 1.2**
     - Use `proptest!` macro; generate arbitrary `(min, delta)` such that `value = min.saturating_sub(delta) < min`; assert `Err(StellarSaveError::InvalidState)`
 
-  - [ ]* 4.3 Write property test for Property 2 — above-maximum values are rejected
+  - [x]* 4.3 Write property test for Property 2 — above-maximum values are rejected
     - **Property 2: Above-maximum values are rejected**
     - **Validates: Requirements 1.3**
     - Use `proptest!` macro; generate arbitrary `(min, max_offset, delta)` such that `value = max.saturating_add(delta) > max`; assert `Err(StellarSaveError::InvalidState)`
 
-  - [ ]* 4.4 Write property test for Property 3 — in-range values (including boundaries) are accepted
+  - [x]* 4.4 Write property test for Property 3 — in-range values (including boundaries) are accepted
     - **Property 3: In-range values are accepted**
     - **Validates: Requirements 1.4, 2.1, 2.2**
     - Use `proptest!` macro; generate arbitrary `(min, max_offset, value_offset)` and clamp `value` to `[min, max]`; assert `Ok(())`
 
-  - [ ]* 4.5 Write property test for Property 4 — contract entry points reject out-of-range max_members
+  - [x]* 4.5 Write property test for Property 4 — contract entry points reject out-of-range max_members
     - **Property 4: Contract entry points reject out-of-range max_members**
     - **Validates: Requirements 3.1, 3.2**
     - Use `proptest!` macro; call `create_group` with `bad_value > config.max_members`; assert `Err(StellarSaveError::InvalidState)`
 
-  - [ ]* 4.6 Write property test for Property 5 — validator is deterministic
+  - [x]* 4.6 Write property test for Property 5 — validator is deterministic
     - **Property 5: Validator is deterministic (idempotence)**
     - **Validates: Requirements 4.7**
     - Use `proptest!` macro; call `validate_max_members` twice with the same value and same env state; assert both results are equal
 
-- [ ] 5. Checkpoint — Ensure all tests pass
+- [x] 5. Checkpoint — Ensure all tests pass
   - Run `cargo test -p stellar-save` and confirm all unit and property tests pass; ask the user if any questions arise.

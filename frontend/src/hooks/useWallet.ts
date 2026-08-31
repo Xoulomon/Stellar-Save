@@ -1,5 +1,7 @@
 import { useContext } from "react";
+
 import { WalletContext } from "../wallet/WalletProvider";
+
 import type { WalletContextValue } from "../wallet/types";
 
 export function useWallet(): WalletContextValue {

@@ -1,0 +1,32 @@
+.wallet-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  font-size: 0.875rem;
+}
+
+.wallet-status-indicator-connected {
+  background-color: color-mix(in srgb, var(--color-success) 5%, transparent);
+  border-color: color-mix(in srgb, var(--color-success) 20%, transparent);
+}
+
+.wallet-status-indicator-error {
+  background-color: color-mix(in srgb, var(--color-danger) 5%, transparent);
+  border-color: color-mix(in srgb, var(--color-danger) 20%, transparent);
+}
+
+.wallet-status-indicator-connecting {
+  background-color: color-mix(in srgb, var(--color-warning) 5%, transparent);
+  border-color: color-mix(in srgb, var(--color-warning) 20%, transparent);
+}
+
+@media (max-width: 768px) {
+  .wallet-status-indicator {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+}

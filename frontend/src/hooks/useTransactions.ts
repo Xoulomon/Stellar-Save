@@ -1,4 +1,15 @@
-import { useState, useEffect } from 'react';
+/**
+ * useTransactions.ts
+ *
+ * React hook that returns a paginated list of past transactions for the current user.
+ * Currently uses mock data; will be replaced with real Stellar Horizon API calls.
+ *
+ * Exposes: { transactions, isLoading }
+ * Note: This hook is unrelated to useTransaction — it fetches transaction history,
+ * not the lifecycle state of a single in-flight transaction.
+ */
+
+import { useAsyncData, mockDelay } from './useAsyncData';
 import type { Transaction } from '../types/transaction';
 
 // Mock data - Replace with real Stellar Horizon API later
@@ -68,18 +79,10 @@ const mockTransactions: Transaction[] = [
 ];
 
 export const useTransactions = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data, isLoading } = useAsyncData<Transaction[]>(
+    () => mockDelay(() => mockTransactions, 800),
+    [],
+  );
 
-  useEffect(() => {
-    // Simulate API delay
-    const timer = setTimeout(() => {
-      setTransactions(mockTransactions);
-      setIsLoading(false);
-    }, 800);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  return { transactions, isLoading };
+  return { transactions: data ?? [], isLoading };
 };

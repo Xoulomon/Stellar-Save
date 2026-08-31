@@ -47,34 +47,34 @@ impl GuessTheNumber {
 
     /// Guess a number between 1 and 10
     pub fn guess(env: &Env, a_number: u64, guesser: Address) -> Result<bool, Error> {
+        let current_number = Self::number(env);
+        let guessed_it = a_number == current_number;
         let xlm_client = xlm::token_client(env);
         let contract_address = env.current_contract_address();
-        let guessed_it = a_number == Self::number(env);
+
         if guessed_it {
             let balance = xlm_client.balance(&contract_address);
             if balance == 0 {
-                return Err(Error::NoBalanceToTransfer);
+                return Err(Error::InsufficientBalance);
             }
             // Methods `try_*` will return an error if the method fails
             // `.map_err` lets us convert the error to our custom Error type
             let _ = xlm_client
                 .try_transfer(&contract_address, &guesser, &balance)
-                .map_err(|_| Error::FailedToTransferToGuesser)?;
+                .map_err(|_| Error::TransferFailed)?;
         } else {
             guesser.require_auth();
             let _ = xlm_client
                 .try_transfer(&guesser, &contract_address, &xlm::to_stroops(1))
-                .map_err(|_| Error::FailedToTransferFromGuesser)?;
+                .map_err(|_| Error::TransferFailed)?;
         }
         Ok(guessed_it)
     }
 
     /// Admin can add more funds to the contract
     pub fn add_funds(env: &Env, amount: i128) {
-        Self::require_admin(env);
+        let admin = Self::require_admin(env);
         let contract_address = env.current_contract_address();
-        // unwrap here is safe because the admin was set in the constructor
-        let admin = Self::admin(env).unwrap();
         xlm::token_client(env).transfer(&admin, &contract_address, &amount);
     }
 
@@ -87,9 +87,10 @@ impl GuessTheNumber {
     /// readonly function to get the current number
     /// `pub(crate)` makes it accessible in the same crate, but not outside of it
     pub(crate) fn number(env: &Env) -> u64 {
-        // We can unwrap because the number is set in the constructor
-        // and then only reset by the admin
-        unsafe { env.storage().instance().get(THE_NUMBER).unwrap_unchecked() }
+        env.storage()
+            .instance()
+            .get(THE_NUMBER)
+            .expect("number not set")
     }
 
     /// Get current admin
@@ -106,11 +107,14 @@ impl GuessTheNumber {
         env.storage().instance().set(ADMIN_KEY, &admin);
     }
 
-    /// Private helper function to require auth from the admin
-    fn require_admin(env: &Env) {
+    /// Private helper function to require auth from the admin and return the admin Address
+    fn require_admin(env: &Env) -> Address {
         let admin = Self::admin(env).expect("admin not set");
         admin.require_auth();
+        admin
     }
 }
 
 mod test;
+#[cfg(test)]
+mod test_utils;

@@ -1,0 +1,101 @@
+name: License Compliance
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  rust-licenses:
+    name: Rust — cargo-deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          command: check licenses bans advisories
+          arguments: --all-features
+          manifest-path: Cargo.toml
+
+  npm-licenses-backend:
+    name: npm — backend license check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Install license-checker
+        run: npm install -g license-checker@25.0.1
+
+      - name: Check backend licenses
+        run: |
+          ALLOWED=$(node -e "
+            const p = require('../.license-policy.json');
+            process.stdout.write(p.allowedLicenses.join(';'));
+          ")
+          license-checker \
+            --onlyAllow "$ALLOWED" \
+            --excludePrivatePackages \
+            --production \
+            --json \
+            --out /tmp/backend-licenses.json
+        working-directory: backend
+
+      - name: Upload license report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-license-report
+          path: /tmp/backend-licenses.json
+
+  npm-licenses-frontend:
+    name: npm — frontend license check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Install license-checker
+        run: npm install -g license-checker@25.0.1
+
+      - name: Check frontend licenses
+        run: |
+          ALLOWED=$(node -e "
+            const p = require('../.license-policy.json');
+            process.stdout.write(p.allowedLicenses.join(';'));
+          ")
+          license-checker \
+            --onlyAllow "$ALLOWED" \
+            --excludePrivatePackages \
+            --production \
+            --json \
+            --out /tmp/frontend-licenses.json
+        working-directory: frontend
+
+      - name: Upload license report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-license-report
+          path: /tmp/frontend-licenses.json

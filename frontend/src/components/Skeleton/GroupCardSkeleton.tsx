@@ -1,5 +1,4 @@
-import { Skeleton } from "./Skeleton";
-import "./Skeleton.css";
+import { Skeleton } from "@mui/material";
 
 export function GroupCardSkeleton() {
   return (
@@ -12,53 +11,59 @@ export function GroupCardSkeleton() {
         width: "100%",
       }}
     >
-      {/* Header */}
+      {/* Image */}
+      <Skeleton variant="rectangular" width="100%" height={160} />
+
+      {/* Header: title + badge */}
       <div
         style={{
-          padding: "1.2em 1.5em",
-          borderBottom: "1px solid #333",
+          padding: "1em 1.5em 0.5em",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           gap: "1em",
         }}
       >
-        <Skeleton variant="text" width="60%" height={24} />
-        <Skeleton variant="rounded" width={60} height={24} />
+        <Skeleton variant="text" width="55%" height={28} />
+        <Skeleton variant="rounded" width={64} height={24} />
       </div>
 
-      {/* Body */}
-      <div style={{ padding: "1.5em" }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-            gap: "1.5em",
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.4em" }}>
-            <Skeleton variant="text" width="80%" height={14} />
-            <Skeleton variant="text" width="50%" height={28} />
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.4em" }}>
-            <Skeleton variant="text" width="80%" height={14} />
-            <Skeleton variant="text" width="70%" height={28} />
-          </div>
+      {/* Description */}
+      <div style={{ padding: "0.25em 1.5em 0.75em" }}>
+        <Skeleton variant="text" width="90%" height={16} />
+        <Skeleton variant="text" width="70%" height={16} />
+      </div>
+
+      {/* Stats */}
+      <div
+        style={{
+          padding: "0.75em 1.5em",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "1em",
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.3em" }}>
+          <Skeleton variant="text" width="70%" height={13} />
+          <Skeleton variant="text" width="50%" height={24} />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.3em" }}>
+          <Skeleton variant="text" width="80%" height={13} />
+          <Skeleton variant="text" width="60%" height={24} />
         </div>
       </div>
 
-      {/* Footer */}
+      {/* Footer buttons */}
       <div
         style={{
-          padding: "1em 1.5em",
+          padding: "0.75em 1.5em 1em",
           borderTop: "1px solid #333",
           display: "flex",
-          alignItems: "center",
           justifyContent: "flex-end",
-          gap: "0.8em",
+          gap: "0.75em",
         }}
       >
-        <Skeleton variant="rounded" width={100} height={36} />
+        <Skeleton variant="rounded" width={110} height={36} />
         <Skeleton variant="rounded" width={100} height={36} />
       </div>
     </div>

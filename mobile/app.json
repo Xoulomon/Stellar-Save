@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "Stellar Save",
+    "slug": "stellar-save-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "stellarsave",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.stellarsave.mobile"
+    },
+    "android": {
+      "package": "com.stellarsave.mobile"
+    }
+  }
+}

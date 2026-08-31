@@ -1,0 +1,4 @@
+# List of quarantined Maestro flows — one path per line (relative to mobile/).
+# Lines starting with # are comments.
+# Example:
+#   .maestro/flaky_flow.yaml    # QUARANTINED: see issue #123

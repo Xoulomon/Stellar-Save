@@ -1,13 +1,13 @@
 # Rust
 target/
-Cargo.lock
 **/*.rs.bk
 *.pdb
 
-# Frontend
+# Frontend & Dependencies
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+node_modules/
 
 # Environment
 .env
