@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useWallet } from '../hooks/useWallet';
+
 import { ROUTES } from './constants';
+import { useWallet } from '../hooks/useWallet';
 
 /**
  * Hook to handle post-authentication redirects.

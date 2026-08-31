@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { ContributionCycle, Member } from "../types/contribution";
+
+import type { ContributionCycle, Member } from "../types/contribution";
 
 interface ContributionStatusProps {
   cycle: ContributionCycle;

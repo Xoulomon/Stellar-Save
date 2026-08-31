@@ -3,16 +3,40 @@
  * Use these constants instead of hardcoded strings throughout the application.
  */
 export const ROUTES = {
-  HOME: "/",
-  DASHBOARD: "/dashboard",
-  GROUPS: "/groups",
-  GROUP_DETAIL: "/groups/:groupId",
-  PROFILE: "/profile",
-  SETTINGS: "/settings",
-  NOT_FOUND: "/404",
-  ERROR: "/500",
-  GROUP_CREATE: "/groups/create",
-  GROUPS_BROWSE: "/groups/browse",
+  HOME: '/',
+  LANDING: '/welcome',
+  DASHBOARD: '/dashboard',
+  GROUPS: '/groups',
+  GROUP_DETAIL: '/groups/:groupId',
+  GROUP_CREATE: '/groups/create',
+  GROUPS_BROWSE: '/groups/browse',
+  GROUPS_COMPARE: '/groups/compare',
+  GROUP_CALENDAR: '/groups/:groupId/calendar',
+  GROUP_ANALYTICS: '/groups/:groupId/analytics',
+  GROUP_MEMBERS: '/groups/:groupId/members',
+  GROUP_JOIN: '/join/:inviteCode',
+  APP_DOWNLOAD: '/app/:inviteCode',
+  PROFILE: '/profile',
+  PROFILE_DETAIL: '/profile/:address',
+  SETTINGS: '/settings',
+  SETTINGS_NOTIFICATIONS: '/settings/notifications',
+  LEADERBOARD: '/leaderboard',
+  TEMPLATES: '/templates',
+  ANALYTICS: '/analytics',
+  PLATFORM_ANALYTICS: '/platform-analytics',
+  TRANSACTIONS: '/transactions',
+  TRANSACTION_BUILDER: '/transactions/builder',
+  HARDWARE_WALLET: '/hardware-wallet',
+  MEMBER_PROFILE: '/members/:address',
+  ABOUT: '/about',
+  FEEDBACK_ADMIN: '/admin/feedback',
+  ADMIN_DASHBOARD: '/admin/dashboard',
+  RECOVERY: '/settings/recovery',
+  GOVERNANCE: '/governance',
+  NOT_FOUND: '/404',
+  ERROR: '/500',
+  /** Dev/visual-test only — registered when VITE_VISUAL_GALLERY=true */
+  VISUAL_GALLERY: '/__visual__/components',
 } as const;
 
 /**
@@ -21,8 +45,22 @@ export const ROUTES = {
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];
 
 /**
- * Helper to build parameterized routes
+ * Helper to build parameterized routes.
+ *
+ * Rules:
+ *  - Only routes that require dynamic path segments live here.
+ *  - Static routes (no params) should be referenced via ROUTES directly.
+ *  - Removed: deposit() and withdraw() — they generated stale /ramp/* paths
+ *    that diverged from ROUTES.DEPOSIT (/deposit) and ROUTES.WITHDRAW (/withdraw).
+ *    Use ROUTES.DEPOSIT / ROUTES.WITHDRAW directly instead.
  */
 export const buildRoute = {
   groupDetail: (groupId: string) => `/groups/${groupId}`,
+  groupCalendar: (groupId: string) => `/groups/${groupId}/calendar`,
+  groupAnalytics: (groupId: string) => `/groups/${groupId}/analytics`,
+  groupMembers: (groupId: string) => `/groups/${groupId}/members`,
+  groupJoin: (inviteCode: string) => `/join/${inviteCode}`,
+  appDownload: (inviteCode: string) => `/app/${inviteCode}`,
+  profile: (address: string) => `/profile/${address}`,
+  memberProfile: (address: string) => `/members/${address}`,
 } as const;

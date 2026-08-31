@@ -1,0 +1,60 @@
+# Fragments
+
+fragment RecommendationFields on Recommendation {
+  groupId
+  score
+  algorithm
+  group {
+    id
+    name
+    contributionAmount
+    cycleDuration
+    maxMembers
+    currentMembers
+    status
+    tags
+  }
+}
+
+# Queries
+
+query GetRecommendations($userId: ID!) {
+  recommendations(userId: $userId) {
+    userId
+    bucket
+    algorithm
+    recommendations {
+      ...RecommendationFields
+    }
+  }
+}
+
+query Search($query: String!) {
+  search(query: $query) {
+    groups {
+      id
+      name
+      contributionAmount
+      status
+      tags
+    }
+    members {
+      id
+      address
+      name
+    }
+    transactions {
+      id
+      groupId
+      memberAddress
+      amount
+      type
+      timestamp
+      stellarTxHash
+    }
+  }
+}
+
+query HealthCheck {
+  health
+}

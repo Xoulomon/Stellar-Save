@@ -1,0 +1,43 @@
+{
+  "version": "1",
+  "generated_at": "2026-07-30T09:30:00Z",
+  "description": "Baseline CPU instruction counts for Soroban contract functions. Update by running: bash scripts/benchmark_regression.sh --update-baseline",
+  "regression_threshold_pct": 10,
+  "functions": {
+    "create_group": {
+      "baseline_cpu_insns": 48234,
+      "group_size": 1,
+      "notes": "Single create_group call with 1 XLM contribution, 1-week cycle, max 5 members. Measured via bench_create_group in gas_benchmark_tests.rs."
+    },
+    "join_group": {
+      "baseline_cpu_insns": 78450,
+      "group_size": 5,
+      "notes": "join_group at N=5 members. Derived from bench_join_group_n5 in gas_benchmark_tests.rs."
+    },
+    "get_group": {
+      "baseline_cpu_insns": 14820,
+      "group_size": 1,
+      "notes": "Read-only get_group for an existing group. Derived from bench_get_group in gas_benchmark_tests.rs."
+    },
+    "is_member": {
+      "baseline_cpu_insns": 11960,
+      "group_size": 20,
+      "notes": "is_member check at N=20 members. Derived from bench_is_member_n20 in gas_benchmark_tests.rs."
+    },
+    "get_group_members": {
+      "baseline_cpu_insns": 43780,
+      "group_size": 20,
+      "notes": "get_group_members for a group with 20 members. Derived from bench_get_group_members_n20 in gas_benchmark_tests.rs."
+    },
+    "contribute": {
+      "baseline_cpu_insns": 118600,
+      "group_size": 10,
+      "notes": "Optimized contribute() call (13 persistent storage ops after optimization). Based on gas_benchmark.rs storage op model: 13 ops × ~9,123 insns/op = ~118,600."
+    },
+    "execute_payout": {
+      "baseline_cpu_insns": 88500,
+      "group_size": 10,
+      "notes": "execute_payout with O(1) reverse-index lookup at N=10 members. Based on gas_benchmark.rs: 15 persistent storage ops × ~5,900 insns/op."
+    }
+  }
+}

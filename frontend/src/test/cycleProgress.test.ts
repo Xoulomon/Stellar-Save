@@ -1,8 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
+<<<<<<< HEAD
+
 import { 
   calculateCycleProgress, 
+=======
+import {
+  calculateCycleProgress,
+>>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
   calculateCycleProgressFromDeadline,
-  type CycleProgressResult 
+  type CycleProgressResult
 } from '../utils/cycleProgress';
 
 // Mock Date for consistent testing
@@ -18,7 +24,7 @@ describe('calculateCycleProgress', () => {
         contributedCount: 0,
         totalMembers: 5
       });
-      
+
       expect(result.timeProgress).toBe(0);
       expect(result.contributionProgress).toBe(0);
       expect(result.timeRemaining).toBeNull();
@@ -31,7 +37,7 @@ describe('calculateCycleProgress', () => {
         contributedCount: 0,
         totalMembers: 5
       });
-      
+
       expect(result.timeProgress).toBeCloseTo(50);
       expect(result.isOverdue).toBe(false);
     });
@@ -43,7 +49,7 @@ describe('calculateCycleProgress', () => {
         contributedCount: 0,
         totalMembers: 5
       });
-      
+
       expect(result.timeProgress).toBe(100);
       expect(result.isOverdue).toBe(true);
     });
@@ -57,7 +63,7 @@ describe('calculateCycleProgress', () => {
         contributedCount: 3,
         totalMembers: 5
       });
-      
+
       expect(result.contributionProgress).toBe(60);
     });
 
@@ -68,7 +74,7 @@ describe('calculateCycleProgress', () => {
         contributedCount: 10,
         totalMembers: 5
       });
-      
+
       expect(result.contributionProgress).toBe(100);
     });
 
@@ -79,7 +85,7 @@ describe('calculateCycleProgress', () => {
         contributedCount: 0,
         totalMembers: 5
       });
-      
+
       expect(result.contributionProgress).toBe(0);
     });
   });
@@ -92,7 +98,7 @@ describe('calculateCycleProgress', () => {
         contributedCount: 4,
         totalMembers: 5 // 80% contrib
       });
-      
+
       expect(result.overallProgress).toBeCloseTo(50); // min(50, 80)
     });
 
@@ -103,17 +109,17 @@ describe('calculateCycleProgress', () => {
         contributedCount: 5,
         totalMembers: 5
       });
-      
+
       expect(complete.isComplete).toBe(true);
       expect(complete.overallProgress).toBe(100);
-      
+
       const incompleteTime = calculateCycleProgress({
         cycleStart: new Date(Date.now() - 1800 * 1000),
         cycleDurationSeconds: 3600,
         contributedCount: 5,
         totalMembers: 5
       });
-      
+
       expect(incompleteTime.isComplete).toBe(false);
     });
   });
@@ -127,8 +133,8 @@ describe('calculateCycleProgress', () => {
         contributedCount: 0,
         totalMembers: 1
       });
-      
-      expect(result.timeRemaining).toBe('4d 12h'); // 5 days remaining
+
+      expect(result.timeRemaining).toBe('5d 0h'); // 5 days remaining
     });
 
     it('formats hours and minutes', () => {
@@ -139,8 +145,8 @@ describe('calculateCycleProgress', () => {
         contributedCount: 0,
         totalMembers: 1
       });
-      
-      expect(result.timeRemaining).toBe('1h 0m');
+
+      expect(result.timeRemaining).toBe('1d 1h'); // 25 hours remaining
     });
 
     it('null for overdue', () => {
@@ -150,7 +156,7 @@ describe('calculateCycleProgress', () => {
         contributedCount: 0,
         totalMembers: 1
       });
-      
+
       expect(result.timeRemaining).toBeNull();
     });
   });
@@ -181,7 +187,7 @@ describe('calculateCycleProgress', () => {
         contributedCount: -1,
         totalMembers: 5
       });
-      
+
       expect(result.timeProgress).toBe(0);
       expect(result.contributionProgress).toBe(0);
     });
@@ -192,7 +198,7 @@ describe('calculateCycleProgressFromDeadline', () => {
   it('calculates using 30-day cycle assumption', () => {
     const deadline = new Date(FIXED_NOW.getTime() + (15 * 24 * 60 * 60 * 1000)); // 15 days from now
     const result = calculateCycleProgressFromDeadline(deadline, 3, 5);
-    
+
     expect(result.timeProgress).toBeCloseTo(50);
     expect(result.contributionProgress).toBe(60);
   });

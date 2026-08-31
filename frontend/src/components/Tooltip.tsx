@@ -71,7 +71,7 @@ export function Tooltip({
 
   const showTooltip = useCallback(() => {
     if (disabled) return;
-    
+
     timeoutRef.current = window.setTimeout(() => {
       setIsVisible(true);
     }, delay);
@@ -89,7 +89,7 @@ export function Tooltip({
       calculatePosition();
       window.addEventListener('scroll', calculatePosition, true);
       window.addEventListener('resize', calculatePosition);
-      
+
       return () => {
         window.removeEventListener('scroll', calculatePosition, true);
         window.removeEventListener('resize', calculatePosition);
@@ -136,7 +136,7 @@ export function Tooltip({
       <div ref={triggerRef} className="tooltip-trigger">
         {childWithProps}
       </div>
-      
+
       {isVisible && (
         <div
           ref={tooltipRef}

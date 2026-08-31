@@ -1,0 +1,87 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#4C51BF', 'primaryTextColor': '#fff', 'primaryBorderColor': '#312E81', 'lineColor': '#6366F1', 'secondaryColor': '#10B981', 'tertiaryColor': '#F59E0B'}}}%%
+
+graph TB
+    subgraph "User Layer"
+        User[👤 User]
+        Wallet[🔐 Stellar Wallet<br/>Freighter / Lobstr / Albedo]
+    end
+
+    subgraph "Frontend Layer"
+        Frontend[🖥️ React + TypeScript Frontend<br/>Vite + MUI]
+        UI[📱 UI Components<br/>GroupList, GroupDetails<br/>ContributeButton, CycleProgress]
+        State[⚙️ State Management<br/>React Query + Context API]
+    end
+
+    subgraph "Blockchain Layer"
+        Network[🌐 Stellar Network<br/>Testnet / Mainnet]
+        Contract[📜 Soroban Smart Contract<br/>stellar-save]
+        Escrow[🏦 Escrow / Vault<br/>Holds contributed funds]
+        Token[💰 Token Handling<br/>XLM / Custom Assets]
+    end
+
+    subgraph "Data Layer"
+        Horizon[📊 Stellar Horizon API<br/>Transaction History]
+        Events[📡 Soroban Events<br/>Real-time Updates]
+        Storage[💾 On-chain Storage<br/>Groups, Members, Contributions]
+    end
+
+    %% User Interactions
+    User -->|Connects| Wallet
+    User -->|Interacts with| Frontend
+
+    %% Wallet Interactions
+    Wallet -->|Signs Transactions| Frontend
+    Wallet -->|Submits to| Network
+
+    %% Frontend Interactions
+    Frontend -->|Calls| Contract
+    Frontend -->|Queries| Horizon
+    Frontend -->|Listens to| Events
+    Frontend -->|Displays| UI
+    Frontend -->|Manages| State
+
+    %% Contract Interactions
+    Contract -->|Deploys to| Network
+    Contract -->|Stores data in| Storage
+    Contract -->|Emits| Events
+    Contract -->|Manages| Escrow
+    Contract -->|Handles| Token
+
+    %% Network Interactions
+    Network -->|Provides| Horizon
+    Network -->|Broadcasts| Events
+
+    %% Data Flow - Group Creation
+    User -.->|1. Create Group| Frontend
+    Frontend -.->|2. Build Transaction| Contract
+    Contract -.->|3. Store Group Data| Storage
+    Contract -.->|4. Emit GroupCreated Event| Events
+    Events -.->|5. Update UI| Frontend
+
+    %% Data Flow - Contribution
+    User -.->|1. Contribute| Frontend
+    Frontend -.->|2. Build Contribution TX| Contract
+    Contract -.->|3. Transfer XLM to Escrow| Escrow
+    Contract -.->|4. Update Contribution Status| Storage
+    Contract -.->|5. Emit Contribution Event| Events
+    Events -.->|6. Update UI| Frontend
+
+    %% Data Flow - Payout
+    User -.->|1. Trigger Payout| Frontend
+    Frontend -.->|2. Build Payout TX| Contract
+    Contract -.->|3. Check All Contributions| Storage
+    Contract -.->|4. Transfer from Escrow to Recipient| Escrow
+    Contract -.->|5. Update Payout Status| Storage
+    Contract -.->|6. Emit Payout Event| Events
+    Events -.->|7. Update UI| Frontend
+
+    %% Styling
+    classDef userLayer fill:#818CF8,stroke:#4C51BF,color:#fff
+    classDef frontendLayer fill:#6366F1,stroke:#4338CA,color:#fff
+    classDef blockchainLayer fill:#10B981,stroke:#059669,color:#fff
+    classDef dataLayer fill:#F59E0B,stroke:#D97706,color:#fff
+
+    class User,Wallet userLayer
+    class Frontend,UI,State frontendLayer
+    class Network,Contract,Escrow,Token blockchainLayer
+    class Horizon,Events,Storage dataLayer

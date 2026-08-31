@@ -1,0 +1,126 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`OfflineIndicator snapshots > renders nothing when online, idle, and queue is empty 1`] = `<div />`;
+
+exports[`OfflineIndicator snapshots > renders the offline-with-queue state 1`] = `
+<div>
+  <div
+    class="MuiBox-root css-axw7ok"
+  >
+    <div
+      class="MuiChip-root MuiChip-outlined MuiChip-sizeSmall MuiChip-colorWarning MuiChip-outlinedWarning css-1dw70sc-MuiChip-root"
+      data-mui-internal-clone-element="true"
+    >
+      <svg
+        aria-hidden="true"
+        class="MuiSvgIcon-root MuiSvgIcon-fontSizeSmall MuiChip-icon MuiChip-iconSmall MuiChip-iconColorWarning css-120dh41-MuiSvgIcon-root"
+        data-testid="CloudOffIcon"
+        focusable="false"
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M19.35 10.04C18.67 6.59 15.64 4 12 4c-1.48 0-2.85.43-4.01 1.17l1.46 1.46C10.21 6.23 11.08 6 12 6c3.04 0 5.5 2.46 5.5 5.5v.5H19c1.66 0 3 1.34 3 3 0 1.13-.64 2.11-1.56 2.62l1.45 1.45C23.16 18.16 24 16.68 24 15c0-2.64-2.05-4.78-4.65-4.96M3 5.27l2.75 2.74C2.56 8.15 0 10.77 0 14c0 3.31 2.69 6 6 6h11.73l2 2L21 20.73 4.27 4zM7.73 10l8 8H6c-2.21 0-4-1.79-4-4s1.79-4 4-4z"
+        />
+      </svg>
+      <span
+        class="MuiChip-label MuiChip-labelSmall css-19m61dl-MuiChip-label"
+      >
+        Offline (3 queued)
+      </span>
+    </div>
+    <style>
+      
+        @keyframes rotate {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .rotating {
+          animation: rotate 1s linear infinite;
+        }
+      
+    </style>
+  </div>
+</div>
+`;
+
+exports[`OfflineIndicator snapshots > renders the sync error state 1`] = `
+<div>
+  <div
+    class="MuiBox-root css-axw7ok"
+  >
+    <div
+      class="MuiChip-root MuiChip-outlined MuiChip-sizeSmall MuiChip-colorError MuiChip-outlinedError css-19qr1s2-MuiChip-root"
+      data-mui-internal-clone-element="true"
+    >
+      <svg
+        aria-hidden="true"
+        class="MuiSvgIcon-root MuiSvgIcon-fontSizeSmall MuiChip-icon MuiChip-iconSmall MuiChip-iconColorError css-120dh41-MuiSvgIcon-root"
+        data-testid="WarningIcon"
+        focusable="false"
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M1 21h22L12 2zm12-3h-2v-2h2zm0-4h-2v-4h2z"
+        />
+      </svg>
+      <span
+        class="MuiChip-label MuiChip-labelSmall css-19m61dl-MuiChip-label"
+      >
+        Sync error
+      </span>
+    </div>
+    <style>
+      
+        @keyframes rotate {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .rotating {
+          animation: rotate 1s linear infinite;
+        }
+      
+    </style>
+  </div>
+</div>
+`;
+
+exports[`OfflineIndicator snapshots > renders the syncing state 1`] = `
+<div>
+  <div
+    class="MuiBox-root css-axw7ok"
+  >
+    <div
+      class="MuiChip-root MuiChip-outlined MuiChip-sizeSmall MuiChip-colorInfo MuiChip-outlinedInfo css-mr7bkj-MuiChip-root"
+      data-mui-internal-clone-element="true"
+    >
+      <svg
+        aria-hidden="true"
+        class="MuiSvgIcon-root MuiSvgIcon-fontSizeSmall MuiChip-icon MuiChip-iconSmall MuiChip-iconColorInfo rotating css-120dh41-MuiSvgIcon-root"
+        data-testid="SyncIcon"
+        focusable="false"
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8m0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4z"
+        />
+      </svg>
+      <span
+        class="MuiChip-label MuiChip-labelSmall css-19m61dl-MuiChip-label"
+      >
+        Syncing...
+      </span>
+    </div>
+    <style>
+      
+        @keyframes rotate {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .rotating {
+          animation: rotate 1s linear infinite;
+        }
+      
+    </style>
+  </div>
+</div>
+`;

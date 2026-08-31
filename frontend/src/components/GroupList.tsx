@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
+
 import { Card } from './Card';
-import { SearchBar } from './SearchBar';
-import { Pagination } from './Pagination';
 import { Dropdown } from './Dropdown';
 import { EmptyState } from './EmptyState/EmptyState';
+import { Pagination } from './Pagination';
+import { SearchBar } from './SearchBar';
 import { GroupSkeleton } from './Skeleton/GroupSkeleton';
+import { applyGroupFilters } from '../lib/filters';
 import './GroupList.css';
 
 export interface Group {
@@ -12,9 +14,11 @@ export interface Group {
   name: string;
   description?: string;
   memberCount?: number;
+  contributionAmount?: number;
+  currency?: string;
   createdAt?: Date;
   avatar?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 type SortField = 'name' | 'memberCount' | 'createdAt';
@@ -43,6 +47,17 @@ interface GroupListProps {
   defaultSortField?: SortField;
   defaultSortOrder?: SortOrder;
   className?: string;
+  /** Controlled search query (for URL param sync) */
+  searchQuery?: string;
+  onSearchChange?: (value: string) => void;
+  /** Token type filter (e.g. "XLM", "USDC") */
+  currencyFilter?: string;
+  onCurrencyChange?: (value: string) => void;
+  /** Amount range filter */
+  minAmount?: string;
+  maxAmount?: string;
+  onMinAmountChange?: (value: string) => void;
+  onMaxAmountChange?: (value: string) => void;
 }
 
 export function GroupList({
@@ -63,8 +78,17 @@ export function GroupList({
   defaultSortField = 'name',
   defaultSortOrder = 'asc',
   className = '',
+  searchQuery: controlledSearch,
+  onSearchChange,
+  currencyFilter = '',
+  onCurrencyChange,
+  minAmount = '',
+  maxAmount = '',
+  onMinAmountChange,
+  onMaxAmountChange,
 }: GroupListProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [internalSearch, setInternalSearch] = useState('');
+  const searchQuery = controlledSearch !== undefined ? controlledSearch : internalSearch;
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [sortConfig, setSortConfig] = useState<SortConfig>({
@@ -72,44 +96,44 @@ export function GroupList({
     order: defaultSortOrder,
   });
 
-  // Filter groups based on search query
+  // Filter groups based on search query, currency, and amount range
   const filteredGroups = useMemo(() => {
-    if (!searchQuery.trim()) return groups;
-
-    const query = searchQuery.toLowerCase();
-    return groups.filter(
-      (group) =>
-        group.name.toLowerCase().includes(query) ||
-        group.description?.toLowerCase().includes(query)
-    );
-  }, [groups, searchQuery]);
+    return applyGroupFilters(groups, {
+      searchQuery,
+      currencyFilter,
+      minAmount,
+      maxAmount,
+    });
+  }, [groups, searchQuery, currencyFilter, minAmount, maxAmount]);
 
   // Sort filtered groups
   const sortedGroups = useMemo(() => {
     const sorted = [...filteredGroups];
 
+    const direction = sortConfig.order === 'asc' ? 1 : -1;
+
     sorted.sort((a, b) => {
-      let aValue: any = a[sortConfig.field];
-      let bValue: any = b[sortConfig.field];
+      const rawA = a[sortConfig.field];
+      const rawB = b[sortConfig.field];
 
-      // Handle undefined values
-      if (aValue === undefined) return 1;
-      if (bValue === undefined) return -1;
+      // Handle undefined values — always sort them last.
+      if (rawA === undefined) return 1;
+      if (rawB === undefined) return -1;
 
-      // Handle dates
-      if (aValue instanceof Date && bValue instanceof Date) {
-        aValue = aValue.getTime();
-        bValue = bValue.getTime();
+      // Normalize dates to their timestamp so they compare numerically.
+      const aValue = rawA instanceof Date ? rawA.getTime() : rawA;
+      const bValue = rawB instanceof Date ? rawB.getTime() : rawB;
+
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return (aValue - bValue) * direction;
       }
 
-      // Handle strings (case-insensitive)
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
-      }
+      // Fall back to a case-insensitive string comparison for everything else.
+      const aStr = String(aValue).toLowerCase();
+      const bStr = String(bValue).toLowerCase();
 
-      if (aValue < bValue) return sortConfig.order === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.order === 'asc' ? 1 : -1;
+      if (aStr < bStr) return -1 * direction;
+      if (aStr > bStr) return 1 * direction;
       return 0;
     });
 
@@ -129,7 +153,11 @@ export function GroupList({
 
   // Reset to page 1 when search or sort changes
   const handleSearch = (value: string) => {
-    setSearchQuery(value);
+    if (onSearchChange) {
+      onSearchChange(value);
+    } else {
+      setInternalSearch(value);
+    }
     setCurrentPage(1);
   };
 
@@ -229,6 +257,7 @@ export function GroupList({
                 placeholder={searchPlaceholder}
                 onSearch={handleSearch}
                 loading={loading}
+                defaultValue={searchQuery}
               />
             </div>
           )}
@@ -242,6 +271,47 @@ export function GroupList({
               items={sortItems}
               position="bottom-end"
             />
+          )}
+        </div>
+      )}
+
+      {/* Filter panel: token type + amount range */}
+      {(onCurrencyChange || onMinAmountChange || onMaxAmountChange) && (
+        <div className="group-list-filters" role="search" aria-label="Filter groups">
+          {onCurrencyChange && (
+            <label className="group-list-filter-label">
+              Token type
+              <input
+                type="text"
+                className="group-list-filter-input"
+                placeholder="e.g. XLM"
+                value={currencyFilter}
+                onChange={(e) => { onCurrencyChange(e.target.value); setCurrentPage(1); }}
+                aria-label="Filter by token type"
+              />
+            </label>
+          )}
+          {(onMinAmountChange || onMaxAmountChange) && (
+            <fieldset className="group-list-filter-range">
+              <legend>Amount range</legend>
+              <input
+                type="number"
+                className="group-list-filter-input"
+                placeholder="Min"
+                value={minAmount}
+                onChange={(e) => { onMinAmountChange?.(e.target.value); setCurrentPage(1); }}
+                aria-label="Minimum contribution amount"
+              />
+              <span aria-hidden>–</span>
+              <input
+                type="number"
+                className="group-list-filter-input"
+                placeholder="Max"
+                value={maxAmount}
+                onChange={(e) => { onMaxAmountChange?.(e.target.value); setCurrentPage(1); }}
+                aria-label="Maximum contribution amount"
+              />
+            </fieldset>
           )}
         </div>
       )}

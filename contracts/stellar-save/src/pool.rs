@@ -60,11 +60,21 @@ impl PoolInfo {
     }
 
     /// Calculates the percentage of cycle completion (0-100).
+    ///
+    /// Uses checked arithmetic for the intermediate u64 multiplication so that
+    /// an unusually large `contributors_count` cannot silently wrap around.
+    /// In practice `contributors_count <= member_count <= MAX_MEMBERS` (20), so
+    /// overflow is unreachable, but we guard it explicitly (invariant #14).
     pub fn completion_percentage(&self) -> u32 {
         if self.member_count == 0 {
             return 0;
         }
-        ((self.contributors_count as u64 * 100) / self.member_count as u64) as u32
+        // checked_mul prevents the theoretical overflow of contributors_count * 100
+        // when contributors_count approaches u64::MAX (impossible in practice).
+        let numerator = (self.contributors_count as u64)
+            .checked_mul(100)
+            .unwrap_or(u64::MAX); // saturate — still produces a valid 0-100 result
+        (numerator / self.member_count as u64) as u32
     }
 }
 
@@ -112,6 +122,9 @@ impl PoolCalculator {
 
     /// Retrieves the member count for a group from storage.
     ///
+    /// Reads directly from the Group struct (single SLOAD) rather than loading
+    /// the full members Vec, which avoids deserializing the entire address list.
+    ///
     /// # Arguments
     /// * `env` - Soroban environment
     /// * `group_id` - ID of the group
@@ -120,14 +133,14 @@ impl PoolCalculator {
     /// * `Ok(member_count)` - The number of members in the group
     /// * `Err(StellarSaveError)` - If group not found or storage error
     pub fn get_member_count(env: &Env, group_id: u64) -> Result<u32, StellarSaveError> {
+        // Gas opt: read member_count from Group struct (1 SLOAD) instead of
+        // deserializing the full Vec<Address> members list.
         let group_key = StorageKeyBuilder::group_data(group_id);
-
         let group: crate::group::Group = env
             .storage()
             .persistent()
             .get(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
-
         Ok(group.member_count)
     }
 
@@ -196,8 +209,9 @@ impl PoolCalculator {
 
     /// Builds complete pool information for a group and cycle.
     ///
-    /// This is the primary function for getting comprehensive pool data.
-    /// It aggregates member count, contribution amount, and current cycle status.
+    /// Gas opt: single SLOAD for the Group struct to get both member_count and
+    /// contribution_amount, then two more SLOADs for cycle totals.
+    /// Previously this made 3 separate group/members reads.
     ///
     /// # Arguments
     /// * `env` - Soroban environment
@@ -212,7 +226,7 @@ impl PoolCalculator {
         group_id: u64,
         cycle: u32,
     ) -> Result<PoolInfo, StellarSaveError> {
-        // Get membership info from single group load
+        // Gas opt: single SLOAD for group data (member_count + contribution_amount)
         let group_key = StorageKeyBuilder::group_data(group_id);
         let group: crate::group::Group = env
             .storage()
@@ -220,6 +234,30 @@ impl PoolCalculator {
             .get(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
+        Self::get_pool_info_for_group(env, &group, cycle)
+    }
+
+    /// Builds complete pool information for a group and cycle, reusing a
+    /// `Group` the caller has already loaded from storage.
+    ///
+    /// Gas opt: avoids re-reading the `group_data` entry when the caller
+    /// already holds the group (e.g. `is_payout_due`, `execute_payout`),
+    /// eliminating a redundant SLOAD within the same invocation.
+    ///
+    /// # Arguments
+    /// * `env` - Soroban environment
+    /// * `group` - Already-loaded group data
+    /// * `cycle` - Current cycle number
+    ///
+    /// # Returns
+    /// * `Ok(PoolInfo)` - Complete pool information
+    /// * `Err(StellarSaveError)` - If pool calculation fails
+    pub fn get_pool_info_for_group(
+        env: &Env,
+        group: &crate::group::Group,
+        cycle: u32,
+    ) -> Result<PoolInfo, StellarSaveError> {
+        let group_id = group.id;
         let member_count = group.member_count;
         let contribution_amount = group.contribution_amount;
 
@@ -691,5 +729,11 @@ mod tests {
 
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), StellarSaveError::InvalidAmount);
+    }
+
+    #[test]
+    fn test_calculate_total_pool_overflow_protection() {
+        let result = PoolCalculator::calculate_total_pool(i128::MAX, 2);
+        assert!(result.is_err());
     }
 }

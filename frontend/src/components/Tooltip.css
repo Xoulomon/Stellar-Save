@@ -9,22 +9,28 @@
   animation: tooltipFadeIn 0.15s ease-out;
 }
 
+/* Tooltip bubbles are intentionally a fixed dark surface in BOTH themes (the same
+   convention GitHub/Radix use) since they need to stand out against arbitrary content
+   behind them — this is a deliberate component-level exception, not a missed token. */
 .tooltip-content {
+  /* stylelint-disable declaration-property-value-disallowed-list */
   background-color: rgba(0, 0, 0, 0.9);
   color: #fff;
+  /* stylelint-enable declaration-property-value-disallowed-list */
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   font-size: 0.875rem;
   line-height: 1.4;
   max-width: 250px;
   word-wrap: break-word;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--color-shadow) 0 4px 6px, var(--color-shadow) 0 2px 4px;
 }
 
 .tooltip-arrow {
   position: absolute;
   width: 8px;
   height: 8px;
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   background-color: rgba(0, 0, 0, 0.9);
   transform: rotate(45deg);
 }
@@ -63,18 +69,6 @@
   to {
     opacity: 1;
     transform: scale(1);
-  }
-}
-
-/* Light mode adjustments */
-@media (prefers-color-scheme: light) {
-  .tooltip-content {
-    background-color: rgba(50, 50, 50, 0.95);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .tooltip-arrow {
-    background-color: rgba(50, 50, 50, 0.95);
   }
 }
 

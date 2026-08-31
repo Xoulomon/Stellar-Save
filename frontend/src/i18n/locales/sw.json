@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "dashboard": "Dashibodi",
+    "groups": "Vikundi",
+    "profile": "Wasifu",
+    "settings": "Mipangilio",
+    "leaderboard": "Ubao wa Viongozi"
+  },
+  "settings": {
+    "title": "Mipangilio",
+    "subtitle": "Sanidi mapendeleo yako",
+    "appearance": "Mwonekano",
+    "appearanceDesc": "Chagua jinsi Stellar Save inavyoonekana kwako.",
+    "language": "Lugha",
+    "languageDesc": "Chagua lugha unayopendelea.",
+    "theme": {
+      "light": "Mwanga",
+      "dark": "Giza",
+      "system": "Mfumo"
+    }
+  },
+  "scheduler": {
+    "title": "Panga Mchango",
+    "amount": "Kiasi (XLM)",
+    "dateTime": "Tarehe na Wakati wa Kupanga",
+    "note": "Kumbuka (si lazima)",
+    "schedule": "Panga",
+    "scheduled": "Imepangwa",
+    "save": "Hifadhi",
+    "cancel": "Ghairi",
+    "edit": "Hariri",
+    "balanceWarning": "Salio lako ({{balance}} XLM) linaweza kutotosheleza michango yote iliyopangwa ({{total}} XLM jumla).",
+    "validation": {
+      "positiveAmount": "Kiasi lazima kiwe nambari chanya.",
+      "selectDate": "Tafadhali chagua tarehe na wakati.",
+      "futureDate": "Tarehe iliyopangwa lazima iwe ya baadaye."
+    }
+  },
+  "common": {
+    "loading": "Inapakia...",
+    "error": "Hitilafu imetokea.",
+    "save": "Hifadhi",
+    "cancel": "Ghairi",
+    "edit": "Hariri",
+    "delete": "Futa",
+    "confirm": "Thibitisha"
+  }
+}

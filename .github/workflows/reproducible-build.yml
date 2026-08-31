@@ -1,0 +1,130 @@
+name: Reproducible WASM Verification
+
+on:
+  push:
+    paths:
+      - 'contracts/**'
+      - 'rust-toolchain.toml'
+      - 'scripts/build_reproducible.sh'
+      - 'scripts/verify_reproducible_build.sh'
+      - 'tests/reproducible_build_test.sh'
+  pull_request:
+    paths:
+      - 'contracts/**'
+      - 'rust-toolchain.toml'
+      - 'scripts/build_reproducible.sh'
+      - 'scripts/verify_reproducible_build.sh'
+      - 'tests/reproducible_build_test.sh'
+  workflow_dispatch:
+    inputs:
+      contract_id:
+        description: 'Contract ID to verify against on-chain hash (optional)'
+        required: false
+        type: string
+      stellar_network:
+        description: 'Stellar network (testnet or mainnet)'
+        required: false
+        default: testnet
+        type: choice
+        options:
+          - testnet
+          - mainnet
+
+jobs:
+  reproducible-build:
+    name: Verify reproducible WASM
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Make scripts executable ─────────────────────────────────────────────
+      - name: Make scripts executable
+        run: |
+          chmod +x scripts/build_reproducible.sh
+          chmod +x scripts/verify_reproducible_build.sh
+          chmod +x tests/reproducible_build_test.sh
+
+      # ── Build 1: baseline ───────────────────────────────────────────────────
+      - name: Build WASM — first run (establish baseline)
+        run: ./scripts/build_reproducible.sh
+
+      # ── Persist the checksum from build 1 ──────────────────────────────────
+      - name: Record baseline checksum
+        id: baseline
+        run: |
+          SHA=$(cat contracts/stellar-save/stellar_save.wasm.sha256)
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "Build-1 SHA-256: $SHA"
+
+      # ── Build 2: must match baseline ────────────────────────────────────────
+      - name: Build WASM — second run (must match baseline)
+        run: ./scripts/build_reproducible.sh --verify
+
+      # ── Hash-match assertion against committed checksum ─────────────────────
+      - name: Assert WASM hash matches committed checksum file
+        run: |
+          if [ ! -f contracts/stellar-save/stellar_save.wasm.sha256 ]; then
+            echo "::error::Baseline checksum file not found — run verify_reproducible_build.sh --regen-checksum and commit the result."
+            exit 1
+          fi
+
+          COMMITTED=$(cat contracts/stellar-save/stellar_save.wasm.sha256)
+          BUILT="${{ steps.baseline.outputs.sha256 }}"
+
+          echo "Committed checksum : $COMMITTED"
+          echo "Built checksum     : $BUILT"
+
+          if [ "$COMMITTED" != "$BUILT" ]; then
+            echo "::error::WASM hash mismatch — committed checksum ($COMMITTED) differs from built hash ($BUILT)."
+            echo "::error::The baseline checksum file must be updated when contract source or toolchain changes."
+            exit 1
+          fi
+          echo "✅ Hash matches committed baseline."
+
+      # ── Automated test suite ────────────────────────────────────────────────
+      - name: Run reproducible build test suite (--local-only)
+        run: ./tests/reproducible_build_test.sh --local-only
+
+      # ── Optional on-chain verification (manual trigger only) ────────────────
+      - name: Verify on-chain hash (manual trigger with contract_id)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.contract_id != '' }}
+        env:
+          CONTRACT_ID: ${{ inputs.contract_id }}
+          STELLAR_NETWORK: ${{ inputs.stellar_network }}
+        run: |
+          echo "Verifying on-chain hash for contract $CONTRACT_ID on $STELLAR_NETWORK…"
+          ./tests/reproducible_build_test.sh --skip-build
+        continue-on-error: false
+
+      # ── Upload artifacts ────────────────────────────────────────────────────
+      - name: Upload WASM artifact and checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: stellar-save-wasm-reproducible
+          path: |
+            target/wasm32-unknown-unknown/release/stellar_save.wasm
+            contracts/stellar-save/stellar_save.wasm.sha256
+          retention-days: 90
+
+      # ── Step summary ────────────────────────────────────────────────────────
+      - name: Post verification summary
+        if: always()
+        run: |
+          SHA="${{ steps.baseline.outputs.sha256 }}"
+          COMMITTED=$(cat contracts/stellar-save/stellar_save.wasm.sha256 2>/dev/null || echo "N/A")
+          MATCH="❌"
+          [ "$SHA" = "$COMMITTED" ] && MATCH="✅"
+
+          {
+            echo "## $MATCH Reproducible Build Verification"
+            echo ""
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Built SHA-256 | \`$SHA\` |"
+            echo "| Committed SHA-256 | \`$COMMITTED\` |"
+            echo "| Hash Match | $MATCH |"
+            echo "| Commit | ${{ github.sha }} |"
+            echo "| Triggered by | ${{ github.actor }} |"
+            echo "| Workflow event | ${{ github.event_name }} |"
+          } >> "$GITHUB_STEP_SUMMARY"

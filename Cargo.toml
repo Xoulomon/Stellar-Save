@@ -1,10 +1,11 @@
 [workspace]
 resolver = "2"
 members = [
-    "contracts/guess-the-number",
-    "contracts/fungible-allowlist",
-    "contracts/nft-enumerable",
+    "contracts/common",
     "contracts/stellar-save",
+    "contracts/guess-the-number",
+    "contracts/nft-enumerable",
+    "contracts/fungible-allowlist",
 ]
 
 [workspace.package]
@@ -15,9 +16,7 @@ repository = "https://github.com/Xoulomon/Stellar-Save"
 
 [workspace.dependencies]
 soroban-sdk = "23.0.3"
-stellar-access = "0.6.0"
-stellar-macros = "0.6.0"
-stellar-tokens = "0.6.0"
+stellar-save-common = { path = "contracts/common" }
 
 [profile.release]
 opt-level = "z"

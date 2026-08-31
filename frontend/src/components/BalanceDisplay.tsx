@@ -1,6 +1,6 @@
-import { useBalance } from "../hooks/useBalance";
 import { Card } from "./Card";
 import { Spinner } from "./Spinner";
+import { useBalance } from "../hooks/useBalance";
 import "./BalanceDisplay.css";
 
 export interface BalanceDisplayProps {
@@ -107,7 +107,7 @@ export function BalanceDisplay({
       {isLoading && !xlmBalance ? (
         <div className="balance-display__loading">
           <Spinner size="md" />
-          <p>Loading balance...</p>
+          <p aria-live="polite">Loading balance...</p>
         </div>
       ) : (
         <>

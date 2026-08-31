@@ -1,35 +1,35 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
+import { Box } from "@mui/material";
+import { lazy, Suspense } from "react";
+
 import "./App.css";
+import { CardSkeleton } from "./components/Skeleton";
+import { useOfflineSyncInit } from "./hooks/offline";
+import { useDeepLink } from "./hooks/useDeepLink";
 
-function App() {
-  const [count, setCount] = useState(0);
+const AppRouter = lazy(() =>
+  import("./routing/AppRouter").then((m) => ({ default: m.AppRouter }))
+);
 
+function RouteLoadingFallback() {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", p: 2 }}>
+      <Box sx={{ width: "100%", maxWidth: 400 }}>
+        <CardSkeleton height={300} lines={3} />
+      </Box>
+    </Box>
   );
 }
 
-export default App;
+export default function App() {
+  // Initialize deep link handler
+  useDeepLink();
+
+  return (
+    <>
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <AppRouter />
+      </Suspense>
+      <FeedbackWidget />
+    </>
+  );
+}

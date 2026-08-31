@@ -54,7 +54,7 @@ export function Pagination({
 
     const pages: (number | string)[] = [];
     const halfVisible = Math.floor(maxVisiblePages / 2);
-    
+
     let startPage = Math.max(1, safePage - halfVisible);
     let endPage = Math.min(totalPages, safePage + halfVisible);
 

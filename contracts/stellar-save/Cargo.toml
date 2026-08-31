@@ -1,24 +1,26 @@
 [package]
 name = "stellar-save"
-description = "Rotational savings and credit association (ROSCA) on Stellar"
-edition = "2021"
-license = "MIT"
-version = "0.1.0"
+description = "Rotational Savings and Credit Association (ROSCA) on Stellar Soroban"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 publish = false
-
-[package.metadata.stellar]
-cargo_inherit = true 
+version.workspace = true
 
 [lib]
 crate-type = ["cdylib"]
 doctest = false
 
 [dependencies]
-soroban-sdk = "23.0.3"
+soroban-sdk = { workspace = true }
+stellar-save-common = { workspace = true }
 
 [dev-dependencies]
-soroban-sdk = { version = "23.0.3", features = ["testutils"] }
+soroban-sdk = { workspace = true, features = ["testutils"] }
+# proptest: used in property_tests.rs, fuzz_tests.rs, escrow_property_tests.rs,
+#           governance_property_tests.rs, insurance_property_tests.rs
 proptest = "1.5.0"
+# ed25519-dalek: used in security.rs test helpers to construct signed payloads
 ed25519-dalek = { version = "2", features = ["rand_core"] }
 
 [features]

@@ -1,3 +1,11 @@
+// Re-export shared primitives from the canonical SDK package so there is a
+// single source of truth for these types across frontend, backend, and mobile.
+export type { MemberStatus, PayoutStatus } from '@stellar-save/sdk';
+
+import type { MemberStatus, PayoutStatus } from '@stellar-save/sdk';
+
+// ─── Contribution-cycle types (frontend-specific) ─────────────────────────────
+
 export interface Member {
   address: string
   name?: string
@@ -32,8 +40,6 @@ export interface ContributeButtonProps {
   disabled?: boolean
 }
 
-export type MemberStatus = 'active' | 'inactive' | 'pending' | 'removed'
-
 export interface MemberCardData {
   address: string
   name?: string
@@ -46,8 +52,6 @@ export interface MemberCardData {
   hasReceivedPayout: boolean
   status: MemberStatus
 }
-
-export type PayoutStatus = 'completed' | 'next' | 'upcoming'
 
 export interface PayoutEntry {
   position: number

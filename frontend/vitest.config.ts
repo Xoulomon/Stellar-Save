@@ -1,11 +1,41 @@
-import { defineConfig } from 'vitest/config';
+import path from 'path';
+
 import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@creit.tech/stellar-wallets-kit/modules/freighter': path.resolve(
+        __dirname,
+        'node_modules/@creit.tech/stellar-wallets-kit/esm/sdk/modules/freighter.module.js',
+      ),
+      '@creit.tech/stellar-wallets-kit/modules/albedo': path.resolve(
+        __dirname,
+        'node_modules/@creit.tech/stellar-wallets-kit/esm/sdk/modules/albedo.module.js',
+      ),
+      '@creit.tech/stellar-wallets-kit/modules/lobstr': path.resolve(
+        __dirname,
+        'node_modules/@creit.tech/stellar-wallets-kit/esm/sdk/modules/lobstr.module.js',
+      ),
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov', 'cobertura', 'json-summary'],
+      reportsDirectory: './coverage',
+      include: ['src/components/GroupCard.tsx', 'src/components/ContributionFlow.tsx', 'src/components/TransactionHistory.tsx'],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 70,
+        statements: 80,
+      },
+    },
   },
 });

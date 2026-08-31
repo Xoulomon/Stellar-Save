@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "dashboard": "داشبورد",
+    "groups": "گروه‌ها",
+    "profile": "پروفایل",
+    "settings": "تنظیمات",
+    "leaderboard": "جدول رتبه‌بندی"
+  },
+  "settings": {
+    "title": "تنظیمات",
+    "subtitle": "تنظیم ترجیحات شما",
+    "appearance": "ظاهر",
+    "appearanceDesc": "انتخاب ظاهر Stellar Save.",
+    "language": "زبان",
+    "languageDesc": "زبان مورد نظر خود را انتخاب کنید.",
+    "theme": {
+      "light": "روشن",
+      "dark": "تاریک",
+      "system": "سیستم"
+    }
+  },
+  "scheduler": {
+    "title": "زمان‌بندی مشارکت",
+    "amount": "مبلغ (XLM)",
+    "dateTime": "تاریخ و زمان برنامه‌ریزی شده",
+    "note": "یادداشت (اختیاری)",
+    "schedule": "زمان‌بندی",
+    "scheduled": "برنامه‌ریزی شده",
+    "save": "ذخیره",
+    "cancel": "لغو",
+    "edit": "ویرایش",
+    "balanceWarning": "موجودی شما ({{balance}} XLM) ممکن است برای پوشش همه مشارکت‌های برنامه‌ریزی شده ({{total}} XLM) کافی نباشد.",
+    "validation": {
+      "positiveAmount": "مبلغ باید یک عدد مثبت باشد.",
+      "selectDate": "لطفاً تاریخ و زمان را انتخاب کنید.",
+      "futureDate": "تاریخ برنامه‌ریزی شده باید در آینده باشد."
+    }
+  },
+  "common": {
+    "loading": "در حال بارگذاری...",
+    "error": "خطایی رخ داد.",
+    "save": "ذخیره",
+    "cancel": "لغو",
+    "edit": "ویرایش",
+    "delete": "حذف",
+    "confirm": "تأیید"
+  }
+}

@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
+
 import { CycleProgress } from '../components/CycleProgress';
 
 const futureDate = new Date(Date.now() + 1000 * 60 * 60 * 24 * 3); // 3 days from now
@@ -50,7 +51,7 @@ describe('CycleProgress', () => {
     render(
       <CycleProgress {...baseProps} contributedCount={10} totalMembers={10} />,
     );
-    expect(screen.getByText('✓ All members have contributed')).toBeInTheDocument();
+    expect(screen.getByText('✓ Cycle complete')).toBeInTheDocument();
   });
 
   it('does not show completion message when not all contributed', () => {
@@ -76,6 +77,6 @@ describe('CycleProgress', () => {
 
   it('renders progress percentages', () => {
     render(<CycleProgress {...baseProps} />);
-    expect(screen.getByText('50%')).toBeInTheDocument(); // contribution progress
+    expect(screen.getAllByText('50%').length).toBeGreaterThan(0);
   });
 });

@@ -26,23 +26,23 @@ export interface UseDebounceOptions {
 
 /**
  * Custom hook that debounces a rapidly changing value
- * 
+ *
  * This hook delays updating the returned value until after the specified delay
  * has elapsed since the last time the input value changed. This is useful for
  * optimizing performance when dealing with rapidly changing values like search
  * inputs, window resize events, or API calls.
- * 
+ *
  * @template T - The type of the value being debounced
  * @param value - The value to debounce
  * @param options - Configuration options for debouncing behavior
  * @returns The debounced value
- * 
+ *
  * @example
  * ```tsx
  * // Basic usage with default 500ms delay
  * const [searchTerm, setSearchTerm] = useState('');
  * const debouncedSearchTerm = useDebounce(searchTerm);
- * 
+ *
  * useEffect(() => {
  *   // This will only run 500ms after the user stops typing
  *   if (debouncedSearchTerm) {
@@ -50,7 +50,7 @@ export interface UseDebounceOptions {
  *   }
  * }, [debouncedSearchTerm]);
  * ```
- * 
+ *
  * @example
  * ```tsx
  * // Custom delay and leading edge update
@@ -137,18 +137,18 @@ export function useDebounce<T>(
 
 /**
  * Alternative hook that returns both the debounced value and a cancel function
- * 
+ *
  * @template T - The type of the value being debounced
  * @param value - The value to debounce
  * @param options - Configuration options for debouncing behavior
  * @returns Object containing the debounced value and a cancel function
- * 
+ *
  * @example
  * ```tsx
  * const { debouncedValue, cancel } = useDebounceWithCancel(searchTerm, {
  *   delay: 1000
  * });
- * 
+ *
  * // Cancel pending debounce on unmount or user action
  * useEffect(() => {
  *   return () => cancel();
@@ -161,7 +161,7 @@ export function useDebounceWithCancel<T>(
 ): { debouncedValue: T; cancel: () => void } {
   const { delay = 500, leading = false, maxWait } = options;
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  
+
   // Use refs to track state and timeouts
   const isFirstUpdate = useRef<boolean>(true);
   const firstChangeTimeRef = useRef<number | null>(null);

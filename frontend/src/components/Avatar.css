@@ -7,10 +7,10 @@
   overflow: hidden;
   background: linear-gradient(
     135deg,
-    rgba(100, 108, 255, 0.2),
-    rgba(72, 187, 120, 0.2)
+    color-mix(in srgb, var(--color-primary) 20%, transparent),
+    color-mix(in srgb, var(--color-success) 20%, transparent)
   );
-  color: rgba(255, 255, 255, 0.87);
+  color: var(--color-text-primary);
   font-weight: 500;
   font-family: inherit;
   flex-shrink: 0;
@@ -73,7 +73,9 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #646cff, #535bf2);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+  /* Fixed white text on a solid --color-primary gradient — stays AA-compliant in both themes. */
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   color: #fff;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -93,28 +95,8 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: rgba(128, 128, 128, 0.3);
-  color: rgba(255, 255, 255, 0.6);
+  background: color-mix(in srgb, var(--color-text-secondary) 30%, transparent);
+  color: var(--color-text-secondary);
   font-weight: 600;
 }
 
-/* Light mode adjustments */
-@media (prefers-color-scheme: light) {
-  .avatar {
-    background: linear-gradient(
-      135deg,
-      rgba(100, 108, 255, 0.15),
-      rgba(72, 187, 120, 0.15)
-    );
-    color: #213547;
-  }
-
-  .avatar-initials {
-    background: linear-gradient(135deg, #535bf2, #646cff);
-  }
-
-  .avatar-fallback {
-    background: rgba(128, 128, 128, 0.2);
-    color: rgba(0, 0, 0, 0.5);
-  }
-}

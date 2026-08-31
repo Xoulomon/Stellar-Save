@@ -1,0 +1,56 @@
+name: Clippy
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'contracts/stellar-save/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/clippy.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'contracts/stellar-save/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/clippy.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  clippy:
+    name: Clippy — stellar-save
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.94.1
+        with:
+          components: clippy
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Run Clippy (deny warnings)
+        run: |
+          cargo clippy \
+            --locked \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            --all-targets \
+            -- -D warnings
+
+      - name: Run cargo test
+        run: |
+          cargo test \
+            --locked \
+            --manifest-path contracts/stellar-save/Cargo.toml \
+            -- --test-threads=1

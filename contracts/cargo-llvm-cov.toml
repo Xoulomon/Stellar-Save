@@ -1,0 +1,10 @@
+# Configuration for cargo-llvm-cov coverage measurement on smart contracts
+[coverage]
+fail-under = 90.0
+html = true
+lcov = true
+output-dir = "target/llvm-cov"
+ignore-filename-regex = ["tests/", "frontend/", "target/"]
+
+[workspace]
+exclude = []

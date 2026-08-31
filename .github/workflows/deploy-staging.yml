@@ -1,0 +1,69 @@
+name: Deploy Staging
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/deploy-staging.yml'
+
+env:
+  TF_VERSION: "1.8.5"
+  AWS_REGION: "us-east-1"
+  TF_WORKING_DIR: infra/envs/staging
+
+jobs:
+  plan:
+    name: Terraform Plan (staging)
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform init
+        run: terraform init -input=false -backend-config=../../environments/staging.backend.hcl
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+      - name: Terraform plan
+        id: plan
+        run: |
+          terraform plan -no-color -input=false \
+            -var-file=../../environments/staging.tfvars \
+            -out=tfplan 2>&1 | tee plan.txt
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_VAR_acm_certificate_arn: ${{ vars.STAGING_ACM_CERT_ARN }}
+          TF_VAR_vpc_id: ${{ secrets.STAGING_VPC_ID }}
+          TF_VAR_private_subnet_ids: ${{ secrets.STAGING_PRIVATE_SUBNET_IDS }}
+          TF_VAR_db_username: ${{ secrets.STAGING_DB_USERNAME }}
+          TF_VAR_db_password: ${{ secrets.STAGING_DB_PASSWORD }}
+
+      - name: Comment plan on PR
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('${{ env.TF_WORKING_DIR }}/plan.txt', 'utf8');
+            const truncated = plan.length > 60000 ? plan.slice(0, 60000) + '\n...(truncated)' : plan;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Terraform Plan — staging\n\`\`\`hcl\n${truncated}\n\`\`\``
+            });

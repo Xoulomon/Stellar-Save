@@ -17,10 +17,11 @@
 //! The design follows a permissionless execution model where any address can trigger
 //! payout execution once preconditions are met.
 
+use crate::auth::is_active_member;
 use crate::error::StellarSaveError;
 use crate::events::EventEmitter;
 use crate::group::{Group, GroupStatus};
-use crate::payout::PayoutRecord;
+use crate::payout::{PayoutOrder, PayoutRecord};
 use crate::pool::PoolCalculator;
 use crate::storage::StorageKeyBuilder;
 use crate::MemberProfile;
@@ -50,11 +51,12 @@ use soroban_sdk::{Address, Env};
 /// Validates Requirements 1.1, 1.2, 1.3, 1.4, 1.5
 fn validate_cycle_complete(
     env: &Env,
-    group_id: u64,
+    group: &Group,
     current_cycle: u32,
 ) -> Result<crate::pool::PoolInfo, StellarSaveError> {
-    // Call PoolCalculator to retrieve comprehensive cycle data
-    let pool_info = PoolCalculator::get_pool_info(env, group_id, current_cycle)?;
+    // Reuse the already-loaded group instead of re-reading it from storage,
+    // avoiding a redundant SLOAD of the group_data entry within this invocation.
+    let pool_info = PoolCalculator::get_pool_info_for_group(env, group, current_cycle)?;
 
     // Validate that the pool is ready for payout
     // This checks:
@@ -68,9 +70,9 @@ fn validate_cycle_complete(
 
 /// Identifies the member who should receive the payout for the current cycle.
 ///
-/// This function iterates through all members in the group to find the member
-/// whose payout_position matches the current cycle number. It verifies that
-/// exactly one member has the matching position.
+/// Gas opt: O(1) direct lookup using the `PayoutPositionIndex` reverse map
+/// written at join/assign time. A single SLOAD replaces the previous O(n)
+/// member-list scan.
 ///
 /// # Arguments
 /// * `env` - Soroban environment for storage access
@@ -80,22 +82,44 @@ fn validate_cycle_complete(
 ///
 /// # Returns
 /// * `Ok(Address)` - The recipient's address
-/// * `Err(StellarSaveError)` - If no member found or multiple members with same position
-///
-/// # Errors
-/// - `InvalidState` - No member found with matching payout position
-/// - `InvalidState` - Multiple members have the same payout position
-/// - `GroupNotFound` - Group members list not found in storage
-///
-/// # Requirements
-/// Validates Requirements 2.1, 2.2, 2.5
+/// * `Err(StellarSaveError)` - If no member found for this position
 fn identify_recipient(
     env: &Env,
     group_id: u64,
     current_cycle: u32,
     member_count: u32,
+    payout_order: &PayoutOrder,
 ) -> Result<Address, StellarSaveError> {
-    // Load the list of all members in the group
+    match payout_order {
+        PayoutOrder::Random => identify_recipient_random(env, group_id, current_cycle),
+        PayoutOrder::Bid => identify_recipient_bid(env, group_id, current_cycle),
+        PayoutOrder::Sequential => {
+            identify_recipient_sequential(env, group_id, current_cycle, member_count)
+        }
+    }
+}
+
+/// Selects the recipient for `Sequential` order: the member whose payout_position
+/// equals `current_cycle` (O(1) via reverse index, O(n) fallback for legacy groups).
+fn identify_recipient_sequential(
+    env: &Env,
+    group_id: u64,
+    current_cycle: u32,
+    member_count: u32,
+) -> Result<Address, StellarSaveError> {
+    // Gas opt: O(1) reverse-index lookup instead of O(n) member-list scan.
+    // The index is written at join_group / assign_payout_positions time.
+    let pos_idx_key = StorageKeyBuilder::group_payout_position_index(group_id, current_cycle);
+    if let Some(recipient) = env.storage().persistent().get::<_, Address>(&pos_idx_key) {
+        // Sanity: position must be within the valid range for this group
+        if current_cycle < member_count {
+            return Ok(recipient);
+        }
+    }
+
+    // Fallback: reverse index not yet populated (legacy groups or first cycle
+    // before assign_payout_positions was called). Fall back to the O(n) scan
+    // so we remain backward-compatible.
     let members_key = StorageKeyBuilder::group_members(group_id);
     let members: soroban_sdk::Vec<Address> = env
         .storage()
@@ -103,75 +127,127 @@ fn identify_recipient(
         .get(&members_key)
         .ok_or(StellarSaveError::GroupNotFound)?;
 
-    // Validate that we have the expected number of members
     if members.len() != member_count {
         return Err(StellarSaveError::InvalidState);
     }
 
-    // Track the recipient and count of matches
     let mut recipient: Option<Address> = None;
     let mut match_count = 0u32;
 
-    // Iterate through all members to find the one with matching payout_position
     for member_address in members.iter() {
-        // Load the member's profile
-        let profile_key = StorageKeyBuilder::member_profile(group_id, member_address.clone());
-        let profile: MemberProfile = env
-            .storage()
-            .persistent()
-            .get(&profile_key)
-            .ok_or(StellarSaveError::InvalidState)?;
-
-        // Check if this member's payout position matches the current cycle
-        if profile.payout_position == current_cycle {
-            recipient = Some(member_address);
-            match_count += 1;
+        let pos_key =
+            StorageKeyBuilder::member_payout_eligibility(group_id, member_address.clone());
+        if let Some(position) = env.storage().persistent().get::<_, u32>(&pos_key) {
+            if position == current_cycle {
+                recipient = Some(member_address);
+                match_count += 1;
+            }
         }
     }
 
-    // Verify exactly one member has the matching position
     match match_count {
-        0 => {
-            // No member found with matching payout position
-            Err(StellarSaveError::InvalidState)
-        }
-        1 => {
-            // Exactly one member found - return their address
-            Ok(recipient.unwrap())
-        }
-        _ => {
-            // Multiple members have the same payout position - invalid state
-            Err(StellarSaveError::InvalidState)
+        0 => Err(StellarSaveError::InvalidState),
+        1 => Ok(recipient.unwrap()),
+        _ => Err(StellarSaveError::InvalidState),
+    }
+}
+
+/// Selects the recipient for `Random` order: picks a random member who has not
+/// yet received a payout, using ledger sequence as entropy.
+fn identify_recipient_random(
+    env: &Env,
+    group_id: u64,
+    current_cycle: u32,
+) -> Result<Address, StellarSaveError> {
+    let members_key = StorageKeyBuilder::group_members(group_id);
+    let members: soroban_sdk::Vec<Address> = env
+        .storage()
+        .persistent()
+        .get(&members_key)
+        .ok_or(StellarSaveError::GroupNotFound)?;
+
+    // Collect members who have not yet received a payout.
+    let mut eligible: soroban_sdk::Vec<Address> = soroban_sdk::Vec::new(env);
+    for member in members.iter() {
+        // A member is eligible if they have no payout record for any prior cycle.
+        // We check the member_payout_eligibility flag: if it equals current_cycle
+        // the member has already been paid this cycle; otherwise they are eligible.
+        let paid_key = StorageKeyBuilder::member_payout_eligibility(group_id, member.clone());
+        let paid_cycle: Option<u32> = env.storage().persistent().get(&paid_key);
+        // paid_cycle stores the cycle at which the member received their payout.
+        // If it is None or points to a future cycle, the member hasn't been paid yet.
+        let already_paid = paid_cycle.map(|c| c < current_cycle).unwrap_or(false);
+        if !already_paid {
+            eligible.push_back(member);
         }
     }
+
+    if eligible.is_empty() {
+        return Err(StellarSaveError::InvalidState);
+    }
+
+    // Use Soroban PRNG + ledger timestamp as entropy source.
+    let prng_val = env.prng().u64_in_range(0..u64::MAX);
+    let ledger_salt = env.ledger().timestamp();
+    let idx = ((prng_val.wrapping_add(ledger_salt).wrapping_add(group_id as u64))
+        % eligible.len() as u64) as u32;
+
+    Ok(eligible.get(idx).unwrap())
+}
+
+/// Selects the recipient for `Bid` order: the member with the highest bid for
+/// `current_cycle`. Ties are broken by member list order (first highest bidder wins).
+fn identify_recipient_bid(
+    env: &Env,
+    group_id: u64,
+    current_cycle: u32,
+) -> Result<Address, StellarSaveError> {
+    let members_key = StorageKeyBuilder::group_members(group_id);
+    let members: soroban_sdk::Vec<Address> = env
+        .storage()
+        .persistent()
+        .get(&members_key)
+        .ok_or(StellarSaveError::GroupNotFound)?;
+
+    let mut best_bidder: Option<Address> = None;
+    let mut best_bid: i128 = -1;
+
+    for member in members.iter() {
+        // Skip members who have already received a payout in a prior cycle.
+        let paid_key = StorageKeyBuilder::member_payout_eligibility(group_id, member.clone());
+        let paid_cycle: Option<u32> = env.storage().persistent().get(&paid_key);
+        let already_paid = paid_cycle.map(|c| c < current_cycle).unwrap_or(false);
+        if already_paid {
+            continue;
+        }
+
+        let bid_key =
+            StorageKeyBuilder::group_bid_amount(group_id, current_cycle, member.clone());
+        let bid: i128 = env.storage().persistent().get(&bid_key).unwrap_or(0);
+        if bid > best_bid {
+            best_bid = bid;
+            best_bidder = Some(member);
+        }
+    }
+
+    best_bidder.ok_or(StellarSaveError::InvalidState)
 }
 
 /// Verifies that the identified recipient is eligible to receive the payout.
 ///
-/// This function performs two critical eligibility checks:
-/// 1. Verifies the recipient is a current member of the group
-/// 2. Ensures the recipient has not already received a payout in this group
-///
-/// The function checks all cycles from 0 to the current cycle to determine if
-/// the recipient has already received a payout. This ensures that each member
-/// receives exactly one payout per group lifecycle.
+/// Gas opt: O(1) — checks member existence (1 SLOAD) then checks the single
+/// payout_recipient slot for the recipient's own payout_position (1 SLOAD).
+/// Replaces the previous O(n) loop over all cycles 0..=current_cycle.
 ///
 /// # Arguments
 /// * `env` - Soroban environment for storage access
 /// * `group_id` - Unique identifier of the group
 /// * `recipient` - Address of the recipient to verify
-/// * `current_cycle` - The current cycle number (used to check payout history)
+/// * `current_cycle` - The current cycle number
 ///
 /// # Returns
 /// * `Ok(())` - Recipient is eligible to receive the payout
 /// * `Err(StellarSaveError)` - Recipient is not eligible
-///
-/// # Errors
-/// - `NotMember` - Recipient is not a member of the group
-/// - `InvalidRecipient` - Recipient has already received a payout in this group
-///
-/// # Requirements
-/// Validates Requirements 2.3, 2.4
 fn verify_recipient_eligibility(
     env: &Env,
     group_id: u64,
@@ -179,27 +255,18 @@ fn verify_recipient_eligibility(
     current_cycle: u32,
 ) -> Result<(), StellarSaveError> {
     // Check 1: Verify recipient is a current member of the group
-    let member_key = StorageKeyBuilder::member_profile(group_id, recipient.clone());
-    if !env.storage().persistent().has(&member_key) {
+    if !is_active_member(env, group_id, recipient) {
         return Err(StellarSaveError::NotMember);
     }
 
-    // Check 2: Verify recipient has not already received a payout
-    // We need to check all cycles from 0 to current_cycle to see if this
-    // recipient has already received a payout in any previous cycle
-    for cycle in 0..=current_cycle {
-        let recipient_key = StorageKeyBuilder::payout_recipient(group_id, cycle);
-        
-        // Check if a payout recipient exists for this cycle
-        if let Some(past_recipient) = env.storage().persistent().get::<_, Address>(&recipient_key) {
-            // If the past recipient matches our current recipient, they've already received a payout
-            if past_recipient == *recipient {
-                return Err(StellarSaveError::InvalidRecipient);
-            }
-        }
+    // Check 2: Gas opt — each member can only receive payout at their payout_position
+    // cycle. Since current_cycle == payout_position (validated in identify_recipient),
+    // we only need to check that single slot rather than looping 0..=current_cycle.
+    let recipient_key = StorageKeyBuilder::payout_recipient(group_id, current_cycle);
+    if env.storage().persistent().has(&recipient_key) {
+        return Err(StellarSaveError::InvalidRecipient);
     }
 
-    // All checks passed - recipient is eligible
     Ok(())
 }
 
@@ -244,50 +311,33 @@ fn calculate_and_validate_payout_amount(
 
 /// Verifies that the contract has sufficient balance to cover the payout amount.
 ///
-/// This function queries the contract's current balance and ensures it is greater
-/// than or equal to the payout amount before proceeding with the transfer. This
-/// check prevents transfer failures due to insufficient funds.
-///
-/// # Arguments
-/// * `env` - Soroban environment for accessing contract address
-/// * `payout_amount` - The amount to be paid out (in stroops)
-///
-/// # Returns
-/// * `Ok(())` - Contract has sufficient balance
-/// * `Err(StellarSaveError)` - Insufficient balance or query failed
-///
-/// # Errors
-/// - `PayoutFailed` - Contract balance is less than the payout amount
-///
-/// # Note
-/// This function uses a placeholder balance query. In production, it would:
-/// 1. Get the native token contract address
-/// 2. Create a token client for the native asset
-/// 3. Query the balance for this contract's address
-/// 4. Compare balance >= payout_amount
+/// Gas opt: placeholder check removed — the hardcoded `balance = 0` caused every
+/// payout to fail with `PayoutFailed`. In production this would query the native
+/// token contract. For MVP the actual balance check is deferred to the token
+/// transfer call in `execute_transfer`, which will revert on insufficient funds.
 ///
 /// # Requirements
-/// Validates Requirements 3.5, 4.4
+/// Verifies the contract has sufficient token balance for the payout.
+/// Uses the group's configured SEP-41 token. Requirements 3.5, 4.4
 fn verify_contract_balance(
     env: &Env,
+    group_id: u64,
     payout_amount: i128,
 ) -> Result<(), StellarSaveError> {
-    // Get the contract's address
-    let _contract_address = env.current_contract_address();
-    
-    // Query the contract's current balance
-    // Note: This is a placeholder implementation
-    // In production, this would query the native token contract:
-    // let native_token = token::Client::new(&env, &native_token_address);
-    // let balance = native_token.balance(&_contract_address);
-    let balance: i128 = 0; // Placeholder
-    
-    // Verify that the contract has sufficient balance to cover the payout
+    let token_config_key = StorageKeyBuilder::group_token_config(group_id);
+    let token_config: crate::group::TokenConfig = env
+        .storage()
+        .persistent()
+        .get(&token_config_key)
+        .ok_or(StellarSaveError::GroupNotFound)?;
+
+    let token_client = soroban_sdk::token::TokenClient::new(env, &token_config.token_address);
+    let contract_address = env.current_contract_address();
+    let balance = token_client.balance(&contract_address);
+
     if balance < payout_amount {
         return Err(StellarSaveError::PayoutFailed);
     }
-    
-    // Balance is sufficient
     Ok(())
 }
 
@@ -327,53 +377,31 @@ fn verify_contract_balance(
 ///
 /// # Requirements
 /// Validates Requirements 4.1, 4.2, 4.3, 10.3, 10.4
+/// Executes the SEP-41 token transfer from the contract to the payout recipient.
+/// Requirements 5.5, 5.6
 fn execute_transfer(
     env: &Env,
+    group_id: u64,
     recipient: &Address,
     amount: i128,
 ) -> Result<(), StellarSaveError> {
-    // Get the contract's address (the source of the transfer)
-    let contract_address = env.current_contract_address();
-    
-    // Validate amount is positive using checked arithmetic
-    // This prevents overflow and ensures we're transferring a valid amount
     if amount <= 0 {
         return Err(StellarSaveError::PayoutFailed);
     }
-    
-    // Validate that the amount doesn't exceed i128::MAX (overflow protection)
-    // This is a defensive check to ensure arithmetic safety
-    if amount > i128::MAX {
-        return Err(StellarSaveError::Overflow);
-    }
-    
-    // Execute the transfer from contract to recipient
-    // Note: This is a placeholder implementation for MVP
-    // In production, this would use the Stellar token API:
-    //
-    // // Get the native token contract address (XLM)
-    // let native_token_address = get_native_token_address(env);
-    // 
-    // // Create a token client for the native asset
-    // let token = token::Client::new(env, &native_token_address);
-    // 
-    // // Execute the transfer
-    // // This will automatically revert on failure (insufficient balance, etc.)
-    // token.transfer(&contract_address, recipient, &amount);
-    //
-    // The transfer operation in Soroban is atomic - if it fails, all state
-    // changes are automatically reverted by the Soroban runtime.
-    
-    // For MVP: Log the transfer details (in production, this would be the actual transfer)
-    // The actual transfer would be handled by the Stellar token contract
-    let _from = contract_address;
-    let _to = recipient.clone();
-    let _transfer_amount = amount;
-    
-    // In production, any transfer failure would cause a panic/revert
-    // For now, we return success to allow testing the payout flow
-    // TODO: Implement actual token transfer when token integration is ready
-    
+
+    let token_config_key = StorageKeyBuilder::group_token_config(group_id);
+    let token_config: crate::group::TokenConfig = env
+        .storage()
+        .persistent()
+        .get(&token_config_key)
+        .ok_or(StellarSaveError::GroupNotFound)?;
+
+    let token_client = soroban_sdk::token::TokenClient::new(env, &token_config.token_address);
+    let contract_address = env.current_contract_address();
+
+    // transfer panics on failure; Soroban reverts all state changes atomically
+    token_client.transfer(&contract_address, recipient, &amount);
+
     Ok(())
 }
 /// Creates and stores an immutable payout record.
@@ -419,13 +447,7 @@ fn record_payout(
     // Create PayoutRecord with all required fields
     // The PayoutRecord::new constructor validates that amount > 0
     // and will panic if validation fails
-    let payout_record = PayoutRecord::new(
-        recipient.clone(),
-        group_id,
-        cycle,
-        amount,
-        timestamp,
-    );
+    let payout_record = PayoutRecord::new(recipient.clone(), group_id, cycle, amount, timestamp);
 
     // Validate the record before storage
     // This ensures the record meets all validation constraints
@@ -482,7 +504,7 @@ fn update_member_status(
     // Load the MemberProfile for the recipient to ensure it exists
     // This validates that the recipient is a valid member of the group
     let member_key = StorageKeyBuilder::member_profile(group_id, recipient.clone());
-    
+
     // Attempt to load the member profile
     // If the profile doesn't exist, this indicates an internal consistency error
     // since we should have already verified the member exists during eligibility checks
@@ -491,7 +513,7 @@ fn update_member_status(
         .persistent()
         .get(&member_key)
         .ok_or(StellarSaveError::InternalError)?;
-    
+
     // The member profile exists and is accessible
     // The payout receipt status is tracked via the payout_recipient storage key
     // which was set by the record_payout function, so no additional updates
@@ -500,7 +522,7 @@ fn update_member_status(
     // Future enhancements could add a payout_received flag to MemberProfile,
     // but the current architecture uses the payout_recipient storage key as
     // the source of truth for payout status.
-    
+
     // Consistency check passed - member status is valid
     Ok(())
 }
@@ -554,7 +576,7 @@ fn emit_payout_event(
 ) {
     // Wrap event emission in error handling that continues on failure
     // Events are non-critical - if emission fails, the payout should still succeed
-    // 
+    //
     // Note: In Soroban, the events().publish() method does not return a Result,
     // so we don't need explicit error handling. However, we wrap this in a
     // separate function to make it clear that event emission is non-critical
@@ -562,16 +584,21 @@ fn emit_payout_event(
     //
     // If the event system fails internally, Soroban will handle it gracefully
     // without causing the transaction to revert.
-    
-    EventEmitter::emit_payout_executed(
-        env,
-        group_id,
-        recipient,
-        amount,
-        cycle,
-        timestamp,
+
+    EventEmitter::emit_payout_executed(env, group_id, recipient.clone(), amount, cycle, timestamp);
+
+    // Issue #754: emit structured contribution receipt for indexer
+    env.events().publish(
+        ("contribution_receipt",),
+        crate::events::ContributionEvent {
+            group_id,
+            member: recipient,
+            amount,
+            cycle,
+            timestamp,
+        },
     );
-    
+
     // Event emission completed (or failed gracefully)
     // The payout flow continues regardless of event emission status
 }
@@ -610,25 +637,79 @@ fn emit_payout_event(
 ///
 /// # Requirements
 /// Validates Requirements 8.1, 8.2, 8.3, 8.4, 8.5, 8.6
-fn advance_cycle_or_complete(
-    env: &Env,
-    group: &mut Group,
-) -> Result<(), StellarSaveError> {
+fn advance_cycle_or_complete(env: &Env, group: &mut Group) -> Result<(), StellarSaveError> {
     // Call group.advance_cycle to increment cycle and handle completion logic
-    // This method:
-    // - Increments current_cycle by 1
-    // - Checks if current_cycle >= max_members (group is complete)
-    // - If complete: sets status = Completed, is_active = false
-    // - If complete: emits GroupCompleted event automatically
-    // - Panics if group is already complete (defensive check)
     group.advance_cycle(env);
 
     // Save the updated group to storage
-    // This persists the incremented cycle number and any status changes
     let group_key = StorageKeyBuilder::group_data(group.id);
     env.storage().persistent().set(&group_key, group);
 
-    // Cycle advancement and storage completed successfully
+    // Emit CycleAdvanced event (only when group is not yet complete)
+    if !group.is_complete() {
+        let timestamp = env.ledger().timestamp();
+        let old_cycle = group.current_cycle.saturating_sub(1);
+        EventEmitter::emit_cycle_advanced(
+            env,
+            group.id,
+            old_cycle,
+            group.current_cycle,
+            true,
+            false,
+            timestamp,
+        );
+    }
+
+    Ok(())
+}
+
+/// Applies penalties to all members who missed their contribution in the given cycle.
+///
+/// Iterates over all group members, checks if each one contributed in `cycle`, and
+/// calls `apply_penalty` for those who did not. The penalty amount is added to the
+/// cycle pool total so the payout recipient receives it.
+///
+/// This function is a no-op when `group.penalty_enabled` is false or
+/// `group.penalty_amount` is zero.
+fn apply_missed_contribution_penalties(
+    env: &Env,
+    group_id: u64,
+    cycle: u32,
+    group: &Group,
+) -> Result<(), StellarSaveError> {
+    let members_key = StorageKeyBuilder::group_members(group_id);
+    let members: soroban_sdk::Vec<Address> = env
+        .storage()
+        .persistent()
+        .get(&members_key)
+        .ok_or(StellarSaveError::GroupNotFound)?;
+
+    for member in members.iter() {
+        let contrib_key =
+            StorageKeyBuilder::contribution_individual(group_id, cycle, member.clone());
+        if !env.storage().persistent().has(&contrib_key) {
+            // Member missed this cycle — apply penalty
+            let penalty_key = StorageKeyBuilder::member_penalty_total(group_id, member.clone());
+            let current_total: i128 = env.storage().persistent().get(&penalty_key).unwrap_or(0);
+            let new_total = current_total
+                .checked_add(group.penalty_amount)
+                .ok_or(StellarSaveError::Overflow)?;
+            env.storage().persistent().set(&penalty_key, &new_total);
+
+            // Add penalty to the cycle pool so the payout recipient benefits
+            let pool_key = StorageKeyBuilder::contribution_cycle_total(group_id, cycle);
+            let current_pool: i128 = env.storage().persistent().get(&pool_key).unwrap_or(0);
+            let new_pool = current_pool
+                .checked_add(group.penalty_amount)
+                .ok_or(StellarSaveError::Overflow)?;
+            env.storage().persistent().set(&pool_key, &new_pool);
+
+            let timestamp = env.ledger().timestamp();
+            let _ = timestamp; // timestamp captured internally by emit_penalty_applied
+            EventEmitter::emit_penalty_applied(env, group_id, member, group.penalty_amount, cycle);
+        }
+    }
+
     Ok(())
 }
 
@@ -682,16 +763,17 @@ fn advance_cycle_or_complete(
 /// Validates Requirements 9.1, 9.2, 9.3, 9.4, 9.5, 10.6, 10.7, and orchestrates all
 /// other requirements through helper functions.
 pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
-    // Reentrancy protection - prevent recursive payout calls
+    // Reentrancy protection — use temporary storage (10x cheaper than persistent).
+    // Temporary entries are scoped to the current transaction and auto-cleared.
     let reentrancy_key = StorageKeyBuilder::reentrancy_guard();
-    let guard_value: u64 = env.storage().persistent().get(&reentrancy_key).unwrap_or(0);
+    let guard_value: u64 = env.storage().temporary().get(&reentrancy_key).unwrap_or(0);
     
     if guard_value != 0 {
         return Err(StellarSaveError::InternalError);
     }
-    
+
     // Set reentrancy protection flag
-    env.storage().persistent().set(&reentrancy_key, &1);
+    env.storage().temporary().set(&reentrancy_key, &1);
 
     // Step 1: Load group from storage
     let group_key = StorageKeyBuilder::group_data(group_id);
@@ -701,10 +783,28 @@ pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
         .get(&group_key)
         .ok_or(StellarSaveError::GroupNotFound)?;
 
+    // Reentrancy protection - reject if a payout is already in progress for this group
+    if group.payout_in_progress {
+        return Err(StellarSaveError::ReentrancyDetected);
+    }
+
+    // Set per-group reentrancy guard
+    group.payout_in_progress = true;
+    env.storage().persistent().set(&group_key, &group);
+
     // Step 2: Validate group status is Active
     // Only Active groups can process payouts
+    if group.paused {
+        return Err(StellarSaveError::InvalidState);
+    }
+
     if group.status != GroupStatus::Active {
         return Err(StellarSaveError::InvalidState);
+    }
+
+    // Step 2b: Block payout if a dispute is active
+    if group.dispute_active {
+        return Err(StellarSaveError::DisputeActive);
     }
 
     // Step 3: Check if payout already executed for current cycle
@@ -718,46 +818,83 @@ pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
 
     // === VALIDATION PHASE (Task 12.2) ===
     // All validation checks must pass before any state modifications occur
-    
+
     // Step 4: Validate cycle is complete (all members have contributed)
-    let pool_info = validate_cycle_complete(&env, group_id, current_cycle)?;
-    
+    let pool_info = validate_cycle_complete(&env, &group, current_cycle)?;
+
+    // Step 4b: Apply penalties to members who missed contributions this cycle.
+    // Penalties are added to the pool total so the payout recipient benefits.
+    if group.penalty_enabled && group.penalty_amount > 0 {
+        apply_missed_contribution_penalties(&env, group_id, current_cycle, &group)?;
+    }
+
     // Step 5: Identify the recipient for this cycle based on payout position
-    let recipient = identify_recipient(&env, group_id, current_cycle, group.member_count)?;
-    
+    let recipient = identify_recipient(&env, group_id, current_cycle, group.member_count, &group.payout_order)?;
+
     // Step 6: Verify the recipient is eligible to receive the payout
     verify_recipient_eligibility(&env, group_id, &recipient, current_cycle)?;
-    
+
     // Step 7: Calculate the payout amount from the pool total
     let payout_amount = calculate_and_validate_payout_amount(&pool_info)?;
-    
+
     // Step 8: Verify contract has sufficient balance to cover the payout
-    verify_contract_balance(&env, payout_amount)?;
-    
-    // === EXECUTION PHASE (Task 12.3) ===
-    // All validations passed - proceed with payout execution
-    // If any step fails after this point, Soroban will automatically revert all changes
-    
-    // Step 9: Execute the fund transfer to the recipient
-    execute_transfer(&env, &recipient, payout_amount)?;
-    
-    // Step 10: Create and store the payout record for audit trail
+    verify_contract_balance(&env, group_id, payout_amount)?;
+
+    // === EFFECTS PHASE (Task 12.3) ===
+    // All validations passed. Checks-effects-interactions: every state mutation
+    // below is committed *before* the token transfer, so a caller-supplied token
+    // contract that calls back during `transfer` sees a fully settled cycle —
+    // the payout-recipient key is already present and the cycle has already
+    // advanced, which is what makes the duplicate-payout check at Step 3 hold.
+    // If any step fails after this point, Soroban reverts all changes atomically.
+
+    // Step 9: Create and store the payout record for audit trail
+    // Gas opt: cache timestamp — single ledger call for the whole function
     let timestamp = env.ledger().timestamp();
-    record_payout(&env, group_id, current_cycle, recipient.clone(), payout_amount, timestamp)?;
-    
-    // Step 11: Update the member status to reflect payout completion
+    record_payout(
+        &env,
+        group_id,
+        current_cycle,
+        recipient.clone(),
+        payout_amount,
+        timestamp,
+    )?;
+
+    // Gas opt: update incremental paid-out counter (avoids O(n) loop in get_total_paid_out)
+    let paid_out_key = StorageKeyBuilder::group_total_paid_out(group_id);
+    let current_paid: i128 = env.storage().persistent().get(&paid_out_key).unwrap_or(0);
+    let new_paid = current_paid
+        .checked_add(payout_amount)
+        .ok_or(StellarSaveError::Overflow)?;
+    env.storage().persistent().set(&paid_out_key, &new_paid);
+
+    // Step 10: Update the member status to reflect payout completion
     update_member_status(&env, group_id, &recipient)?;
-    
-    // Step 12: Emit payout event (non-critical - continues on failure)
-    emit_payout_event(&env, group_id, recipient, payout_amount, current_cycle, timestamp);
-    
-    // Step 13: Advance to the next cycle or mark group as complete
+
+    // Step 11: Emit payout event (non-critical - continues on failure)
+    emit_payout_event(
+        &env,
+        group_id,
+        recipient.clone(),
+        payout_amount,
+        current_cycle,
+        timestamp,
+    );
+
+    // Step 12: Advance to the next cycle or mark group as complete.
+    // The per-group reentrancy guard stays set across this write so it is still
+    // held when the external token call runs below.
     advance_cycle_or_complete(&env, &mut group)?;
-    
-    // Clear reentrancy protection flag
-    let reentrancy_key = StorageKeyBuilder::reentrancy_guard();
-    env.storage().persistent().set(&reentrancy_key, &0);
-    
+
+    // === INTERACTIONS PHASE ===
+
+    // Step 13: Execute the fund transfer to the recipient
+    execute_transfer(&env, group_id, &recipient, payout_amount)?;
+
+    // Clear per-group reentrancy guard only after the external call has returned
+    group.payout_in_progress = false;
+    env.storage().persistent().set(&group_key, &group);
+
     // Payout execution completed successfully
     Ok(())
 }
@@ -833,7 +970,7 @@ mod tests {
             group_id: 1,
             cycle: 0,
             member_count: 100,
-            contribution_amount: 100_000_000i128, // 10 XLM
+            contribution_amount: 100_000_000i128,  // 10 XLM
             total_pool_amount: 10_000_000_000i128, // 1000 XLM
             current_contributions: 10_000_000_000i128,
             contributors_count: 100,
@@ -845,35 +982,29 @@ mod tests {
         assert_eq!(result.unwrap(), 10_000_000_000i128);
     }
 
-    // Test verify_contract_balance with sufficient balance
-    // Note: This test uses the placeholder implementation
+    // Test verify_contract_balance — now requires a real group with TokenConfig.
+    // These tests verify the amount guard only; storage lookup will return GroupNotFound
+    // for group_id=0 which is expected in unit test context.
     #[test]
     fn test_verify_contract_balance_placeholder() {
         let env = Env::default();
         let payout_amount = 5_000_000i128;
-
-        // With the current placeholder implementation (balance = 0),
-        // this should fail
-        let result = verify_contract_balance(&env, payout_amount);
+        // group_id=0 has no TokenConfig → GroupNotFound
+        let result = verify_contract_balance(&env, 0, payout_amount);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), StellarSaveError::PayoutFailed);
     }
 
-    // Test verify_contract_balance with zero payout
     #[test]
     fn test_verify_contract_balance_zero_payout() {
         let env = Env::default();
         let payout_amount = 0i128;
-
-        // Even with zero payout, the placeholder balance (0) should pass
-        let result = verify_contract_balance(&env, payout_amount);
-        assert!(result.is_ok());
+        // group_id=0 has no TokenConfig → GroupNotFound
+        let result = verify_contract_balance(&env, 0, payout_amount);
+        assert!(result.is_err());
     }
 
-    // Integration test: Test that helper functions can be called together
     #[test]
     fn test_helper_functions_integration() {
-        // Create a valid pool info
         let pool_info = PoolInfo {
             group_id: 1,
             cycle: 0,
@@ -884,92 +1015,79 @@ mod tests {
             contributors_count: 3,
             is_cycle_complete: true,
         };
-
-        // Calculate payout amount
         let payout_amount = calculate_and_validate_payout_amount(&pool_info);
         assert!(payout_amount.is_ok());
         assert_eq!(payout_amount.unwrap(), 6_000_000i128);
 
-        // Verify contract balance (will fail with placeholder)
         let env = Env::default();
-        let balance_check = verify_contract_balance(&env, payout_amount.unwrap());
-        assert!(balance_check.is_err()); // Expected with placeholder implementation
+        // group_id=1 has no TokenConfig in unit test env → GroupNotFound
+        let balance_check = verify_contract_balance(&env, 1, payout_amount.unwrap());
+        assert!(balance_check.is_err());
     }
 
-    // Test execute_transfer with valid amount
     #[test]
     fn test_execute_transfer_valid() {
         let env = Env::default();
         let recipient = Address::generate(&env);
-        let amount = 5_000_000i128; // 0.5 XLM
-
-        let result = execute_transfer(&env, &recipient, amount);
-        // With placeholder implementation, this should succeed
-        assert!(result.is_ok());
+        let amount = 5_000_000i128;
+        // group_id=0 has no TokenConfig → GroupNotFound (amount guard passes)
+        let result = execute_transfer(&env, 0, &recipient, amount);
+        assert!(result.is_err()); // GroupNotFound since no token registered
     }
 
-    // Test execute_transfer with zero amount
     #[test]
     fn test_execute_transfer_zero_amount() {
         let env = Env::default();
         let recipient = Address::generate(&env);
         let amount = 0i128;
-
-        let result = execute_transfer(&env, &recipient, amount);
-        // Zero amount should fail
+        let result = execute_transfer(&env, 0, &recipient, amount);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), StellarSaveError::PayoutFailed);
     }
 
-    // Test execute_transfer with negative amount
     #[test]
     fn test_execute_transfer_negative_amount() {
         let env = Env::default();
         let recipient = Address::generate(&env);
         let amount = -1_000_000i128;
-
-        let result = execute_transfer(&env, &recipient, amount);
-        // Negative amount should fail
+        let result = execute_transfer(&env, 0, &recipient, amount);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), StellarSaveError::PayoutFailed);
     }
 
-    // Test execute_transfer with large valid amount
     #[test]
     fn test_execute_transfer_large_amount() {
         let env = Env::default();
         let recipient = Address::generate(&env);
-        let amount = 1_000_000_000_000i128; // 100,000 XLM
-
-        let result = execute_transfer(&env, &recipient, amount);
-        // Large but valid amount should succeed with placeholder
-        assert!(result.is_ok());
+        let amount = 1_000_000_000_000i128;
+        // group_id=0 has no TokenConfig → GroupNotFound (amount guard passes)
+        let result = execute_transfer(&env, 0, &recipient, amount);
+        assert!(result.is_err()); // GroupNotFound
     }
 
-    // Test execute_transfer with maximum i128 value (edge case)
     #[test]
     fn test_execute_transfer_max_amount() {
         let env = Env::default();
         let recipient = Address::generate(&env);
         let amount = i128::MAX;
 
-        let result = execute_transfer(&env, &recipient, amount);
-        // Maximum i128 should succeed (no overflow)
-        assert!(result.is_ok());
+        let result = execute_transfer(&env, 0, &recipient, amount);
+        // group_id=0 has no TokenConfig → GroupNotFound (amount guard passes for i128::MAX)
+        assert!(result.is_err());
     }
 
     // Test that execute_transfer gets contract address correctly
     #[test]
     fn test_execute_transfer_contract_address() {
         let env = Env::default();
-        env.mock_all_auths(); // Mock authentication for testing
-        
+        env.mock_all_auths();
+
         let recipient = Address::generate(&env);
         let amount = 1_000_000i128;
 
-        // The function should be able to get the contract address
-        let result = execute_transfer(&env, &recipient, amount);
-        assert!(result.is_ok());
+        // group_id=0 has no TokenConfig → GroupNotFound (amount guard passes)
+        let result = execute_transfer(&env, 0, &recipient, amount);
+        assert!(result.is_err()); // GroupNotFound
     }
 
     // Test record_payout with valid data
@@ -1039,16 +1157,23 @@ mod tests {
         assert!(result1.is_ok());
 
         // Record payout for cycle 1
-        let result2 = record_payout(&env, group_id, 1, recipient2.clone(), amount, timestamp + 604800);
+        let result2 = record_payout(
+            &env,
+            group_id,
+            1,
+            recipient2.clone(),
+            amount,
+            timestamp + 604800,
+        );
         assert!(result2.is_ok());
 
         // Verify both records exist
         let record_key_0 = StorageKeyBuilder::payout_record(group_id, 0);
         let record_key_1 = StorageKeyBuilder::payout_record(group_id, 1);
-        
+
         let stored_record_0: Option<PayoutRecord> = env.storage().persistent().get(&record_key_0);
         let stored_record_1: Option<PayoutRecord> = env.storage().persistent().get(&record_key_1);
-        
+
         assert!(stored_record_0.is_some());
         assert!(stored_record_1.is_some());
         assert_eq!(stored_record_0.unwrap().recipient, recipient1);
@@ -1091,7 +1216,7 @@ mod tests {
         // Verify both storage keys exist
         let record_key = StorageKeyBuilder::payout_record(group_id, cycle);
         let recipient_key = StorageKeyBuilder::payout_recipient(group_id, cycle);
-        
+
         assert!(env.storage().persistent().has(&record_key));
         assert!(env.storage().persistent().has(&recipient_key));
     }
@@ -1117,10 +1242,10 @@ mod tests {
         // Verify both records exist and are independent
         let record_key_1 = StorageKeyBuilder::payout_record(1, cycle);
         let record_key_2 = StorageKeyBuilder::payout_record(2, cycle);
-        
+
         let stored_record_1: Option<PayoutRecord> = env.storage().persistent().get(&record_key_1);
         let stored_record_2: Option<PayoutRecord> = env.storage().persistent().get(&record_key_2);
-        
+
         assert!(stored_record_1.is_some());
         assert!(stored_record_2.is_some());
         assert_eq!(stored_record_1.unwrap().group_id, 1);
@@ -1140,6 +1265,7 @@ mod tests {
             group_id,
             payout_position: 0,
             joined_at: 1234567890u64,
+            auto_contribute_enabled: false,
         };
 
         // Store the member profile
@@ -1180,9 +1306,12 @@ mod tests {
             group_id: group_id_1,
             payout_position: 0,
             joined_at: 1234567890u64,
+            auto_contribute_enabled: false,
         };
         let member_key_1 = StorageKeyBuilder::member_profile(group_id_1, recipient.clone());
-        env.storage().persistent().set(&member_key_1, &member_profile_1);
+        env.storage()
+            .persistent()
+            .set(&member_key_1, &member_profile_1);
 
         // Update status for group 1 should succeed
         let result1 = update_member_status(&env, group_id_1, &recipient);
@@ -1208,6 +1337,7 @@ mod tests {
             group_id,
             payout_position: cycle,
             joined_at: 1234567890u64,
+            auto_contribute_enabled: false,
         };
         let member_key = StorageKeyBuilder::member_profile(group_id, recipient.clone());
         env.storage().persistent().set(&member_key, &member_profile);
@@ -1240,24 +1370,30 @@ mod tests {
             group_id,
             payout_position: 0,
             joined_at: 1234567890u64,
+            auto_contribute_enabled: false,
         };
         let member_profile_2 = MemberProfile {
             address: recipient2.clone(),
             group_id,
             payout_position: 1,
             joined_at: 1234567890u64,
+            auto_contribute_enabled: false,
         };
 
         let member_key_1 = StorageKeyBuilder::member_profile(group_id, recipient1.clone());
         let member_key_2 = StorageKeyBuilder::member_profile(group_id, recipient2.clone());
-        
-        env.storage().persistent().set(&member_key_1, &member_profile_1);
-        env.storage().persistent().set(&member_key_2, &member_profile_2);
+
+        env.storage()
+            .persistent()
+            .set(&member_key_1, &member_profile_1);
+        env.storage()
+            .persistent()
+            .set(&member_key_2, &member_profile_2);
 
         // Update status for both members should succeed
         let result1 = update_member_status(&env, group_id, &recipient1);
         let result2 = update_member_status(&env, group_id, &recipient2);
-        
+
         assert!(result1.is_ok());
         assert!(result2.is_ok());
     }
@@ -1275,7 +1411,7 @@ mod tests {
         // Event emission should not panic or fail
         // This function always succeeds, even if event emission fails internally
         emit_payout_event(&env, group_id, recipient.clone(), amount, cycle, timestamp);
-        
+
         // No assertion needed - if we reach here, the function succeeded
         // In a real test environment with event inspection, we would verify
         // that the PayoutExecuted event was emitted with correct data
@@ -1322,7 +1458,7 @@ mod tests {
         // Emit events for multiple cycles
         emit_payout_event(&env, group_id, recipient1, amount, 0, timestamp);
         emit_payout_event(&env, group_id, recipient2, amount, 1, timestamp + 604800);
-        
+
         // Both emissions should succeed
     }
 
@@ -1339,7 +1475,7 @@ mod tests {
         // Emit events for different groups
         emit_payout_event(&env, 1, recipient1, amount, cycle, timestamp);
         emit_payout_event(&env, 2, recipient2, amount, cycle, timestamp);
-        
+
         // Both emissions should succeed
     }
 
@@ -1358,7 +1494,7 @@ mod tests {
         for _ in 0..10 {
             emit_payout_event(&env, group_id, recipient.clone(), amount, cycle, timestamp);
         }
-        
+
         // All emissions should succeed without error
     }
 
@@ -1380,12 +1516,13 @@ mod tests {
     }
 
     // Test advance_cycle_or_complete with valid group
+
     // Test advance_cycle_or_complete saves to correct storage key
     #[test]
     fn test_advance_cycle_or_complete_storage_key() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        
+
         let mut group = Group::new(
             42, // Specific group ID
             creator,
@@ -1395,15 +1532,16 @@ mod tests {
             2,
             1234567890,
         );
-        
+
         let result = advance_cycle_or_complete(&env, &mut group);
         assert!(result.is_ok());
-        
+
         // Verify the group was saved with the correct group ID
         let group_key = StorageKeyBuilder::group_data(42);
         let stored_group: Option<Group> = env.storage().persistent().get(&group_key);
         assert!(stored_group.is_some());
         assert_eq!(stored_group.unwrap().id, 42);
     }
+
 
 }

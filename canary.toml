@@ -1,0 +1,33 @@
+# Canary Deployment Configuration
+# Controls how the canary contract is promoted or rolled back.
+
+[canary]
+# Percentage of traffic routed to the canary contract (0-100).
+# The routing registry file is updated by canary_deploy.sh.
+traffic_weight = 10
+
+# How long (seconds) to observe the canary before auto-promoting.
+# Set to 0 to require manual promotion.
+bake_time_seconds = 600   # 10 minutes
+
+[thresholds]
+# Maximum allowed error rate (%) before automatic rollback triggers.
+max_error_rate = 5.0
+
+# Minimum successful invocations required before health is considered valid.
+min_sample_size = 10
+
+# Maximum consecutive health-check failures before rollback.
+max_consecutive_failures = 3
+
+[promotion]
+# Traffic weight steps used during gradual promotion: 10 → 25 → 50 → 100
+steps = [10, 25, 50, 100]
+
+# Seconds to wait between promotion steps.
+step_interval_seconds = 300   # 5 minutes
+
+[registry]
+# File that records stable/canary contract IDs and current traffic weight.
+# Committed to the repo so all clients can read it.
+path = "deployment-records/active.json"

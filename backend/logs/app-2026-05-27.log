@@ -1,0 +1,6 @@
+{"key":"value","level":"info","message":"test message","service":"stellar-save-backend","timestamp":"2026-05-27T15:35:56.001+00:00"}
+{"level":"warn","message":"test warning","service":"stellar-save-backend","timestamp":"2026-05-27T15:35:56.002+00:00"}
+{"err":"details","level":"error","message":"test error","service":"stellar-save-backend","timestamp":"2026-05-27T15:35:56.002+00:00"}
+{"key":"value","level":"info","message":"test message","service":"stellar-save-backend","timestamp":"2026-05-27T15:37:24.902+00:00"}
+{"level":"warn","message":"test warning","service":"stellar-save-backend","timestamp":"2026-05-27T15:37:24.905+00:00"}
+{"err":"details","level":"error","message":"test error","service":"stellar-save-backend","timestamp":"2026-05-27T15:37:24.906+00:00"}

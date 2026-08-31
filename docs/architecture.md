@@ -88,3 +88,19 @@ Key on-chain operations:
 - Yield-bearing ROSCAs (integrating with Stellar liquidity pools)
 - Mobile app (React Native)
 - Governance module for platform parameters
+
+## Architectural Decision Record (ADR 0001): Shared Access-Control Module
+
+### Context & Problem
+Authorization checks (`admin-only`, `member-only`, `creator-only`) were previously duplicated inline across contract entry points. This created inconsistency and maintenance risks.
+
+### Decision
+Consolidate all authorization logic into `contracts/stellar-save/src/auth.rs`:
+- `require_admin`: Validates caller authentication and checks against global `ContractConfig.admin`.
+- `require_creator`: Validates caller authentication and checks caller equality with `Group.creator`.
+- `require_member`: Validates caller authentication and checks caller membership via `GroupRepository::is_member`.
+
+### Consequences
+- Shared guard functions reduce code duplication and audit surface.
+- Centralized guard tests cover positive/negative authorization paths.
+

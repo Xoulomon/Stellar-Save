@@ -1,0 +1,17 @@
+# Maestro global configuration for Stellar Save E2E tests
+# Docs: https://maestro.mobile.dev/reference/configuration
+
+# Default app bundle ID – override per flow with appId: field
+appId: com.stellarsave.app
+
+# Retry failed flows up to 2 times before marking as failed
+retryOnFailure: 2
+
+# Wait up to 10 seconds for elements before timing out
+defaultTimeout: 10000
+
+# Enable screenshots on failure
+screenshotsOnFailure: true
+
+# Output directory for test artifacts
+outputDirectory: ../test-results/mobile

@@ -1,0 +1,42 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+
+      - name: GraphQL schema breaking-change check
+        # Fails if the committed snapshot diverges from the live schema or if
+        # any breaking change is present (ALLOW_BREAKING_SCHEMA is never set
+        # here, so the gate is unconditional).
+        run: npm run schema:check
+
+      - name: Test
+        run: npm test

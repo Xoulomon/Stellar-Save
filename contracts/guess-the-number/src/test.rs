@@ -4,19 +4,12 @@ extern crate std;
 
 use super::*;
 use soroban_sdk::{
-    testutils::{Address as _, MockAuth, MockAuthInvoke},
-    token::StellarAssetClient,
+    testutils::MockAuth,
+    MockAuthInvoke,
     Address, Env, IntoVal, Val, Vec,
 };
 
-fn init_test<'a>(env: &'a Env) -> (Address, StellarAssetClient<'a>, GuessTheNumberClient<'a>) {
-    let admin = Address::generate(env);
-    let client = generate_client(env, &admin);
-    // This is needed because we want to call a function from within the context of the contract
-    // In this case we want to get the address of the XLM contract registered by the constructor
-    let sac_address = env.as_contract(&client.address, || xlm::contract_id(env));
-    (admin, StellarAssetClient::new(env, &sac_address), client)
-}
+use crate::test_utils::{init_test, generate_address, generate_client, create_env};
 
 #[test]
 fn constructed_correctly() {
@@ -34,9 +27,9 @@ fn constructed_correctly() {
 
 #[test]
 fn only_admin_can_reset() {
-    let env = &Env::default();
+    let env = &create_env();
     let (admin, _, client) = init_test(env);
-    let user = Address::generate(env);
+    let user = generate_address(env);
 
     set_caller(&client, "reset", &user, ());
     assert!(client.try_reset().is_err());
@@ -70,7 +63,7 @@ fn guess() {
     // Now we test a wrong guess but the user has no funds so  we get an error
     assert_eq!(
         client.try_guess(&3, &bob).unwrap_err(),
-        Ok(Error::FailedToTransferFromGuesser)
+        Ok(Error::TransferFailed)
     );
 
     // Now we test a correct guess, the balance should go up by the initial 1 XLM + the 1 XLM from the contract
@@ -79,7 +72,7 @@ fn guess() {
 
     assert_eq!(
         client.try_guess(&4, &alice).unwrap_err(),
-        Ok(Error::NoBalanceToTransfer)
+        Ok(Error::InsufficientBalance)
     );
 }
 
@@ -127,15 +120,21 @@ fn reset_and_guess() {
     assert!(client.guess(&10, &alice));
 }
 
-fn generate_client<'a>(env: &Env, admin: &Address) -> GuessTheNumberClient<'a> {
-    let contract_id = Address::generate(env);
+#[test]
+fn test_optimized_storage_and_funds_flow() {
+    let env = &Env::default();
+    let (admin, sac, client) = init_test(env);
     env.mock_all_auths();
-    let contract_id = env.register_at(&contract_id, GuessTheNumber, (admin,));
-    env.set_auths(&[]); // clear auths
-    GuessTheNumberClient::new(env, &contract_id)
+
+    // Add funds using optimized single-read require_admin path
+    client.add_funds(&xlm::to_stroops(3));
+    assert_eq!(sac.balance(&client.address), xlm::to_stroops(4));
+
+    // Verify admin query is consistent
+    assert_eq!(client.admin(), Some(admin.clone()));
 }
 
-// This lets you mock the auth context for a function call
+
 fn set_caller<T>(client: &GuessTheNumberClient, fn_name: &str, caller: &Address, args: T)
 where
     T: IntoVal<Env, Vec<Val>>,
@@ -155,4 +154,132 @@ where
         address: caller,
         invoke,
     }]);
+}
+
+// ── Negative-path tests for invalid guesses (issue #1530) ────────────────────
+
+/// Out-of-bounds guess: value 0.
+///
+/// The contract does NOT perform explicit range validation on the guess input.
+/// A value of 0 can never equal the random number (which is always in 1..=10),
+/// so it is treated as an ordinary wrong guess: 1 XLM is deducted from the
+/// guesser and `false` is returned.  This test documents that behaviour so
+/// that any future change to add explicit bounds checking will require a
+/// deliberate update here.
+#[test]
+fn test_out_of_bounds_guess_low() {
+    let env = &Env::default();
+    let (_, sac, client) = init_test(env);
+    env.mock_all_auths();
+
+    let alice = Address::generate(env);
+    sac.mint(&alice, &xlm::to_stroops(2));
+
+    // Guess of 0 is out of the valid 1..=10 range.
+    // No range validation exists; it is treated as a wrong guess.
+    let result = client.guess(&0, &alice);
+    assert!(!result, "guess(0) should return false (wrong guess, not a panic)");
+
+    // The user should have been charged 1 XLM for the wrong guess.
+    assert_eq!(
+        sac.balance(&alice),
+        xlm::to_stroops(1),
+        "user should be charged 1 XLM for an out-of-bounds guess of 0"
+    );
+}
+
+/// Out-of-bounds guess: value 11.
+///
+/// Same reasoning as `test_out_of_bounds_guess_low`: 11 is outside the 1..=10
+/// range but the contract currently has no bounds check.  It is treated as a
+/// wrong guess and costs the user 1 XLM.
+#[test]
+fn test_out_of_bounds_guess_high() {
+    let env = &Env::default();
+    let (_, sac, client) = init_test(env);
+    env.mock_all_auths();
+
+    let alice = Address::generate(env);
+    sac.mint(&alice, &xlm::to_stroops(2));
+
+    // Guess of 11 is out of the valid 1..=10 range.
+    let result = client.guess(&11, &alice);
+    assert!(!result, "guess(11) should return false (wrong guess, not a panic)");
+
+    // The user should have been charged 1 XLM for the wrong guess.
+    assert_eq!(
+        sac.balance(&alice),
+        xlm::to_stroops(1),
+        "user should be charged 1 XLM for an out-of-bounds guess of 11"
+    );
+}
+
+/// Post-game-end: attempting a correct guess after the contract balance is 0
+/// must return `Error::InsufficientBalance`.
+///
+/// Sequence:
+/// 1. Alice wins the game (correct guess = 4), draining the contract to 0.
+/// 2. Bob then makes the same correct guess; since the pot is empty the
+///    contract must return `InsufficientBalance` rather than trying to pay out.
+#[test]
+fn test_guess_after_balance_drained() {
+    let env = &Env::default();
+    let (_, sac, client) = init_test(env);
+    env.mock_all_auths();
+
+    // Fund Alice and Bob.
+    let alice = Address::generate(env);
+    let bob = Address::generate(env);
+    sac.mint(&alice, &xlm::to_stroops(5));
+    sac.mint(&bob, &xlm::to_stroops(5));
+
+    // Alice wins: the correct answer is 4 in the default seeded environment.
+    assert!(client.guess(&4, &alice), "alice should win with the correct guess");
+    assert_eq!(
+        sac.balance(&client.address),
+        0,
+        "contract balance should be 0 after alice wins"
+    );
+
+    // Bob now attempts the same correct guess with an empty contract pot.
+    assert_eq!(
+        client.try_guess(&4, &bob).unwrap_err(),
+        Ok(Error::InsufficientBalance),
+        "a correct guess against an empty contract should return InsufficientBalance"
+    );
+}
+
+/// Repeated wrong guesses drain the user's balance one XLM at a time.
+///
+/// This verifies that there is no deduplication or "you already guessed that"
+/// protection: each wrong guess always costs 1 XLM regardless of whether the
+/// same value was tried before.
+#[test]
+fn test_repeated_wrong_guesses_drain_user() {
+    let env = &Env::default();
+    let (_, sac, client) = init_test(env);
+    env.mock_all_auths();
+
+    let alice = Address::generate(env);
+    // Give Alice exactly 3 XLM so we can make three wrong guesses.
+    sac.mint(&alice, &xlm::to_stroops(3));
+
+    // All three guesses are wrong (correct answer is 4).
+    assert!(!client.guess(&1, &alice));
+    assert_eq!(sac.balance(&alice), xlm::to_stroops(2), "after 1st wrong guess");
+
+    // Duplicate guess: same wrong value guessed again — still costs 1 XLM.
+    assert!(!client.guess(&1, &alice));
+    assert_eq!(sac.balance(&alice), xlm::to_stroops(1), "after 2nd wrong guess (duplicate)");
+
+    // Another different wrong guess.
+    assert!(!client.guess(&2, &alice));
+    assert_eq!(sac.balance(&alice), xlm::to_stroops(0), "after 3rd wrong guess");
+
+    // Alice is now out of funds; the next wrong guess must fail with TransferFailed.
+    assert_eq!(
+        client.try_guess(&1, &alice).unwrap_err(),
+        Ok(Error::TransferFailed),
+        "user with zero balance should receive TransferFailed on a wrong guess"
+    );
 }

@@ -1,0 +1,24 @@
+{
+  "ignoreFiles": [
+    "dist/**",
+    "coverage/**",
+    "src/index.css"
+  ],
+  "rules": {
+    "declaration-property-value-disallowed-list": [
+      {
+        "/^(background|background-color|color|border|border-color|border-top|border-right|border-bottom|border-left|border-top-color|border-right-color|border-bottom-color|border-left-color|outline|outline-color|box-shadow|fill|stroke)$/": [
+          "/#[0-9a-fA-F]{3,8}/",
+          "/rgba?\\(\\s*[\\d.]/",
+          "/hsla?\\(/"
+        ]
+      },
+      {
+        "message": "Raw color literals (hex/rgb/hsl) are not allowed in component styles — use a design token from src/index.css (e.g. var(--color-primary)) instead. src/index.css is exempt as the primitives source of truth."
+      }
+    ],
+    "block-no-empty": true,
+    "no-duplicate-selectors": true,
+    "declaration-block-no-duplicate-properties": true
+  }
+}

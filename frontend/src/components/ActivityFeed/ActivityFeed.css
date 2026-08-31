@@ -1,0 +1,286 @@
+/* ─── ActivityFeed ─────────────────────────────────────────────────────────── */
+
+.activity-feed {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg-paper);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Header */
+.activity-feed__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.activity-feed__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.activity-feed__refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 6px;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.activity-feed__refresh-btn:hover:not(:disabled) {
+  color: var(--color-primary);
+  background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.activity-feed__refresh-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Filter toolbar */
+.activity-feed__filters {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.activity-feed__filters::-webkit-scrollbar {
+  display: none;
+}
+
+.activity-feed__filter-icon {
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  margin-right: 0.2rem;
+}
+
+.activity-feed__filter-btn {
+  flex-shrink: 0;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background-color 0.2s;
+  white-space: nowrap;
+}
+
+.activity-feed__filter-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-text-primary);
+}
+
+.activity-feed__filter-btn--active {
+  border-color: var(--color-primary);
+  background-color: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  color: var(--color-primary);
+}
+
+/* Error banner */
+.activity-feed__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 1.25rem;
+  background-color: color-mix(in srgb, var(--color-danger) 10%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-danger) 20%, transparent);
+  color: var(--color-danger);
+  font-size: 0.85rem;
+}
+
+.activity-feed__error-retry {
+  background: transparent;
+  border: 1px solid var(--color-danger);
+  color: var(--color-danger);
+  border-radius: 6px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.activity-feed__error-retry:hover {
+  background-color: color-mix(in srgb, var(--color-danger) 10%, transparent);
+}
+
+/* Scroll area */
+.activity-feed__scroll-area {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.activity-feed__scroll-area::-webkit-scrollbar {
+  width: 4px;
+}
+
+.activity-feed__scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.activity-feed__scroll-area::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 4px;
+}
+
+/* List */
+.activity-feed__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Sentinel / end message */
+.activity-feed__sentinel {
+  padding: 0.5rem 0;
+}
+
+.activity-feed__end-message {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  padding: 0.75rem 0;
+  margin: 0;
+}
+
+/* Empty state */
+.activity-feed__empty {
+  padding: 2rem 1.25rem;
+}
+
+/* ─── Activity item ─────────────────────────────────────────────────────────── */
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  transition: background-color 0.15s;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-item:hover {
+  background-color: var(--color-surface-hover);
+}
+
+/* Icon wrapper */
+.activity-item__icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Color variants */
+.activity-item--contribution .activity-item__icon-wrap {
+  background-color: color-mix(in srgb, var(--color-success) 15%, transparent);
+  color: var(--color-success);
+}
+
+.activity-item--payout .activity-item__icon-wrap {
+  background-color: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  color: var(--color-primary);
+}
+
+.activity-item--member-join .activity-item__icon-wrap {
+  background-color: color-mix(in srgb, var(--color-warning) 15%, transparent);
+  color: var(--color-warning);
+}
+
+.activity-item--group-created .activity-item__icon-wrap {
+  /* One-off categorical accent (4th activity-type color alongside success/primary/warning
+     above) — not a themeable UI color, so it's intentionally excluded from the token set
+     rather than forced onto an unrelated semantic token. */
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
+  background-color: rgba(139, 92, 246, 0.15);
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
+  color: #8b5cf6;
+}
+
+/* Body */
+.activity-item__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.activity-item__title {
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-item__subtitle {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Timestamp */
+.activity-item__time {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+/* Skeleton variant */
+.activity-item--skeleton {
+  pointer-events: none;
+}
+
+/* ─── Responsive ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .activity-feed__header,
+  .activity-feed__filters,
+  .activity-item {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .activity-item__title {
+    font-size: 0.82rem;
+  }
+
+  .activity-item__time {
+    font-size: 0.7rem;
+  }
+}
+

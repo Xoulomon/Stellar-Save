@@ -1,17 +1,18 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import tseslint from 'typescript-eslint'
-import { defineConfig, globalIgnores } from 'eslint/config'
+import js from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
 
-export default defineConfig([
-  globalIgnores(['dist']),
+import base from '../eslint.config.base.js';
+
+export default tseslint.config(
+  ...base,
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
       js.configs.recommended,
-      tseslint.configs.recommended,
+      ...tseslint.configs.recommended,
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
     ],
@@ -19,5 +20,20 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+    },
   },
-])
+  {
+    // Incremental `no-explicit-any` enforcement. The top level of the component
+    // library is now free of `any`; the rule is upgraded to an error there so
+    // regressions are blocked. Subdirectories are migrated folder-by-folder.
+    files: ['src/components/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+    },
+  },
+  {
+    ignores: ['dist', 'coverage'],
+  },
+);

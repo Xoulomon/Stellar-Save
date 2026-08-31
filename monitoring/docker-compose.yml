@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports:
+      - "9090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      # Enable the Jaeger trace-to-logs/explore experience
+      GF_FEATURE_TOGGLES_ENABLE: "traceqlEditor"
+    volumes:
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on: [prometheus, jaeger]
+
+  # ── Distributed tracing ──────────────────────────────────────────────────────
+  # Jaeger all-in-one: trace store + query UI. OTLP receivers are enabled so the
+  # OpenTelemetry Collector (and any direct OTLP client) can ship spans to it.
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      # Cap memory so all-in-one (in-memory store) stays bounded for local dev.
+      SPAN_STORAGE_TYPE: memory
+    ports:
+      - "16686:16686"   # Jaeger UI
+      # OTLP receivers (used internally by the collector; exposed for convenience)
+      - "14317:4317"    # OTLP gRPC  (host:container)
+      - "14318:4318"    # OTLP HTTP  (host:container)
+
+  # OpenTelemetry Collector: single ingestion point for backend / indexer /
+  # frontend. Receives OTLP, applies tail/probabilistic sampling + batching,
+  # and forwards to Jaeger. Apps point OTEL_EXPORTER_OTLP_ENDPOINT here.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.103.1
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./otel-collector/config.yaml:/etc/otel/config.yaml:ro
+    ports:
+      - "4317:4317"     # OTLP gRPC  (apps -> collector)
+      - "4318:4318"     # OTLP HTTP  (apps/browser -> collector)
+    depends_on: [jaeger]
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on: [elasticsearch]
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.13.4
+    user: root
+    volumes:
+      - ./elk/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on: [elasticsearch]
+
+volumes:
+  grafana-data:
+  es-data:

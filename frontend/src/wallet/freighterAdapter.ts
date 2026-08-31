@@ -1,4 +1,5 @@
 import * as freighterApi from "@stellar/freighter-api";
+
 import type { WalletAdapter, WalletConnection } from "./types";
 
 type FreighterFunction<T extends (...args: unknown[]) => unknown> =

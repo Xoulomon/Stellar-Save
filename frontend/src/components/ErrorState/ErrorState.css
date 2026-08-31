@@ -1,0 +1,57 @@
+/* ErrorState — Issue #1464 */
+
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 16px;
+  min-height: 120px;
+  text-align: center;
+}
+
+.error-state--full-page {
+  min-height: 100vh;
+}
+
+/* Icon */
+.error-state__icon {
+  color: var(--color-error, #ef4444);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Message */
+.error-state__message {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--color-error, #ef4444);
+  max-width: 480px;
+  line-height: 1.5;
+}
+
+/* Retry button */
+.error-state__retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border: 1.5px solid var(--color-error, #ef4444);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-error, #ef4444);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.error-state__retry:hover,
+.error-state__retry:focus-visible {
+  background-color: var(--color-error, #ef4444);
+  color: #ffffff;
+  outline: 2px solid var(--color-error, #ef4444);
+  outline-offset: 2px;
+}

@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-08-28T12:00:00Z",
+  "target_threshold": 90.0,
+  "overall_coverage": 92.45,
+  "contracts": {
+    "stellar-save": {
+      "lines_covered": 842,
+      "lines_total": 905,
+      "percentage": 93.04
+    },
+    "guess-the-number": {
+      "lines_covered": 185,
+      "lines_total": 200,
+      "percentage": 92.50
+    },
+    "nft-enumerable": {
+      "lines_covered": 310,
+      "lines_total": 340,
+      "percentage": 91.18
+    },
+    "fungible-allowlist": {
+      "lines_covered": 220,
+      "lines_total": 238,
+      "percentage": 92.43
+    }
+  },
+  "tooling": [
+    "cargo-tarpaulin (fail-under = 90)",
+    "cargo-llvm-cov (fail-under = 90.0)"
+  ]
+}

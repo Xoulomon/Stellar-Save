@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest", "node", "express", "supertest"],
+    "outDir": "dist-test"
+  },
+  "include": [
+    "src/**/*",
+    "test/**/*"
+  ]
+}

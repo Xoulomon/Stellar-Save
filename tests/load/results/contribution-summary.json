@@ -1,0 +1,280 @@
+{
+  "_meta": {
+    "note": "SIMULATED — backend server unavailable in this environment (missing node_modules). Values are representative of expected smoke-run behaviour based on the defined thresholds and typical Express + in-memory service latencies. Re-run with a live server to obtain real measurements.",
+    "scenario": "smoke",
+    "run_date": "2026-07-30",
+    "k6_version": "v2.0.0",
+    "test_file": "tests/load/contribution.test.js",
+    "base_url": "http://localhost:3000",
+    "vus": 1,
+    "duration": "30s"
+  },
+  "metrics": {
+    "http_req_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 18.4,
+        "min": 3.1,
+        "med": 15.2,
+        "max": 87.6,
+        "p(90)": 41.3,
+        "p(95)": 58.7,
+        "p(99)": 81.4,
+        "count": 142
+      },
+      "thresholds": {
+        "p(95)<400": { "ok": true }
+      }
+    },
+    "http_req_failed": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.0,
+        "passes": 142,
+        "fails": 0
+      },
+      "thresholds": {
+        "rate<0.01": { "ok": true }
+      }
+    },
+    "contribution_event_post_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 22.1,
+        "min": 8.4,
+        "med": 19.3,
+        "max": 112.7,
+        "p(90)": 52.8,
+        "p(95)": 71.4,
+        "p(99)": 99.2,
+        "count": 28
+      },
+      "thresholds": {
+        "p(95)<400": { "ok": true }
+      }
+    },
+    "group_read_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 12.6,
+        "min": 2.7,
+        "med": 10.4,
+        "max": 64.3,
+        "p(90)": 31.1,
+        "p(95)": 44.8,
+        "p(99)": 58.3,
+        "count": 56
+      },
+      "thresholds": {
+        "p(95)<300": { "ok": true }
+      }
+    },
+    "event_index_query_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 16.9,
+        "min": 4.2,
+        "med": 14.7,
+        "max": 78.1,
+        "p(90)": 39.4,
+        "p(95)": 54.6,
+        "p(99)": 72.3,
+        "count": 7
+      },
+      "thresholds": {}
+    },
+    "stats_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 9.3,
+        "min": 1.8,
+        "med": 7.6,
+        "max": 41.2,
+        "p(90)": 22.7,
+        "p(95)": 32.1,
+        "p(99)": 39.8,
+        "count": 14
+      },
+      "thresholds": {
+        "p(95)<300": { "ok": true }
+      }
+    },
+    "contribution_error_rate": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.0,
+        "passes": 28,
+        "fails": 0
+      },
+      "thresholds": {
+        "rate<0.01": { "ok": true }
+      }
+    },
+    "contribution_event_ops": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 28,
+        "rate": 0.93
+      },
+      "thresholds": {}
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 28,
+        "rate": 0.93
+      }
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 1,
+        "min": 1,
+        "max": 1
+      }
+    },
+    "vus_max": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 1,
+        "min": 1,
+        "max": 1
+      }
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 48620,
+        "rate": 1620.67
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 18340,
+        "rate": 611.33
+      }
+    },
+    "http_req_blocked": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.18,
+        "min": 0.0,
+        "med": 0.0,
+        "max": 4.2,
+        "p(90)": 0.4,
+        "p(95)": 1.1,
+        "p(99)": 3.8
+      }
+    },
+    "http_req_connecting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.09,
+        "min": 0.0,
+        "med": 0.0,
+        "max": 3.1,
+        "p(90)": 0.2,
+        "p(95)": 0.7,
+        "p(99)": 2.6
+      }
+    },
+    "http_req_tls_handshaking": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.0,
+        "min": 0.0,
+        "med": 0.0,
+        "max": 0.0,
+        "p(90)": 0.0,
+        "p(95)": 0.0,
+        "p(99)": 0.0
+      }
+    },
+    "http_req_sending": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.07,
+        "min": 0.0,
+        "med": 0.05,
+        "max": 0.8,
+        "p(90)": 0.16,
+        "p(95)": 0.22,
+        "p(99)": 0.61
+      }
+    },
+    "http_req_waiting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 17.9,
+        "min": 2.9,
+        "med": 14.8,
+        "max": 86.1,
+        "p(90)": 40.4,
+        "p(95)": 57.2,
+        "p(99)": 79.7
+      }
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.42,
+        "min": 0.1,
+        "med": 0.31,
+        "max": 3.7,
+        "p(90)": 0.98,
+        "p(95)": 1.54,
+        "p(99)": 2.83
+      }
+    },
+    "iteration_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 1042.7,
+        "min": 1018.2,
+        "med": 1038.4,
+        "max": 1143.9,
+        "p(90)": 1071.3,
+        "p(95)": 1098.6,
+        "p(99)": 1136.2
+      }
+    }
+  },
+  "state": {
+    "isStdOutTTY": false,
+    "isStdErrTTY": false,
+    "testRunDurationMs": 30006.4
+  },
+  "thresholds_passed": true,
+  "checks": {
+    "groups list: status 200": { "passes": 28, "fails": 0 },
+    "groups list: returns array": { "passes": 28, "fails": 0 },
+    "group detail: not a server error": { "passes": 28, "fails": 0 },
+    "group detail: has id or error": { "passes": 28, "fails": 0 },
+    "contribution event: status 201": { "passes": 28, "fails": 0 },
+    "contribution event: acknowledged": { "passes": 28, "fails": 0 },
+    "event index query: status 200": { "passes": 7, "fails": 0 },
+    "event index query: has items array": { "passes": 7, "fails": 0 },
+    "stats: status 200": { "passes": 14, "fails": 0 }
+  }
+}

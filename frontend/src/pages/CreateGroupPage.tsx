@@ -1,99 +1,87 @@
-import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Stack, Typography } from '@mui/material';
-import { AppCard, AppLayout } from '../ui';
+
 import { CreateGroupForm } from '../components/CreateGroupForm';
-import { createGroup } from '../utils/groupApi';
+import { LoadingState } from '../components/LoadingState';
+import { ErrorState } from '../components/ErrorState';
+import { useWallet } from '../hooks/useWallet';
+import { queryKeys } from '../lib/queryKeys';
+import { updateInsuranceSettings } from '../utils/insuranceApi';
+
 import type { GroupData } from '../utils/groupApi';
-import { ROUTES, buildRoute } from '../routing/constants';
 
-type SubmitStatus = 'idle' | 'loading' | 'success' | 'error';
-
-interface PageState {
-  status: SubmitStatus;
-  groupId: string | null;
-  errorMessage: string | null;
-  groupName: string | null;
-}
-
-export default function CreateGroupPage() {
+const CreateGroupPage: React.FC = () => {
+  const { activeAddress } = useWallet();
   const navigate = useNavigate();
-  const [pageState, setPageState] = useState<PageState>({
-    status: 'idle',
-    groupId: null,
-    errorMessage: null,
-    groupName: null,
-  });
+  const queryClient = useQueryClient();
 
-  // Task 10: redirect after success
-  useEffect(() => {
-    if (pageState.status !== 'success') return;
-    const timer = setTimeout(() => {
-      if (pageState.groupId) {
-        navigate(buildRoute.groupDetail(pageState.groupId));
-      } else {
-        navigate(ROUTES.GROUPS);
-      }
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [pageState.status, pageState.groupId, navigate]);
-
-  const handleCancel = () => {
-    navigate(ROUTES.GROUPS);
-  };
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [txError, setTxError] = useState<string | null>(null);
 
   const handleSubmit = async (data: GroupData) => {
-    setPageState(prev => ({ ...prev, status: 'loading', errorMessage: null }));
+    if (!activeAddress) {
+      setTxError('Please connect your Freighter wallet first!');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setTxError(null);
+
     try {
-      const groupId = await createGroup(data);
-      setPageState({
-        status: 'success',
-        groupId,
-        errorMessage: null,
-        groupName: data.name,
-      });
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error && err.message
-          ? err.message
-          : 'Failed to create group. Please try again.';
-      setPageState(prev => ({ ...prev, status: 'error', errorMessage }));
+      // TODO: Replace with actual Soroban contract call
+
+      // Simulate a group ID returned from the contract
+      const mockGroupId = `group-${Date.now()}`;
+
+      // Persist insurance settings if enabled
+      if (data.insuranceEnabled) {
+        await updateInsuranceSettings(mockGroupId, {
+          enabled: true,
+          premiumRate: data.insurancePremiumRate / 100,
+        });
+      }
+
+      // A brand-new group should show up in the shared groups list the
+      // next time GroupsPage/BrowseGroupsPage read from the cache.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.groups.all() });
+      setTimeout(() => navigate('/dashboard'), 2500);
+    } catch (error) {
+      console.error('Failed to create group:', error);
+      setTxError('Failed to create group. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  return (
-    <AppLayout
-      title="Create Group"
-      subtitle="Set up your savings circle"
-      footerText="Stellar Save - Built for transparent, on-chain savings"
-    >
-      <AppCard>
-        <Stack spacing={2}>
-          {/* aria-live region for status announcements */}
-          <div aria-live="polite" aria-atomic="true">
-            {pageState.status === 'success' && (
-              <Typography color="success.main">
-                Group created successfully! Redirecting...
-              </Typography>
-            )}
-            {pageState.status === 'error' && pageState.errorMessage && (
-              <Typography color="error.main">{pageState.errorMessage}</Typography>
-            )}
-          </div>
+  const handleCancel = () => navigate('/dashboard');
 
-          {pageState.status === 'success' ? (
-            <Typography variant="h6">
-              "{pageState.groupName}" has been created! You will be redirected shortly.
-            </Typography>
-          ) : (
-            <CreateGroupForm
-              onSubmit={handleSubmit}
-              onCancel={handleCancel}
-              isSubmitting={pageState.status === 'loading'}
-            />
-          )}
-        </Stack>
-      </AppCard>
-    </AppLayout>
+  return (
+    <div className="create-group-page">
+      <div className="page-header">
+        <h1>Create New ROSCA Group</h1>
+        <p className="page-subtitle">
+          Set up a new Rotating Savings and Credit Association group
+        </p>
+      </div>
+
+      <CreateGroupForm
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        isSubmitting={isSubmitting}
+      />
+
+      {isSubmitting && <LoadingState message="Submitting transaction to Stellar…" />}
+
+      {txError && !isSubmitting && (
+        <ErrorState
+          message={txError}
+          onRetry={() => setTxError(null)}
+          retryLabel="Dismiss"
+        />
+      )}
+    </div>
   );
-}
+};
+
+export default CreateGroupPage;
