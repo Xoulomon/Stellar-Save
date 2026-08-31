@@ -17,11 +17,6 @@ stellar-save-common = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
-# proptest: used in property_tests.rs, fuzz_tests.rs, escrow_property_tests.rs,
-#           governance_property_tests.rs, insurance_property_tests.rs
-proptest = "1.5.0"
-# ed25519-dalek: used in security.rs test helpers to construct signed payloads
-ed25519-dalek = { version = "2", features = ["rand_core"] }
 
 [features]
 # Enable coverage instrumentation (used by cargo-tarpaulin / cargo-llvm-cov)
