@@ -21,7 +21,7 @@
 
 #[cfg(test)]
 mod tests {
-    use soroban_sdk::{Bytes, BytesN, Env, testutils::Address as _};
+    use soroban_sdk::{testutils::Address as _, Bytes, BytesN, Env};
 
     // ─── Helper: create raw Bytes of given length filled with `val` ──────────
 
@@ -52,10 +52,7 @@ mod tests {
 
     /// Parse a proof blob into (public_key, signature, nonce).
     /// Returns None if the blob is not exactly PROOF_TOTAL_LEN bytes.
-    fn parse_proof(
-        env: &Env,
-        proof: &Bytes,
-    ) -> Option<(BytesN<32>, BytesN<64>, [u8; 8])> {
+    fn parse_proof(env: &Env, proof: &Bytes) -> Option<(BytesN<32>, BytesN<64>, [u8; 8])> {
         if proof.len() != PROOF_TOTAL_LEN {
             return None;
         }
@@ -95,12 +92,7 @@ mod tests {
     /// - `Some(true)`  → valid signature
     ///
     /// Note: replay detection is the caller's responsibility (nullifier check).
-    fn verify_poc_proof(
-        env: &Env,
-        proof: &Bytes,
-        group_id: u64,
-        cycle: u32,
-    ) -> Option<bool> {
+    fn verify_poc_proof(env: &Env, proof: &Bytes, group_id: u64, cycle: u32) -> Option<bool> {
         // ZK-002: Malformed proof rejected before any crypto
         let (pk, sig, _nonce) = parse_proof(env, proof)?;
 
@@ -232,10 +224,7 @@ mod tests {
         let env = Env::default();
         let proof = Bytes::new(&env);
         let result = verify_poc_proof(&env, &proof, 1, 0);
-        assert_eq!(
-            result, None,
-            "Empty proof must return None (malformed)"
-        );
+        assert_eq!(result, None, "Empty proof must return None (malformed)");
     }
 
     /// Tests that a truncated proof (too short) is rejected without panicking.
@@ -273,7 +262,10 @@ mod tests {
         // The host will panic on invalid signature — we expect a panic here.
         // This is the expected behavior: invalid signatures panic via the host.
         let parsed = parse_proof(&env, &proof);
-        assert!(parsed.is_some(), "Correctly-sized random bytes should parse");
+        assert!(
+            parsed.is_some(),
+            "Correctly-sized random bytes should parse"
+        );
         // Note: calling verify_poc_proof would panic due to invalid Ed25519 sig.
         // The test verifies the parse step does not panic — crypto validation
         // happens in the host and results in a contract error/panic.
@@ -298,8 +290,7 @@ mod tests {
         let proof = make_valid_proof(&env, group_id, cycle, nonce);
 
         // Simulate a nullifier store (would be env.storage() in production)
-        let mut used_nullifiers: std::collections::HashSet<u64> =
-            std::collections::HashSet::new();
+        let mut used_nullifiers: std::collections::HashSet<u64> = std::collections::HashSet::new();
 
         let (_, _, nullifier_bytes) = parse_proof(&env, &proof).unwrap();
         let nullifier = u64::from_le_bytes(nullifier_bytes);
@@ -403,7 +394,11 @@ mod tests {
         // The Soroban test environment enforces its own budget — this test
         // ensures we do not hit a budget-exceeded panic in the test harness.
         let result = verify_poc_proof(&env, &proof, group_id, cycle);
-        assert_eq!(result, Some(true), "Valid proof must succeed within gas budget");
+        assert_eq!(
+            result,
+            Some(true),
+            "Valid proof must succeed within gas budget"
+        );
 
         // GAS COST NOTE (ZK-003):
         // Phase-1 PoC (Ed25519 only):
@@ -426,7 +421,11 @@ mod tests {
     fn test_proof_correct_length_parses() {
         let env = Env::default();
         let proof = make_valid_proof(&env, 1, 0, 1);
-        assert_eq!(proof.len(), PROOF_TOTAL_LEN, "Valid proof must be exactly {PROOF_TOTAL_LEN} bytes");
+        assert_eq!(
+            proof.len(),
+            PROOF_TOTAL_LEN,
+            "Valid proof must be exactly {PROOF_TOTAL_LEN} bytes"
+        );
         let parsed = parse_proof(&env, &proof);
         assert!(parsed.is_some(), "Correctly-sized valid proof must parse");
     }

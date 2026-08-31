@@ -9,9 +9,13 @@
 /// Re-export from errors module for backward compatibility.
 /// This module is maintained for compatibility with existing code.
 /// New code should import directly from the errors module.
-pub use crate::errors::{ContractError as StellarSaveError, ContractResult, ErrorCategory, ErrorRecoveryStrategy};
+pub use crate::errors::{
+    ContractError as StellarSaveError, ContractResult, ErrorCategory, ErrorRecoveryStrategy,
+};
 
-pub use stellar_save_common::{CommonResult, Error as CommonError, ErrorCategory as CommonErrorCategory};
+pub use stellar_save_common::{
+    CommonResult, Error as CommonError, ErrorCategory as CommonErrorCategory,
+};
 
 use crate::errors::ContractError;
 
@@ -116,8 +120,14 @@ mod tests {
 
     #[test]
     fn missing_entities_map_to_not_found() {
-        assert_eq!(to_common(StellarSaveError::GroupNotFound), CommonError::NotFound);
-        assert_eq!(to_common(StellarSaveError::NotMember), CommonError::NotFound);
+        assert_eq!(
+            to_common(StellarSaveError::GroupNotFound),
+            CommonError::NotFound
+        );
+        assert_eq!(
+            to_common(StellarSaveError::NotMember),
+            CommonError::NotFound
+        );
         assert_eq!(
             to_common(StellarSaveError::ContributionNotFound),
             CommonError::NotFound

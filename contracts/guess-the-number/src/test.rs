@@ -3,13 +3,9 @@
 extern crate std;
 
 use super::*;
-use soroban_sdk::{
-    testutils::MockAuth,
-    MockAuthInvoke,
-    Address, Env, IntoVal, Val, Vec,
-};
+use soroban_sdk::{testutils::MockAuth, Address, Env, IntoVal, MockAuthInvoke, Val, Vec};
 
-use crate::test_utils::{init_test, generate_address, generate_client, create_env};
+use crate::test_utils::{create_env, generate_address, generate_client, init_test};
 
 #[test]
 fn constructed_correctly() {
@@ -134,7 +130,6 @@ fn test_optimized_storage_and_funds_flow() {
     assert_eq!(client.admin(), Some(admin.clone()));
 }
 
-
 fn set_caller<T>(client: &GuessTheNumberClient, fn_name: &str, caller: &Address, args: T)
 where
     T: IntoVal<Env, Vec<Val>>,
@@ -178,7 +173,10 @@ fn test_out_of_bounds_guess_low() {
     // Guess of 0 is out of the valid 1..=10 range.
     // No range validation exists; it is treated as a wrong guess.
     let result = client.guess(&0, &alice);
-    assert!(!result, "guess(0) should return false (wrong guess, not a panic)");
+    assert!(
+        !result,
+        "guess(0) should return false (wrong guess, not a panic)"
+    );
 
     // The user should have been charged 1 XLM for the wrong guess.
     assert_eq!(
@@ -204,7 +202,10 @@ fn test_out_of_bounds_guess_high() {
 
     // Guess of 11 is out of the valid 1..=10 range.
     let result = client.guess(&11, &alice);
-    assert!(!result, "guess(11) should return false (wrong guess, not a panic)");
+    assert!(
+        !result,
+        "guess(11) should return false (wrong guess, not a panic)"
+    );
 
     // The user should have been charged 1 XLM for the wrong guess.
     assert_eq!(
@@ -234,7 +235,10 @@ fn test_guess_after_balance_drained() {
     sac.mint(&bob, &xlm::to_stroops(5));
 
     // Alice wins: the correct answer is 4 in the default seeded environment.
-    assert!(client.guess(&4, &alice), "alice should win with the correct guess");
+    assert!(
+        client.guess(&4, &alice),
+        "alice should win with the correct guess"
+    );
     assert_eq!(
         sac.balance(&client.address),
         0,
@@ -266,15 +270,27 @@ fn test_repeated_wrong_guesses_drain_user() {
 
     // All three guesses are wrong (correct answer is 4).
     assert!(!client.guess(&1, &alice));
-    assert_eq!(sac.balance(&alice), xlm::to_stroops(2), "after 1st wrong guess");
+    assert_eq!(
+        sac.balance(&alice),
+        xlm::to_stroops(2),
+        "after 1st wrong guess"
+    );
 
     // Duplicate guess: same wrong value guessed again — still costs 1 XLM.
     assert!(!client.guess(&1, &alice));
-    assert_eq!(sac.balance(&alice), xlm::to_stroops(1), "after 2nd wrong guess (duplicate)");
+    assert_eq!(
+        sac.balance(&alice),
+        xlm::to_stroops(1),
+        "after 2nd wrong guess (duplicate)"
+    );
 
     // Another different wrong guess.
     assert!(!client.guess(&2, &alice));
-    assert_eq!(sac.balance(&alice), xlm::to_stroops(0), "after 3rd wrong guess");
+    assert_eq!(
+        sac.balance(&alice),
+        xlm::to_stroops(0),
+        "after 3rd wrong guess"
+    );
 
     // Alice is now out of funds; the next wrong guess must fail with TransferFailed.
     assert_eq!(

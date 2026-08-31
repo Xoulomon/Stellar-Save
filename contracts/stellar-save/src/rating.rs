@@ -10,10 +10,7 @@
 use soroban_sdk::{contracttype, Address, Env, String};
 
 use crate::{
-    auth::is_active_member,
-    error::StellarSaveError,
-    events::EventEmitter,
-    group::Group,
+    auth::is_active_member, error::StellarSaveError, events::EventEmitter, group::Group,
     storage::StorageKeyBuilder,
 };
 

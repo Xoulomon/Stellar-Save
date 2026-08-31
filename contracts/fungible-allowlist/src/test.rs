@@ -1,9 +1,9 @@
 extern crate std;
 
-use soroban_sdk::{Address};
+use soroban_sdk::Address;
 
 use crate::contract::ExampleContractClient;
-use crate::test_utils::{create_env, create_client, setup_accounts};
+use crate::test_utils::{create_client, create_env, setup_accounts};
 
 #[test]
 #[should_panic(expected = "Error(Contract, #113)")]
@@ -164,4 +164,3 @@ fn centralized_access_control_guards_work() {
         crate::require_allowlisted(&e, &admin);
     });
 }
-

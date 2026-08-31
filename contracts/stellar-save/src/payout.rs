@@ -164,8 +164,7 @@ pub fn get_next_recipient(env: &Env, group_id: u64) -> Result<Address, StellarSa
     }
 
     // O(1) lookup: position → Address via the reverse index written at join/assign time
-    let pos_idx_key =
-        StorageKeyBuilder::group_payout_position_index(group_id, group.current_cycle);
+    let pos_idx_key = StorageKeyBuilder::group_payout_position_index(group_id, group.current_cycle);
     env.storage()
         .persistent()
         .get::<_, Address>(&pos_idx_key)

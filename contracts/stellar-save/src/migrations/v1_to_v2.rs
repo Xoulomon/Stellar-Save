@@ -20,9 +20,7 @@ use soroban_sdk::{symbol_short, Address, Env, Symbol, Vec};
 
 use crate::{
     group::TokenConfig,
-    migration::{
-        save_migration_record, set_schema_version, MigrationRecord, V1, V2,
-    },
+    migration::{save_migration_record, set_schema_version, MigrationRecord, V1, V2},
     storage::{StorageKey, StorageKeyBuilder},
 };
 

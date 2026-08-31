@@ -5,11 +5,11 @@
 //! - `require_creator`: Validates caller is the group creator
 //! - `require_member`: Validates caller is an active group member
 
-use soroban_sdk::{Address, Env};
 use crate::error::StellarSaveError;
 use crate::group::Group;
 use crate::storage::StorageKeyBuilder;
 use crate::types::ContractConfig;
+use soroban_sdk::{Address, Env};
 
 /// Require caller authentication and verify caller is a registered admin.
 pub fn require_admin(env: &Env, caller: &Address) -> Result<(), StellarSaveError> {
@@ -78,17 +78,7 @@ mod tests {
         let creator = Address::generate(&env);
         let non_creator = Address::generate(&env);
 
-        let group = Group::new(
-            &env,
-            1,
-            creator.clone(),
-            100,
-            3600,
-            5,
-            2,
-            1000,
-            0,
-        );
+        let group = Group::new(&env, 1, creator.clone(), 100, 3600, 5, 2, 1000, 0);
 
         env.mock_all_auths();
 
@@ -145,7 +135,9 @@ mod tests {
         let group_id = 42u64;
 
         let key = StorageKeyBuilder::member_profile(group_id, address.clone());
-        env.storage().persistent().set(&key, &make_profile(&env, address.clone(), group_id));
+        env.storage()
+            .persistent()
+            .set(&key, &make_profile(&env, address.clone(), group_id));
 
         assert!(is_active_member(&env, group_id, &address));
     }
@@ -192,7 +184,9 @@ mod tests {
 
         // Store profile only for group 1
         let key = StorageKeyBuilder::member_profile(1, address.clone());
-        env.storage().persistent().set(&key, &make_profile(&env, address.clone(), 1));
+        env.storage()
+            .persistent()
+            .set(&key, &make_profile(&env, address.clone(), 1));
 
         assert!(is_active_member(&env, 1, &address));
         // Group 2 should return false even though address is in group 1

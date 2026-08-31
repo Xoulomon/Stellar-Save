@@ -5,9 +5,7 @@
 
 use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String};
 use stellar_tokens::non_fungible::{
-    burnable::NonFungibleBurnable,
-    enumerable::Enumerable,
-    Base, NonFungibleToken,
+    burnable::NonFungibleBurnable, enumerable::Enumerable, Base, NonFungibleToken,
 };
 
 #[contracttype]

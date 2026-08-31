@@ -232,7 +232,6 @@ pub struct GroupCloned {
     pub cloned_at: u64,
 }
 
-
 /// Event emitted when a cycle advances to the next cycle.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -578,12 +577,7 @@ impl EventEmitter {
         env.events().publish(("refund_issued",), event);
     }
 
-    pub fn emit_group_dissolved(
-        env: &Env,
-        group_id: u64,
-        dissolved_at: u64,
-        total_refunded: i128,
-    ) {
+    pub fn emit_group_dissolved(env: &Env, group_id: u64, dissolved_at: u64, total_refunded: i128) {
         let event = GroupDissolved {
             group_id,
             dissolved_at,
@@ -847,7 +841,6 @@ impl EventEmitter {
         env.events().publish(("groups_merged",), event);
     }
 
-
     pub fn emit_reward_claimed(
         env: &Env,
         group_id: u64,
@@ -1010,7 +1003,15 @@ impl EventEmitter {
     ) {
         env.events().publish(
             ("dispute_raised",),
-            (group_id, raised_by, reason, vote_count, threshold, auto_paused, raised_at),
+            (
+                group_id,
+                raised_by,
+                reason,
+                vote_count,
+                threshold,
+                auto_paused,
+                raised_at,
+            ),
         );
     }
 

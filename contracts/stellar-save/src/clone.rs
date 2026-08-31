@@ -58,11 +58,15 @@ pub fn clone_group(
     env.storage().persistent().set(&id_key, &new_id);
 
     // Apply overrides
-    let contribution_amount = overrides.contribution_amount.unwrap_or(src.contribution_amount);
+    let contribution_amount = overrides
+        .contribution_amount
+        .unwrap_or(src.contribution_amount);
     let cycle_duration = overrides.cycle_duration.unwrap_or(src.cycle_duration);
     let max_members = overrides.max_members.unwrap_or(src.max_members);
     let min_members = overrides.min_members.unwrap_or(src.min_members);
-    let grace_period_seconds = overrides.grace_period_seconds.unwrap_or(src.grace_period_seconds);
+    let grace_period_seconds = overrides
+        .grace_period_seconds
+        .unwrap_or(src.grace_period_seconds);
 
     let now = env.ledger().timestamp();
     let new_group = Group::new(
@@ -83,9 +87,10 @@ pub fn clone_group(
         .set(&StorageKeyBuilder::group_data(new_id), &new_group);
 
     // Persist status as Pending
-    env.storage()
-        .persistent()
-        .set(&StorageKeyBuilder::group_status(new_id), &GroupStatus::Pending);
+    env.storage().persistent().set(
+        &StorageKeyBuilder::group_status(new_id),
+        &GroupStatus::Pending,
+    );
 
     // Copy token config (use override token if provided, else copy source)
     let new_token_config = match overrides.token_address {
@@ -95,9 +100,10 @@ pub fn clone_group(
         },
         None => token_config,
     };
-    env.storage()
-        .persistent()
-        .set(&StorageKeyBuilder::group_token_config(new_id), &new_token_config);
+    env.storage().persistent().set(
+        &StorageKeyBuilder::group_token_config(new_id),
+        &new_token_config,
+    );
 
     // Emit GroupCloned event
     EventEmitter::emit_group_cloned(env, group_id, new_id, caller.clone(), now);
@@ -156,18 +162,20 @@ mod tests {
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Pending);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_status(group_id),
+            &GroupStatus::Pending,
+        );
 
         let token = Address::generate(env);
         let token_config = TokenConfig {
             token_address: token,
             token_decimals: 7,
         };
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::group_token_config(group_id), &token_config);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_token_config(group_id),
+            &token_config,
+        );
 
         // Set ID counter so next ID = 2
         env.storage()
@@ -262,7 +270,8 @@ mod tests {
         let new_creator = Address::generate(&env);
         let src_id = setup_source_group(&env, &original_creator);
 
-        let new_id = clone_group(&env, new_creator.clone(), src_id, CloneOverrides::none()).unwrap();
+        let new_id =
+            clone_group(&env, new_creator.clone(), src_id, CloneOverrides::none()).unwrap();
 
         let new_group: Group = env
             .storage()

@@ -3,7 +3,6 @@
 /// This module provides a centralized repository pattern for all group-related storage reads and writes.
 /// It encapsulates all direct env.storage() calls related to group state, improving testability and
 /// reducing duplication across the codebase.
-
 use crate::constants::{TTL_EXTEND_TO_LEDGERS, TTL_THRESHOLD_LEDGERS};
 use crate::error::StellarSaveError;
 use crate::group::{Group, TokenConfig};
@@ -109,7 +108,9 @@ impl GroupRepository {
     /// * `None` - If the member list does not exist
     pub fn get_members(env: &Env, group_id: u64) -> Option<Vec<Address>> {
         let members_key = StorageKeyBuilder::group_members(group_id);
-        env.storage().persistent().get::<_, Vec<Address>>(&members_key)
+        env.storage()
+            .persistent()
+            .get::<_, Vec<Address>>(&members_key)
     }
 
     /// Saves the list of members for a group.
@@ -204,9 +205,7 @@ impl GroupRepository {
     /// * `None` - If this group was not created by merging
     pub fn get_merged_from(env: &Env, group_id: u64) -> Option<(u64, u64)> {
         let merged_key = StorageKeyBuilder::group_merged_from(group_id);
-        env.storage()
-            .persistent()
-            .get::<_, (u64, u64)>(&merged_key)
+        env.storage().persistent().get::<_, (u64, u64)>(&merged_key)
     }
 
     /// Saves the merged-from group IDs for a group created by merging.
@@ -238,18 +237,8 @@ mod tests {
     fn test_group_repository_save_and_retrieve() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        
-        let group = Group::new(
-            &env,
-            1,
-            creator,
-            1_000_000,
-            604800,
-            5,
-            2,
-            1234567890,
-            0,
-        );
+
+        let group = Group::new(&env, 1, creator, 1_000_000, 604800, 5, 2, 1234567890, 0);
 
         // Save the group
         GroupRepository::save_group(&env, &group);
@@ -264,21 +253,11 @@ mod tests {
     fn test_group_repository_exists() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        
+
         // Group doesn't exist initially
         assert!(!GroupRepository::group_exists(&env, 1));
 
-        let group = Group::new(
-            &env,
-            1,
-            creator,
-            1_000_000,
-            604800,
-            5,
-            2,
-            1234567890,
-            0,
-        );
+        let group = Group::new(&env, 1, creator, 1_000_000, 604800, 5, 2, 1234567890, 0);
 
         // Save and check
         GroupRepository::save_group(&env, &group);
@@ -290,7 +269,7 @@ mod tests {
         let env = Env::default();
         let member1 = Address::generate(&env);
         let member2 = Address::generate(&env);
-        
+
         let mut members = Vec::new(&env);
         members.push_back(member1.clone());
         members.push_back(member2.clone());
@@ -309,17 +288,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
 
-        let group = Group::new(
-            &env,
-            1,
-            creator,
-            1_000_000,
-            604800,
-            5,
-            2,
-            1234567890,
-            0,
-        );
+        let group = Group::new(&env, 1, creator, 1_000_000, 604800, 5, 2, 1234567890, 0);
 
         // Save triggers bump_ttl — should not panic
         GroupRepository::save_group(&env, &group);

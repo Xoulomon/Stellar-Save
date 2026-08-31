@@ -1,0 +1,9 @@
+# rustfmt configuration for the Stellar-Save workspace.
+#
+# Kept minimal and close to rustfmt's stable defaults: the goal is a single
+# enforced baseline (see .github/workflows/clippy.yml and
+# docs/clippy-policy.md for the Clippy side of the gate), not a heavily
+# customized style. `edition` is pinned to match [workspace.package] in the
+# root Cargo.toml so `cargo fmt` and `rustc` agree on edition-specific
+# formatting (e.g. `dyn` trait syntax).
+edition = "2021"

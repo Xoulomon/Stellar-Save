@@ -189,7 +189,9 @@ fn identify_recipient_random(
     // Use Soroban PRNG + ledger timestamp as entropy source.
     let prng_val = env.prng().u64_in_range(0..u64::MAX);
     let ledger_salt = env.ledger().timestamp();
-    let idx = ((prng_val.wrapping_add(ledger_salt).wrapping_add(group_id as u64))
+    let idx = ((prng_val
+        .wrapping_add(ledger_salt)
+        .wrapping_add(group_id as u64))
         % eligible.len() as u64) as u32;
 
     Ok(eligible.get(idx).unwrap())
@@ -221,8 +223,7 @@ fn identify_recipient_bid(
             continue;
         }
 
-        let bid_key =
-            StorageKeyBuilder::group_bid_amount(group_id, current_cycle, member.clone());
+        let bid_key = StorageKeyBuilder::group_bid_amount(group_id, current_cycle, member.clone());
         let bid: i128 = env.storage().persistent().get(&bid_key).unwrap_or(0);
         if bid > best_bid {
             best_bid = bid;
@@ -767,7 +768,7 @@ pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
     // Temporary entries are scoped to the current transaction and auto-cleared.
     let reentrancy_key = StorageKeyBuilder::reentrancy_guard();
     let guard_value: u64 = env.storage().temporary().get(&reentrancy_key).unwrap_or(0);
-    
+
     if guard_value != 0 {
         return Err(StellarSaveError::InternalError);
     }
@@ -829,7 +830,13 @@ pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
     }
 
     // Step 5: Identify the recipient for this cycle based on payout position
-    let recipient = identify_recipient(&env, group_id, current_cycle, group.member_count, &group.payout_order)?;
+    let recipient = identify_recipient(
+        &env,
+        group_id,
+        current_cycle,
+        group.member_count,
+        &group.payout_order,
+    )?;
 
     // Step 6: Verify the recipient is eligible to receive the payout
     verify_recipient_eligibility(&env, group_id, &recipient, current_cycle)?;
@@ -1883,9 +1890,8 @@ mod tests {
 
         // Create a minimal group with payout_in_progress = true
         let creator = Address::generate(&env);
-        let mut group = Group::new_with_penalty(
-            group_id, creator, 1_000_000, 3600, 2, 2, 0, 0, false, 0,
-        );
+        let mut group =
+            Group::new_with_penalty(group_id, creator, 1_000_000, 3600, 2, 2, 0, 0, false, 0);
         group.payout_in_progress = true;
         env.storage()
             .persistent()

@@ -5,8 +5,8 @@
 
 #![cfg(test)]
 
-use soroban_sdk::{testutils::Address as _, Address, Env, String};
 use crate::contract::{ExampleContract, ExampleContractClient};
+use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
 /// Initialize a test environment with auth mocking.
 ///

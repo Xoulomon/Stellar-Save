@@ -93,13 +93,7 @@ impl ReentrantToken {
         Self::reenter(&env);
     }
 
-    pub fn transfer_from(
-        env: Env,
-        _spender: Address,
-        _from: Address,
-        _to: Address,
-        _amount: i128,
-    ) {
+    pub fn transfer_from(env: Env, _spender: Address, _from: Address, _to: Address, _amount: i128) {
         Self::reenter(&env);
     }
 
@@ -174,9 +168,10 @@ fn setup<'a>(group_id: u64) -> Fixture<'a> {
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::group_status(group_id), &GroupStatus::Active);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::group_status(group_id),
+            &GroupStatus::Active,
+        );
         env.storage().persistent().set(
             &StorageKeyBuilder::group_token_config(group_id),
             &TokenConfig {
@@ -278,9 +273,12 @@ fn contribute_records_before_calling_the_token() {
         );
     });
 
-    fixture
-        .token_client
-        .arm(&fixture.contract_id, &MODE_CONTRIBUTE, &group_id, &fresh_member);
+    fixture.token_client.arm(
+        &fixture.contract_id,
+        &MODE_CONTRIBUTE,
+        &group_id,
+        &fresh_member,
+    );
 
     fixture
         .client

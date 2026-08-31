@@ -1,10 +1,10 @@
 #![no_std]
 #![allow(dead_code)]
 
-pub mod enumeration;
-pub mod token;
 mod contract;
+pub mod enumeration;
 pub mod error;
+pub mod token;
 
 pub use error::Error;
 pub use token::{DataKey, ExampleContract};
