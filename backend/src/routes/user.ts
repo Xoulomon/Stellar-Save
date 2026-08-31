@@ -1,7 +1,11 @@
-import { Router, NextFunction } from 'express';
-import { jwtAuthMiddleware, requireSelf, AuthenticatedRequest } from '../auth_middleware';
+import { Router } from 'express';
+
+import { jwtAuthMiddleware, requireSelf } from '../auth_middleware';
 import { AppError } from '../lib/errors';
 import { logger } from '../logger';
+
+import type { AuthenticatedRequest } from '../auth_middleware';
+import type { NextFunction } from 'express';
 
 /**
  * User routes — all protected by JWT authentication.

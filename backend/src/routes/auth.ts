@@ -1,4 +1,6 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
+
+import { jwtAuthMiddleware } from '../auth_middleware';
 import {
   generateChallenge,
   verifySignature,
@@ -8,10 +10,12 @@ import {
   revokeSession,
   revokeAllSessions,
 } from '../auth_service';
-import { jwtAuthMiddleware, AuthenticatedRequest } from '../auth_middleware';
-import { logger } from '../logger';
 import { AppError } from '../lib/errors';
 import { validateBody, schemas } from '../lib/validation';
+import { logger } from '../logger';
+
+import type { AuthenticatedRequest } from '../auth_middleware';
+import type { Request, Response, NextFunction } from 'express';
 
 /**
  * Auth routes for Stellar wallet-based authentication.

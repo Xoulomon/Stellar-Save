@@ -5,9 +5,12 @@
  * and educational prompts for transaction signing.
  */
 
-import { Transaction, Networks, xdr, Operation } from '@stellar/stellar-sdk';
-import { logger } from './logger';
+import { Transaction } from '@stellar/stellar-sdk';
+
 import { config } from './config';
+import { logger } from './logger';
+
+import type { xdr} from '@stellar/stellar-sdk';
 
 export interface DecodedOperation {
   type: string;
@@ -89,7 +92,7 @@ export class TransactionDecoderService {
   /**
    * Decode a single operation
    */
-  private decodeOperation(operation: xdr.Operation, index: number): DecodedOperation {
+  private decodeOperation(operation: xdr.Operation, _index: number): DecodedOperation {
     const type = operation.body().switch().name;
     const warnings: string[] = [];
     let riskLevel: 'low' | 'medium' | 'high' = 'low';

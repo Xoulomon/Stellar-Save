@@ -1,8 +1,12 @@
-import { Router, Response, NextFunction } from 'express';
-import { jwtAuthMiddleware, AuthenticatedRequest } from '../auth_middleware';
-import { getQuote, sendPayment, getPaymentStatus } from '../services/sep31';
-import { logger } from '../logger';
+import { Router } from 'express';
+
+import { jwtAuthMiddleware } from '../auth_middleware';
 import { AppError } from '../lib/errors';
+import { logger } from '../logger';
+import { getQuote, sendPayment, getPaymentStatus } from '../services/sep31';
+
+import type { AuthenticatedRequest } from '../auth_middleware';
+import type { Response, NextFunction } from 'express';
 
 export function createSep31Router(): Router {
   const router = Router();

@@ -9,11 +9,12 @@
  */
 
 import * as sgMail from '@sendgrid/mail';
-import { prisma } from '../prisma_client';
-import { logger } from '../logger';
-import { notificationPreferenceRepository } from '../modules/notifications/notification-preference.repository';
+
 import { config } from '../config';
+import { logger } from '../logger';
 import { calculateReminderSchedules } from './reminder_scheduler';
+import { notificationPreferenceRepository } from '../modules/notifications/notification-preference.repository';
+import { prisma } from '../prisma_client';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

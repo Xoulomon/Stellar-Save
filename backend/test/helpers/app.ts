@@ -6,28 +6,32 @@
  */
 
 import express from 'express';
-import { PrismaClient } from '../src/generated/prisma/client';
-import { AnalyticsService } from '../src/analytics_service';
-import { RecommendationEngine } from '../src/recommendation';
+import { format as fastCsvFormat } from 'fast-csv';
+
 import { ABTestingFramework } from '../src/ab_testing';
-import { ExportService } from '../src/export_service';
-import { BackupService, S3HttpClient } from '../src/backup_service';
-import { BackupScheduler } from '../src/backup_scheduler';
-import { RecoveryService } from '../src/recovery_service';
+import { AnalyticsService } from '../src/analytics_service';
 import { BackupMonitor } from '../src/backup_monitor';
 import { BackupRestoreDrill } from '../src/backup_restore_drill';
+import { BackupScheduler } from '../src/backup_scheduler';
+import { BackupService, S3HttpClient } from '../src/backup_service';
 import { ContractEventIndexer } from '../src/contract_event_indexer';
-import { WebPushService } from '../src/web_push_service';
 import { EmailService } from '../src/email_service';
+import { ExportService } from '../src/export_service';
 import { FeedbackService } from '../src/feedback_service';
-import { createV1Router } from '../src/routes/v1';
-import { createGroupsRouter } from '../src/routes/groups';
-import { GroupsService } from '../src/services/group/groups.service';
-import { InMemoryGroupsRepository } from '../src/services/group/groups.repository';
-import { getMemberReputation } from '../src/reputation_service';
-import { Group, UserInteraction } from '../src/models';
-import { format as fastCsvFormat } from 'fast-csv';
+import { PrismaClient } from '../src/generated/prisma/client';
 import { mockTransactions } from '../src/mock_data';
+import { RecommendationEngine } from '../src/recommendation';
+import { RecoveryService } from '../src/recovery_service';
+import { getMemberReputation } from '../src/reputation_service';
+import { createGroupsRouter } from '../src/routes/groups';
+import { createV1Router } from '../src/routes/v1';
+import { InMemoryGroupsRepository } from '../src/services/group/groups.repository';
+import { GroupsService } from '../src/services/group/groups.service';
+import { WebPushService } from '../src/web_push_service';
+
+import type { Group, UserInteraction } from '../src/models';
+
+
 
 const mockGroups: Group[] = [
   { id: '1', name: 'Weekly Savers', contributionAmount: 100, cycleDuration: 604800, maxMembers: 10, currentMembers: 5, status: 'Active', tags: ['weekly', 'low-entry'] },

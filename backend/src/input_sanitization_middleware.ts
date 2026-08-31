@@ -5,8 +5,10 @@
  * XSS, SQL injection, and other injection attacks.
  */
 
-import { Request, Response, NextFunction } from 'express';
 import { logger } from './logger';
+
+import type { Request, Response, NextFunction } from 'express';
+
 
 // HTML entity encoding map
 const HTML_ENTITIES: Record<string, string> = {
@@ -102,7 +104,7 @@ export class InputSanitizer {
    * HTML entity encoding
    */
   static encodeHtml(text: string): string {
-    return text.replace(/[&<>"'\/]/g, (char) => HTML_ENTITIES[char] || char);
+    return text.replace(/[&<>"'/]/g, (char) => HTML_ENTITIES[char] || char);
   }
 
   /**
@@ -270,7 +272,7 @@ export const sanitizeGroupMetadataMiddleware = (
       req.body.metadata = InputSanitizer.sanitizeGroupMetadata(req.body.metadata);
     }
     next();
-  } catch (error) {
+  } catch {
     res.status(400).json({
       error: 'Invalid metadata',
       message: 'Group metadata contains invalid content',
@@ -291,7 +293,7 @@ export const sanitizeProfileMiddleware = (
       req.body.profile = InputSanitizer.sanitizeProfileData(req.body.profile);
     }
     next();
-  } catch (error) {
+  } catch {
     res.status(400).json({
       error: 'Invalid profile data',
       message: 'Profile contains invalid content',

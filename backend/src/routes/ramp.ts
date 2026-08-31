@@ -1,10 +1,14 @@
-import { Router, Response, NextFunction } from 'express';
-import { jwtAuthMiddleware, AuthenticatedRequest } from '../auth_middleware';
-import { initiateDeposit, initiateWithdraw, syncTransactionStatus, getTransaction, CircuitBreakerOpenError } from '../services/sep24';
-import { getKycStatus } from '../services/kyc';
-import { logger } from '../logger';
+import { Router } from 'express';
+
+import { jwtAuthMiddleware } from '../auth_middleware';
 import { rampProtection } from '../fiat_ramp_protection';
 import { AppError } from '../lib/errors';
+import { logger } from '../logger';
+import { getKycStatus } from '../services/kyc';
+import { initiateDeposit, initiateWithdraw, syncTransactionStatus, getTransaction, CircuitBreakerOpenError } from '../services/sep24';
+
+import type { AuthenticatedRequest } from '../auth_middleware';
+import type { Response, NextFunction } from 'express';
 
 export function createRampRouter(): Router {
   const router = Router();

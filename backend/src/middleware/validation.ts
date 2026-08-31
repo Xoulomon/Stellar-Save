@@ -1,6 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import { z, ZodSchema } from 'zod';
+import { z } from 'zod';
+
 import { logger } from '../logger';
+
+import type { Request, Response, NextFunction } from 'express';
+import type { ZodSchema } from 'zod';
+
 
 export interface AuthenticatedRequest extends Request {
   user?: any;

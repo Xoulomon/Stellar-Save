@@ -9,8 +9,11 @@
  * can be built and tested without a live contract.
  */
 
-import { Router, NextFunction } from 'express';
+import { Router } from 'express';
+
 import { AppError } from '../lib/errors';
+
+import type { NextFunction } from 'express';
 
 export interface InsuranceClaim {
   id: string;

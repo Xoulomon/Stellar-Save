@@ -9,10 +9,10 @@
  * Protected by CircuitBreaker to prevent cascading failures when external anchors fail or time out.
  */
 
+import { CircuitBreaker, CircuitBreakerOpenError } from '../lib/circuit_breaker';
+import { fetchWithCorrelationId } from '../lib/http';
 import { logger } from '../logger';
 import { prisma } from '../prisma_client';
-import { fetchWithCorrelationId } from '../lib/http';
-import { CircuitBreaker, CircuitBreakerOpenError } from '../lib/circuit_breaker';
 
 export { CircuitBreakerOpenError };
 

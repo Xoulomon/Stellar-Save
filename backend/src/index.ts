@@ -1,60 +1,65 @@
 // ── Distributed tracing ───────────────────────────────────────────────────────
 // MUST be the very first import so OpenTelemetry can patch instrumented libraries
 // (express, http, pg, ioredis, …) before they are required. No-op when tracing
-// is disabled (the default).
+// is disabled (the default). Deliberately out of import/order's alphabetical
+// sort for this reason -- do not let `eslint --fix` reorder it.
+// eslint-disable-next-line import/order
 import { startTracing } from './tracing';
 startTracing();
 
 import fs from 'fs';
 import http2 from 'http2';
-import dotenv from 'dotenv';
+
 
 dotenv.config();
 
-import express from 'express';
-import compression from 'compression';
-import cors from 'cors';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import { makeExecutableSchema } from '@graphql-tools/schema';
-import { RecommendationEngine } from './recommendation';
-import { EmailService } from './email_service';
-import { ExportService } from './export_service';
-import { BackupService, S3HttpClient } from './backup_service';
-import { BackupScheduler } from './backup_scheduler';
-import { RecoveryService } from './recovery_service';
+import compression from 'compression';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import express from 'express';
+
+import { AuditEventLog, auditMiddleware, createAuditRouter } from './audit_event_log';
 import { BackupMonitor } from './backup_monitor';
 import { BackupRestoreDrill } from './backup_restore_drill';
+import { BackupScheduler } from './backup_scheduler';
+import { BackupService, S3HttpClient } from './backup_service';
 import { ContractEventIndexer } from './contract_event_indexer';
-import { WebPushService } from './web_push_service';
-import { versionMiddleware } from './versioning';
-import { createV1Router } from './routes/v1';
+import docsRouter from './docs';
+import { EmailService } from './email_service';
+import { ExportService } from './export_service';
 import { FeedbackService } from './feedback_service';
-import { createV2Router } from './routes/v2';
-import { metricsMiddleware, metricsHandler } from './metrics';
-import { requestLogger, logger, errFields } from './logger';
-import { requestId } from './middleware/requestId';
-import { disconnectPrisma, prisma } from './prisma_client';
-import { createGracefulShutdown } from './graceful_shutdown';
-import { createRateLimiterMiddleware, createAuthRateLimiterMiddleware } from './rate_limiter';
-import { createTieredRateLimiter, configureTier, setEndpointCost } from './redis_rate_limiter';
-import { createQuotaReporterRouter } from './routes/quota_reporter';
-import { createWebhookRouter } from './routes/webhooks';
-import { getMemberReputation } from './reputation_service';
-import { createAuthRouter } from './routes/auth';
-import { createUserRouter } from './routes/user';
-import { createRampRouter } from './routes/ramp';
-import { createSep31Router } from './routes/sep31';
 import { rampProtection } from './fiat_ramp_protection';
+import { createGracefulShutdown } from './graceful_shutdown';
+import { IpfsClient, PinningService, GroupMetadataCache, IpfsMonitor } from './ipfs';
 import { errorMiddleware, notFoundMiddleware } from './lib/errorMiddleware';
 import { AppError } from './lib/errors';
-import { AuditEventLog, auditMiddleware, createAuditRouter } from './audit_event_log';
-import { initWebSocketGateway } from './ws_gateway';
+import { requestLogger, logger, errFields } from './logger';
+import { metricsMiddleware, metricsHandler } from './metrics';
+import { requestId } from './middleware/requestId';
+import { mockGroups, mockInteractions } from './mock_data';
+import { disconnectPrisma, prisma } from './prisma_client';
+import { createAuthRateLimiterMiddleware } from './rate_limiter';
+import { RecommendationEngine } from './recommendation';
 import { initReconciliationService } from './reconciliation_service';
-import docsRouter from './docs';
-import { IpfsClient, PinningService, GroupMetadataCache, IpfsMonitor } from './ipfs';
-import { createIpfsRouter } from './routes/ipfs';
+import { RecoveryService } from './recovery_service';
+import { createTieredRateLimiter, configureTier, setEndpointCost } from './redis_rate_limiter';
+import { getMemberReputation } from './reputation_service';
+import { createAuthRouter } from './routes/auth';
 import { createHealthRouter, createDatabaseCheck, createRpcCheck } from './routes/health';
+import { createIpfsRouter } from './routes/ipfs';
+import { createQuotaReporterRouter } from './routes/quota_reporter';
+import { createRampRouter } from './routes/ramp';
+import { createSep31Router } from './routes/sep31';
+import { createUserRouter } from './routes/user';
+import { createV1Router } from './routes/v1';
+import { createV2Router } from './routes/v2';
+import { createWebhookRouter } from './routes/webhooks';
+import { versionMiddleware } from './versioning';
+import { WebPushService } from './web_push_service';
+import { initWebSocketGateway } from './ws_gateway';
 
 const CSP_POLICY = [
   "default-src 'self'",
@@ -201,7 +206,6 @@ if (config.ipfs.enabled) {
 }
 
 // ── Services ─────────────────────────────────────────────────────────────────
-import { mockGroups, mockInteractions } from './mock_data';
 const engine = new RecommendationEngine(mockGroups, mockInteractions);
 const emailService = new EmailService();
 const exportService = new ExportService(emailService, engine.getInteractions(), engine.getPreferences());
@@ -219,7 +223,7 @@ const backupRestoreDrill = new BackupRestoreDrill(backupService, s3Client, {
 });
 const feedbackService = new FeedbackService(prisma);
 
-const adminService = new AdminService();
+new AdminService();
 
 const webPushService = new WebPushService();
 

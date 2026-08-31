@@ -29,12 +29,17 @@
  */
 
 import crypto from 'crypto';
-import { Request, Response, NextFunction, Router } from 'express';
-import { prisma } from './prisma_client';
-import { logger } from './logger';
-import { adminAuthMiddleware, AuthenticatedRequest } from './auth_middleware';
+
+import { Router } from 'express';
 import { Gauge, Counter } from 'prom-client';
+
+import { adminAuthMiddleware } from './auth_middleware';
+import { logger } from './logger';
 import { registry } from './metrics';
+import { prisma } from './prisma_client';
+
+import type { AuthenticatedRequest } from './auth_middleware';
+import type { Request, Response, NextFunction} from 'express';
 
 // ── Prometheus metrics ────────────────────────────────────────────────────────
 
@@ -466,7 +471,7 @@ export function createAuditRouter(): Router {
       });
       if (!entry) return res.status(404).json({ error: 'Audit entry not found' });
       res.json(entry);
-    } catch (err) {
+    } catch {
       res.status(500).json({ error: 'Failed to fetch audit entry' });
     }
   });

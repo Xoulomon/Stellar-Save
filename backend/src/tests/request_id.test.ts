@@ -1,5 +1,5 @@
-import { requestId } from '../middleware/requestId';
 import { getCorrelationId, getRequestContext } from '../lib/requestContext';
+import { requestId } from '../middleware/requestId';
 
 function makeReqRes(headers: Record<string, string> = {}) {
   const resHeaders: Record<string, string> = {};

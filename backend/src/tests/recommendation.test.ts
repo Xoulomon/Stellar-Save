@@ -1,5 +1,6 @@
 import { RecommendationEngine } from '../recommendation';
-import { Group, UserInteraction, UserPreference } from '../models';
+
+import type { Group, UserInteraction} from '../models';
 
 async function runTests() {
   console.log('🧪 Running Recommendation Engine Tests...');

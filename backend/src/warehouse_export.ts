@@ -34,10 +34,13 @@
  *    success_rate_pct       NUMERIC
  */
 
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+
 import { PrismaClient } from './generated/prisma/client';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { logger } from './logger';
 import { fetchWithCorrelationId } from './lib/http';
+import { logger } from './logger';
+
+import type { S3Client} from '@aws-sdk/client-s3';
 
 const WATERMARK_KEY = 'warehouse_export_watermark';
 

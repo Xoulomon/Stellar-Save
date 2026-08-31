@@ -1,8 +1,9 @@
 import express from 'express';
 import request from 'supertest';
+
+import { readinessCheckCache } from '../redis';
 import { createV1Router } from '../routes/v1';
 import { createV2Router } from '../routes/v2';
-import { readinessCheckCache } from '../redis';
 
 // Mock the redis module
 jest.mock('../redis', () => ({

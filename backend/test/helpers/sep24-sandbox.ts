@@ -10,9 +10,13 @@
  * - GET /transaction/:id
  */
 
-import express, { Express, Request, Response } from 'express';
+
 import * as crypto from 'crypto';
+
 import { Keypair } from '@stellar/stellar-sdk';
+import express from 'express';
+
+import type { Express, Request, Response } from 'express';
 
 export interface Sep24Transaction {
   id: string;

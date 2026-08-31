@@ -27,6 +27,7 @@
  */
 
 import { context, trace, SpanStatusCode, type Span } from '@opentelemetry/api';
+
 import { config } from './config';
 import { logger } from './logger';
 
@@ -49,7 +50,12 @@ export function startTracing(): void {
   started = true;
 
   try {
-    /* eslint-disable @typescript-eslint/no-var-requires */
+    // Synchronous `require()` (not a static/dynamic `import`) is deliberate here:
+    // it keeps these heavyweight OTel packages truly optional, loaded only on
+    // this call path when tracing is actually enabled, and must complete before
+    // startTracing() returns so instrumentation patching is in place before the
+    // caller's subsequent requires run (see this function's doc comment).
+    /* eslint-disable @typescript-eslint/no-require-imports */
     const { NodeSDK } = require('@opentelemetry/sdk-node');
     const {
       getNodeAutoInstrumentations,
@@ -66,7 +72,7 @@ export function startTracing(): void {
       ParentBasedSampler,
       TraceIdRatioBasedSampler,
     } = require('@opentelemetry/sdk-trace-base');
-    /* eslint-enable @typescript-eslint/no-var-requires */
+    /* eslint-enable @typescript-eslint/no-require-imports */
 
     const ratio = config.tracing.samplerArg;
     const sampler = new ParentBasedSampler({

@@ -1,6 +1,7 @@
 // backend/src/modules/webhooks/webhook.controller.ts
 import { Controller, Post, Get, Delete, Param, Body } from '@nestjs/common';
-import { WebhookService } from './webhook.service';
+
+import type { WebhookService } from './webhook.service';
 
 @Controller('webhooks')
 export class WebhookController {

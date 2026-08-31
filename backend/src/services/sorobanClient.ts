@@ -5,9 +5,11 @@
  * Decouples business logic from network client details.
  */
 
-import { rpc as SorobanRpc } from '@stellar/stellar-sdk';
+
 import { getSorobanPool } from '../lib/soroban';
 import { logger } from '../logger';
+
+import type { rpc as SorobanRpc } from '@stellar/stellar-sdk';
 
 export interface SorobanClientConfig {
   timeoutMs?: number;

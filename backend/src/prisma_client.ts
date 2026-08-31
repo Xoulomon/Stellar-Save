@@ -1,7 +1,8 @@
 import { PrismaClient } from '@prisma/client';
+import { Gauge } from 'prom-client';
+
 import { config } from './config';
 import { logger } from './logger';
-import { Gauge } from 'prom-client';
 import { registry } from './metrics';
 
 // ── Connection-count metric ───────────────────────────────────────────────────

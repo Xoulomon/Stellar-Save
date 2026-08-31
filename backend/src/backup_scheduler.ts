@@ -1,6 +1,8 @@
-import { BackupService } from './backup_service';
-import { BackupJob } from './models';
 import { logger } from './logger';
+
+import type { BackupService } from './backup_service';
+import type { BackupJob } from './models';
+
 
 export interface SchedulerConfig {
   fullBackupIntervalMs: number;    // default: 24h

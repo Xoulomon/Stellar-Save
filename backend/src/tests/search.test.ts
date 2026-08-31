@@ -1,5 +1,4 @@
 import { SearchService } from '../search';
-import { Group, Member, Transaction } from '../models';
 
 // Mock Elasticsearch Client
 class MockClient {
@@ -27,9 +26,9 @@ async function runTests() {
   console.log('🧪 Running Search Service Tests...');
 
   const searchService = new SearchService();
-  // @ts-ignore - Injecting mock client
+  // @ts-expect-error - Injecting mock client
   searchService['client'] = new MockClient();
-  // @ts-ignore
+  // @ts-expect-error - Injecting mock client
   searchService['isConnected'] = true;
 
   // Test searchGroups

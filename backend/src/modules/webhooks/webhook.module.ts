@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
-import { WebhookService } from './webhook.service';
+
 import { WebhookController } from './webhook.controller';
+import { WebhookService } from './webhook.service';
 
 @Module({
   imports: [ConfigModule, ScheduleModule.forRoot()],

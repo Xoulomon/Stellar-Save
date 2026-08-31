@@ -7,7 +7,7 @@
  *    variable that the English template also uses (catches copy-paste gaps).
  * 3. Fallback to 'en' never produces an untranslated key literal in output.
  */
-import { t, SUPPORTED_LOCALES, SupportedLocale } from '../../lib/i18n';
+import { t, SUPPORTED_LOCALES } from '../../lib/i18n';
 
 const ALL_KEYS = [
   'contribution_reminder.subject',

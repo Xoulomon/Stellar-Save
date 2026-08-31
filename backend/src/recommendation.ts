@@ -1,4 +1,4 @@
-import { UserPreference, Group, UserInteraction, Recommendation } from './models';
+import type { UserPreference, Group, UserInteraction, Recommendation } from './models';
 
 export class RecommendationEngine {
   private groups: Group[] = [];

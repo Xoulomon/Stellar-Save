@@ -1,9 +1,11 @@
 import {
   LocalImageStorageService,
   S3ImageStorageService,
-  ImageValidationError,
-  ImageUploadOptions,
+  ImageValidationError
 } from '../services/image_storage_service';
+
+import type {
+  ImageUploadOptions} from '../services/image_storage_service';
 
 describe('ImageStorageService Unit Tests', () => {
   // Sample valid magic byte buffers

@@ -1,9 +1,14 @@
-import { Router, Request, Response, NextFunction } from 'express';
 import * as crypto from 'crypto';
-import { prisma } from '../prisma_client';
-import { fetchWithCorrelationId } from '../lib/http';
+
+import { Router } from 'express';
+
+
 import { AppError } from '../lib/errors';
+import { fetchWithCorrelationId } from '../lib/http';
 import { logger } from '../logger';
+import { prisma } from '../prisma_client';
+
+import type { Request, Response, NextFunction } from 'express';
 
 export function createWebhookRouter(): Router {
   const router = Router();
@@ -29,7 +34,7 @@ export function createWebhookRouter(): Router {
         data: { userId, groupId: groupId || null, url, events, secret: webhookSecret, description: description || null },
       });
       return res.status(201).json({ ...webhook, secret: webhookSecret });
-    } catch (err) {
+    } catch {
       return next(new AppError('WEBHOOK_CREATE_FAILED', 'Failed to create webhook', 500));
     }
   });

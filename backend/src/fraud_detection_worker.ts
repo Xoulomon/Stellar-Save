@@ -1,6 +1,6 @@
+import { config } from './config';
 import { fraudDetectionService } from './fraud_detection_service';
 import { logger } from './logger';
-import { config } from './config';
 
 export class FraudDetectionWorker {
   private intervalId?: NodeJS.Timer;

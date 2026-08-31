@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+
 import { logger } from './logger';
 import { notificationPreferenceRepository } from './modules/notifications/notification-preference.repository';
 

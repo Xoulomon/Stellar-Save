@@ -7,13 +7,17 @@
  * without any network flakiness.
  */
 
-import express, { Express } from 'express';
+
 import http from 'http';
-import { AddressInfo } from 'net';
+
+import express from 'express';
 import request from 'supertest';
 
 import { PrismaClient } from '../../src/generated/prisma/client';
 import { createHealthRouter, createDatabaseCheck, createRpcCheck } from '../../src/routes/health';
+
+import type { Express } from 'express';
+import type { AddressInfo } from 'net';
 
 // === Fake Soroban RPC
 

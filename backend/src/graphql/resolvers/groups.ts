@@ -1,6 +1,7 @@
-import { Group } from '../../models';
-import { mockGroups, mockMembers, mockTransactions } from '../../mock_data';
 import { paginateResults } from './shared';
+import { mockGroups, mockMembers, mockTransactions } from '../../mock_data';
+
+import type { Group } from '../../models';
 
 export const groupResolvers = {
   Query: {

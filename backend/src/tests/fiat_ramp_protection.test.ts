@@ -1,9 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
 import {
   rampIpRateLimiter,
   rampUserVelocityLimiter,
   rampCaptchaGate,
 } from '../fiat_ramp_protection';
+
+import type { Request, Response} from 'express';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

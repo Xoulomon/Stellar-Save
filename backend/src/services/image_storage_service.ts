@@ -7,12 +7,14 @@
  * Issue #1302
  */
 
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import * as fs from 'fs';
 import * as path from 'path';
+
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+
 import { config } from '../config';
-import { logger } from '../logger';
 import { ImageValidationError } from '../lib/errors';
+import { logger } from '../logger';
 
 export { ImageValidationError };
 

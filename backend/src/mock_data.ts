@@ -1,4 +1,4 @@
-import { Group, Member, Transaction, UserInteraction, AuditLog } from './models';
+import type { Group, Member, Transaction, UserInteraction, AuditLog } from './models';
 
 export const mockGroups: Group[] = [
   { id: '1', name: 'Weekly Savers', contributionAmount: 100, cycleDuration: 604800, maxMembers: 10, currentMembers: 5, status: 'Active', tags: ['weekly', 'low-entry'] },

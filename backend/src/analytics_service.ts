@@ -1,5 +1,5 @@
-import * as redis from './redis';
 import { logger } from './logger';
+import * as redis from './redis';
 //import type { PrismaClient } from '@prisma/client';
 
 export interface GroupCycleStats {

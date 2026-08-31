@@ -36,13 +36,7 @@
  * when no SDK has been registered.
  */
 
-import {
-  trace,
-  context,
-  SpanStatusCode,
-  type Span,
-  type Tracer,
-} from '@opentelemetry/api';
+import { type Span, type Tracer } from '@opentelemetry/api';
 
 // ── Module under test ──────────────────────────────────────────────────────
 
@@ -62,28 +56,10 @@ jest.mock('../config', () => ({
 }));
 
 // ── Import after the mock so config is already stubbed ────────────────────
-import { withSpan, getTracer, startTracing } from '../tracing';
 import { SorobanClientPool, resetSorobanPool } from '../lib/soroban';
+import { withSpan, getTracer, startTracing } from '../tracing';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/**
- * Returns the span name and status stored by a recorded span.
- * Works with the @opentelemetry/api no-op tracer, where spanContext() returns
- * a valid (though zeroed) SpanContext.
- */
-function captureSpan(span: Span): {
-  traceId: string;
-  spanId: string;
-  isRecording: boolean;
-} {
-  const ctx = span.spanContext();
-  return {
-    traceId: ctx.traceId,
-    spanId:  ctx.spanId,
-    isRecording: span.isRecording(),
-  };
-}
 
 // ─── 1. getTracer() returns a usable tracer ───────────────────────────────────
 

@@ -10,9 +10,11 @@
  */
 
 import request from 'supertest';
-import { buildGroupApp } from '../helpers/groupApp';
+
 import { GroupFixtureFactory } from '../fixtures/groups';
-import { Group } from '../../src/models';
+import { buildGroupApp } from '../helpers/groupApp';
+
+import type { Group } from '../../src/models';
 
 // ── Shared default app ────────────────────────────────────────────────────────
 // Mirrors the original seed so existing assertions are unchanged.

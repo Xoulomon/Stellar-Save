@@ -1,8 +1,10 @@
 import { IpfsClient } from './client';
-import { PinningQueue, PinningJob } from './pinning_queue';
-import redis from '../redis';
+import { PinningQueue } from './pinning_queue';
 import { config } from '../config';
 import { logger } from '../logger';
+import redis from '../redis';
+
+import type { PinningJob } from './pinning_queue';
 
 const ACCESS_COUNTER_PREFIX = 'ipfs:access:count';
 const PINNED_CID_PREFIX = 'ipfs:pinned:cid';
@@ -116,7 +118,7 @@ export class PinningService {
 
   async recordAccess(cid: string): Promise<void> {
     const key = `${ACCESS_COUNTER_PREFIX}:${cid}`;
-    const count = await redis.incr(key);
+    await redis.incr(key);
     await redis.expire(key, 86400);
   }
 

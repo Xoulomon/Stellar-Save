@@ -2,8 +2,9 @@
  * Monitoring tests — run with: npx tsx src/tests/monitoring.test.ts
  */
 import { Registry, Counter, Histogram, Gauge, collectDefaultMetrics } from 'prom-client';
-import { metricsMiddleware, metricsHandler, registry } from '../metrics';
+
 import { logger, requestLogger } from '../logger';
+import { metricsMiddleware, metricsHandler, registry } from '../metrics';
 
 let passed = 0, failed = 0;
 function assert(cond: boolean, label: string) {
@@ -18,7 +19,7 @@ function makeReqRes(method = 'GET', path = '/test') {
     on(event: string, cb: () => void) { if (event === 'finish') cb(); return this; },
     setHeader(k: string, v: string) { this.headers[k] = v; },
     set(k: string, v: string) { this.headers[k] = v; return this; },
-    end(b?: string) { return this; },
+    end(_b?: string) { return this; },
   };
   const req = { method, path, ip: '127.0.0.1', headers: { 'user-agent': 'test' }, route: { path } };
   return { req, res };

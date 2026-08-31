@@ -5,23 +5,23 @@
  */
 
 import {
-  CostExplorerClient,
-  GetCostAndUsageCommand,
-  GetCostForecastCommand,
-  GetDimensionValuesCommand,
-  Granularity,
-  type ResultByTime,
-} from '@aws-sdk/client-cost-explorer';
-import {
   ComputeOptimizerClient,
   GetRecommendationSummariesCommand,
   GetEC2InstanceRecommendationsCommand,
   FindingType,
 } from '@aws-sdk/client-compute-optimizer';
+import {
+  CostExplorerClient,
+  GetCostAndUsageCommand,
+  GetCostForecastCommand,
+  Granularity,
+  type ResultByTime,
+} from '@aws-sdk/client-cost-explorer';
 import { Gauge, Counter } from 'prom-client';
-import { registry } from './metrics';
-import logger from './logger';
+
 import { config } from './config';
+import logger from './logger';
+import { registry } from './metrics';
 
 // ── Prometheus metrics ────────────────────────────────────────────────────────
 

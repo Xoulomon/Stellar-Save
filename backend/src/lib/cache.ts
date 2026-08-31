@@ -1,5 +1,5 @@
-import { get, set, del, delPattern } from '../redis';
 import { cacheHitsTotal, cacheMissesTotal, cacheInvalidationsTotal } from '../metrics';
+import { get, set, del, delPattern } from '../redis';
 
 const TTL_SECONDS = 10;
 const KEY_PREFIX = 'group_state';

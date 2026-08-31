@@ -53,6 +53,7 @@ export class MemberReputationRepository {
   private get db(): MemberReputationPrisma {
     if (!this._db) {
       // Lazy require avoids pulling `prisma_client` into unit tests that inject a mock.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       this._db = require('../../prisma_client').prisma as MemberReputationPrisma;
     }
     return this._db;

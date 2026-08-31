@@ -16,10 +16,11 @@
  *
  * Runbooks: docs/runbooks/on-chain-*.md
  */
-import { prisma } from './prisma_client';
-import { logger } from './logger';
 import { Counter, Gauge } from 'prom-client';
+
+import { logger } from './logger';
 import { registry } from './metrics';
+import { prisma } from './prisma_client';
 
 // ── Prometheus metrics ────────────────────────────────────────────────────────
 

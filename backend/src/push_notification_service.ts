@@ -1,8 +1,10 @@
 import https from 'https';
+
 import jwt from 'jsonwebtoken';
-import { logger } from './logger';
-import { deviceTokenService } from './device_token_service';
+
 import { config } from './config';
+import { deviceTokenService } from './device_token_service';
+import { logger } from './logger';
 
 /**
  * Abstract interface for push notification providers
@@ -27,7 +29,7 @@ export class FirebaseProvider implements PushNotificationProvider {
     this.projectId = projectId;
     try {
       this.serviceAccount = JSON.parse(serviceAccountJson);
-    } catch (e) {
+    } catch {
       throw new Error('Invalid Firebase service account JSON');
     }
   }
@@ -36,7 +38,7 @@ export class FirebaseProvider implements PushNotificationProvider {
     deviceToken: string,
     title: string,
     body: string,
-    data?: Record<string, string>
+    _data?: Record<string, string>
   ): Promise<string> {
     try {
       // TODO: integrate Firebase Admin SDK when credentials are provisioned.
@@ -148,20 +150,13 @@ export class OneSignalProvider implements PushNotificationProvider {
     deviceToken: string,
     title: string,
     body: string,
-    data?: Record<string, string>
+    _data?: Record<string, string>
   ): Promise<string> {
     try {
-      const payload = {
-        app_id: this.appId,
-        include_external_user_ids: [deviceToken],
-        headings: { en: title },
-        contents: { en: body },
-        data: data || {},
-        delivery_delay: 'immediate',
-        priority: 10,
-      };
-
-      // TODO: integrate OneSignal SDK when credentials are provisioned.
+      // TODO: integrate OneSignal SDK when credentials are provisioned. The
+      // request payload (app_id, include_external_user_ids, headings,
+      // contents, data, delivery_delay, priority) will be built here once
+      // the real API call replaces the mock response below.
       logger.info('OneSignal notification prepared', {
         userId: deviceToken,
         title,

@@ -1,8 +1,9 @@
 // backend/src/modules/webhooks/webhook.worker.ts
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
 import axios from 'axios';
+
+import type { Job } from 'bullmq';
 
 @Processor('webhook-delivery')
 export class WebhookWorker extends WorkerHost {

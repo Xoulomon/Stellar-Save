@@ -1,7 +1,8 @@
-import request from 'supertest';
 import express from 'express';
-import { createRampRouter } from '../../src/routes/ramp';
+import request from 'supertest';
+
 import { issueJwt } from '../../src/auth_service';
+import { createRampRouter } from '../../src/routes/ramp';
 import { TEST_ACCOUNT as TEST_WALLET } from '../fixtures/sep24';
 
 function buildApp() {

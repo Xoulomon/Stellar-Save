@@ -1,7 +1,10 @@
 import crypto from 'crypto';
-import { BackupService, S3Client } from './backup_service';
-import { BackupJob } from './models';
+
 import { config } from './config';
+
+import type { BackupService, S3Client } from './backup_service';
+import type { BackupJob } from './models';
+
 
 export interface RecoveryResult {
   jobId: string;

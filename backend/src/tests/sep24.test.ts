@@ -1,3 +1,4 @@
+import { prisma } from '../prisma_client';
 import { initiateDeposit, initiateWithdraw, syncTransactionStatus, sep10Auth } from '../services/sep24';
 
 const mockFetch = jest.fn();
@@ -12,8 +13,6 @@ jest.mock('../prisma_client', () => ({
     },
   },
 }));
-
-const { prisma } = require('../prisma_client');
 
 const TOML_RESPONSE = `AUTH_SERVER = "https://anchor.example.com/auth"\nTRANSFER_SERVER_SEP0024 = "https://anchor.example.com/sep24"\n`;
 

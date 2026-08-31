@@ -12,8 +12,8 @@
  *   config.backup.bucket // string
  */
 
-import { z } from 'zod';
 import dotenv from 'dotenv';
+import { z } from 'zod';
 
 dotenv.config();
 
@@ -227,9 +227,6 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  const issues = parsed.error.issues
-    .map((i) => `  • ${i.path.join('.')}: ${i.message}`)
-    .join('\n');
   // NOTE: the structured logger depends on this module, so it is not available
   // yet during config bootstrap — write directly to stderr as JSON instead.
   process.stderr.write(

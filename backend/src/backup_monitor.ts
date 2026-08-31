@@ -1,8 +1,11 @@
 import crypto from 'crypto';
-import { BackupService } from './backup_service';
-import { BackupAlert } from './models';
+
 import { fetchWithCorrelationId } from './lib/http';
 import { logger } from './logger';
+
+import type { BackupService } from './backup_service';
+import type { BackupAlert } from './models';
+
 
 export interface MonitorConfig {
   maxBackupAgeMs: number;       // alert if latest backup is older than this (default: 25h)

@@ -1,5 +1,5 @@
 // Lightweight rate-limiting middleware scaffold
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 
 // TODO: Implement per-docs/api-rate-limiting.md policy
 export default function rateLimit(req: Request, res: Response, next: NextFunction) {

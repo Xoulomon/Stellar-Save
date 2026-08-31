@@ -1,7 +1,9 @@
-import { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
+
 import { ValidationMiddleware } from './validation';
 import * as schemas from './validation.schemas';
-import { z } from 'zod';
+
+import type { NextFunction } from 'express';
 
 describe('ValidationMiddleware', () => {
   let req: any;

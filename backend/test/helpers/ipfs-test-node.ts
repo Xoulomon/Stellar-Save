@@ -14,7 +14,9 @@
  * standing up a real IPFS daemon.
  */
 
-import http, { IncomingMessage, ServerResponse } from 'http';
+import http from 'http';
+
+import type { IncomingMessage, ServerResponse } from 'http';
 import type { AddressInfo } from 'net';
 
 export interface IpfsTestContent {

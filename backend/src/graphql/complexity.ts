@@ -1,5 +1,7 @@
+import { GraphQLError } from 'graphql';
 import depthLimit from 'graphql-depth-limit';
-import { GraphQLSchema, ValidationContext, ASTVisitor } from 'graphql';
+
+import type { ValidationContext, ASTVisitor } from 'graphql';
 
 // ── Limits ────────────────────────────────────────────────────────────────────
 
@@ -48,7 +50,7 @@ export function complexityLimitRule(maxComplexity: number) {
         leave() {
           if (complexity > maxComplexity) {
             context.reportError(
-              new (require('graphql').GraphQLError)(
+              new GraphQLError(
                 `Query complexity ${complexity} exceeds maximum allowed complexity of ${maxComplexity}.`
               )
             );

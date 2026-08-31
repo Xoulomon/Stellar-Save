@@ -1,13 +1,14 @@
-import crypto from 'crypto';
-import { BackupService, S3Client } from '../backup_service';
-import { BackupScheduler } from '../backup_scheduler';
-import { RecoveryService } from '../recovery_service';
 import { BackupMonitor } from '../backup_monitor';
 import { BackupRestoreDrill } from '../backup_restore_drill';
+import { BackupScheduler } from '../backup_scheduler';
+import { BackupService } from '../backup_service';
+import { RecoveryService } from '../recovery_service';
+
+import type { S3Client } from '../backup_service';
 
 // ── Inline test harness (matches existing test files) ────────────────────────
 let _currentBeforeEach: (() => void) | null = null;
-let _testQueue: Array<() => Promise<void>> = [];
+const _testQueue: Array<() => Promise<void>> = [];
 let _queueDraining = false;
 
 async function _drainQueue() {
@@ -17,7 +18,7 @@ async function _drainQueue() {
   _queueDraining = false;
 }
 
-function describe(name: string, fn: Function) {
+function describe(name: string, fn: () => void) {
   console.log(`\nDescribe: ${name}`);
   const saved = _currentBeforeEach;
   _currentBeforeEach = null;

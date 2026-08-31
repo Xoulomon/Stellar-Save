@@ -1,6 +1,8 @@
-import { Group } from '../../models';
 import { AppError } from '../../lib/errors';
-import { GroupsRepository } from './groups.repository';
+
+import type { GroupsRepository } from './groups.repository';
+import type { Group } from '../../models';
+
 
 /**
  * Business logic for groups. Knows nothing about Express: it takes plain

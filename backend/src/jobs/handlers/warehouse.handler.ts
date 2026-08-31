@@ -1,6 +1,8 @@
-import { S3Client } from '@aws-sdk/client-s3';
-import { WarehouseExportPipeline } from '../../warehouse_export';
+
 import { logger } from '../../logger';
+import { WarehouseExportPipeline } from '../../warehouse_export';
+
+import type { S3Client } from '@aws-sdk/client-s3';
 
 export class WarehouseHandler {
   private pipeline: WarehouseExportPipeline;

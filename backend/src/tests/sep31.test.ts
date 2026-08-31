@@ -1,3 +1,4 @@
+import { prisma } from '../prisma_client';
 import { validateComplianceFields, getQuote, sendPayment, getPaymentStatus } from '../services/sep31';
 
 const mockFetch = jest.fn();
@@ -12,8 +13,6 @@ jest.mock('../prisma_client', () => ({
     },
   },
 }));
-
-const { prisma } = require('../prisma_client');
 
 const TOML = `DIRECT_PAYMENT_SERVER = "https://anchor.example.com/sep31"\n`;
 

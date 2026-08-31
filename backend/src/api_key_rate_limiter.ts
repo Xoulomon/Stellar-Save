@@ -1,6 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
+
 import { apiKeyService } from './api_key_service';
 import { logger } from './logger';
+
+import type { Request, Response, NextFunction } from 'express';
 
 const keyUsageCounts = new Map<string, { count: number; resetAt: number }>();
 

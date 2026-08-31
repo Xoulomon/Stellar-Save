@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeAll, afterAll, jest } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { PrismaClient } from '@prisma/client';
-import { AnalyticsService } from '../analytics_service';
+
 import { AnalyticsAggregator } from '../analytics_aggregator';
-import * as redis from '../redis';
+import { AnalyticsService } from '../analytics_service';
 
 describe('AnalyticsService', () => {
   let prisma: PrismaClient;
@@ -114,7 +114,7 @@ describe('AnalyticsService', () => {
 
       expect(stats).toBeDefined();
       expect(stats?.totalUsers).toBeGreaterThan(0);
-      expect(stats?.activeUsers).toBeLessThanOrEqual(stats?.totalUsers!);
+      expect(stats?.activeUsers).toBeLessThanOrEqual(stats!.totalUsers);
     });
 
     it('should return null for non-existent date', async () => {

@@ -1,8 +1,9 @@
 import { ApolloServer } from '@apollo/server';
 import { makeExecutableSchema } from '@graphql-tools/schema';
-import { typeDefs } from '../graphql/schema';
-import { resolvers } from '../graphql/resolvers';
+
 import { validationRules, MAX_DEPTH, MAX_COMPLEXITY } from '../graphql/complexity';
+import { resolvers } from '../graphql/resolvers';
+import { typeDefs } from '../graphql/schema';
 
 const schema = makeExecutableSchema({ typeDefs, resolvers });
 

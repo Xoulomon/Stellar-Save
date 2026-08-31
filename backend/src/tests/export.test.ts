@@ -1,8 +1,8 @@
 // Mock jest since it's not installed in this environment
-function describe(name: string, fn: Function) { console.log(`Describe: ${name}`); fn(); }
-function beforeEach(fn: Function) { fn(); }
-function afterEach(fn: Function) { }
-function test(name: string, fn: Function) {
+function describe(name: string, fn: () => any) { console.log(`Describe: ${name}`); fn(); }
+function beforeEach(fn: () => any) { fn(); }
+function afterEach(_fn: () => any) { }
+function test(name: string, fn: () => any) {
   console.log(`Test: ${name}`);
   try {
     const res = fn();
@@ -15,7 +15,7 @@ function test(name: string, fn: Function) {
 }
 const jest = {
   spyOn: (obj: any, method: string) => ({
-    mockImplementation: (fn: Function) => { obj[method] = fn; return { toHaveBeenCalledWith: () => {} }; }
+    mockImplementation: (fn: (...args: any[]) => any) => { obj[method] = fn; return { toHaveBeenCalledWith: () => {} }; }
   }),
   clearAllMocks: () => {}
 };
@@ -27,9 +27,10 @@ const expect = (val: any) => ({
   toHaveBeenCalledWith: (email: string, url: string) => { console.log(`Verified email to ${email} with url ${url}`); }
 });
 
-import { ExportService } from '../export_service';
 import { EmailService } from '../email_service';
-import { UserInteraction, UserPreference } from '../models';
+import { ExportService } from '../export_service';
+
+import type { UserInteraction, UserPreference } from '../models';
 
 describe('ExportService', () => {
   let exportService: ExportService;

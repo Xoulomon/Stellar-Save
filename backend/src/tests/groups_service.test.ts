@@ -1,7 +1,9 @@
-import { GroupsService } from '../services/group/groups.service';
-import { GroupsRepository, InMemoryGroupsRepository } from '../services/group/groups.repository';
 import { AppError } from '../lib/errors';
-import { Group } from '../models';
+import { InMemoryGroupsRepository } from '../services/group/groups.repository';
+import { GroupsService } from '../services/group/groups.service';
+
+import type { Group } from '../models';
+import type { GroupsRepository} from '../services/group/groups.repository';
 
 /*
  * Service-layer tests: no Express, no supertest. The repository is the only

@@ -1,7 +1,8 @@
 import webpush from 'web-push';
+
+import { config } from './config';
 import { PrismaClient } from './generated/prisma/client';
 import { logger } from './logger';
-import { config } from './config';
 
 export interface WebPushSubscriptionInput {
   endpoint: string;

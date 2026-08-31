@@ -4,9 +4,12 @@
  */
 
 import { CronJob } from 'cron';
+
+import { StellarClient } from '../lib/stellar_client';
 import { logger } from '../logger';
-import { IStellarClient, StellarClient } from '../lib/stellar_client';
 import { KeeperHandler } from './handlers/keeper.handler';
+
+import type { IStellarClient} from '../lib/stellar_client';
 
 export class KeeperJob {
   private contractId: string;

@@ -1,13 +1,16 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { NotificationService } from '../notification_service';
-import { PushNotificationService } from '../push_notification_service';
-import { WebPushService } from '../web_push_service';
-import { UserPreferenceManager } from '../user_preference_manager';
-import { NotificationTemplateManager } from '../notification_template_manager';
+import { Router } from 'express';
+
+import { config } from '../config';
 import { deviceTokenService } from '../device_token_service';
 import { AppError } from '../lib/errors';
 import { logger } from '../logger';
-import { config } from '../config';
+import { NotificationService } from '../notification_service';
+import { NotificationTemplateManager } from '../notification_template_manager';
+import { PushNotificationService } from '../push_notification_service';
+import { UserPreferenceManager } from '../user_preference_manager';
+import { WebPushService } from '../web_push_service';
+
+import type { Request, Response, NextFunction } from 'express';
 
 /**
  * Notification Service Routes

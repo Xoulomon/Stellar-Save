@@ -78,6 +78,7 @@ export class NotificationPreferenceRepository {
   private get db(): NotificationPreferencePrisma {
     if (!this._db) {
       // Lazy require avoids pulling `prisma_client` into unit tests that inject a mock.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       this._db = require('../../prisma_client').prisma as NotificationPreferencePrisma;
     }
     return this._db;

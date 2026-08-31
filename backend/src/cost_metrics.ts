@@ -1,4 +1,5 @@
 import { Gauge, Counter } from 'prom-client';
+
 import { registry } from './metrics';
 
 // ── GitHub Actions cost (minutes consumed) ────────────────────────────────────

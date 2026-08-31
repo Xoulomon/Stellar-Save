@@ -21,8 +21,10 @@
 
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
-import { buildSchema, printSchema } from 'graphql';
+
 import { diff, CriticalityLevel, type Change } from '@graphql-inspector/core';
+import { buildSchema, printSchema } from 'graphql';
+
 import { typeDefs } from '../graphql/schema';
 
 // ---------------------------------------------------------------------------

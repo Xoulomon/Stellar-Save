@@ -1,5 +1,5 @@
-import { prisma } from './prisma_client';
 import { logger } from './logger';
+import { prisma } from './prisma_client';
 
 export class DeviceTokenService {
   async registerToken(userId: string, token: string, platform: 'ios' | 'android'): Promise<void> {

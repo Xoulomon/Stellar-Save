@@ -12,10 +12,13 @@
  * - Edge cases and error handling
  */
 
+
 import request from 'supertest';
-import { Sep24Sandbox } from '../helpers/sep24-sandbox';
-import { Server } from 'http';
+
 import { TEST_ACCOUNT } from '../fixtures/sep24';
+import { Sep24Sandbox } from '../helpers/sep24-sandbox';
+
+import type { Server } from 'http';
 
 describe('SEP-24 Fiat Ramp Integration Tests', () => {
   let sandbox: Sep24Sandbox;

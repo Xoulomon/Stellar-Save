@@ -3,11 +3,12 @@
  * Serves Swagger UI and Redoc interfaces for the OpenAPI specification
  */
 
-import express, { Router } from 'express';
-import path from 'path';
 import fs from 'fs';
-import swaggerUi from 'swagger-ui-express';
+import path from 'path';
+
+import { Router } from 'express';
 import yaml from 'js-yaml';
+import swaggerUi from 'swagger-ui-express';
 
 const router = Router();
 

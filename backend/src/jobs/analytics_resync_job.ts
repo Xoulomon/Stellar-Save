@@ -1,6 +1,7 @@
 import cron from 'node-cron';
-import { prisma } from '../prisma_client';
+
 import { logger } from '../logger';
+import { prisma } from '../prisma_client';
 import { AnalyticsHandler } from './handlers/analytics.handler';
 
 export function startAnalyticsResyncJob(schedule = '0 * * * *'): cron.ScheduledTask {
