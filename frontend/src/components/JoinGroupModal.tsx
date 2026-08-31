@@ -1,8 +1,16 @@
 import GroupsIcon from '@mui/icons-material/Groups';
 import PaidIcon from '@mui/icons-material/Paid';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  Typography, Box, Chip, Button, Stack, Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Typography,
+  Box,
+  Chip,
+  Button,
+  Stack,
+  Divider,
 } from '@mui/material';
 import React from 'react';
 
@@ -15,19 +23,29 @@ interface Props {
 }
 
 const STATUS_COLOR: Record<string, 'success' | 'warning' | 'default'> = {
-  active: 'success', pending: 'warning', completed: 'default',
+  active: 'success',
+  pending: 'warning',
+  completed: 'default',
 };
 
 export const JoinGroupModal: React.FC<Props> = ({ group, onClose, onConfirm }) => {
   if (!group) return null;
 
   return (
-    <Dialog open={Boolean(group)} onClose={onClose} maxWidth="xs" fullWidth aria-describedby="join-group-description">
+    <Dialog
+      open={Boolean(group)}
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      aria-describedby="join-group-description"
+    >
       <DialogTitle fontWeight="bold">Join Group</DialogTitle>
       <DialogContent>
         <Stack spacing={2}>
           <Box>
-            <Typography variant="h6" fontWeight="bold">{group.name}</Typography>
+            <Typography variant="h6" fontWeight="bold">
+              {group.name}
+            </Typography>
             {group.description && (
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                 {group.description}
@@ -42,7 +60,9 @@ export const JoinGroupModal: React.FC<Props> = ({ group, onClose, onConfirm }) =
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <PaidIcon fontSize="small" color="action" />
-              <Typography variant="body2">{group.contributionAmount} {group.currency}/cycle</Typography>
+              <Typography variant="body2">
+                {group.contributionAmount} {group.currency}/cycle
+              </Typography>
             </Box>
             <Chip
               label={group.status}
@@ -53,13 +73,23 @@ export const JoinGroupModal: React.FC<Props> = ({ group, onClose, onConfirm }) =
             />
           </Stack>
           <Typography id="join-group-description" variant="body2" color="text.secondary">
-            By joining, you commit to contributing <strong>{group.contributionAmount} {group.currency}</strong> each cycle until the group completes.
+            By joining, you commit to contributing{' '}
+            <strong>
+              {group.contributionAmount} {group.currency}
+            </strong>{' '}
+            each cycle until the group completes.
           </Typography>
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 3 }}>
-        <Button onClick={onClose} variant="outlined" sx={{ textTransform: 'none' }}>Cancel</Button>
-        <Button onClick={() => onConfirm(group)} variant="contained" sx={{ textTransform: 'none', fontWeight: 'bold' }}>
+        <Button onClick={onClose} variant="outlined" sx={{ textTransform: 'none' }}>
+          Cancel
+        </Button>
+        <Button
+          onClick={() => onConfirm(group)}
+          variant="contained"
+          sx={{ textTransform: 'none', fontWeight: 'bold' }}
+        >
           Confirm Join
         </Button>
       </DialogActions>

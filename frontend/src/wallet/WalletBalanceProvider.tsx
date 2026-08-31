@@ -46,9 +46,7 @@ export interface WalletBalanceContextValue {
   refreshBalance: () => Promise<void>;
 }
 
-export const WalletBalanceContext = createContext<
-  WalletBalanceContextValue | undefined
->(undefined);
+export const WalletBalanceContext = createContext<WalletBalanceContextValue | undefined>(undefined);
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
@@ -92,10 +90,7 @@ export const WalletBalanceProvider: React.FC<WalletBalanceProviderProps> = ({
     setBalanceError(null);
 
     try {
-      const balances = await stellarService.getAllBalances(
-        activeAddress,
-        network ?? 'TESTNET',
-      );
+      const balances = await stellarService.getAllBalances(activeAddress, network ?? 'TESTNET');
 
       if (!isMountedRef.current) return;
 
@@ -149,11 +144,7 @@ export const WalletBalanceProvider: React.FC<WalletBalanceProviderProps> = ({
     refreshBalance: fetchBalance,
   };
 
-  return (
-    <WalletBalanceContext.Provider value={value}>
-      {children}
-    </WalletBalanceContext.Provider>
-  );
+  return <WalletBalanceContext.Provider value={value}>{children}</WalletBalanceContext.Provider>;
 };
 
 // ── Narrow hook ───────────────────────────────────────────────────────────────
@@ -161,9 +152,7 @@ export const WalletBalanceProvider: React.FC<WalletBalanceProviderProps> = ({
 export function useWalletBalance(): WalletBalanceContextValue {
   const ctx = useContext(WalletBalanceContext);
   if (!ctx) {
-    throw new Error(
-      'useWalletBalance must be used within WalletBalanceProvider.',
-    );
+    throw new Error('useWalletBalance must be used within WalletBalanceProvider.');
   }
   return ctx;
 }

@@ -35,7 +35,9 @@
   cursor: pointer;
   padding: 0.25rem;
   border-radius: 6px;
-  transition: color 0.2s, background-color 0.2s;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
 }
 
 .activity-feed__refresh-btn:hover:not(:disabled) {
@@ -79,7 +81,10 @@
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s, background-color 0.2s;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background-color 0.2s;
   white-space: nowrap;
 }
 
@@ -283,4 +288,3 @@
     font-size: 0.7rem;
   }
 }
-

@@ -52,7 +52,10 @@
   background: var(--color-bg);
   position: relative;
   z-index: 1;
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s;
 }
 
 .wizard-step--completed .wizard-step__number {
@@ -210,7 +213,6 @@
   }
 }
 
-
 /* ── Insurance step (Issue #1012) ─────────────────────────────────────────── */
 
 .form-step-description {
@@ -259,4 +261,3 @@
 .insurance-cost-preview strong {
   color: var(--color-text-primary);
 }
-

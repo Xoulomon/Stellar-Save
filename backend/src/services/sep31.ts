@@ -68,12 +68,17 @@ async function getDirectPaymentServer(anchorDomain: string): Promise<string> {
  * Fetch anchor's /info to get required compliance fields, then validate provided fields.
  * Throws an error listing any missing required fields.
  */
-export async function validateComplianceFields(anchorDomain: string, fields: Record<string, string>): Promise<void> {
+export async function validateComplianceFields(
+  anchorDomain: string,
+  fields: Record<string, string>
+): Promise<void> {
   const server = await getDirectPaymentServer(anchorDomain);
   const res = await fetchWithCorrelationId(`${server}/info`);
   if (!res.ok) throw new Error(`SEP-31 /info failed: ${res.status}`);
 
-  const body = (await res.json()) as { receive?: Record<string, { fields?: Record<string, { optional?: boolean }> }> };
+  const body = (await res.json()) as {
+    receive?: Record<string, { fields?: Record<string, { optional?: boolean }> }>;
+  };
   const receiveAssets = body.receive ?? {};
 
   const missing: string[] = [];
@@ -111,7 +116,16 @@ export async function getQuote(opts: Sep31QuoteOpts): Promise<Sep31Quote> {
  * Initiate a SEP-31 cross-border payment.
  */
 export async function sendPayment(opts: Sep31SendOpts): Promise<Sep31SendResult> {
-  const { anchorDomain, sendAssetCode, receiveAssetCode, amount, senderId, receiverId, fields, groupId } = opts;
+  const {
+    anchorDomain,
+    sendAssetCode,
+    receiveAssetCode,
+    amount,
+    senderId,
+    receiverId,
+    fields,
+    groupId,
+  } = opts;
 
   await validateComplianceFields(anchorDomain, fields);
 
@@ -154,20 +168,31 @@ export async function sendPayment(opts: Sep31SendOpts): Promise<Sep31SendResult>
   });
 
   logger.info('[sep31] payment initiated', { anchorTxId: body.id, groupId });
-  return { id: record.id, anchorTxId: body.id, stellarAccountId: body.stellar_account_id, stellarMemo: body.stellar_memo, stellarMemoType: body.stellar_memo_type };
+  return {
+    id: record.id,
+    anchorTxId: body.id,
+    stellarAccountId: body.stellar_account_id,
+    stellarMemo: body.stellar_memo,
+    stellarMemoType: body.stellar_memo_type,
+  };
 }
 
 /**
  * Fetch latest status from anchor and reconcile local record.
  */
-export async function getPaymentStatus(anchorDomain: string, id: string): Promise<Sep31StatusResult> {
+export async function getPaymentStatus(
+  anchorDomain: string,
+  id: string
+): Promise<Sep31StatusResult> {
   const record = await (prisma as any).crossBorderPayment.findUnique({ where: { id } });
   if (!record) throw new Error(`CrossBorderPayment ${id} not found`);
 
   if (!record.anchorTxId) return { id, status: record.status };
 
   const server = await getDirectPaymentServer(anchorDomain);
-  const res = await fetchWithCorrelationId(`${server}/transaction/${encodeURIComponent(record.anchorTxId)}`);
+  const res = await fetchWithCorrelationId(
+    `${server}/transaction/${encodeURIComponent(record.anchorTxId)}`
+  );
   if (!res.ok) {
     logger.warn('[sep31] status poll failed', { id, status: res.status });
     return { id, status: record.status };
@@ -178,7 +203,10 @@ export async function getPaymentStatus(anchorDomain: string, id: string): Promis
   const completedAt = body.transaction?.completed_at;
 
   if (anchorStatus !== record.status) {
-    await (prisma as any).crossBorderPayment.update({ where: { id }, data: { status: anchorStatus } });
+    await (prisma as any).crossBorderPayment.update({
+      where: { id },
+      data: { status: anchorStatus },
+    });
     logger.info('[sep31] status reconciled', { id, from: record.status, to: anchorStatus });
   }
 

@@ -8,7 +8,6 @@ import { fetchGroups } from '../utils/groupApi';
 
 import type { GroupFilters, PublicGroup } from '../types/group';
 
-
 interface UseDiscoveryFeedOptions {
   initialFilters?: Partial<GroupFilters>;
   initialPageSize?: number;
@@ -129,7 +128,11 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}): UseDisc
   });
   const [visibleCount, setVisibleCount] = useState(initialPageSize);
 
-  const { data: rawGroups = [], isLoading, error: queryError } = useQuery<PublicGroup[], Error>({
+  const {
+    data: rawGroups = [],
+    isLoading,
+    error: queryError,
+  } = useQuery<PublicGroup[], Error>({
     queryKey: queryKeys.groups.all(),
     queryFn: () => fetchGroups(),
     staleTime: STALE_TIME.GROUP_STATE,
@@ -144,16 +147,13 @@ export function useDiscoveryFeed(options: UseDiscoveryFeedOptions = {}): UseDisc
     void queryClient.invalidateQueries({ queryKey: queryKeys.groups.all() });
   }, [queryClient]);
 
-  const recommendations = useMemo(
-    () => recommendGroups(rawGroups, filters),
-    [rawGroups, filters],
-  );
+  const recommendations = useMemo(() => recommendGroups(rawGroups, filters), [rawGroups, filters]);
 
   const totalCount = recommendations.length;
   const hasMore = visibleCount < totalCount;
   const visibleRecommendations = useMemo(
     () => recommendations.slice(0, visibleCount),
-    [recommendations, visibleCount],
+    [recommendations, visibleCount]
   );
 
   useEffect(() => {

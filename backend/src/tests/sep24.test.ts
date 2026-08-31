@@ -1,4 +1,9 @@
-import { initiateDeposit, initiateWithdraw, syncTransactionStatus, sep10Auth } from '../services/sep24';
+import {
+  initiateDeposit,
+  initiateWithdraw,
+  syncTransactionStatus,
+  sep10Auth,
+} from '../services/sep24';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch as any;
@@ -19,17 +24,25 @@ const TOML_RESPONSE = `AUTH_SERVER = "https://anchor.example.com/auth"\nTRANSFER
 
 // sep24 service calls fetchToml for sep10Auth separately, then again for TRANSFER_SERVER
 function mockToml() {
-  mockFetch.mockResolvedValueOnce({ ok: true, text: jest.fn().mockResolvedValue(TOML_RESPONSE) } as any);
+  mockFetch.mockResolvedValueOnce({
+    ok: true,
+    text: jest.fn().mockResolvedValue(TOML_RESPONSE),
+  } as any);
 }
 function mockChallenge() {
-  mockFetch.mockResolvedValueOnce({ ok: true, json: jest.fn().mockResolvedValue({ transaction: 'mock-challenge-xdr' }) } as any);
+  mockFetch.mockResolvedValueOnce({
+    ok: true,
+    json: jest.fn().mockResolvedValue({ transaction: 'mock-challenge-xdr' }),
+  } as any);
 }
 function mockSep24Response(data: object) {
   mockFetch.mockResolvedValueOnce({ ok: true, json: jest.fn().mockResolvedValue(data) } as any);
 }
 
 describe('sep10Auth', () => {
-  beforeEach(() => { mockFetch.mockReset(); });
+  beforeEach(() => {
+    mockFetch.mockReset();
+  });
 
   it('returns challenge XDR as token', async () => {
     mockToml();
@@ -46,8 +59,25 @@ describe('sep10Auth', () => {
 });
 
 describe('initiateDeposit', () => {
-  const opts = { anchorDomain: 'anchor.example.com', stellarAccount: 'GABC', assetCode: 'USDC', userId: 'user1' };
-  const createdRecord = { id: 'local-1', ...opts, type: 'deposit', status: 'pending_user_transfer_start', anchorId: 'anchor-tx-1', interactiveUrl: 'https://anchor.example.com/interactive', moreInfoUrl: null, startedAt: new Date(), updatedAt: new Date(), assetIssuer: null, amount: null };
+  const opts = {
+    anchorDomain: 'anchor.example.com',
+    stellarAccount: 'GABC',
+    assetCode: 'USDC',
+    userId: 'user1',
+  };
+  const createdRecord = {
+    id: 'local-1',
+    ...opts,
+    type: 'deposit',
+    status: 'pending_user_transfer_start',
+    anchorId: 'anchor-tx-1',
+    interactiveUrl: 'https://anchor.example.com/interactive',
+    moreInfoUrl: null,
+    startedAt: new Date(),
+    updatedAt: new Date(),
+    assetIssuer: null,
+    amount: null,
+  };
 
   beforeEach(() => {
     mockFetch.mockReset();
@@ -68,8 +98,25 @@ describe('initiateDeposit', () => {
 });
 
 describe('initiateWithdraw', () => {
-  const opts = { anchorDomain: 'anchor.example.com', stellarAccount: 'GABC', assetCode: 'USDC', userId: 'user1' };
-  const createdRecord = { id: 'local-2', ...opts, type: 'withdraw', status: 'pending_user_transfer_start', anchorId: 'anchor-tx-2', interactiveUrl: 'https://anchor.example.com/interactive', moreInfoUrl: null, startedAt: new Date(), updatedAt: new Date(), assetIssuer: null, amount: null };
+  const opts = {
+    anchorDomain: 'anchor.example.com',
+    stellarAccount: 'GABC',
+    assetCode: 'USDC',
+    userId: 'user1',
+  };
+  const createdRecord = {
+    id: 'local-2',
+    ...opts,
+    type: 'withdraw',
+    status: 'pending_user_transfer_start',
+    anchorId: 'anchor-tx-2',
+    interactiveUrl: 'https://anchor.example.com/interactive',
+    moreInfoUrl: null,
+    startedAt: new Date(),
+    updatedAt: new Date(),
+    assetIssuer: null,
+    amount: null,
+  };
 
   beforeEach(() => {
     mockFetch.mockReset();
@@ -89,17 +136,28 @@ describe('initiateWithdraw', () => {
 });
 
 describe('syncTransactionStatus', () => {
-  beforeEach(() => { mockFetch.mockReset(); });
+  beforeEach(() => {
+    mockFetch.mockReset();
+  });
 
   it('updates status from anchor and returns updated record', async () => {
-    const existing = { id: 'local-1', anchorId: 'anchor-tx-1', anchorDomain: 'anchor.example.com', stellarAccount: 'GABC', status: 'pending_user_transfer_start' };
+    const existing = {
+      id: 'local-1',
+      anchorId: 'anchor-tx-1',
+      anchorDomain: 'anchor.example.com',
+      stellarAccount: 'GABC',
+      status: 'pending_user_transfer_start',
+    };
     const updated = { ...existing, status: 'completed', moreInfoUrl: null };
     prisma.rampTransaction.findUnique.mockResolvedValue(existing);
     prisma.rampTransaction.update.mockResolvedValue(updated);
     mockToml(); // fetchToml in syncTransactionStatus for TRANSFER_SERVER
     mockToml(); // fetchToml in sep10Auth
     mockChallenge();
-    mockFetch.mockResolvedValueOnce({ ok: true, json: jest.fn().mockResolvedValue({ transaction: { status: 'completed' } }) } as any);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: jest.fn().mockResolvedValue({ transaction: { status: 'completed' } }),
+    } as any);
     const result = await syncTransactionStatus('local-1');
     expect(result.status).toBe('completed');
   });

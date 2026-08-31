@@ -81,15 +81,11 @@ export function SearchBar({
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setActiveSuggestionIndex((prev) =>
-          prev < filteredSuggestions.length - 1 ? prev + 1 : 0
-        );
+        setActiveSuggestionIndex((prev) => (prev < filteredSuggestions.length - 1 ? prev + 1 : 0));
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setActiveSuggestionIndex((prev) =>
-          prev > 0 ? prev - 1 : filteredSuggestions.length - 1
-        );
+        setActiveSuggestionIndex((prev) => (prev > 0 ? prev - 1 : filteredSuggestions.length - 1));
         break;
       case 'Enter':
         e.preventDefault();
@@ -140,9 +136,7 @@ export function SearchBar({
         aria-expanded={showSuggestions && filteredSuggestions.length > 0}
         aria-controls="search-suggestions"
         aria-activedescendant={
-          activeSuggestionIndex >= 0
-            ? `search-suggestion-${activeSuggestionIndex}`
-            : undefined
+          activeSuggestionIndex >= 0 ? `search-suggestion-${activeSuggestionIndex}` : undefined
         }
         autoComplete="off"
       />

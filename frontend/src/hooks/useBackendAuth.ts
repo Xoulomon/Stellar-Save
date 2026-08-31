@@ -23,7 +23,9 @@ export function useBackendAuth(): BackendAuthState {
   const { activeAddress, signMessage } = useWallet();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const jwtRef = useRef<string | null>(typeof window !== 'undefined' ? localStorage.getItem('stellar_save_jwt') : null);
+  const jwtRef = useRef<string | null>(
+    typeof window !== 'undefined' ? localStorage.getItem('stellar_save_jwt') : null
+  );
 
   const authenticate = useCallback(async () => {
     const address = activeAddress;
@@ -34,7 +36,9 @@ export function useBackendAuth(): BackendAuthState {
     setIsAuthenticating(true);
     setError(null);
     try {
-      const { challenge } = await api.get<{ challenge: string }>(`/auth/challenge?walletAddress=${encodeURIComponent(address)}`);
+      const { challenge } = await api.get<{ challenge: string }>(
+        `/auth/challenge?walletAddress=${encodeURIComponent(address)}`
+      );
       const signature = await signMessage(challenge, { address });
       const { token } = await api.post<{ token: string }>('/auth/verify', {
         walletAddress: address,

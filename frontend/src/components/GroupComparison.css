@@ -27,7 +27,9 @@
   background: transparent;
   cursor: pointer;
   font-size: 0.875rem;
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 }
 
 .gc-selector-item:hover:not(:disabled) {

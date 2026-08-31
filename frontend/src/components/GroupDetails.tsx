@@ -70,7 +70,12 @@ export function GroupDetails({
       id: 'contributions',
       label: 'Contributions',
       icon: '💰',
-      content: <ContributionsPanel contributions={contributions} onContributionClick={onContributionClick} />,
+      content: (
+        <ContributionsPanel
+          contributions={contributions}
+          onContributionClick={onContributionClick}
+        />
+      ),
     },
   ];
 

@@ -5,10 +5,7 @@ describe('Webhook HMAC signature', () => {
     const secret = 'test-secret';
     const timestamp = '1234567890';
     const body = JSON.stringify({ event: 'contribution.created', timestamp, data: {} });
-    const sig = crypto
-      .createHmac('sha256', secret)
-      .update(`${timestamp}.${body}`)
-      .digest('hex');
+    const sig = crypto.createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex');
 
     expect(sig).toMatch(/^[a-f0-9]{64}$/);
   });
@@ -16,8 +13,14 @@ describe('Webhook HMAC signature', () => {
   it('produces different signatures for different secrets', () => {
     const timestamp = '1234567890';
     const body = JSON.stringify({ event: 'contribution.created', timestamp, data: {} });
-    const sig1 = crypto.createHmac('sha256', 'secret1').update(`${timestamp}.${body}`).digest('hex');
-    const sig2 = crypto.createHmac('sha256', 'secret2').update(`${timestamp}.${body}`).digest('hex');
+    const sig1 = crypto
+      .createHmac('sha256', 'secret1')
+      .update(`${timestamp}.${body}`)
+      .digest('hex');
+    const sig2 = crypto
+      .createHmac('sha256', 'secret2')
+      .update(`${timestamp}.${body}`)
+      .digest('hex');
     expect(sig1).not.toBe(sig2);
   });
 

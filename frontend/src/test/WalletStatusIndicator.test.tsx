@@ -7,7 +7,6 @@ import { WalletStatusIndicator } from '../components/WalletStatusIndicator';
 import * as useClipboardHook from '../hooks/useClipboard';
 import * as useWalletHook from '../hooks/useWallet';
 
-
 vi.mock('../hooks/useWallet');
 vi.mock('../hooks/useClipboard');
 
@@ -176,9 +175,10 @@ describe('WalletStatusIndicator', () => {
      */
     vi.useFakeTimers();
     mockFetch.mockImplementation(
-      () => new Promise((resolve) => {
-        setTimeout(() => resolve({ ok: true }), 100);
-      }),
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve({ ok: true }), 100);
+        })
     );
 
     try {

@@ -35,8 +35,7 @@ export default function NotificationSettings() {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  const toggle = (key: keyof NotificationPrefs) =>
-    setPrefs((p) => ({ ...p, [key]: !p[key] }));
+  const toggle = (key: keyof NotificationPrefs) => setPrefs((p) => ({ ...p, [key]: !p[key] }));
 
   const handleSave = async () => {
     if (!activeAddress) return;
@@ -112,8 +111,12 @@ export default function NotificationSettings() {
                 }
                 label={
                   <Stack spacing={0.25}>
-                    <Typography variant="body2" fontWeight={500}>{row.label}</Typography>
-                    <Typography variant="caption" color="text.secondary">{row.description}</Typography>
+                    <Typography variant="body2" fontWeight={500}>
+                      {row.label}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {row.description}
+                    </Typography>
                   </Stack>
                 }
               />

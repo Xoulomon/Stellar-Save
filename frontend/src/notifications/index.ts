@@ -20,21 +20,19 @@ export type {
 
 // ─── Transport Layer ───────────────────────────────────────────────────────
 
-export {
-  NotificationTransport,
-  notificationTransport,
-} from './NotificationTransport';
+export { NotificationTransport, notificationTransport } from './NotificationTransport';
 
 // ─── UI Layer ──────────────────────────────────────────────────────────────
 
-export {
-  NotificationUI,
-  type Toast as UIToast,
-} from './NotificationUI';
+export { NotificationUI, type Toast as UIToast } from './NotificationUI';
 
 // ─── Permissions & Service Worker ──────────────────────────────────────────
 
-export { requestNotificationPermission, getNotificationPermission, canShowNotifications } from './notificationPermission';
+export {
+  requestNotificationPermission,
+  getNotificationPermission,
+  canShowNotifications,
+} from './notificationPermission';
 export type { NotificationPermissionStatus } from './notificationPermission';
 
 export { registerServiceWorker, postToServiceWorker } from './serviceWorkerRegistration';
@@ -57,4 +55,9 @@ export {
   resetReminderPreferences,
   isWithinQuietHours,
 } from './reminderPreferences';
-export type { ReminderPreferences, ReminderTiming, NotificationChannel, QuietHours } from './reminderPreferences';
+export type {
+  ReminderPreferences,
+  ReminderTiming,
+  NotificationChannel,
+  QuietHours,
+} from './reminderPreferences';

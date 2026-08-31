@@ -23,8 +23,8 @@ export interface Proposal {
   votesFor: number;
   votesAgainst: number;
   votes: Vote[];
-  votingEndsAt: number;      // Unix ms
-  timelockEndsAt?: number;   // Unix ms — only for 'passed'
+  votingEndsAt: number; // Unix ms
+  timelockEndsAt?: number; // Unix ms — only for 'passed'
   createdAt: string;
   executedAt?: string;
 }
@@ -32,7 +32,7 @@ export interface Proposal {
 export async function fetchProposals(): Promise<Proposal[]> {
   const res = await fetch(`${API_BASE}/governance/proposals`);
   if (!res.ok) throw new Error('Failed to fetch proposals');
-  const data = await res.json() as { proposals: Proposal[] };
+  const data = (await res.json()) as { proposals: Proposal[] };
   return data.proposals;
 }
 
@@ -45,14 +45,14 @@ export async function fetchProposal(id: string): Promise<Proposal> {
 export async function fetchGovernors(): Promise<string[]> {
   const res = await fetch(`${API_BASE}/governance/governors`);
   if (!res.ok) throw new Error('Failed to fetch governors');
-  const data = await res.json() as { governors: string[] };
+  const data = (await res.json()) as { governors: string[] };
   return data.governors;
 }
 
 export async function castVote(
   proposalId: string,
   voter: string,
-  support: boolean,
+  support: boolean
 ): Promise<Proposal> {
   const res = await fetch(`${API_BASE}/governance/proposals/${proposalId}/vote`, {
     method: 'POST',
@@ -60,7 +60,7 @@ export async function castVote(
     body: JSON.stringify({ voter, support }),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Vote failed' })) as { error: string };
+    const err = (await res.json().catch(() => ({ error: 'Vote failed' }))) as { error: string };
     throw new Error(err.error ?? 'Vote failed');
   }
   return res.json() as Promise<Proposal>;

@@ -210,12 +210,20 @@ describe('ContributionFlow — success flow', () => {
 
   async function confirmSuccess(user: ReturnType<typeof userEvent.setup>) {
     await user.click(screen.getByRole('button', { name: /contribute/i }));
-    await waitFor(() => { expect(screen.getByRole('dialog')).toBeInTheDocument(); }, { timeout: LONG_TIMEOUT });
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      },
+      { timeout: LONG_TIMEOUT }
+    );
     await user.click(screen.getByRole('button', { name: /confirm & sign/i }));
-    await waitFor(() => {
-      const headings = screen.getAllByRole('heading', { name: /Contribution Successful/i });
-      expect(headings.length).toBeGreaterThanOrEqual(1);
-    }, { timeout: LONG_TIMEOUT });
+    await waitFor(
+      () => {
+        const headings = screen.getAllByRole('heading', { name: /Contribution Successful/i });
+        expect(headings.length).toBeGreaterThanOrEqual(1);
+      },
+      { timeout: LONG_TIMEOUT }
+    );
   }
 
   it('shows success message after signing', { timeout: LONG_TEST_TIMEOUT }, async () => {
@@ -242,36 +250,60 @@ describe('ContributionFlow — success flow', () => {
     expect(links.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows Make Another Contribution button after success', { timeout: LONG_TEST_TIMEOUT }, async () => {
-    const user = userEvent.setup();
-    renderFlow({ defaultAmount: 50, minAmount: 1, maxAmount: 1000 });
-    await confirmSuccess(user);
-    expect(screen.getByRole('button', { name: /Make Another Contribution/i })).toBeInTheDocument();
-  });
+  it(
+    'shows Make Another Contribution button after success',
+    { timeout: LONG_TEST_TIMEOUT },
+    async () => {
+      const user = userEvent.setup();
+      renderFlow({ defaultAmount: 50, minAmount: 1, maxAmount: 1000 });
+      await confirmSuccess(user);
+      expect(
+        screen.getByRole('button', { name: /Make Another Contribution/i })
+      ).toBeInTheDocument();
+    }
+  );
 
-  it('resets form when Make Another Contribution is clicked', { timeout: LONG_TEST_TIMEOUT }, async () => {
-    const user = userEvent.setup();
-    renderFlow({ defaultAmount: 50, minAmount: 1, maxAmount: 1000 });
-    await confirmSuccess(user);
-    await user.click(screen.getByRole('button', { name: /Make Another Contribution/i }));
-    expect(screen.getByRole('button', { name: /contribute/i })).toBeInTheDocument();
-  });
+  it(
+    'resets form when Make Another Contribution is clicked',
+    { timeout: LONG_TEST_TIMEOUT },
+    async () => {
+      const user = userEvent.setup();
+      renderFlow({ defaultAmount: 50, minAmount: 1, maxAmount: 1000 });
+      await confirmSuccess(user);
+      await user.click(screen.getByRole('button', { name: /Make Another Contribution/i }));
+      expect(screen.getByRole('button', { name: /contribute/i })).toBeInTheDocument();
+    }
+  );
 
-  it('shows New button in status banner and resets on click', { timeout: LONG_TEST_TIMEOUT }, async () => {
-    const user = userEvent.setup();
-    renderFlow({ defaultAmount: 50, minAmount: 1, maxAmount: 1000 });
-    await confirmSuccess(user);
-    await user.click(screen.getByRole('button', { name: /New/i }));
-    expect(screen.getByRole('button', { name: /contribute/i })).toBeInTheDocument();
-  });
+  it(
+    'shows New button in status banner and resets on click',
+    { timeout: LONG_TEST_TIMEOUT },
+    async () => {
+      const user = userEvent.setup();
+      renderFlow({ defaultAmount: 50, minAmount: 1, maxAmount: 1000 });
+      await confirmSuccess(user);
+      await user.click(screen.getByRole('button', { name: /New/i }));
+      expect(screen.getByRole('button', { name: /contribute/i })).toBeInTheDocument();
+    }
+  );
 });
 
 describe('ContributionFlow — error and retry', () => {
   async function confirmError(user: ReturnType<typeof userEvent.setup>) {
     await user.click(screen.getByRole('button', { name: /contribute/i }));
-    await waitFor(() => { expect(screen.getByRole('dialog')).toBeInTheDocument(); }, { timeout: LONG_TIMEOUT });
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      },
+      { timeout: LONG_TIMEOUT }
+    );
     await user.click(screen.getByRole('button', { name: /confirm & sign/i }));
-    await waitFor(() => { expect(screen.getByText(/Transaction failed/)).toBeInTheDocument(); }, { timeout: LONG_TIMEOUT });
+    await waitFor(
+      () => {
+        expect(screen.getByText(/Transaction failed/)).toBeInTheDocument();
+      },
+      { timeout: LONG_TIMEOUT }
+    );
   }
 
   it('shows error message when user rejects transaction', async () => {
@@ -309,25 +341,37 @@ describe('ContributionFlow — error and retry', () => {
     expect(screen.queryByText(/Transaction failed/)).not.toBeInTheDocument();
   });
 
-  it('succeeds after retry when random returns high value', { timeout: LONG_TEST_TIMEOUT }, async () => {
-    const mockMath = vi.spyOn(Math, 'random');
-    mockMath.mockReturnValue(0.04);
-    const onSuccess = vi.fn();
-    const user = userEvent.setup();
-    renderFlow({ defaultAmount: 50, minAmount: 1, maxAmount: 1000, onSuccess });
-    await confirmError(user);
-    mockMath.mockReset();
-    mockMath.mockReturnValue(0.9);
-    await user.click(screen.getByRole('button', { name: /retry/i }));
-    await user.click(screen.getByRole('button', { name: /contribute/i }));
-    await waitFor(() => { expect(screen.getByRole('dialog')).toBeInTheDocument(); }, { timeout: LONG_TIMEOUT });
-    await user.click(screen.getByRole('button', { name: /confirm & sign/i }));
-    await waitFor(() => {
-      const headings = screen.getAllByRole('heading', { name: /Contribution Successful/i });
-      expect(headings.length).toBeGreaterThanOrEqual(1);
-    }, { timeout: LONG_TIMEOUT });
-    expect(onSuccess).toHaveBeenCalled();
-  });
+  it(
+    'succeeds after retry when random returns high value',
+    { timeout: LONG_TEST_TIMEOUT },
+    async () => {
+      const mockMath = vi.spyOn(Math, 'random');
+      mockMath.mockReturnValue(0.04);
+      const onSuccess = vi.fn();
+      const user = userEvent.setup();
+      renderFlow({ defaultAmount: 50, minAmount: 1, maxAmount: 1000, onSuccess });
+      await confirmError(user);
+      mockMath.mockReset();
+      mockMath.mockReturnValue(0.9);
+      await user.click(screen.getByRole('button', { name: /retry/i }));
+      await user.click(screen.getByRole('button', { name: /contribute/i }));
+      await waitFor(
+        () => {
+          expect(screen.getByRole('dialog')).toBeInTheDocument();
+        },
+        { timeout: LONG_TIMEOUT }
+      );
+      await user.click(screen.getByRole('button', { name: /confirm & sign/i }));
+      await waitFor(
+        () => {
+          const headings = screen.getAllByRole('heading', { name: /Contribution Successful/i });
+          expect(headings.length).toBeGreaterThanOrEqual(1);
+        },
+        { timeout: LONG_TIMEOUT }
+      );
+      expect(onSuccess).toHaveBeenCalled();
+    }
+  );
 });
 
 describe('ContributionFlow — disabled state', () => {
@@ -339,8 +383,8 @@ describe('ContributionFlow — disabled state', () => {
 
   it('disables chips when disabled prop is true', () => {
     renderFlow({ disabled: true, defaultAmount: 100 });
-    const chips = screen.getAllByRole('button').filter(b => b.textContent?.includes('XLM'));
-    chips.forEach(chip => {
+    const chips = screen.getAllByRole('button').filter((b) => b.textContent?.includes('XLM'));
+    chips.forEach((chip) => {
       expect(chip).toHaveAttribute('aria-disabled', 'true');
     });
   });
@@ -369,11 +413,21 @@ describe('ContributionFlow — onError callback', () => {
     const user = userEvent.setup();
     renderFlow({ defaultAmount: 50, minAmount: 1, maxAmount: 1000, onError });
     await user.click(screen.getByRole('button', { name: /contribute/i }));
-    await waitFor(() => { expect(screen.getByRole('dialog')).toBeInTheDocument(); }, { timeout: LONG_TIMEOUT });
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      },
+      { timeout: LONG_TIMEOUT }
+    );
     await user.click(screen.getByRole('button', { name: /confirm & sign/i }));
-    await waitFor(() => { expect(onError).toHaveBeenCalled(); }, { timeout: LONG_TIMEOUT });
+    await waitFor(
+      () => {
+        expect(onError).toHaveBeenCalled();
+      },
+      { timeout: LONG_TIMEOUT }
+    );
     expect(onError).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'User rejected the transaction in wallet.' }),
+      expect.objectContaining({ message: 'User rejected the transaction in wallet.' })
     );
   });
 });

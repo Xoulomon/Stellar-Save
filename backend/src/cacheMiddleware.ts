@@ -10,8 +10,12 @@ const redis = new Redis({
 let hits = 0;
 let misses = 0;
 
-export const recordHit = () => { hits++; };
-export const recordMiss = () => { misses++; };
+export const recordHit = () => {
+  hits++;
+};
+export const recordMiss = () => {
+  misses++;
+};
 
 export const getCacheStats = async () => {
   return {

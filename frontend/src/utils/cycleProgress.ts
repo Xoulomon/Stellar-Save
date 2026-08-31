@@ -83,7 +83,10 @@ export function calculateCycleProgress(params: {
     if (params.totalMembers <= 0) throw new Error('Total members must be greater than 0');
     return {
       timeProgress: 0,
-      contributionProgress: Math.min(100, Math.max(0, (params.contributedCount / params.totalMembers) * 100)),
+      contributionProgress: Math.min(
+        100,
+        Math.max(0, (params.contributedCount / params.totalMembers) * 100)
+      ),
       overallProgress: 0,
       isComplete: false,
       isOverdue: false,
@@ -152,13 +155,12 @@ export function calculateCycleProgressFromDeadline(
   totalMembers: number,
   now?: Date
 ): CycleProgressResult {
-  const cycleStart = new Date(deadline.getTime() - (30 * 24 * 60 * 60 * 1000)); // Assume 30-day cycles
+  const cycleStart = new Date(deadline.getTime() - 30 * 24 * 60 * 60 * 1000); // Assume 30-day cycles
   return calculateCycleProgress({
     cycleStart,
     cycleDurationSeconds: 30 * 24 * 60 * 60, // 30 days
     contributedCount,
     totalMembers,
-    now
+    now,
   });
 }
-

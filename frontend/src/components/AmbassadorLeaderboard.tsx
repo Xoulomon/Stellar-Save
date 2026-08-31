@@ -10,11 +10,36 @@ interface AmbassadorEntry {
 }
 
 const MOCK_DATA: AmbassadorEntry[] = [
-  { address: 'GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37', tier: 'Gold',   reputationScore: 0.97, rewardsEarned: 500 },
-  { address: 'GBVNNPOFVV2BTEGXFNM3KQJT3ZQG5FMHAKZ4QQ5Z3ZQVV6KQNBPZMQW', tier: 'Gold',   reputationScore: 0.96, rewardsEarned: 420 },
-  { address: 'GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGLIWDZVEN4RK7STCHNW7H3', tier: 'Silver', reputationScore: 0.88, rewardsEarned: 210 },
-  { address: 'GDHV7FL73QXEHSFNBMPD4TTAOSGZBTPJ5OAUIWQNLSAPKXEEBKM5LVF4', tier: 'Silver', reputationScore: 0.86, rewardsEarned: 175 },
-  { address: 'GBHV2XMZFSDYF5VBTKEMQ2IETUBICQEJRJGZ5EAQOMQPHCRCJ2E2ZQJQ', tier: 'Bronze', reputationScore: 0.73, rewardsEarned:  80 },
+  {
+    address: 'GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37',
+    tier: 'Gold',
+    reputationScore: 0.97,
+    rewardsEarned: 500,
+  },
+  {
+    address: 'GBVNNPOFVV2BTEGXFNM3KQJT3ZQG5FMHAKZ4QQ5Z3ZQVV6KQNBPZMQW',
+    tier: 'Gold',
+    reputationScore: 0.96,
+    rewardsEarned: 420,
+  },
+  {
+    address: 'GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGLIWDZVEN4RK7STCHNW7H3',
+    tier: 'Silver',
+    reputationScore: 0.88,
+    rewardsEarned: 210,
+  },
+  {
+    address: 'GDHV7FL73QXEHSFNBMPD4TTAOSGZBTPJ5OAUIWQNLSAPKXEEBKM5LVF4',
+    tier: 'Silver',
+    reputationScore: 0.86,
+    rewardsEarned: 175,
+  },
+  {
+    address: 'GBHV2XMZFSDYF5VBTKEMQ2IETUBICQEJRJGZ5EAQOMQPHCRCJ2E2ZQJQ',
+    tier: 'Bronze',
+    reputationScore: 0.73,
+    rewardsEarned: 80,
+  },
 ];
 
 const trunc = (addr: string) => `${addr.slice(0, 6)}…${addr.slice(-4)}`;
@@ -57,7 +82,9 @@ export const AmbassadorLeaderboard: React.FC = () => (
           <tr key={entry.address}>
             <td style={tdStyle}>{i + 1}</td>
             <td style={{ ...tdStyle, fontFamily: 'monospace' }}>{trunc(entry.address)}</td>
-            <td style={tdStyle}><AmbassadorBadge tier={entry.tier} address={entry.address} /></td>
+            <td style={tdStyle}>
+              <AmbassadorBadge tier={entry.tier} address={entry.address} />
+            </td>
             <td style={tdStyle}>{(entry.reputationScore * 100).toFixed(0)}%</td>
             <td style={tdStyle}>{entry.rewardsEarned}</td>
           </tr>

@@ -1,9 +1,5 @@
-import {
-  Box, Stack, Typography, Tabs, Tab,
-  Skeleton, Alert, Chip, Tooltip,
-} from '@mui/material';
+import { Box, Stack, Typography, Tabs, Tab, Skeleton, Alert, Chip, Tooltip } from '@mui/material';
 import { useState } from 'react';
-
 
 import { formatAddress } from '../utils/formatAddress';
 import { formatAmount } from '../utils/formatAmount';
@@ -14,8 +10,8 @@ import type { SyntheticEvent } from 'react';
 // ── Period selector ───────────────────────────────────────────────────────────
 
 const PERIODS: { value: TimePeriod; label: string }[] = [
-  { value: 'week',     label: 'This Week' },
-  { value: 'month',   label: 'This Month' },
+  { value: 'week', label: 'This Week' },
+  { value: 'month', label: 'This Month' },
   { value: 'all-time', label: 'All Time' },
 ];
 
@@ -54,9 +50,13 @@ function RankBadge({ rank }: { rank: number }) {
   return (
     <Box
       sx={{
-        width: 32, height: 32, borderRadius: '50%',
+        width: 32,
+        height: 32,
+        borderRadius: '50%',
         bgcolor: 'action.selected',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
     >
       <Typography variant="caption" fontWeight={700} color="text.secondary">
@@ -69,19 +69,36 @@ function RankBadge({ rank }: { rank: number }) {
 // ── Trend indicator ───────────────────────────────────────────────────────────
 
 function TrendIcon({ trend }: { trend: 'up' | 'down' | 'stable' }) {
-  if (trend === 'up')   return <Typography color="success.main" fontSize={14} aria-label="Trending up">▲</Typography>;
-  if (trend === 'down') return <Typography color="error.main"   fontSize={14} aria-label="Trending down">▼</Typography>;
-  return <Typography color="text.disabled" fontSize={14} aria-label="Stable">—</Typography>;
+  if (trend === 'up')
+    return (
+      <Typography color="success.main" fontSize={14} aria-label="Trending up">
+        ▲
+      </Typography>
+    );
+  if (trend === 'down')
+    return (
+      <Typography color="error.main" fontSize={14} aria-label="Trending down">
+        ▼
+      </Typography>
+    );
+  return (
+    <Typography color="text.disabled" fontSize={14} aria-label="Stable">
+      —
+    </Typography>
+  );
 }
 
 // ── Progress bar ──────────────────────────────────────────────────────────────
 
 function ProgressBar({ value, color = 'primary.main' }: { value: number; color?: string }) {
   return (
-    <Box sx={{ height: 6, bgcolor: 'action.hover', borderRadius: 3, overflow: 'hidden', minWidth: 60 }}>
+    <Box
+      sx={{ height: 6, bgcolor: 'action.hover', borderRadius: 3, overflow: 'hidden', minWidth: 60 }}
+    >
       <Box
         sx={{
-          height: '100%', borderRadius: 3,
+          height: '100%',
+          borderRadius: 3,
           bgcolor: color,
           width: `${Math.min(100, value)}%`,
           transition: 'width 0.4s ease',
@@ -97,7 +114,7 @@ function ProgressBar({ value, color = 'primary.main' }: { value: number; color?:
 
 // ── Avatar ────────────────────────────────────────────────────────────────────
 
-const AVATAR_COLORS = ['#6366f1','#8b5cf6','#ec4899','#3b82f6','#14b8a6','#f97316'];
+const AVATAR_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#3b82f6', '#14b8a6', '#f97316'];
 
 function MemberAvatar({ address, name }: { address: string; name?: string }) {
   const color = AVATAR_COLORS[address.charCodeAt(0) % AVATAR_COLORS.length];
@@ -105,10 +122,17 @@ function MemberAvatar({ address, name }: { address: string; name?: string }) {
   return (
     <Box
       sx={{
-        width: 36, height: 36, borderRadius: '50%',
-        bgcolor: color, color: '#fff',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontWeight: 700, fontSize: 13, flexShrink: 0,
+        width: 36,
+        height: 36,
+        borderRadius: '50%',
+        bgcolor: color,
+        color: '#fff',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontWeight: 700,
+        fontSize: 13,
+        flexShrink: 0,
       }}
       aria-hidden="true"
     >
@@ -119,7 +143,10 @@ function MemberAvatar({ address, name }: { address: string; name?: string }) {
 
 // ── Group row ─────────────────────────────────────────────────────────────────
 
-interface GroupRowProps { group: LeaderboardGroup; highlight?: boolean }
+interface GroupRowProps {
+  group: LeaderboardGroup;
+  highlight?: boolean;
+}
 
 function GroupRow({ group, highlight }: GroupRowProps) {
   return (
@@ -129,7 +156,8 @@ function GroupRow({ group, highlight }: GroupRowProps) {
         gridTemplateColumns: '48px 1fr 90px 90px 80px 36px',
         alignItems: 'center',
         gap: 1.5,
-        px: 2, py: 1.5,
+        px: 2,
+        py: 1.5,
         borderRadius: 2,
         bgcolor: highlight ? 'primary.50' : 'transparent',
         '&:hover': { bgcolor: 'action.hover' },
@@ -143,7 +171,9 @@ function GroupRow({ group, highlight }: GroupRowProps) {
 
       {/* Name + meta */}
       <Box sx={{ minWidth: 0 }}>
-        <Typography variant="body2" fontWeight={600} noWrap>{group.name}</Typography>
+        <Typography variant="body2" fontWeight={600} noWrap>
+          {group.name}
+        </Typography>
         <Typography variant="caption" color="text.secondary">
           {group.memberCount} members · {group.completedCycles}/{group.totalCycles} cycles
         </Typography>
@@ -151,26 +181,41 @@ function GroupRow({ group, highlight }: GroupRowProps) {
 
       {/* Completion rate */}
       <Stack spacing={0.5}>
-        <Typography variant="caption" color="text.secondary">Completion</Typography>
+        <Typography variant="caption" color="text.secondary">
+          Completion
+        </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <ProgressBar value={group.completionRate} color={group.completionRate >= 90 ? 'success.main' : 'primary.main'} />
-          <Typography variant="caption" fontWeight={600}>{group.completionRate}%</Typography>
+          <ProgressBar
+            value={group.completionRate}
+            color={group.completionRate >= 90 ? 'success.main' : 'primary.main'}
+          />
+          <Typography variant="caption" fontWeight={600}>
+            {group.completionRate}%
+          </Typography>
         </Box>
       </Stack>
 
       {/* On-time rate */}
       <Stack spacing={0.5}>
-        <Typography variant="caption" color="text.secondary">On-time</Typography>
+        <Typography variant="caption" color="text.secondary">
+          On-time
+        </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <ProgressBar value={group.onTimeRate} color="warning.main" />
-          <Typography variant="caption" fontWeight={600}>{group.onTimeRate}%</Typography>
+          <Typography variant="caption" fontWeight={600}>
+            {group.onTimeRate}%
+          </Typography>
         </Box>
       </Stack>
 
       {/* Volume */}
       <Stack spacing={0}>
-        <Typography variant="caption" color="text.secondary">Volume</Typography>
-        <Typography variant="caption" fontWeight={600}>{formatAmount(group.totalVolume, { decimals: 0 })}</Typography>
+        <Typography variant="caption" color="text.secondary">
+          Volume
+        </Typography>
+        <Typography variant="caption" fontWeight={600}>
+          {formatAmount(group.totalVolume, { decimals: 0 })}
+        </Typography>
       </Stack>
 
       {/* Trend */}
@@ -181,7 +226,10 @@ function GroupRow({ group, highlight }: GroupRowProps) {
 
 // ── Member row ────────────────────────────────────────────────────────────────
 
-interface MemberRowProps { member: LeaderboardMember; highlight?: boolean }
+interface MemberRowProps {
+  member: LeaderboardMember;
+  highlight?: boolean;
+}
 
 function MemberRow({ member, highlight }: MemberRowProps) {
   return (
@@ -191,7 +239,8 @@ function MemberRow({ member, highlight }: MemberRowProps) {
         gridTemplateColumns: '48px 40px 1fr 90px 80px 60px 36px',
         alignItems: 'center',
         gap: 1.5,
-        px: 2, py: 1.5,
+        px: 2,
+        py: 1.5,
         borderRadius: 2,
         bgcolor: highlight ? 'primary.50' : 'transparent',
         '&:hover': { bgcolor: 'action.hover' },
@@ -209,7 +258,9 @@ function MemberRow({ member, highlight }: MemberRowProps) {
       {/* Name + address */}
       <Box sx={{ minWidth: 0 }}>
         {member.name && (
-          <Typography variant="body2" fontWeight={600} noWrap>{member.name}</Typography>
+          <Typography variant="body2" fontWeight={600} noWrap>
+            {member.name}
+          </Typography>
         )}
         <Tooltip title={member.address}>
           <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
@@ -220,31 +271,40 @@ function MemberRow({ member, highlight }: MemberRowProps) {
 
       {/* On-time rate */}
       <Stack spacing={0.5}>
-        <Typography variant="caption" color="text.secondary">On-time</Typography>
+        <Typography variant="caption" color="text.secondary">
+          On-time
+        </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <ProgressBar value={member.onTimeRate} color={member.onTimeRate === 100 ? 'success.main' : 'primary.main'} />
-          <Typography variant="caption" fontWeight={600}>{member.onTimeRate}%</Typography>
+          <ProgressBar
+            value={member.onTimeRate}
+            color={member.onTimeRate === 100 ? 'success.main' : 'primary.main'}
+          />
+          <Typography variant="caption" fontWeight={600}>
+            {member.onTimeRate}%
+          </Typography>
         </Box>
       </Stack>
 
       {/* Total contributed */}
       <Stack spacing={0}>
-        <Typography variant="caption" color="text.secondary">Contributed</Typography>
-        <Typography variant="caption" fontWeight={600}>{formatAmount(member.totalContributed, { decimals: 0 })}</Typography>
+        <Typography variant="caption" color="text.secondary">
+          Contributed
+        </Typography>
+        <Typography variant="caption" fontWeight={600}>
+          {formatAmount(member.totalContributed, { decimals: 0 })}
+        </Typography>
       </Stack>
 
       {/* Streak */}
       <Box sx={{ textAlign: 'center' }}>
         {member.streak > 0 ? (
           <Tooltip title={`${member.streak}-cycle streak`}>
-            <Chip
-              label={`🔥 ${member.streak}`}
-              size="small"
-              sx={{ fontSize: 11, height: 22 }}
-            />
+            <Chip label={`🔥 ${member.streak}`} size="small" sx={{ fontSize: 11, height: 22 }} />
           </Tooltip>
         ) : (
-          <Typography variant="caption" color="text.disabled">—</Typography>
+          <Typography variant="caption" color="text.disabled">
+            —
+          </Typography>
         )}
       </Box>
 
@@ -262,12 +322,21 @@ function GroupTableHeader() {
       sx={{
         display: 'grid',
         gridTemplateColumns: '48px 1fr 90px 90px 80px 36px',
-        gap: 1.5, px: 2, pb: 1,
-        borderBottom: '1px solid', borderColor: 'divider',
+        gap: 1.5,
+        px: 2,
+        pb: 1,
+        borderBottom: '1px solid',
+        borderColor: 'divider',
       }}
     >
       {['#', 'Group', 'Completion', 'On-time', 'Volume', ''].map((h) => (
-        <Typography key={h} variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase">
+        <Typography
+          key={h}
+          variant="caption"
+          color="text.secondary"
+          fontWeight={600}
+          textTransform="uppercase"
+        >
           {h}
         </Typography>
       ))}
@@ -281,12 +350,21 @@ function MemberTableHeader() {
       sx={{
         display: 'grid',
         gridTemplateColumns: '48px 40px 1fr 90px 80px 60px 36px',
-        gap: 1.5, px: 2, pb: 1,
-        borderBottom: '1px solid', borderColor: 'divider',
+        gap: 1.5,
+        px: 2,
+        pb: 1,
+        borderBottom: '1px solid',
+        borderColor: 'divider',
       }}
     >
       {['#', '', 'Member', 'On-time', 'Contributed', 'Streak', ''].map((h, i) => (
-        <Typography key={i} variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase">
+        <Typography
+          key={i}
+          variant="caption"
+          color="text.secondary"
+          fontWeight={600}
+          textTransform="uppercase"
+        >
           {h}
         </Typography>
       ))}
@@ -300,7 +378,15 @@ function SkeletonRows({ count = 5, cols = 6 }: { count?: number; cols?: number }
   return (
     <Stack spacing={1} px={2} py={1}>
       {Array.from({ length: count }).map((_, i) => (
-        <Box key={i} sx={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 1.5, alignItems: 'center' }}>
+        <Box
+          key={i}
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${cols}, 1fr)`,
+            gap: 1.5,
+            alignItems: 'center',
+          }}
+        >
           {Array.from({ length: cols }).map((__, j) => (
             <Skeleton key={j} height={32} sx={{ borderRadius: 1 }} />
           ))}
@@ -346,8 +432,13 @@ export function Leaderboard({
           component="button"
           onClick={() => setTab('groups')}
           sx={{
-            px: 2, py: 0.75, borderRadius: 2, border: 'none', cursor: 'pointer',
-            fontWeight: 600, fontSize: '0.875rem',
+            px: 2,
+            py: 0.75,
+            borderRadius: 2,
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 600,
+            fontSize: '0.875rem',
             bgcolor: tab === 'groups' ? 'primary.main' : 'action.hover',
             color: tab === 'groups' ? 'primary.contrastText' : 'text.primary',
             transition: 'all 0.15s',
@@ -360,8 +451,13 @@ export function Leaderboard({
           component="button"
           onClick={() => setTab('members')}
           sx={{
-            px: 2, py: 0.75, borderRadius: 2, border: 'none', cursor: 'pointer',
-            fontWeight: 600, fontSize: '0.875rem',
+            px: 2,
+            py: 0.75,
+            borderRadius: 2,
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 600,
+            fontSize: '0.875rem',
             bgcolor: tab === 'members' ? 'primary.main' : 'action.hover',
             color: tab === 'members' ? 'primary.contrastText' : 'text.primary',
             transition: 'all 0.15s',
@@ -386,7 +482,9 @@ export function Leaderboard({
             {isLoading ? (
               <SkeletonRows count={5} cols={6} />
             ) : groups.length === 0 ? (
-              <Typography color="text.secondary" textAlign="center" py={4}>No data available</Typography>
+              <Typography color="text.secondary" textAlign="center" py={4}>
+                No data available
+              </Typography>
             ) : (
               <Stack spacing={0}>
                 {groups.map((g) => (
@@ -401,7 +499,9 @@ export function Leaderboard({
             {isLoading ? (
               <SkeletonRows count={5} cols={7} />
             ) : members.length === 0 ? (
-              <Typography color="text.secondary" textAlign="center" py={4}>No data available</Typography>
+              <Typography color="text.secondary" textAlign="center" py={4}>
+                No data available
+              </Typography>
             ) : (
               <Stack spacing={0}>
                 {members.map((m) => (

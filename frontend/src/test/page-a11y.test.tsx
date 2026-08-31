@@ -10,10 +10,18 @@ import { WalletContext } from '../wallet/WalletProvider';
 expect.extend(toHaveNoViolations);
 
 const mockWallet = {
-  wallets: [], selectedWalletId: 'freighter', status: 'connected' as const,
-  activeAddress: 'GABC1234567890', network: 'testnet', connectedAccounts: [], error: null,
-  refreshWallets: () => {}, connect: async () => {}, disconnect: async () => {},
-  switchWallet: async () => {}, switchAccount: async () => {},
+  wallets: [],
+  selectedWalletId: 'freighter',
+  status: 'connected' as const,
+  activeAddress: 'GABC1234567890',
+  network: 'testnet',
+  connectedAccounts: [],
+  error: null,
+  refreshWallets: () => {},
+  connect: async () => {},
+  disconnect: async () => {},
+  switchWallet: async () => {},
+  switchAccount: async () => {},
 };
 
 function withProviders(ui: React.ReactElement) {

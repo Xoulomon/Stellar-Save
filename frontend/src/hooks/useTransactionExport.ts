@@ -8,7 +8,18 @@ export interface ExportOptions {
   dateTo?: Date;
 }
 
-const CSV_HEADERS = ['Date', 'Type', 'Amount', 'Asset', 'From', 'To', 'Memo', 'Status', 'Fee', 'Hash'];
+const CSV_HEADERS = [
+  'Date',
+  'Type',
+  'Amount',
+  'Asset',
+  'From',
+  'To',
+  'Memo',
+  'Status',
+  'Fee',
+  'Hash',
+];
 
 function escapeCSV(value: string | undefined): string {
   const s = value ?? '';
@@ -22,7 +33,7 @@ function escapeCSV(value: string | undefined): string {
 export function filterByDateRange(
   transactions: Transaction[],
   dateFrom?: Date,
-  dateTo?: Date,
+  dateTo?: Date
 ): Transaction[] {
   return transactions.filter((tx) => {
     const d = new Date(tx.createdAt);
@@ -50,7 +61,7 @@ export function buildCSV(transactions: Transaction[]): string {
       escapeCSV(tx.status),
       escapeCSV(tx.fee),
       escapeCSV(tx.hash),
-    ].join(','),
+    ].join(',')
   );
   return [CSV_HEADERS.join(','), ...rows].join('\n');
 }
@@ -61,10 +72,10 @@ export function buildFilename(format: 'csv' | 'pdf', dateFrom?: Date, dateTo?: D
     dateFrom && dateTo
       ? `_${fmt(dateFrom)}_to_${fmt(dateTo)}`
       : dateFrom
-      ? `_from_${fmt(dateFrom)}`
-      : dateTo
-      ? `_to_${fmt(dateTo)}`
-      : `_${fmt(new Date())}`;
+        ? `_from_${fmt(dateFrom)}`
+        : dateTo
+          ? `_to_${fmt(dateTo)}`
+          : `_${fmt(new Date())}`;
   return `stellar-save-transactions${suffix}.${format}`;
 }
 
@@ -91,7 +102,7 @@ function buildPDFHtml(transactions: Transaction[]): string {
       <td>${tx.memo ?? '—'}</td>
       <td>${tx.status}</td>
       <td>${tx.fee}</td>
-    </tr>`,
+    </tr>`
     )
     .join('');
 
@@ -140,7 +151,7 @@ export function useTransactionExport(transactions: Transaction[]) {
       win.focus();
       win.print();
     },
-    [transactions],
+    [transactions]
   );
 
   return { exportTransactions };

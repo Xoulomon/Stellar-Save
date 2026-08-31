@@ -15,12 +15,23 @@ let prevClientWidth: PropertyDescriptor | undefined;
 function mockContainerDimensions() {
   prevClientHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight');
   prevClientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
-  Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, get() { return 480; } });
-  Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get() { return 900; } });
+  Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+    configurable: true,
+    get() {
+      return 480;
+    },
+  });
+  Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+    configurable: true,
+    get() {
+      return 900;
+    },
+  });
 }
 
 function restoreContainerDimensions() {
-  if (prevClientHeight) Object.defineProperty(HTMLElement.prototype, 'clientHeight', prevClientHeight);
+  if (prevClientHeight)
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', prevClientHeight);
   if (prevClientWidth) Object.defineProperty(HTMLElement.prototype, 'clientWidth', prevClientWidth);
 }
 
@@ -32,8 +43,22 @@ beforeEach(() => {
     }
     observe(target: Element) {
       this.cb(
-        [{ contentRect: { height: 480, width: 900, x: 0, y: 0, top: 0, right: 900, bottom: 480, left: 0 } as DOMRectReadOnly, target } as ResizeObserverEntry],
-        this as unknown as ResizeObserver,
+        [
+          {
+            contentRect: {
+              height: 480,
+              width: 900,
+              x: 0,
+              y: 0,
+              top: 0,
+              right: 900,
+              bottom: 480,
+              left: 0,
+            } as DOMRectReadOnly,
+            target,
+          } as ResizeObserverEntry,
+        ],
+        this as unknown as ResizeObserver
       );
     }
     unobserve() {}
@@ -150,7 +175,7 @@ describe('TransactionHistory — with address and Horizon fetch', () => {
     render(<TransactionHistory />);
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/accounts/GABC1234567890/payments'),
+        expect.stringContaining('/accounts/GABC1234567890/payments')
       );
     });
   });
@@ -202,9 +227,7 @@ describe('TransactionHistory — with address and Horizon fetch', () => {
     mock.mockReturnValue({ activeAddress: 'GABC1234567890', network: 'MAINNET' });
     render(<TransactionHistory />);
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('horizon.stellar.org'),
-      );
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('horizon.stellar.org'));
     });
   });
 });
@@ -220,9 +243,7 @@ describe('TransactionHistory — custom address prop', () => {
 
     render(<TransactionHistory address="GCUSTOM1234567890" />);
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('GCUSTOM1234567890'),
-      );
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('GCUSTOM1234567890'));
     });
 
     global.fetch = originalFetch;
@@ -272,7 +293,7 @@ describe('TransactionHistory — custom network prop', () => {
     render(<TransactionHistory />);
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('horizon-futurenet.stellar.org'),
+        expect.stringContaining('horizon-futurenet.stellar.org')
       );
     });
 

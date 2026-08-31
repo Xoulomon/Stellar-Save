@@ -17,10 +17,7 @@ export interface MemberProfile {
  * Formula: weighted sum of on-time rate (50%), group participation (30%),
  * and streak bonus (20%).
  */
-export function computeReputationScore(
-  stats: UserStats,
-  currentStreak: number,
-): number {
+export function computeReputationScore(stats: UserStats, currentStreak: number): number {
   const onTimeRate =
     stats.completedCycles > 0
       ? Math.min(stats.completedCycles / Math.max(stats.groupsJoined, 1), 1)
@@ -64,7 +61,7 @@ export function useMemberProfile(address: string | undefined) {
         throw new Error('Failed to load member profile.');
       }),
     [address],
-    { enabled: !!address },
+    { enabled: !!address }
   );
 
   return { profile: data, isLoading, error };

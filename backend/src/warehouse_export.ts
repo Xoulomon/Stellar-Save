@@ -58,11 +58,7 @@ export class WarehouseExportPipeline {
   private bucket: string;
   private alertWebhook?: string;
 
-  constructor(opts: {
-    s3Client: S3Client;
-    bucket: string;
-    alertWebhook?: string;
-  }) {
+  constructor(opts: { s3Client: S3Client; bucket: string; alertWebhook?: string }) {
     this.prisma = new (PrismaClient as any)();
     this.s3 = opts.s3Client;
     this.bucket = opts.bucket;
@@ -84,7 +80,7 @@ export class WarehouseExportPipeline {
     let newWatermark = watermark;
 
     if (events.length > 0) {
-      const rows = events.map(e => ({
+      const rows = events.map((e) => ({
         id: e.id,
         contract_id: e.contractId,
         event_type: e.eventType,
@@ -111,7 +107,7 @@ export class WarehouseExportPipeline {
     });
 
     if (metrics.length > 0) {
-      const rows = metrics.map(m => ({
+      const rows = metrics.map((m) => ({
         date: m.date.toISOString().slice(0, 10),
         total_users: m.totalUsers,
         active_users: m.activeUsers,
@@ -149,7 +145,14 @@ export class WarehouseExportPipeline {
 
     // Check 2: required fields are present and non-null
     const requiredByTable: Record<string, string[]> = {
-      fact_contract_events: ['id', 'contract_id', 'event_type', 'tx_hash', 'ledger_seq', 'event_ts'],
+      fact_contract_events: [
+        'id',
+        'contract_id',
+        'event_type',
+        'tx_hash',
+        'ledger_seq',
+        'event_ts',
+      ],
       dim_platform_metrics: ['date', 'total_users', 'active_users'],
     };
     const required = requiredByTable[table] ?? [];
@@ -157,7 +160,9 @@ export class WarehouseExportPipeline {
       for (const field of required) {
         if (row[field] === null || row[field] === undefined || row[field] === '') {
           await this.alert(`[warehouse] DQ failure on ${table}: null/empty field "${field}"`);
-          const err = new Error(`Data-quality check failed: null field "${field}" in ${table}`) as DataQualityError;
+          const err = new Error(
+            `Data-quality check failed: null field "${field}" in ${table}`
+          ) as DataQualityError;
           err.check = 'null_required_field';
           throw err;
         }
@@ -169,8 +174,12 @@ export class WarehouseExportPipeline {
     const seen = new Set<unknown>();
     for (const row of rows) {
       if (seen.has(row[pkField])) {
-        await this.alert(`[warehouse] DQ failure on ${table}: duplicate ${pkField} "${row[pkField]}"`);
-        const err = new Error(`Data-quality check failed: duplicate "${pkField}" in ${table}`) as DataQualityError;
+        await this.alert(
+          `[warehouse] DQ failure on ${table}: duplicate ${pkField} "${row[pkField]}"`
+        );
+        const err = new Error(
+          `Data-quality check failed: duplicate "${pkField}" in ${table}`
+        ) as DataQualityError;
         err.check = 'duplicate_pk';
         throw err;
       }
@@ -205,12 +214,14 @@ export class WarehouseExportPipeline {
   // ── S3 upload helper ─────────────────────────────────────────────────────
 
   private async upload(key: string, body: string): Promise<void> {
-    await this.s3.send(new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: key,
-      Body: body,
-      ContentType: 'application/x-ndjson',
-    }));
+    await this.s3.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: body,
+        ContentType: 'application/x-ndjson',
+      })
+    );
     logger.info(`[warehouse] Uploaded s3://${this.bucket}/${key}`);
   }
 
@@ -240,7 +251,7 @@ export class WarehouseExportPipeline {
 // ── Utilities ────────────────────────────────────────────────────────────────
 
 function toNdjson(rows: Record<string, unknown>[]): string {
-  return rows.map(r => JSON.stringify(r)).join('\n');
+  return rows.map((r) => JSON.stringify(r)).join('\n');
 }
 
 function datePrefix(isoTs: string): string {

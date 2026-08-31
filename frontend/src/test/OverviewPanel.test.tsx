@@ -30,66 +30,42 @@ const mockCycles: GroupCycle[] = [];
 describe('OverviewPanel', () => {
   it('renders group name', () => {
     render(
-      <OverviewPanel
-        group={mockGroup}
-        contributions={mockContributions}
-        cycles={mockCycles}
-      />,
+      <OverviewPanel group={mockGroup} contributions={mockContributions} cycles={mockCycles} />
     );
     expect(screen.getByText('Test Group')).toBeInTheDocument();
   });
 
   it('renders description', () => {
     render(
-      <OverviewPanel
-        group={mockGroup}
-        contributions={mockContributions}
-        cycles={mockCycles}
-      />,
+      <OverviewPanel group={mockGroup} contributions={mockContributions} cycles={mockCycles} />
     );
     expect(screen.getByText('A test savings group')).toBeInTheDocument();
   });
 
   it('displays member count', () => {
     render(
-      <OverviewPanel
-        group={mockGroup}
-        contributions={mockContributions}
-        cycles={mockCycles}
-      />,
+      <OverviewPanel group={mockGroup} contributions={mockContributions} cycles={mockCycles} />
     );
     expect(screen.getByText('2')).toBeInTheDocument();
   });
 
   it('displays contribution frequency', () => {
     render(
-      <OverviewPanel
-        group={mockGroup}
-        contributions={mockContributions}
-        cycles={mockCycles}
-      />,
+      <OverviewPanel group={mockGroup} contributions={mockContributions} cycles={mockCycles} />
     );
     expect(screen.getByText('monthly')).toBeInTheDocument();
   });
 
   it('calculates and displays progress percentage', () => {
     render(
-      <OverviewPanel
-        group={mockGroup}
-        contributions={mockContributions}
-        cycles={mockCycles}
-      />,
+      <OverviewPanel group={mockGroup} contributions={mockContributions} cycles={mockCycles} />
     );
     expect(screen.getByText('50.0% Complete')).toBeInTheDocument();
   });
 
   it('displays status badge', () => {
     render(
-      <OverviewPanel
-        group={mockGroup}
-        contributions={mockContributions}
-        cycles={mockCycles}
-      />,
+      <OverviewPanel group={mockGroup} contributions={mockContributions} cycles={mockCycles} />
     );
     expect(screen.getByText('active')).toBeInTheDocument();
   });

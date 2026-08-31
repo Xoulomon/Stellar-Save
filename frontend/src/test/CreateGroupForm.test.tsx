@@ -151,7 +151,7 @@ describe('CreateGroupForm', () => {
         max_members: 5,
         min_members: 2,
         insuranceEnabled: false,
-      }),
+      })
     );
   });
 

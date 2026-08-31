@@ -62,10 +62,7 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
 
   const theme = useMemo(() => (mode === 'dark' ? darkTheme : lightTheme), [mode]);
 
-  const value = useMemo<ThemeContextValue>(
-    () => ({ mode, toggleTheme }),
-    [mode, toggleTheme],
-  );
+  const value = useMemo<ThemeContextValue>(() => ({ mode, toggleTheme }), [mode, toggleTheme]);
 
   return (
     <ThemeContext.Provider value={value}>

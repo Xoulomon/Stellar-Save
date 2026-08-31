@@ -1,4 +1,13 @@
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Typography,
+} from '@mui/material';
 
 import type { GroupTemplate } from '../../types/template';
 
@@ -19,25 +28,46 @@ export function TemplatePreviewModal({ template, onClose, onUse }: TemplatePrevi
   ];
 
   return (
-    <Dialog open={!!template} onClose={onClose} maxWidth="xs" fullWidth aria-describedby="template-preview-description">
+    <Dialog
+      open={!!template}
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      aria-describedby="template-preview-description"
+    >
       <DialogTitle>{template.name}</DialogTitle>
       <DialogContent>
-        <Typography id="template-preview-description" variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography
+          id="template-preview-description"
+          variant="body2"
+          color="text.secondary"
+          sx={{ mb: 2 }}
+        >
           {template.description}
         </Typography>
         <Divider sx={{ mb: 2 }} />
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {rows.map(([label, value]) => (
             <Box key={label} sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography variant="body2" color="text.secondary">{label}</Typography>
-              <Typography variant="body2" fontWeight="medium" sx={{ textTransform: 'capitalize' }}>{value}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {label}
+              </Typography>
+              <Typography variant="body2" fontWeight="medium" sx={{ textTransform: 'capitalize' }}>
+                {value}
+              </Typography>
             </Box>
           ))}
         </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
-        <Button variant="contained" onClick={() => { onUse(template); onClose(); }}>
+        <Button
+          variant="contained"
+          onClick={() => {
+            onUse(template);
+            onClose();
+          }}
+        >
           Use Template
         </Button>
       </DialogActions>

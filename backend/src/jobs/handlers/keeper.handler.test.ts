@@ -43,10 +43,7 @@ describe('KeeperHandler', () => {
     const handler = new KeeperHandler(contractId, mockStellarClient, mockDb);
     await handler.execute();
 
-    expect(mockStellarClient.executePayoutsBatch).toHaveBeenCalledWith(
-      ['group-1'],
-      contractId,
-    );
+    expect(mockStellarClient.executePayoutsBatch).toHaveBeenCalledWith(['group-1'], contractId);
   });
 
   it('should skip groups that already have payouts', async () => {

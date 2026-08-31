@@ -257,10 +257,7 @@ async function refreshCache(): Promise<void> {
 /**
  * Queue an action for later execution (when offline)
  */
-export async function queueAction(
-  type: SyncQueueItem['type'],
-  payload: unknown
-): Promise<string> {
+export async function queueAction(type: SyncQueueItem['type'], payload: unknown): Promise<string> {
   const id = await addToSyncQueue({
     type,
     payload,

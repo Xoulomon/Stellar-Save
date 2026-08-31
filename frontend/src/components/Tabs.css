@@ -43,7 +43,10 @@
   font-size: 0.95em;
   font-weight: 500;
   padding: 0.75em 1.25em;
-  transition: color 0.2s, background-color 0.2s, border-color 0.2s;
+  transition:
+    color 0.2s,
+    background-color 0.2s,
+    border-color 0.2s;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
@@ -200,4 +203,3 @@
     height: 2px;
   }
 }
-

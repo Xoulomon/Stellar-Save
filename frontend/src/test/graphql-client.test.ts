@@ -70,7 +70,7 @@ describe('fetcher', () => {
 
     const thunk = fetcher<{ group: { id: string; name: string } }, typeof variables>(
       QUERY,
-      variables,
+      variables
     );
     await thunk();
 
@@ -89,9 +89,9 @@ describe('fetcher', () => {
     const error = new Error('GraphQL network error');
     mockRequest.mockRejectedValueOnce(error);
 
-    await expect(
-      fetcher<GroupsData, Record<string, never>>(QUERY)(),
-    ).rejects.toThrow('GraphQL network error');
+    await expect(fetcher<GroupsData, Record<string, never>>(QUERY)()).rejects.toThrow(
+      'GraphQL network error'
+    );
   });
 
   it('creates a new GraphQLClient when extra headers are provided', async () => {

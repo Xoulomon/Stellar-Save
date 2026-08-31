@@ -2,11 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { TransactionExportButton } from '../components/TransactionExportButton';
-import {
-  buildCSV,
-  buildFilename,
-  filterByDateRange,
-} from '../hooks/useTransactionExport';
+import { buildCSV, buildFilename, filterByDateRange } from '../hooks/useTransactionExport';
 
 import type { Transaction } from '../types/transaction';
 
@@ -55,21 +51,13 @@ describe('filterByDateRange', () => {
   });
 
   it('filters by both dateFrom and dateTo', () => {
-    const result = filterByDateRange(
-      TRANSACTIONS,
-      new Date('2026-02-01'),
-      new Date('2026-02-28'),
-    );
+    const result = filterByDateRange(TRANSACTIONS, new Date('2026-02-01'), new Date('2026-02-28'));
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe('2');
   });
 
   it('includes transactions on the dateTo day (end of day)', () => {
-    const result = filterByDateRange(
-      TRANSACTIONS,
-      undefined,
-      new Date('2026-01-10'),
-    );
+    const result = filterByDateRange(TRANSACTIONS, undefined, new Date('2026-01-10'));
     expect(result.some((t) => t.id === '1')).toBe(true);
   });
 
@@ -112,7 +100,7 @@ describe('buildCSV', () => {
 
   it('handles large datasets (1000 rows) without error', () => {
     const large = Array.from({ length: 1000 }, (_, i) =>
-      makeTx({ id: String(i), hash: `hash${i}` }),
+      makeTx({ id: String(i), hash: `hash${i}` })
     );
     const csv = buildCSV(large);
     const lines = csv.trim().split('\n');

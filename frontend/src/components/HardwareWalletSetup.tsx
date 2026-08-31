@@ -16,11 +16,19 @@ import {
 import { useState, useCallback } from 'react';
 
 import { Button } from './Button';
-import { scanForDevices, connectToDevice, fetchAccounts, updatePersistedState } from '../wallet/hardware/hardwareService';
+import {
+  scanForDevices,
+  connectToDevice,
+  fetchAccounts,
+  updatePersistedState,
+} from '../wallet/hardware/hardwareService';
 import { HARDWARE_WALLET_I18N } from '../wallet/hardware/types';
 
-import type { HardwareWalletType, HardwareDeviceInfo, ConnectionStatus } from '../wallet/hardware/types';
-
+import type {
+  HardwareWalletType,
+  HardwareDeviceInfo,
+  ConnectionStatus,
+} from '../wallet/hardware/types';
 
 interface HardwareWalletSetupProps {
   onComplete: () => void;
@@ -51,7 +59,9 @@ export function HardwareWalletSetup({ onComplete, onCancel }: HardwareWalletSetu
       setDevices(found);
       if (found.length === 0) {
         setStatus('error');
-        setError(`No ${HARDWARE_WALLET_I18N[selectedType]} devices found. Ensure Bluetooth is enabled and the device is unlocked.`);
+        setError(
+          `No ${HARDWARE_WALLET_I18N[selectedType]} devices found. Ensure Bluetooth is enabled and the device is unlocked.`
+        );
       } else {
         setActiveStep(1);
         setStatus('disconnected');
@@ -94,25 +104,41 @@ export function HardwareWalletSetup({ onComplete, onCancel }: HardwareWalletSetu
   return (
     <Box>
       <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
-        {steps.map(label => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}
+        {steps.map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
       </Stepper>
 
-      {error && <Alert severity="error" sx={{ mb: 2, fontSize: '0.85rem' }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2, fontSize: '0.85rem' }}>
+          {error}
+        </Alert>
+      )}
 
       {activeStep === 0 && (
         <Stack spacing={2}>
           <Typography variant="body2" color="text.secondary">
             Select your hardware wallet type to begin the connection process.
           </Typography>
-          <RadioGroup value={selectedType || ''} onChange={(e) => handleTypeSelect(e.target.value as HardwareWalletType)}>
-            <Card variant="outlined" sx={{ mb: 1, borderColor: selectedType === 'ledger' ? 'primary.main' : undefined }}>
+          <RadioGroup
+            value={selectedType || ''}
+            onChange={(e) => handleTypeSelect(e.target.value as HardwareWalletType)}
+          >
+            <Card
+              variant="outlined"
+              sx={{ mb: 1, borderColor: selectedType === 'ledger' ? 'primary.main' : undefined }}
+            >
               <CardContent sx={{ py: 1.5 }}>
                 <FormControlLabel
                   value="ledger"
                   control={<Radio />}
                   label={
                     <Stack>
-                      <Typography variant="body1" fontWeight={600}>Ledger</Typography>
+                      <Typography variant="body1" fontWeight={600}>
+                        Ledger
+                      </Typography>
                       <Typography variant="caption" color="text.secondary">
                         Nano S, Nano S Plus, Nano X, Stax
                       </Typography>
@@ -122,14 +148,19 @@ export function HardwareWalletSetup({ onComplete, onCancel }: HardwareWalletSetu
                 />
               </CardContent>
             </Card>
-            <Card variant="outlined" sx={{ borderColor: selectedType === 'trezor' ? 'primary.main' : undefined }}>
+            <Card
+              variant="outlined"
+              sx={{ borderColor: selectedType === 'trezor' ? 'primary.main' : undefined }}
+            >
               <CardContent sx={{ py: 1.5 }}>
                 <FormControlLabel
                   value="trezor"
                   control={<Radio />}
                   label={
                     <Stack>
-                      <Typography variant="body1" fontWeight={600}>Trezor</Typography>
+                      <Typography variant="body1" fontWeight={600}>
+                        Trezor
+                      </Typography>
                       <Typography variant="caption" color="text.secondary">
                         Model One, Model T, Safe 3, Safe 5
                       </Typography>
@@ -141,7 +172,9 @@ export function HardwareWalletSetup({ onComplete, onCancel }: HardwareWalletSetu
             </Card>
           </RadioGroup>
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-            <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+            <Button variant="secondary" onClick={onCancel}>
+              Cancel
+            </Button>
             <Button variant="primary" onClick={handleStartScan} disabled={!selectedType}>
               {status === 'scanning' ? 'Scanning...' : 'Scan for Devices'}
             </Button>
@@ -154,7 +187,7 @@ export function HardwareWalletSetup({ onComplete, onCancel }: HardwareWalletSetu
           <Typography variant="body2" color="text.secondary">
             {devices.length} device{devices.length !== 1 ? 's' : ''} found. Select one to connect.
           </Typography>
-          {devices.map(device => (
+          {devices.map((device) => (
             <Card
               key={device.id}
               variant="outlined"
@@ -168,7 +201,9 @@ export function HardwareWalletSetup({ onComplete, onCancel }: HardwareWalletSetu
               <CardContent sx={{ py: 1.5 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Stack>
-                    <Typography variant="body2" fontWeight={600}>{device.name}</Typography>
+                    <Typography variant="body2" fontWeight={600}>
+                      {device.name}
+                    </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {HARDWARE_WALLET_I18N[device.connection]} · FW {device.firmwareVersion}
                     </Typography>
@@ -188,7 +223,14 @@ export function HardwareWalletSetup({ onComplete, onCancel }: HardwareWalletSetu
             </Card>
           ))}
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-            <Button variant="secondary" onClick={() => { setActiveStep(0); setDevices([]); setSelectedDevice(null); }}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setActiveStep(0);
+                setDevices([]);
+                setSelectedDevice(null);
+              }}
+            >
               Back
             </Button>
             <Button variant="primary" onClick={handleConnect} disabled={!selectedDevice}>
@@ -200,24 +242,41 @@ export function HardwareWalletSetup({ onComplete, onCancel }: HardwareWalletSetu
 
       {activeStep === 2 && (
         <Stack spacing={2} alignItems="center" sx={{ py: 2 }}>
-          <Box sx={{
-            width: 56, height: 56, borderRadius: '50%',
-            bgcolor: 'success.light', color: 'success.dark',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
+          <Box
+            sx={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              bgcolor: 'success.light',
+              color: 'success.dark',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
             <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
             </svg>
           </Box>
-          <Typography variant="h6" fontWeight={700} color="success.main">Connected</Typography>
+          <Typography variant="h6" fontWeight={700} color="success.main">
+            Connected
+          </Typography>
           <Typography variant="body2" color="text.secondary" textAlign="center">
-            {selectedDevice?.name} connected successfully via {HARDWARE_WALLET_I18N[selectedDevice?.connection || 'ble']}.
+            {selectedDevice?.name} connected successfully via{' '}
+            {HARDWARE_WALLET_I18N[selectedDevice?.connection || 'ble']}.
           </Typography>
           <Typography variant="body2" color="text.secondary" textAlign="center">
             Import accounts to start using your hardware wallet with Stellar Save.
           </Typography>
           <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-            <Button variant="secondary" onClick={onCancel}>Skip</Button>
+            <Button variant="secondary" onClick={onCancel}>
+              Skip
+            </Button>
             <Button variant="primary" onClick={handleImport}>
               Import Accounts
             </Button>

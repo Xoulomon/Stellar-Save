@@ -53,7 +53,12 @@ export function TemplateCard({ template, onUse, onPreview }: TemplateCardProps) 
       </Box>
 
       <Box sx={{ display: 'flex', gap: 1, mt: 'auto', pt: 0.5 }}>
-        <Button size="small" variant="outlined" onClick={() => onPreview(template)} sx={{ flex: 1 }}>
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => onPreview(template)}
+          sx={{ flex: 1 }}
+        >
           Preview
         </Button>
         <Button size="small" variant="contained" onClick={() => onUse(template)} sx={{ flex: 1 }}>

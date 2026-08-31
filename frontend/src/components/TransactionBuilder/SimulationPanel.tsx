@@ -14,7 +14,9 @@ export function SimulationPanel({ result, loading, onRetry }: SimulationPanelPro
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 4 }}>
         <Stack alignItems="center" spacing={2}>
           <CircularProgress size={40} />
-          <Typography variant="body2" color="text.secondary">Simulating transaction...</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Simulating transaction...
+          </Typography>
         </Stack>
       </Box>
     );
@@ -32,7 +34,9 @@ export function SimulationPanel({ result, loading, onRetry }: SimulationPanelPro
 
   return (
     <Stack spacing={2}>
-      <Typography variant="subtitle2" fontWeight={700}>Simulation Results</Typography>
+      <Typography variant="subtitle2" fontWeight={700}>
+        Simulation Results
+      </Typography>
 
       {result.error && (
         <Alert severity="error" sx={{ fontSize: '0.8rem' }}>
@@ -49,7 +53,9 @@ export function SimulationPanel({ result, loading, onRetry }: SimulationPanelPro
       <Box sx={{ bgcolor: 'action.hover', borderRadius: 2, p: 2 }}>
         <Stack spacing={1.5}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="body2" color="text.secondary">Status</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Status
+            </Typography>
             <Chip
               label={result.success ? 'Success' : 'Failed'}
               color={result.success ? 'success' : 'error'}
@@ -60,20 +66,32 @@ export function SimulationPanel({ result, loading, onRetry }: SimulationPanelPro
           <Divider />
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography variant="body2" color="text.secondary">Estimated Fee</Typography>
-            <Typography variant="body2" fontWeight={600} color={result.feeInXlm > 0.1 ? 'warning.main' : undefined}>
+            <Typography variant="body2" color="text.secondary">
+              Estimated Fee
+            </Typography>
+            <Typography
+              variant="body2"
+              fontWeight={600}
+              color={result.feeInXlm > 0.1 ? 'warning.main' : undefined}
+            >
               {result.feeEstimate}
             </Typography>
           </Box>
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography variant="body2" color="text.secondary">Operations</Typography>
-            <Typography variant="body2" fontWeight={600}>{result.operationsCount}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Operations
+            </Typography>
+            <Typography variant="body2" fontWeight={600}>
+              {result.operationsCount}
+            </Typography>
           </Box>
 
           {result.footprintBytes > 0 && (
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography variant="body2" color="text.secondary">Footprint</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Footprint
+              </Typography>
               <Typography variant="body2" fontWeight={600}>
                 {result.footprintBytes > 1024
                   ? `${(result.footprintBytes / 1024).toFixed(1)} KB`
@@ -84,8 +102,14 @@ export function SimulationPanel({ result, loading, onRetry }: SimulationPanelPro
 
           {result.result && (
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography variant="body2" color="text.secondary">Result</Typography>
-              <Typography variant="body2" fontWeight={600} sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+              <Typography variant="body2" color="text.secondary">
+                Result
+              </Typography>
+              <Typography
+                variant="body2"
+                fontWeight={600}
+                sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}
+              >
                 {result.result}
               </Typography>
             </Box>

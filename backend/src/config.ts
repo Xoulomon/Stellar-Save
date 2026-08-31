@@ -23,9 +23,7 @@ dotenv.config();
 
 const envSchema = z.object({
   // ── Server ────────────────────────────────────────────────────────────────
-  NODE_ENV: z
-    .enum(['development', 'test', 'production'])
-    .default('development'),
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z
     .string()
     .regex(/^\d+$/, 'PORT must be a numeric string')
@@ -54,30 +52,18 @@ const envSchema = z.object({
     .min(32, 'JWT_SECRET must be at least 32 characters')
     .default('stellar-save-jwt-secret-change-in-production-min32chars'),
   JWT_ACCESS_TOKEN_TTL: z.string().default('15m'),
-  JWT_REFRESH_TOKEN_TTL_DAYS: z
-    .string()
-    .regex(/^\d+$/)
-    .default('30')
-    .transform(Number),
+  JWT_REFRESH_TOKEN_TTL_DAYS: z.string().regex(/^\d+$/).default('30').transform(Number),
 
   // ── Privacy / GDPR ────────────────────────────────────────────────────────
-  PII_RETENTION_DAYS: z
-    .string()
-    .regex(/^\d+$/)
-    .default('365')
-    .transform(Number),
+  PII_RETENTION_DAYS: z.string().regex(/^\d+$/).default('365').transform(Number),
 
   // ── Stellar / Soroban ─────────────────────────────────────────────────────
-  STELLAR_NETWORK: z
-    .enum(['testnet', 'mainnet', 'futurenet', 'standalone'])
-    .default('testnet'),
+  STELLAR_NETWORK: z.enum(['testnet', 'mainnet', 'futurenet', 'standalone']).default('testnet'),
   STELLAR_RPC_URL: z
     .string()
     .url('STELLAR_RPC_URL must be a valid URL')
     .default('https://soroban-testnet.stellar.org'),
-  STELLAR_NETWORK_PASSPHRASE: z
-    .string()
-    .default('Test SDF Network ; September 2015'),
+  STELLAR_NETWORK_PASSPHRASE: z.string().default('Test SDF Network ; September 2015'),
 
   // ── Backup ────────────────────────────────────────────────────────────────
   BACKUP_ENABLED: z
@@ -91,9 +77,20 @@ const envSchema = z.object({
     .default('30')
     .transform(Number),
   BACKUP_ALERT_WEBHOOK_URL: z.string().url().optional().or(z.literal('')),
-  BACKUP_DRILL_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
-  BACKUP_DRILL_INTERVAL_MS: z.string().regex(/^\d+$/).default(String(24 * 60 * 60 * 1000)).transform(Number),
-  BACKUP_DRILL_MAX_DURATION_MS: z.string().regex(/^\d+$/).default(String(5 * 60 * 1000)).transform(Number),
+  BACKUP_DRILL_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  BACKUP_DRILL_INTERVAL_MS: z
+    .string()
+    .regex(/^\d+$/)
+    .default(String(24 * 60 * 60 * 1000))
+    .transform(Number),
+  BACKUP_DRILL_MAX_DURATION_MS: z
+    .string()
+    .regex(/^\d+$/)
+    .default(String(5 * 60 * 1000))
+    .transform(Number),
 
   // ── AWS ───────────────────────────────────────────────────────────────────
   AWS_REGION: z.string().default('us-east-1'),
@@ -109,10 +106,7 @@ const envSchema = z.object({
   ELASTICSEARCH_PASSWORD: z.string().default('changeme'),
 
   // ── KYC (Issue #1024) ─────────────────────────────────────────────────────
-  KYC_PROVIDER_URL: z
-    .string()
-    .url()
-    .default('https://sandbox.kyc-provider.example.com'),
+  KYC_PROVIDER_URL: z.string().url().default('https://sandbox.kyc-provider.example.com'),
   KYC_WEBHOOK_SECRET: z.string().default(''),
 
   // ── Keeper/relayer (Issue #1026) ──────────────────────────────────────────
@@ -160,10 +154,17 @@ const envSchema = z.object({
   VAPID_SUBJECT: z.string().default('mailto:noreply@stellar-save.com'),
 
   // ── Distributed Tracing (OpenTelemetry) ──────────────────────────────────
-  OTEL_TRACES_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+  OTEL_TRACES_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   OTEL_SERVICE_NAME: z.string().default('stellar-save-backend'),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().default('http://localhost:4318'),
-  OTEL_TRACES_SAMPLER_ARG: z.string().regex(/^\d*\.?\d+$/).default('0.1').transform(Number),
+  OTEL_TRACES_SAMPLER_ARG: z
+    .string()
+    .regex(/^\d*\.?\d+$/)
+    .default('0.1')
+    .transform(Number),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 
   // ── Soroban connection pool ────────────────────────────────────────────────
@@ -180,21 +181,37 @@ const envSchema = z.object({
   // ── Horizon / Contract Indexer ────────────────────────────────────────────
   HORIZON_URL: z.string().url().default('https://horizon-testnet.stellar.org'),
   CONTRACT_ID: z.string().default(''),
-  INDEXER_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+  INDEXER_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
 
   // ── On-chain monitor ──────────────────────────────────────────────────────
-  ON_CHAIN_MONITOR_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+  ON_CHAIN_MONITOR_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   ON_CHAIN_LARGE_PAYOUT_THRESHOLD_STROOPS: z.string().regex(/^\d+$/).default('100000000000'),
 
   // ── Fraud detection ───────────────────────────────────────────────────────
-  FRAUD_DETECTION_ENABLED: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
+  FRAUD_DETECTION_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
   FRAUD_SYBIL_THRESHOLD: z.string().regex(/^\d+$/).default('3').transform(Number),
   FRAUD_RAPID_CYCLE_HOURS: z.string().regex(/^\d+$/).default('24').transform(Number),
-  FRAUD_CONTRIBUTION_OUTLIER_FACTOR: z.string().regex(/^\d*\.?\d+$/).default('3').transform(Number),
+  FRAUD_CONTRIBUTION_OUTLIER_FACTOR: z
+    .string()
+    .regex(/^\d*\.?\d+$/)
+    .default('3')
+    .transform(Number),
   FRAUD_SCAN_INTERVAL_MINUTES: z.string().regex(/^\d+$/).default('60').transform(Number),
 
   // ── Analytics resync ──────────────────────────────────────────────────────
-  ANALYTICS_RESYNC_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+  ANALYTICS_RESYNC_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   ANALYTICS_RESYNC_SCHEDULE: z.string().default('0 * * * *'),
 
   // ── CAPTCHA ───────────────────────────────────────────────────────────────
@@ -217,7 +234,10 @@ const envSchema = z.object({
   IPFS_PIN_RETRY_COUNT: z.string().regex(/^\d+$/).default('3').transform(Number),
   IPFS_PIN_CHECK_INTERVAL_MS: z.string().regex(/^\d+$/).default('5000').transform(Number),
   IPFS_MONITOR_INTERVAL_MS: z.string().regex(/^\d+$/).default('60000').transform(Number),
-  IPFS_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+  IPFS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
 });
 
 // ---------------------------------------------------------------------------
@@ -227,9 +247,7 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  const issues = parsed.error.issues
-    .map((i) => `  • ${i.path.join('.')}: ${i.message}`)
-    .join('\n');
+  const issues = parsed.error.issues.map((i) => `  • ${i.path.join('.')}: ${i.message}`).join('\n');
   // NOTE: the structured logger depends on this module, so it is not available
   // yet during config bootstrap — write directly to stderr as JSON instead.
   process.stderr.write(
@@ -238,7 +256,7 @@ if (!parsed.success) {
       message: 'invalid environment configuration',
       issues: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`),
       hint: 'Check your .env file against .env.example and fix the above variables.',
-    }) + '\n',
+    }) + '\n'
   );
   process.exit(1);
 }
@@ -269,7 +287,7 @@ function getDatabaseUrl(): string {
       level: 'warn',
       message:
         'Neither DATABASE_URL nor complete DB_* variables provided; using default local connection',
-    }) + '\n',
+    }) + '\n'
   );
   return 'postgresql://user:pass@localhost:5432/stellar_save';
 }
@@ -362,7 +380,9 @@ export const config = {
 
   cors: {
     allowedOrigins: env.CORS_ALLOWED_ORIGINS
-      ? env.CORS_ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+      ? env.CORS_ALLOWED_ORIGINS.split(',')
+          .map((o) => o.trim())
+          .filter(Boolean)
       : [],
   },
 

@@ -68,7 +68,7 @@ export interface UseAsyncDataResult<T> {
 export function useAsyncData<T>(
   loader: () => Promise<T>,
   deps: DependencyList,
-  options: UseAsyncDataOptions = {},
+  options: UseAsyncDataOptions = {}
 ): UseAsyncDataResult<T> {
   const { enabled = true } = options;
 
@@ -134,14 +134,8 @@ export function useAsyncData<T>(
  * @param ms - Milliseconds to simulate loading for.
  * @param deps - Dependencies that should restart the simulated load.
  */
-export function useSimulatedLoading(
-  ms: number,
-  deps: DependencyList = [],
-): boolean {
-  const { isLoading } = useAsyncData<null>(
-    () => mockDelay(() => null, ms),
-    deps,
-  );
+export function useSimulatedLoading(ms: number, deps: DependencyList = []): boolean {
+  const { isLoading } = useAsyncData<null>(() => mockDelay(() => null, ms), deps);
   return isLoading;
 }
 

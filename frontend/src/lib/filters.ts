@@ -39,15 +39,11 @@ export interface GroupFilterParams {
  * Returns `true` when the group name or description contains `query`.
  * An empty / whitespace-only query always matches.
  */
-export function matchesSearchQuery<G extends FilterableGroup>(
-  group: G,
-  query: string,
-): boolean {
+export function matchesSearchQuery<G extends FilterableGroup>(group: G, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
   return (
-    group.name.toLowerCase().includes(q) ||
-    (group.description?.toLowerCase().includes(q) ?? false)
+    group.name.toLowerCase().includes(q) || (group.description?.toLowerCase().includes(q) ?? false)
   );
 }
 
@@ -56,10 +52,7 @@ export function matchesSearchQuery<G extends FilterableGroup>(
  * An empty / whitespace-only filter always matches.
  * Comparison is case-insensitive.
  */
-export function matchesCurrency<G extends FilterableGroup>(
-  group: G,
-  filter: string,
-): boolean {
+export function matchesCurrency<G extends FilterableGroup>(group: G, filter: string): boolean {
   const f = filter.trim().toLowerCase();
   if (!f) return true;
   return (group.currency?.toLowerCase() ?? '') === f;
@@ -70,10 +63,7 @@ export function matchesCurrency<G extends FilterableGroup>(
  * `min` is parsed as a number; if it is not a valid finite number the predicate
  * always returns `true` (no lower bound).
  */
-export function matchesMinAmount<G extends FilterableGroup>(
-  group: G,
-  min: string,
-): boolean {
+export function matchesMinAmount<G extends FilterableGroup>(group: G, min: string): boolean {
   if (min.trim() === '') return true;
   const minVal = Number(min);
   if (!Number.isFinite(minVal)) return true;
@@ -85,10 +75,7 @@ export function matchesMinAmount<G extends FilterableGroup>(
  * `max` is parsed as a number; if it is not a valid finite number the predicate
  * always returns `true` (no upper bound).
  */
-export function matchesMaxAmount<G extends FilterableGroup>(
-  group: G,
-  max: string,
-): boolean {
+export function matchesMaxAmount<G extends FilterableGroup>(group: G, max: string): boolean {
   if (max.trim() === '') return true;
   const maxVal = Number(max);
   if (!Number.isFinite(maxVal)) return true;
@@ -110,20 +97,15 @@ export function matchesMaxAmount<G extends FilterableGroup>(
  */
 export function applyGroupFilters<G extends FilterableGroup>(
   groups: G[],
-  params: GroupFilterParams,
+  params: GroupFilterParams
 ): G[] {
-  const {
-    searchQuery = '',
-    currencyFilter = '',
-    minAmount = '',
-    maxAmount = '',
-  } = params;
+  const { searchQuery = '', currencyFilter = '', minAmount = '', maxAmount = '' } = params;
 
   return groups.filter(
     (g) =>
       matchesSearchQuery(g, searchQuery) &&
       matchesCurrency(g, currencyFilter) &&
       matchesMinAmount(g, minAmount) &&
-      matchesMaxAmount(g, maxAmount),
+      matchesMaxAmount(g, maxAmount)
   );
 }

@@ -19,7 +19,11 @@ export interface ApiKeyInfo {
 }
 
 export class ApiKeyService {
-  async generateKey(userId: string, name: string, tier: 'free' | 'pro' = 'free'): Promise<{ key: string; info: ApiKeyInfo }> {
+  async generateKey(
+    userId: string,
+    name: string,
+    tier: 'free' | 'pro' = 'free'
+  ): Promise<{ key: string; info: ApiKeyInfo }> {
     const keyId = crypto.randomBytes(16).toString('hex');
     const fullKey = `${API_KEY_PREFIX}${keyId}`;
     const keyHash = crypto.createHash(KEY_HASH_ALGORITHM).update(fullKey).digest('hex');
@@ -43,7 +47,9 @@ export class ApiKeyService {
     return { key: fullKey, info: apiKey as any };
   }
 
-  async validateKey(key: string): Promise<{ valid: boolean; keyId?: string; userId?: string; rateLimit?: number }> {
+  async validateKey(
+    key: string
+  ): Promise<{ valid: boolean; keyId?: string; userId?: string; rateLimit?: number }> {
     const keyHash = crypto.createHash(KEY_HASH_ALGORITHM).update(key).digest('hex');
 
     const apiKey = await (prisma as any).apiKey.findUnique({
@@ -81,7 +87,12 @@ export class ApiKeyService {
     logger.info('API key revoked', { keyId });
   }
 
-  async recordUsage(keyId: string, endpoint: string, method: string, statusCode: number): Promise<void> {
+  async recordUsage(
+    keyId: string,
+    endpoint: string,
+    method: string,
+    statusCode: number
+  ): Promise<void> {
     await (prisma as any).apiKeyUsage.create({
       data: { keyId, endpoint, method, statusCode },
     });

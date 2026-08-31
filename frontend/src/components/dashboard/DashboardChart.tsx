@@ -27,19 +27,25 @@ export const DashboardChart: React.FC<DashboardChartProps> = ({ groups, isLoadin
       </Typography>
       <Box sx={{ display: 'flex', gap: 4, alignItems: 'center', mt: 2 }}>
         <Box sx={{ flex: 1 }}>
-          <Typography variant="body2" color="text.secondary">Active Groups</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Active Groups
+          </Typography>
           <Typography variant="h4" fontWeight="bold" color="success.main">
             {activeGroups.length}
           </Typography>
         </Box>
         <Box sx={{ flex: 1 }}>
-          <Typography variant="body2" color="text.secondary">Completed Cycles</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Completed Cycles
+          </Typography>
           <Typography variant="h4" fontWeight="bold" color="info.main">
             {completedGroups.length}
           </Typography>
         </Box>
         <Box sx={{ flex: 1 }}>
-          <Typography variant="body2" color="text.secondary">Total Subscribed Groups</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Total Subscribed Groups
+          </Typography>
           <Typography variant="h4" fontWeight="bold">
             {groups.length}
           </Typography>

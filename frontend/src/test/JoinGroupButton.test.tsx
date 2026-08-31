@@ -8,7 +8,9 @@ import * as useWalletModule from '../hooks/useWallet';
 import { queryKeys } from '../lib/queryKeys';
 
 // Prevent Vite from transforming WalletProvider (which imports the broken @creit.tech package)
-vi.mock('../wallet/WalletProvider', () => ({ WalletContext: { Provider: ({ children }: any) => children } }));
+vi.mock('../wallet/WalletProvider', () => ({
+  WalletContext: { Provider: ({ children }: any) => children },
+}));
 
 const baseWallet = {
   wallets: [],
@@ -31,8 +33,14 @@ vi.mock('../hooks/useContract', () => ({
   useContract: () => ({ joinGroup: vi.fn().mockResolvedValue({ txHash: 'abc123', error: null }) }),
 }));
 
-function renderWithClient(ui: React.ReactElement, queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
-  return { queryClient, ...render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>) };
+function renderWithClient(
+  ui: React.ReactElement,
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+) {
+  return {
+    queryClient,
+    ...render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>),
+  };
 }
 
 describe('JoinGroupButton', () => {
@@ -41,29 +49,45 @@ describe('JoinGroupButton', () => {
   });
 
   it('shows "Already Joined" when user is member', () => {
-    renderWithClient(<JoinGroupButton groupId={1} maxMembers={10} currentMembers={5} isActive={false} isMember={true} />);
+    renderWithClient(
+      <JoinGroupButton
+        groupId={1}
+        maxMembers={10}
+        currentMembers={5}
+        isActive={false}
+        isMember={true}
+      />
+    );
     expect(screen.getByText('Already Joined')).toBeInTheDocument();
   });
 
   it('shows "Group Full" when max members reached', () => {
-    renderWithClient(<JoinGroupButton groupId={1} maxMembers={10} currentMembers={10} isActive={false} />);
+    renderWithClient(
+      <JoinGroupButton groupId={1} maxMembers={10} currentMembers={10} isActive={false} />
+    );
     expect(screen.getByText('Group Full')).toBeInTheDocument();
   });
 
   it('shows "Group Active" when group is active', () => {
-    renderWithClient(<JoinGroupButton groupId={1} maxMembers={10} currentMembers={5} isActive={true} />);
+    renderWithClient(
+      <JoinGroupButton groupId={1} maxMembers={10} currentMembers={5} isActive={true} />
+    );
     expect(screen.getByText('Group Active')).toBeInTheDocument();
   });
 
   it('shows "Connect Wallet" when wallet not connected', () => {
     vi.mocked(useWalletModule.useWallet).mockReturnValue({ ...baseWallet, status: 'idle' } as any);
-    renderWithClient(<JoinGroupButton groupId={1} maxMembers={10} currentMembers={5} isActive={false} />);
+    renderWithClient(
+      <JoinGroupButton groupId={1} maxMembers={10} currentMembers={5} isActive={false} />
+    );
     expect(screen.getByText('Connect Wallet')).toBeInTheDocument();
   });
 
   it('shows confirmation dialog when clicked', async () => {
     const user = userEvent.setup();
-    renderWithClient(<JoinGroupButton groupId={1} maxMembers={10} currentMembers={5} isActive={false} />);
+    renderWithClient(
+      <JoinGroupButton groupId={1} maxMembers={10} currentMembers={5} isActive={false} />
+    );
     await user.click(screen.getByText('Join Group'));
     expect(screen.getByText('Confirm')).toBeInTheDocument();
     expect(screen.getByText('Cancel')).toBeInTheDocument();
@@ -72,10 +96,23 @@ describe('JoinGroupButton', () => {
   it('calls onSuccess after successful join', async () => {
     const user = userEvent.setup();
     const onSuccess = vi.fn();
-    renderWithClient(<JoinGroupButton groupId={1} maxMembers={10} currentMembers={5} isActive={false} onSuccess={onSuccess} />);
+    renderWithClient(
+      <JoinGroupButton
+        groupId={1}
+        maxMembers={10}
+        currentMembers={5}
+        isActive={false}
+        onSuccess={onSuccess}
+      />
+    );
     await user.click(screen.getByText('Join Group'));
     await user.click(screen.getByText('Confirm'));
-    await waitFor(() => { expect(onSuccess).toHaveBeenCalled(); }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        expect(onSuccess).toHaveBeenCalled();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it('invalidates the shared groups query cache after a successful join', async () => {
@@ -85,13 +122,16 @@ describe('JoinGroupButton', () => {
 
     renderWithClient(
       <JoinGroupButton groupId={42} maxMembers={10} currentMembers={5} isActive={false} />,
-      queryClient,
+      queryClient
     );
     await user.click(screen.getByText('Join Group'));
     await user.click(screen.getByText('Confirm'));
 
-    await waitFor(() => {
-      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.groups.all() });
-    }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.groups.all() });
+      },
+      { timeout: 3000 }
+    );
   });
 });

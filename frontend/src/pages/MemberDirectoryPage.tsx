@@ -152,7 +152,9 @@ export default function MemberDirectoryPage() {
 
         <AppCard>
           <Stack spacing={1} sx={{ mb: 2 }}>
-            <Typography variant="h5" fontWeight={700}>Member Directory</Typography>
+            <Typography variant="h5" fontWeight={700}>
+              Member Directory
+            </Typography>
             <Typography variant="body2" color="text.secondary">
               Browse, search, and filter all members in this savings group.
             </Typography>

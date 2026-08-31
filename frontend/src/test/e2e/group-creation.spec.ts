@@ -72,9 +72,9 @@ test.describe('Group creation flow', () => {
     const nextBtn = page.getByRole('button', { name: /next/i });
     await nextBtn.click();
 
-    await expect(
-      page.getByText(/required|at least|characters/i).first()
-    ).toBeVisible({ timeout: 3000 });
+    await expect(page.getByText(/required|at least|characters/i).first()).toBeVisible({
+      timeout: 3000,
+    });
   });
 
   test('create group form step 1 accepts valid input and advances', async ({ page }) => {
@@ -94,8 +94,6 @@ test.describe('Group creation flow', () => {
     const nextBtn = page.getByRole('button', { name: /next/i });
     await nextBtn.click();
 
-    await expect(
-      page.getByLabel(/contribution amount/i)
-    ).toBeVisible({ timeout: 3000 });
+    await expect(page.getByLabel(/contribution amount/i)).toBeVisible({ timeout: 3000 });
   });
 });

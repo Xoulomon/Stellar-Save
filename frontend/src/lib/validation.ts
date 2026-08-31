@@ -64,36 +64,27 @@ export const commonValidators = {
   stellarAddress: z
     .string()
     .trim()
-    .refine(isValidStellarAddress, 'Invalid Stellar public key (must start with G and be 56 characters)'),
+    .refine(
+      isValidStellarAddress,
+      'Invalid Stellar public key (must start with G and be 56 characters)'
+    ),
 
-  email: z
-    .string()
-    .trim()
-    .email('Invalid email address format'),
+  email: z.string().trim().email('Invalid email address format'),
 
-  url: z
-    .string()
-    .url('Must be a valid URL')
-    .optional()
-    .or(z.literal('')),
+  url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
 
   positiveNumberString: (minVal = 0, fieldName = 'Amount') =>
-    z
-      .string()
-      .refine(
-        (val) => {
-          const num = parseFloat(val);
-          return !isNaN(num) && num > minVal;
-        },
-        `${fieldName} must be greater than ${minVal}`,
-      ),
+    z.string().refine((val) => {
+      const num = parseFloat(val);
+      return !isNaN(num) && num > minVal;
+    }, `${fieldName} must be greater than ${minVal}`),
 
   boundedNumberString: (minVal: number, maxVal: number, fieldName = 'Value') =>
     z
       .string()
       .refine(
         (val) => isValidNumberInRange(val, minVal, maxVal),
-        `${fieldName} must be between ${minVal} and ${maxVal}`,
+        `${fieldName} must be between ${minVal} and ${maxVal}`
       ),
 
   nonEmptyString: (maxLen: number, fieldName = 'Field') =>

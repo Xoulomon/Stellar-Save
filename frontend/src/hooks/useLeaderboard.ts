@@ -4,7 +4,10 @@ import { fetchLeaderboard } from '../utils/leaderboardApi';
 
 import type { LeaderboardData, TimePeriod } from '../types/leaderboard';
 
-interface CacheEntry { data: LeaderboardData; fetchedAt: number }
+interface CacheEntry {
+  data: LeaderboardData;
+  fetchedAt: number;
+}
 const CACHE_TTL = 60_000;
 const cache = new Map<TimePeriod, CacheEntry>();
 
@@ -45,7 +48,9 @@ export function useLeaderboard(initial: TimePeriod = 'all-time'): UseLeaderboard
     }
   }, []);
 
-  useEffect(() => { void load(period); }, [period, load]);
+  useEffect(() => {
+    void load(period);
+  }, [period, load]);
 
   const setPeriod = useCallback((p: TimePeriod) => setPeriodState(p), []);
   const refresh = useCallback(() => void load(period, true), [period, load]);
@@ -53,4 +58,6 @@ export function useLeaderboard(initial: TimePeriod = 'all-time'): UseLeaderboard
   return { data, isLoading, error, period, setPeriod, refresh };
 }
 
-export function clearLeaderboardCache(): void { cache.clear(); }
+export function clearLeaderboardCache(): void {
+  cache.clear();
+}

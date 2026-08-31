@@ -13,9 +13,33 @@ vi.mock('../hooks/useBalance', () => ({
 const mockUseBalance = useBalance as ReturnType<typeof vi.fn>;
 
 const activeGroups: DashboardGroup[] = [
-  { id: '1', name: 'Group A', currentCycle: 1, totalCycles: 5, contributionAmount: 300, currency: 'XLM', status: 'active' },
-  { id: '2', name: 'Group B', currentCycle: 2, totalCycles: 5, contributionAmount: 200, currency: 'XLM', status: 'active' },
-  { id: '3', name: 'Group C', currentCycle: 3, totalCycles: 5, contributionAmount: 100, currency: 'XLM', status: 'completed' },
+  {
+    id: '1',
+    name: 'Group A',
+    currentCycle: 1,
+    totalCycles: 5,
+    contributionAmount: 300,
+    currency: 'XLM',
+    status: 'active',
+  },
+  {
+    id: '2',
+    name: 'Group B',
+    currentCycle: 2,
+    totalCycles: 5,
+    contributionAmount: 200,
+    currency: 'XLM',
+    status: 'active',
+  },
+  {
+    id: '3',
+    name: 'Group C',
+    currentCycle: 3,
+    totalCycles: 5,
+    contributionAmount: 100,
+    currency: 'XLM',
+    status: 'completed',
+  },
 ];
 
 describe('useBalanceWarning', () => {
@@ -52,8 +76,24 @@ describe('useBalanceWarning', () => {
   it('excludes completed and pending groups from required amount', () => {
     mockUseBalance.mockReturnValue({ xlmBalance: '0' });
     const groups: DashboardGroup[] = [
-      { id: '1', name: 'Done', currentCycle: 5, totalCycles: 5, contributionAmount: 999, currency: 'XLM', status: 'completed' },
-      { id: '2', name: 'Pending', currentCycle: 0, totalCycles: 5, contributionAmount: 999, currency: 'XLM', status: 'pending' },
+      {
+        id: '1',
+        name: 'Done',
+        currentCycle: 5,
+        totalCycles: 5,
+        contributionAmount: 999,
+        currency: 'XLM',
+        status: 'completed',
+      },
+      {
+        id: '2',
+        name: 'Pending',
+        currentCycle: 0,
+        totalCycles: 5,
+        contributionAmount: 999,
+        currency: 'XLM',
+        status: 'pending',
+      },
     ];
     const { result } = renderHook(() => useBalanceWarning(groups));
     expect(result.current.requiredAmount).toBe(0);

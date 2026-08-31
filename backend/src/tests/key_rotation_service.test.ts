@@ -39,7 +39,7 @@ describe('bootstrapKeys', () => {
     bootstrapKeys();
 
     const summary = getKeyStatusSummary();
-    const activeTypes = summary.filter(s => s.status === 'active').map(s => s.keyType);
+    const activeTypes = summary.filter((s) => s.status === 'active').map((s) => s.keyType);
 
     expect(activeTypes).toContain('jwt');
     expect(activeTypes).toContain('hmac');
@@ -51,7 +51,7 @@ describe('bootstrapKeys', () => {
     bootstrapKeys();
 
     const summary = getKeyStatusSummary();
-    const activeJwt = summary.filter(s => s.keyType === 'jwt' && s.status === 'active');
+    const activeJwt = summary.filter((s) => s.keyType === 'jwt' && s.status === 'active');
     expect(activeJwt.length).toBe(1);
   });
 });
@@ -64,7 +64,7 @@ describe('rotateKeys', () => {
   it('creates a new active key and moves the previous key to retiring', async () => {
     const beforeSummary = getKeyStatusSummary();
     const previousActiveJwt = beforeSummary.find(
-      s => s.keyType === 'jwt' && s.status === 'active',
+      (s) => s.keyType === 'jwt' && s.status === 'active'
     );
     expect(previousActiveJwt).toBeDefined();
 
@@ -76,10 +76,8 @@ describe('rotateKeys', () => {
     expect(result.newKeyId).not.toBe(result.previousKeyId);
 
     const afterSummary = getKeyStatusSummary();
-    const newActive = afterSummary.find(s => s.keyType === 'jwt' && s.status === 'active');
-    const retiring = afterSummary.find(
-      s => s.keyType === 'jwt' && s.status === 'retiring',
-    );
+    const newActive = afterSummary.find((s) => s.keyType === 'jwt' && s.status === 'active');
+    const retiring = afterSummary.find((s) => s.keyType === 'jwt' && s.status === 'retiring');
 
     expect(newActive).toBeDefined();
     expect(newActive!.keyId).toBe(result.newKeyId);
@@ -89,7 +87,7 @@ describe('rotateKeys', () => {
 
   it('rotates all key types when no type argument is supplied', async () => {
     const results = await rotateKeys();
-    const rotatedTypes = results.map(r => r.keyType);
+    const rotatedTypes = results.map((r) => r.keyType);
     expect(rotatedTypes).toContain('jwt');
     expect(rotatedTypes).toContain('hmac');
     expect(rotatedTypes).toContain('api');
@@ -154,12 +152,12 @@ describe('signWithActiveKey / verifyWithDualValidation', () => {
 
     // Rotate and immediately force-retire the old key by manipulating rotatedAt
     const summary = getKeyStatusSummary();
-    const beforeRotation = summary.find(s => s.keyType === 'jwt' && s.status === 'active');
+    const beforeRotation = summary.find((s) => s.keyType === 'jwt' && s.status === 'active');
 
     await rotateKeys('jwt');
 
     // Fast-forward the retiring key's rotatedAt so pruning retires it
-    const retiringKey = keyRegistry.getAll('jwt').find(k => k.status === 'retiring');
+    const retiringKey = keyRegistry.getAll('jwt').find((k) => k.status === 'retiring');
     if (retiringKey) {
       retiringKey.rotatedAt = new Date(Date.now() - 48 * 60 * 60 * 1_000);
     }
@@ -184,7 +182,7 @@ describe('getKeyStatusSummary', () => {
 
   it('returns a summary entry for every active key', () => {
     const summary = getKeyStatusSummary();
-    const activeEntries = summary.filter(s => s.status === 'active');
+    const activeEntries = summary.filter((s) => s.status === 'active');
     expect(activeEntries.length).toBeGreaterThanOrEqual(3); // jwt, hmac, api
   });
 

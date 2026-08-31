@@ -60,13 +60,24 @@ function ProfileHeader({ address, displayName, joinDate, onEditName }: ProfileHe
   const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 3, alignItems: { xs: 'flex-start', sm: 'center' } }}>
-      <MuiAvatar sx={{ width: 72, height: 72, bgcolor: 'primary.main', fontSize: '1.5rem', fontWeight: 700 }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: { xs: 'column', sm: 'row' },
+        gap: 3,
+        alignItems: { xs: 'flex-start', sm: 'center' },
+      }}
+    >
+      <MuiAvatar
+        sx={{ width: 72, height: 72, bgcolor: 'primary.main', fontSize: '1.5rem', fontWeight: 700 }}
+      >
         {initials}
       </MuiAvatar>
       <Box sx={{ flex: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-          <Typography variant="h2" sx={{ fontWeight: 700 }}>{displayName}</Typography>
+          <Typography variant="h2" sx={{ fontWeight: 700 }}>
+            {displayName}
+          </Typography>
           <Tooltip title="Edit display name">
             <IconButton size="small" onClick={onEditName} aria-label="Edit display name">
               <EditIcon fontSize="small" />
@@ -75,23 +86,40 @@ function ProfileHeader({ address, displayName, joinDate, onEditName }: ProfileHe
         </Box>
         {address ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
-            <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}
+            >
               {address.slice(0, 12)}…{address.slice(-8)}
             </Typography>
             <Tooltip title={copied ? 'Copied!' : 'Copy full address'}>
-              <IconButton size="small" onClick={() => copy(address)} aria-label="Copy wallet address">
-                {copied
-                  ? <CheckCircleIcon fontSize="small" color="success" />
-                  : <ContentCopyIcon sx={{ fontSize: 14 }} />}
+              <IconButton
+                size="small"
+                onClick={() => copy(address)}
+                aria-label="Copy wallet address"
+              >
+                {copied ? (
+                  <CheckCircleIcon fontSize="small" color="success" />
+                ) : (
+                  <ContentCopyIcon sx={{ fontSize: 14 }} />
+                )}
               </IconButton>
             </Tooltip>
           </Box>
         ) : (
-          <Typography variant="body2" color="text.secondary">Wallet not connected</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Wallet not connected
+          </Typography>
         )}
         {joinDate && (
           <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
-            Member since {joinDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+            Member since{' '}
+            {joinDate.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
           </Typography>
         )}
       </Box>
@@ -150,7 +178,9 @@ function ProfileSettings({ displayName, onSave }: ProfileSettingsProps) {
         </Select>
       </FormControl>
       <Box>
-        <Button variant="primary" onClick={handleSave}>Save Settings</Button>
+        <Button variant="primary" onClick={handleSave}>
+          Save Settings
+        </Button>
       </Box>
     </Stack>
   );
@@ -170,8 +200,7 @@ function NotificationPreferences() {
   });
   const [saved, setSaved] = useState(false);
 
-  const toggle = (key: keyof typeof prefs) =>
-    setPrefs((p) => ({ ...p, [key]: !p[key] }));
+  const toggle = (key: keyof typeof prefs) => setPrefs((p) => ({ ...p, [key]: !p[key] }));
 
   const handleSave = () => {
     setSaved(true);
@@ -179,13 +208,41 @@ function NotificationPreferences() {
   };
 
   const rows: { key: keyof typeof prefs; label: string; description: string }[] = [
-    { key: 'emailContributions', label: 'Email — Contributions', description: 'Get notified when a contribution is made in your groups.' },
-    { key: 'emailPayouts', label: 'Email — Payouts', description: 'Receive email alerts when a payout is processed.' },
-    { key: 'emailGroupUpdates', label: 'Email — Group Updates', description: 'Updates about group membership and settings changes.' },
-    { key: 'pushContributions', label: 'Push — Contributions', description: 'Browser push notifications for contributions.' },
-    { key: 'pushPayouts', label: 'Push — Payouts', description: 'Browser push notifications for payouts.' },
-    { key: 'pushGroupUpdates', label: 'Push — Group Updates', description: 'Browser push notifications for group changes.' },
-    { key: 'smsAlerts', label: 'SMS Alerts', description: 'Text message alerts for critical events (requires phone number).' },
+    {
+      key: 'emailContributions',
+      label: 'Email — Contributions',
+      description: 'Get notified when a contribution is made in your groups.',
+    },
+    {
+      key: 'emailPayouts',
+      label: 'Email — Payouts',
+      description: 'Receive email alerts when a payout is processed.',
+    },
+    {
+      key: 'emailGroupUpdates',
+      label: 'Email — Group Updates',
+      description: 'Updates about group membership and settings changes.',
+    },
+    {
+      key: 'pushContributions',
+      label: 'Push — Contributions',
+      description: 'Browser push notifications for contributions.',
+    },
+    {
+      key: 'pushPayouts',
+      label: 'Push — Payouts',
+      description: 'Browser push notifications for payouts.',
+    },
+    {
+      key: 'pushGroupUpdates',
+      label: 'Push — Group Updates',
+      description: 'Browser push notifications for group changes.',
+    },
+    {
+      key: 'smsAlerts',
+      label: 'SMS Alerts',
+      description: 'Text message alerts for critical events (requires phone number).',
+    },
   ];
 
   return (
@@ -194,10 +251,17 @@ function NotificationPreferences() {
       {saved && <Alert severity="success">Notification preferences saved.</Alert>}
       <Stack spacing={1} divider={<Divider />}>
         {rows.map(({ key, label, description }) => (
-          <Box key={key} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1 }}>
+          <Box
+            key={key}
+            sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1 }}
+          >
             <Box>
-              <Typography variant="body2" fontWeight={600}>{label}</Typography>
-              <Typography variant="caption" color="text.secondary">{description}</Typography>
+              <Typography variant="body2" fontWeight={600}>
+                {label}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {description}
+              </Typography>
             </Box>
             <FormControlLabel
               control={<Switch checked={prefs[key]} onChange={() => toggle(key)} size="small" />}
@@ -208,7 +272,9 @@ function NotificationPreferences() {
         ))}
       </Stack>
       <Box>
-        <Button variant="primary" onClick={handleSave}>Save Preferences</Button>
+        <Button variant="primary" onClick={handleSave}>
+          Save Preferences
+        </Button>
       </Box>
     </Stack>
   );
@@ -235,16 +301,29 @@ function SecuritySettings() {
       {/* Wallet info */}
       <AppCard>
         <Stack spacing={1.5}>
-          <Typography variant="body1" fontWeight={600}>Connected Wallet</Typography>
+          <Typography variant="body1" fontWeight={600}>
+            Connected Wallet
+          </Typography>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-            <Typography variant="body2" color="text.secondary">Address</Typography>
-            <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all' }}>
+            <Typography variant="body2" color="text.secondary">
+              Address
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all' }}
+            >
               {activeAddress ?? 'Not connected'}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-            <Typography variant="body2" color="text.secondary">Network</Typography>
-            <Chip label={network ?? 'Unknown'} size="small" color={network === 'PUBLIC' ? 'success' : 'warning'} />
+            <Typography variant="body2" color="text.secondary">
+              Network
+            </Typography>
+            <Chip
+              label={network ?? 'Unknown'}
+              size="small"
+              color={network === 'PUBLIC' ? 'success' : 'warning'}
+            />
           </Box>
         </Stack>
       </AppCard>
@@ -252,7 +331,9 @@ function SecuritySettings() {
       {/* 2FA toggle */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box>
-          <Typography variant="body2" fontWeight={600}>Two-Factor Authentication</Typography>
+          <Typography variant="body2" fontWeight={600}>
+            Two-Factor Authentication
+          </Typography>
           <Typography variant="caption" color="text.secondary">
             Add an extra layer of security to your account.
           </Typography>
@@ -273,7 +354,11 @@ function SecuritySettings() {
       {/* Session timeout */}
       <FormControl fullWidth size="small">
         <InputLabel>Session Timeout</InputLabel>
-        <Select value={sessionTimeout} label="Session Timeout" onChange={(e) => setSessionTimeout(e.target.value)}>
+        <Select
+          value={sessionTimeout}
+          label="Session Timeout"
+          onChange={(e) => setSessionTimeout(e.target.value)}
+        >
           <MenuItem value="15">15 minutes</MenuItem>
           <MenuItem value="30">30 minutes</MenuItem>
           <MenuItem value="60">1 hour</MenuItem>
@@ -287,7 +372,9 @@ function SecuritySettings() {
         Revoking wallet access will disconnect your wallet and clear all session data.
       </Alert>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <Button variant="primary" onClick={handleSave}>Save Security Settings</Button>
+        <Button variant="primary" onClick={handleSave}>
+          Save Security Settings
+        </Button>
         <Button variant="secondary">Revoke Wallet Access</Button>
       </Box>
     </Stack>
@@ -361,24 +448,38 @@ export default function ProfilePage() {
                 size="small"
                 label="Display Name"
                 autoFocus
-                onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmName(); if (e.key === 'Escape') setEditingName(false); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConfirmName();
+                  if (e.key === 'Escape') setEditingName(false);
+                }}
               />
-              <IconButton onClick={handleConfirmName} color="primary" aria-label="Confirm name"><CheckIcon /></IconButton>
-              <IconButton onClick={() => setEditingName(false)} aria-label="Cancel edit"><CloseIcon /></IconButton>
+              <IconButton onClick={handleConfirmName} color="primary" aria-label="Confirm name">
+                <CheckIcon />
+              </IconButton>
+              <IconButton onClick={() => setEditingName(false)} aria-label="Cancel edit">
+                <CloseIcon />
+              </IconButton>
             </Box>
           ) : (
             <ProfileHeader
               address={activeAddress}
               displayName={displayName}
               joinDate={profile?.joinDate}
-              onEditName={() => { setNameInput(displayName); setEditingName(true); }}
+              onEditName={() => {
+                setNameInput(displayName);
+                setEditingName(true);
+              }}
             />
           )}
         </AppCard>
 
         <AppCard>
           {/* Tab Headers */}
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, overflowX: 'auto' }} role="tablist" aria-label="Profile sections">
+          <Box
+            sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, overflowX: 'auto' }}
+            role="tablist"
+            aria-label="Profile sections"
+          >
             <Box sx={{ display: 'flex', gap: 0, minWidth: 'max-content' }}>
               {TABS.map((tab) => (
                 <Box
@@ -389,7 +490,9 @@ export default function ProfilePage() {
                   aria-selected={activeTab === tab.id}
                   aria-controls={`profile-panel-${tab.id}`}
                   tabIndex={activeTab === tab.id ? 0 : -1}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveTab(tab.id); }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') setActiveTab(tab.id);
+                  }}
                   sx={{
                     px: { xs: 2, sm: 3 },
                     py: 2,
@@ -419,7 +522,12 @@ export default function ProfilePage() {
           {/* Tab Content */}
           <Box>
             {activeTab === 'overview' && (
-              <Stack spacing={3} role="tabpanel" id={`profile-panel-overview`} aria-labelledby="tab-overview">
+              <Stack
+                spacing={3}
+                role="tabpanel"
+                id={`profile-panel-overview`}
+                aria-labelledby="tab-overview"
+              >
                 {profileLoading ? (
                   <Typography color="text.secondary">Loading profile data…</Typography>
                 ) : profile ? (
@@ -427,7 +535,16 @@ export default function ProfilePage() {
                     <UserStats stats={profile.stats} />
 
                     <Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 2 }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: 2,
+                          mb: 2,
+                        }}
+                      >
                         <Typography variant="h3">Participation Timeline</Typography>
                         <Typography color="text.secondary" variant="body2">
                           Showing the latest {Math.min(transactions.length, TIMELINE_LIMIT)} events
@@ -435,13 +552,27 @@ export default function ProfilePage() {
                       </Box>
 
                       {transactions.length === 0 ? (
-                        <Typography color="text.secondary">No savings history found yet.</Typography>
+                        <Typography color="text.secondary">
+                          No savings history found yet.
+                        </Typography>
                       ) : (
                         <Stack spacing={2}>
                           {transactions.slice(0, TIMELINE_LIMIT).map((tx) => (
-                            <Box key={tx.id} sx={{ p: 2, borderRadius: 2, border: 1, borderColor: 'divider' }}>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-                                <Typography variant="subtitle2">{getTimelineLabel(tx, profile.address)}</Typography>
+                            <Box
+                              key={tx.id}
+                              sx={{ p: 2, borderRadius: 2, border: 1, borderColor: 'divider' }}
+                            >
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  flexWrap: 'wrap',
+                                  gap: 1,
+                                }}
+                              >
+                                <Typography variant="subtitle2">
+                                  {getTimelineLabel(tx, profile.address)}
+                                </Typography>
                                 <Typography variant="subtitle2" color="text.secondary">
                                   {new Date(tx.createdAt).toLocaleDateString()}
                                 </Typography>
@@ -451,11 +582,12 @@ export default function ProfilePage() {
 
                               <Box sx={{ display: 'grid', gap: 1 }}>
                                 <Typography>
-                                  Amount: <strong>{tx.amount} {tx.assetCode}</strong>
+                                  Amount:{' '}
+                                  <strong>
+                                    {tx.amount} {tx.assetCode}
+                                  </strong>
                                 </Typography>
-                                <Typography color="text.secondary">
-                                  From: {tx.from}
-                                </Typography>
+                                <Typography color="text.secondary">From: {tx.from}</Typography>
                                 <Typography color="text.secondary">
                                   To: {tx.to || 'Unknown'}
                                 </Typography>
@@ -470,15 +602,18 @@ export default function ProfilePage() {
                     </Box>
                   </>
                 ) : (
-                  <Alert severity="info">
-                    Connect your wallet to view account statistics.
-                  </Alert>
+                  <Alert severity="info">Connect your wallet to view account statistics.</Alert>
                 )}
               </Stack>
             )}
 
             {activeTab === 'history' && (
-              <Stack spacing={2} role="tabpanel" id="profile-panel-history" aria-labelledby="tab-history">
+              <Stack
+                spacing={2}
+                role="tabpanel"
+                id="profile-panel-history"
+                aria-labelledby="tab-history"
+              >
                 <Typography variant="h3">Transaction History</Typography>
                 <TransactionTable
                   transactions={transactions}
@@ -490,15 +625,16 @@ export default function ProfilePage() {
 
             {activeTab === 'settings' && (
               <Box role="tabpanel" id="profile-panel-settings" aria-labelledby="tab-settings">
-                <ProfileSettings
-                  displayName={displayName}
-                  onSave={handleSaveSettings}
-                />
+                <ProfileSettings displayName={displayName} onSave={handleSaveSettings} />
               </Box>
             )}
 
             {activeTab === 'notifications' && (
-              <Box role="tabpanel" id="profile-panel-notifications" aria-labelledby="tab-notifications">
+              <Box
+                role="tabpanel"
+                id="profile-panel-notifications"
+                aria-labelledby="tab-notifications"
+              >
                 <NotificationPreferences />
               </Box>
             )}

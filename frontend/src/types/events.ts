@@ -44,7 +44,10 @@ export { CONTRACT_EVENT_TOPICS } from '../../../packages/events-schema/generated
 export type AppEvent = ContractEvent;
 export type EventType = ContractEventTopic;
 
-import type { ContractEvent, ContractEventTopic } from '../../../packages/events-schema/generated/events';
+import type {
+  ContractEvent,
+  ContractEventTopic,
+} from '../../../packages/events-schema/generated/events';
 
 export interface EventFilter {
   types?: ContractEventTopic[];

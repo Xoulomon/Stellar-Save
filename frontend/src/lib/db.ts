@@ -142,11 +142,15 @@ export async function getCachedGroup(groupId: string): Promise<CachedGroup | nul
 
 export async function cacheGroupsList(groups: PublicGroup[]): Promise<void> {
   const db = await getDB();
-  await db.put('groupsList', {
-    groups,
-    timestamp: new Date(),
-    stale: false,
-  }, 'all');
+  await db.put(
+    'groupsList',
+    {
+      groups,
+      timestamp: new Date(),
+      stale: false,
+    },
+    'all'
+  );
 }
 
 export async function getCachedGroupsList(): Promise<CachedGroupsList | null> {
@@ -226,7 +230,10 @@ export async function getPendingSyncItems(): Promise<SyncQueueItem[]> {
   return allItems.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 }
 
-export async function updateSyncQueueItem(id: string, updates: Partial<SyncQueueItem>): Promise<void> {
+export async function updateSyncQueueItem(
+  id: string,
+  updates: Partial<SyncQueueItem>
+): Promise<void> {
   const db = await getDB();
   const item = await db.get('syncQueue', id);
   if (item) {
@@ -247,7 +254,10 @@ export async function getSyncQueueCount(): Promise<number> {
 
 // ─── Metadata Operations ──────────────────────────────────────────────────────
 
-export async function updateSyncMetadata(data: { lastSync?: Date; isOnline?: boolean }): Promise<void> {
+export async function updateSyncMetadata(data: {
+  lastSync?: Date;
+  isOnline?: boolean;
+}): Promise<void> {
   const db = await getDB();
   const current = (await db.get('metadata', 'sync')) ?? { lastSync: new Date(), isOnline: true };
   await db.put('metadata', { ...current, ...data }, 'sync');

@@ -11,7 +11,7 @@ const FOCUSABLE_SELECTORS = [
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS)).filter(
-    (el) => !el.closest('[aria-hidden="true"]'),
+    (el) => !el.closest('[aria-hidden="true"]')
   );
 }
 
@@ -25,7 +25,7 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
  */
 export function useFocusTrap(
   containerRef: React.RefObject<HTMLElement | null>,
-  active: boolean,
+  active: boolean
 ): void {
   const previousFocusRef = useRef<Element | null>(null);
 

@@ -2,10 +2,7 @@
  * Re-exports from the shared @stellar-save/sdk package.
  * Existing imports of this module continue to work unchanged.
  */
-export {
-  formatDate,
-  formatDistanceToNow,
-} from '@stellar-save/sdk';
+export { formatDate, formatDistanceToNow } from '@stellar-save/sdk';
 export type { FormatDateOptions } from '@stellar-save/sdk';
 
 /** Convenience wrapper: always relative mode. */

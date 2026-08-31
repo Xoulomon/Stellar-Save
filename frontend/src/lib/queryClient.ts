@@ -12,13 +12,13 @@ import { QueryClient } from '@tanstack/react-query';
  *                       refetch on every mount/focus).
  */
 export const STALE_TIME = {
-  GROUP_STATE: 30_000,       // 30 seconds — group state queries
-  CONTRIBUTION_STATUS: 0,    // always fresh — contribution status queries
+  GROUP_STATE: 30_000, // 30 seconds — group state queries
+  CONTRIBUTION_STATUS: 0, // always fresh — contribution status queries
 } as const;
 
 /** How long unused query data stays in the cache before being garbage-collected. */
 export const GC_TIME = {
-  DEFAULT: 5 * 60_000,       // 5 minutes
+  DEFAULT: 5 * 60_000, // 5 minutes
 } as const;
 
 export const queryClient = new QueryClient({

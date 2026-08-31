@@ -11,7 +11,11 @@ export interface AuthenticatedRequest extends Request {
   walletAddress?: string; // set by jwtAuthMiddleware
 }
 
-export const adminAuthMiddleware = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const adminAuthMiddleware = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
   const secret = req.headers['x-admin-secret'];
 
   if (secret === ADMIN_SECRET) {
@@ -36,7 +40,9 @@ export const jwtAuthMiddleware = (req: AuthenticatedRequest, res: Response, next
   const authHeader = req.headers['authorization'];
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized: Missing or malformed Authorization header' });
+    return res
+      .status(401)
+      .json({ error: 'Unauthorized: Missing or malformed Authorization header' });
   }
 
   const token = authHeader.slice(7); // strip "Bearer "

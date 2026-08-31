@@ -51,12 +51,8 @@ export function startTracing(): void {
   try {
     /* eslint-disable @typescript-eslint/no-var-requires */
     const { NodeSDK } = require('@opentelemetry/sdk-node');
-    const {
-      getNodeAutoInstrumentations,
-    } = require('@opentelemetry/auto-instrumentations-node');
-    const {
-      OTLPTraceExporter,
-    } = require('@opentelemetry/exporter-trace-otlp-http');
+    const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
+    const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http');
     const { resourceFromAttributes } = require('@opentelemetry/resources');
     const {
       ATTR_SERVICE_NAME,
@@ -75,7 +71,8 @@ export function startTracing(): void {
 
     // OTLP/HTTP exporter. If only a base endpoint is given, the exporter appends
     // the standard /v1/traces path automatically.
-    const endpoint = process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || config.tracing.otlpEndpoint + '/v1/traces';
+    const endpoint =
+      process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || config.tracing.otlpEndpoint + '/v1/traces';
     const exporter = new OTLPTraceExporter({ url: endpoint });
 
     const sdk = new NodeSDK({
@@ -96,7 +93,7 @@ export function startTracing(): void {
     sdk.start();
     logger.info(
       `[tracing] OpenTelemetry enabled for "${SERVICE_NAME}" ` +
-        `(sampler ratio=${ratio}, exporter=OTLP/HTTP)`,
+        `(sampler ratio=${ratio}, exporter=OTLP/HTTP)`
     );
 
     const shutdown = () =>
@@ -111,7 +108,7 @@ export function startTracing(): void {
     // Missing optional deps or misconfig must never crash the server.
     logger.warn(
       '[tracing] Failed to initialise OpenTelemetry; continuing without tracing.',
-      err instanceof Error ? err.message : err,
+      err instanceof Error ? err.message : err
     );
   }
 }
@@ -133,7 +130,7 @@ export function getTracer() {
 export async function withSpan<T>(
   name: string,
   attrs: Record<string, string | number | boolean>,
-  fn: (span: Span) => Promise<T>,
+  fn: (span: Span) => Promise<T>
 ): Promise<T> {
   const tracer = getTracer();
   return tracer.startActiveSpan(name, { attributes: attrs }, async (span) => {

@@ -23,15 +23,9 @@ import {
   decodeShareCode,
   createStep,
 } from '../services/transactionBuilderService';
-import {
-  GROUP_TEMPLATES,
-  type GroupTemplate,
-} from '../types/template';
+import { GROUP_TEMPLATES, type GroupTemplate } from '../types/template';
 
-import type {
-  TransactionTemplate,
-  TransactionBuilderStep,
-} from '../types/transactionBuilder';
+import type { TransactionTemplate, TransactionBuilderStep } from '../types/transactionBuilder';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -154,14 +148,14 @@ describe('Override precedence when applying a template', () => {
    */
   function applyTemplate(
     template: GroupTemplate,
-    overrides: { contributionAmount: number; groupId: number },
+    overrides: { contributionAmount: number; groupId: number }
   ) {
     return {
       groupId: overrides.groupId,
       contributionAmount: overrides.contributionAmount,
-      cycleDuration: template.cycleDuration,   // from template
-      maxMembers: template.maxMembers,          // from template
-      category: template.category,             // from template
+      cycleDuration: template.cycleDuration, // from template
+      maxMembers: template.maxMembers, // from template
+      category: template.category, // from template
     };
   }
 

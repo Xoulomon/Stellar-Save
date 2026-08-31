@@ -137,7 +137,12 @@ export async function sendContributionReminder(
 
     if (prefs && (!prefs.emailNotifications || !prefs.contributionReminders)) {
       logger.info('Skipping reminder — user opted out', { userId: member.userId, groupId });
-      return { memberId: member.userId, email: member.email, status: 'skipped', reason: 'opted_out' };
+      return {
+        memberId: member.userId,
+        email: member.email,
+        status: 'skipped',
+        reason: 'opted_out',
+      };
     }
 
     const unsubscribeUrl = prefs
@@ -172,7 +177,12 @@ export async function sendContributionReminder(
 
     if (!apiKey) {
       logger.warn('SENDGRID_API_KEY not set — skipping send', { userId: member.userId });
-      return { memberId: member.userId, email: member.email, status: 'skipped', reason: 'no_api_key' };
+      return {
+        memberId: member.userId,
+        email: member.email,
+        status: 'skipped',
+        reason: 'no_api_key',
+      };
     }
 
     sgMail.setApiKey(apiKey);
@@ -203,11 +213,20 @@ export async function sendContributionReminder(
       },
     });
 
-    logger.info('Contribution reminder sent', { userId: member.userId, groupId, window, messageId });
+    logger.info('Contribution reminder sent', {
+      userId: member.userId,
+      groupId,
+      window,
+      messageId,
+    });
     return { memberId: member.userId, email: member.email, status: 'sent', messageId };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    logger.error('Failed to send contribution reminder', { userId: member.userId, groupId, error: reason });
+    logger.error('Failed to send contribution reminder', {
+      userId: member.userId,
+      groupId,
+      error: reason,
+    });
 
     await prisma.notification
       .create({

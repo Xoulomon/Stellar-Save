@@ -25,7 +25,6 @@ import { signWithHardwareWallet } from '../wallet/hardware/hardwareService';
 
 import type { HardwareWalletState, TxApprovalRequest } from '../wallet/hardware/types';
 
-
 export default function HardwareWalletPage() {
   const { activeAddress } = useWallet();
   const [tab, setTab] = useState(0);
@@ -42,7 +41,7 @@ export default function HardwareWalletPage() {
       'AAAAAgAAA...',
       'TESTNET',
       '0.00012 XLM',
-      [{ type: 'contract_call', summary: 'contribute(group: 1, amount: 100)' }],
+      [{ type: 'contract_call', summary: 'contribute(group: 1, amount: 100)' }]
     );
     setTxRequest(req);
     setTxConfirmOpen(true);
@@ -53,27 +52,32 @@ export default function HardwareWalletPage() {
     const req = txRequest!;
     try {
       await signWithHardwareWallet(req, walletState.device, (status) => {
-        setTxRequest(prev => prev ? { ...prev, status } : null);
+        setTxRequest((prev) => (prev ? { ...prev, status } : null));
       });
     } catch {
-      setTxRequest(prev => prev ? { ...prev, status: 'error' } : null);
+      setTxRequest((prev) => (prev ? { ...prev, status: 'error' } : null));
     }
   };
 
   const handleSetupComplete = () => {
     setSetupOpen(false);
-    setWalletState(prev => ({ ...prev, status: 'connected' }));
+    setWalletState((prev) => ({ ...prev, status: 'connected' }));
   };
 
   return (
-    <AppLayout title="Hardware Wallet" subtitle="Manage Ledger and Trezor devices" navItems={navItems}>
+    <AppLayout
+      title="Hardware Wallet"
+      subtitle="Manage Ledger and Trezor devices"
+      navItems={navItems}
+    >
       <Container maxWidth="md" sx={{ py: 3 }}>
         <Box sx={{ mb: 3 }}>
           <Typography variant="h5" fontWeight={700} gutterBottom>
             Hardware Wallet
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Connect a Ledger or Trezor device for enhanced security. Transactions require physical confirmation on your device.
+            Connect a Ledger or Trezor device for enhanced security. Transactions require physical
+            confirmation on your device.
           </Typography>
         </Box>
 
@@ -82,9 +86,7 @@ export default function HardwareWalletPage() {
           <Tab label="Test Signing" />
         </Tabs>
 
-        {tab === 0 && (
-          <HardwareWalletManage state={walletState} onStateChange={setWalletState} />
-        )}
+        {tab === 0 && <HardwareWalletManage state={walletState} onStateChange={setWalletState} />}
 
         {tab === 1 && (
           <Stack spacing={2}>
@@ -99,7 +101,9 @@ export default function HardwareWalletPage() {
 
                 <Stack spacing={1} sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" color="text.secondary">Wallet Status</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Wallet Status
+                    </Typography>
                     <Chip
                       label={walletState.status === 'connected' ? 'Connected' : 'Not Connected'}
                       color={walletState.status === 'connected' ? 'success' : 'default'}
@@ -107,17 +111,23 @@ export default function HardwareWalletPage() {
                     />
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" color="text.secondary">Device</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Device
+                    </Typography>
                     <Typography variant="body2">{walletState.device?.name || 'None'}</Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" color="text.secondary">Account</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Account
+                    </Typography>
                     <Typography variant="body2">
                       {walletState.selectedAccount?.label || 'None selected'}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" color="text.secondary">Wallet (Web)</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Wallet (Web)
+                    </Typography>
                     <Typography variant="body2">{activeAddress || 'Not connected'}</Typography>
                   </Box>
                 </Stack>
@@ -150,7 +160,9 @@ export default function HardwareWalletPage() {
 
         <Dialog open={setupOpen} onClose={() => setSetupOpen(false)} maxWidth="sm" fullWidth>
           <DialogTitle>
-            <Typography variant="h6" fontWeight={700}>Setup Hardware Wallet</Typography>
+            <Typography variant="h6" fontWeight={700}>
+              Setup Hardware Wallet
+            </Typography>
           </DialogTitle>
           <DialogContent>
             <HardwareWalletSetup

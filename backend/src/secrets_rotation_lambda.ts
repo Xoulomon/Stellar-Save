@@ -123,10 +123,7 @@ async function createSecret(event: RotationEvent): Promise<void> {
   }
 
   // Generate new secret value based on secret type
-  const newSecretValue = generateNewSecretValue(
-    event.SecretId,
-    currentSecret.SecretString
-  );
+  const newSecretValue = generateNewSecretValue(event.SecretId, currentSecret.SecretString);
 
   // Store the new secret with the AWSPENDING label
   const putCommand = new PutSecretValueCommand({
@@ -275,10 +272,7 @@ function generateNewSecretValue(secretId: string, currentValue: string): string 
 /**
  * Update the service with the new secret
  */
-async function updateServiceWithNewSecret(
-  secretId: string,
-  newValue: string
-): Promise<void> {
+async function updateServiceWithNewSecret(secretId: string, newValue: string): Promise<void> {
   // This is where you'd implement service-specific logic
   // For example:
   // - Update database user password

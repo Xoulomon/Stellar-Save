@@ -29,7 +29,10 @@ export interface KycStatusResult {
 
 export async function submitKyc(opts: KycSubmitOpts): Promise<KycStatusResult> {
   const { userId, walletAddress, fields } = opts;
-  const providerUrl = (config as any).kyc?.providerUrl ?? process.env['KYC_PROVIDER_URL'] ?? 'https://sandbox.kyc-provider.example.com';
+  const providerUrl =
+    (config as any).kyc?.providerUrl ??
+    process.env['KYC_PROVIDER_URL'] ??
+    'https://sandbox.kyc-provider.example.com';
 
   // POST to provider — only send fields, never store raw docs locally
   const res = await fetchWithCorrelationId(`${providerUrl}/kyc`, {
@@ -53,7 +56,12 @@ export async function submitKyc(opts: KycSubmitOpts): Promise<KycStatusResult> {
   });
 
   logger.info('[kyc] submitted', { userId, kycProviderId });
-  return { userId: record.userId, status: record.status as KycStatus, kycId: record.kycProviderId ?? undefined, submittedAt: record.submittedAt.toISOString() };
+  return {
+    userId: record.userId,
+    status: record.status as KycStatus,
+    kycId: record.kycProviderId ?? undefined,
+    submittedAt: record.submittedAt.toISOString(),
+  };
 }
 
 export async function getKycStatus(userId: string): Promise<KycStatusResult> {
@@ -72,8 +80,13 @@ export async function pollAndUpdateStatus(userId: string): Promise<KycStatusResu
   const record = await (prisma as any).kycRecord.findUnique({ where: { userId } });
   if (!record || !record.kycProviderId) return getKycStatus(userId);
 
-  const providerUrl = (config as any).kyc?.providerUrl ?? process.env['KYC_PROVIDER_URL'] ?? 'https://sandbox.kyc-provider.example.com';
-  const res = await fetchWithCorrelationId(`${providerUrl}/kyc/${encodeURIComponent(record.kycProviderId)}`);
+  const providerUrl =
+    (config as any).kyc?.providerUrl ??
+    process.env['KYC_PROVIDER_URL'] ??
+    'https://sandbox.kyc-provider.example.com';
+  const res = await fetchWithCorrelationId(
+    `${providerUrl}/kyc/${encodeURIComponent(record.kycProviderId)}`
+  );
   if (!res.ok) {
     logger.warn('[kyc] status poll failed', { userId, status: res.status });
     return getKycStatus(userId);
@@ -94,12 +107,20 @@ export async function pollAndUpdateStatus(userId: string): Promise<KycStatusResu
   return getKycStatus(userId);
 }
 
-export async function emitKycStatusChange(userId: string, oldStatus: string, newStatus: string): Promise<void> {
+export async function emitKycStatusChange(
+  userId: string,
+  oldStatus: string,
+  newStatus: string
+): Promise<void> {
   await (prisma as any).kycStatusEvent.create({ data: { userId, oldStatus, newStatus } });
   logger.info('[kyc] status change event emitted', { userId, oldStatus, newStatus });
 }
 
-export function verifyKycWebhookSignature(secret: string, rawBody: string, signature: string): boolean {
+export function verifyKycWebhookSignature(
+  secret: string,
+  rawBody: string,
+  signature: string
+): boolean {
   const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
   try {
     return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));

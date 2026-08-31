@@ -41,7 +41,7 @@ async function runTests() {
   // Test Audit Logs
   console.log('Testing audit logs...');
   const logs = adminService.getAuditLogs();
-  const updateLog = logs.find(l => l.action === 'UPDATE_USER' && l.targetId === userId);
+  const updateLog = logs.find((l) => l.action === 'UPDATE_USER' && l.targetId === userId);
   if (updateLog) {
     console.log('✅ Audit logging for update passed');
   } else {
@@ -58,7 +58,9 @@ async function runTests() {
     process.exit(1);
   }
 
-  const deleteLog = adminService.getAuditLogs().find(l => l.action === 'DELETE_USER' && l.targetId === userId);
+  const deleteLog = adminService
+    .getAuditLogs()
+    .find((l) => l.action === 'DELETE_USER' && l.targetId === userId);
   if (deleteLog) {
     console.log('✅ Audit logging for delete passed');
   } else {
@@ -69,7 +71,7 @@ async function runTests() {
   console.log('ALL ADMIN TESTS PASSED! 🎉');
 }
 
-runTests().catch(err => {
+runTests().catch((err) => {
   console.error(err);
   process.exit(1);
 });

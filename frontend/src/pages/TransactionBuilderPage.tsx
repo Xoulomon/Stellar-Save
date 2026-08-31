@@ -11,15 +11,19 @@ export default function TransactionBuilderPage() {
   const navItems = useMemo(() => [], []);
 
   return (
-    <AppLayout title="Transaction Builder" subtitle="Construct complex multi-step transactions" navItems={navItems}>
+    <AppLayout
+      title="Transaction Builder"
+      subtitle="Construct complex multi-step transactions"
+      navItems={navItems}
+    >
       <Container maxWidth="lg" sx={{ py: 3 }}>
         <Box sx={{ mb: 3 }}>
           <Typography variant="h5" fontWeight={700} gutterBottom>
             Multi-Step Transaction Builder
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Chain multiple operations into a single transaction, simulate to estimate fees,
-            and save as reusable templates.
+            Chain multiple operations into a single transaction, simulate to estimate fees, and save
+            as reusable templates.
           </Typography>
         </Box>
 

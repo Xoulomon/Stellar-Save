@@ -95,9 +95,7 @@ describe('MemberList', () => {
   });
 
   it('applies custom className', () => {
-    const { container } = render(
-      <MemberList members={mockMembers} className="custom-class" />
-    );
+    const { container } = render(<MemberList members={mockMembers} className="custom-class" />);
     expect(container.querySelector('.custom-class')).toBeInTheDocument();
   });
 

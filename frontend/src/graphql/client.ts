@@ -17,8 +17,8 @@
 import { GraphQLClient } from 'graphql-request';
 
 const GRAPHQL_ENDPOINT =
-  (import.meta as ImportMeta & { env: Record<string, string | undefined> }).env
-    ?.VITE_GRAPHQL_URL ?? 'http://localhost:4000/graphql';
+  (import.meta as ImportMeta & { env: Record<string, string | undefined> }).env?.VITE_GRAPHQL_URL ??
+  'http://localhost:4000/graphql';
 
 /** Shared client singleton — reuse the connection pool across all queries. */
 export const graphqlClient = new GraphQLClient(GRAPHQL_ENDPOINT, {
@@ -45,7 +45,7 @@ export const graphqlClient = new GraphQLClient(GRAPHQL_ENDPOINT, {
 export function fetcher<TData, TVariables>(
   query: string,
   variables?: TVariables,
-  headers?: RequestInit['headers'],
+  headers?: RequestInit['headers']
 ): () => Promise<TData> {
   return async () => {
     const client = headers

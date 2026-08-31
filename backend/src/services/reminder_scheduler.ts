@@ -13,10 +13,10 @@ export interface ReminderPreferences {
   contributionReminders?: boolean;
   muteAll?: boolean;
   quietHoursStart?: string; // HH:mm format, e.g. "22:00"
-  quietHoursEnd?: string;   // HH:mm format, e.g. "07:00"
+  quietHoursEnd?: string; // HH:mm format, e.g. "07:00"
   preferredTimeOfDay?: string; // HH:mm format, e.g. "09:00"
-  timezone?: string;        // IANA timezone string, e.g. "America/New_York"
-  leadHours?: number[];     // Custom lead times in hours, e.g. [48, 24]
+  timezone?: string; // IANA timezone string, e.g. "America/New_York"
+  leadHours?: number[]; // Custom lead times in hours, e.g. [48, 24]
 }
 
 export interface ScheduleReminderOptions {
@@ -119,7 +119,7 @@ export function adjustTimeForTimezone(baseDate: Date, targetTime: string, timezo
     const lH = Number(localParts.find((p) => p.type === 'hour')?.value % 24);
     const lM = Number(localParts.find((p) => p.type === 'minute')?.value);
 
-    const diffMinutes = (lH * 60 + lM) - (targetH * 60 + targetM);
+    const diffMinutes = lH * 60 + lM - (targetH * 60 + targetM);
     return new Date(utcTestDate.getTime() - diffMinutes * 60 * 1000);
   } catch {
     // Fallback if timezone string is invalid
@@ -151,7 +151,11 @@ export function calculateReminderSchedules(options: ScheduleReminderOptions): Sc
 
     // Override with custom preferred time of day if set
     if (preferences?.preferredTimeOfDay) {
-      scheduledTime = adjustTimeForTimezone(scheduledTime, preferences.preferredTimeOfDay, timezone);
+      scheduledTime = adjustTimeForTimezone(
+        scheduledTime,
+        preferences.preferredTimeOfDay,
+        timezone
+      );
     }
 
     let skipReason: ScheduledSlot['skipReason'];

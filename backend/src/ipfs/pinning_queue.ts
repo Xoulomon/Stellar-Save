@@ -3,7 +3,8 @@ import redis from '../redis';
 import { config } from '../config';
 import { logger } from '../logger';
 
-export type PinningJobStatus = 'queued' | 'pinning' | 'pinned' | 'failed' | 'unpinning' | 'unpinned';
+export type PinningJobStatus =
+  'queued' | 'pinning' | 'pinned' | 'failed' | 'unpinning' | 'unpinned';
 
 export interface PinningJob {
   id: string;
@@ -31,7 +32,7 @@ export class PinningQueue {
     groupId: string,
     contractId: string,
     action: 'pin' | 'unpin',
-    priority = 0,
+    priority = 0
   ): Promise<PinningJob> {
     const job: PinningJob = {
       id: uuid(),
@@ -87,7 +88,7 @@ export class PinningQueue {
   static async updateStatus(
     jobId: string,
     status: PinningJobStatus,
-    error?: string,
+    error?: string
   ): Promise<void> {
     const jobData = await redis.hgetall(`${JOB_KEY_PREFIX}:${jobId}`);
     if (!jobData || Object.keys(jobData).length === 0) return;

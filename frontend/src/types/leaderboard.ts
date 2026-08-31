@@ -4,12 +4,12 @@ export interface LeaderboardGroup {
   rank: number;
   id: string;
   name: string;
-  completionRate: number;   // 0–100
+  completionRate: number; // 0–100
   totalCycles: number;
   completedCycles: number;
   memberCount: number;
-  totalVolume: number;      // XLM
-  onTimeRate: number;       // % contributions on time
+  totalVolume: number; // XLM
+  onTimeRate: number; // % contributions on time
   status: 'active' | 'completed' | 'pending';
   trend: 'up' | 'down' | 'stable';
 }
@@ -20,7 +20,7 @@ export interface LeaderboardMember {
   name?: string;
   totalContributed: number; // XLM
   contributionCount: number;
-  onTimeRate: number;       // 0–100
+  onTimeRate: number; // 0–100
   streak: number;
   groupsParticipated: number;
   trend: 'up' | 'down' | 'stable';

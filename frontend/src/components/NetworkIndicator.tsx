@@ -30,11 +30,7 @@ export function NetworkIndicator() {
       </button>
 
       {showSwitcher && (
-        <div
-          className="network-switcher"
-          role="listbox"
-          aria-label="Select network"
-        >
+        <div className="network-switcher" role="listbox" aria-label="Select network">
           {NETWORKS.map((net) => (
             <button
               key={net}

@@ -86,7 +86,9 @@ function buildVolumeTrend(totalVolume: number) {
 
 function buildGroupTrend(totalGroups: number) {
   return Array.from({ length: 6 }, (_, i) => ({
-    month: new Date(Date.now() - (5 - i) * 30 * 86_400_000).toLocaleDateString('en', { month: 'short' }),
+    month: new Date(Date.now() - (5 - i) * 30 * 86_400_000).toLocaleDateString('en', {
+      month: 'short',
+    }),
     groups: Math.max(1, Math.round(totalGroups * ((i + 1) / 6) * (0.85 + Math.random() * 0.3))),
   }));
 }
@@ -113,14 +115,21 @@ function StatCard({ label, value, sub, color = 'primary.main' }: StatCardProps) 
         bgcolor: 'background.paper',
       }}
     >
-      <Typography variant="caption" color="text.secondary" textTransform="uppercase" letterSpacing={0.5}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        textTransform="uppercase"
+        letterSpacing={0.5}
+      >
         {label}
       </Typography>
       <Typography variant="h5" fontWeight={800} color={color} sx={{ mt: 0.5 }}>
         {value}
       </Typography>
       {sub && (
-        <Typography variant="caption" color="text.secondary">{sub}</Typography>
+        <Typography variant="caption" color="text.secondary">
+          {sub}
+        </Typography>
       )}
     </Box>
   );
@@ -149,15 +158,19 @@ function DeleteUserDialog({
       <DialogTitle>Delete user?</DialogTitle>
       <DialogContent>
         <Typography variant="body2">
-          Permanently remove <strong>{user.name || user.address}</strong> from the platform?
-          This action is logged in the audit trail.
+          Permanently remove <strong>{user.name || user.address}</strong> from the platform? This
+          action is logged in the audit trail.
         </Typography>
         {mutation.isError && (
-          <Alert severity="error" sx={{ mt: 1 }}>{(mutation.error as Error).message}</Alert>
+          <Alert severity="error" sx={{ mt: 1 }}>
+            {(mutation.error as Error).message}
+          </Alert>
         )}
       </DialogContent>
       <DialogActions>
-        <Button variant="secondary" onClick={onClose} disabled={mutation.isPending}>Cancel</Button>
+        <Button variant="secondary" onClick={onClose} disabled={mutation.isPending}>
+          Cancel
+        </Button>
         <Button variant="primary" onClick={() => mutation.mutate()} loading={mutation.isPending}>
           Delete
         </Button>
@@ -290,14 +303,25 @@ function GroupsTable({ adminId }: { adminId: string }) {
         {groups.map((group) => (
           <TableRow key={group.id} sx={{ bgcolor: group.flagged ? 'warning.50' : undefined }}>
             <TableCell>{group.name}</TableCell>
-            <TableCell>{group.currentMembers} / {group.maxMembers}</TableCell>
+            <TableCell>
+              {group.currentMembers} / {group.maxMembers}
+            </TableCell>
             <TableCell>{group.contributionAmount.toLocaleString()} XLM</TableCell>
             <TableCell>
-              <Chip label={group.status} size="small" color={group.status === 'active' ? 'success' : 'default'} />
+              <Chip
+                label={group.status}
+                size="small"
+                color={group.status === 'active' ? 'success' : 'default'}
+              />
             </TableCell>
             <TableCell>
               {group.flagged && (
-                <Chip icon={<WarningAmberIcon />} label="Under review" size="small" color="warning" />
+                <Chip
+                  icon={<WarningAmberIcon />}
+                  label="Under review"
+                  size="small"
+                  color="warning"
+                />
               )}
             </TableCell>
             <TableCell align="right">
@@ -376,7 +400,11 @@ export default function AdminDashboardPage() {
   const { activeAddress } = useWallet();
   const adminId = activeAddress ?? '';
 
-  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    error: statsError,
+  } = useQuery({
     queryKey: adminKeys.stats(),
     queryFn: fetchPlatformStats,
     staleTime: 60_000,
@@ -387,9 +415,7 @@ export default function AdminDashboardPage() {
   const groupTrend = stats ? buildGroupTrend(stats.totalGroups) : [];
 
   const healthOk = stats?.systemHealth === 'Healthy';
-  const lastBackupAgo = stats
-    ? Math.round((Date.now() - stats.lastBackup) / 60_000)
-    : null;
+  const lastBackupAgo = stats ? Math.round((Date.now() - stats.lastBackup) / 60_000) : null;
 
   return (
     <AppLayout
@@ -399,12 +425,16 @@ export default function AdminDashboardPage() {
     >
       <Stack spacing={3}>
         {statsError && (
-          <Alert severity="error">Failed to load platform stats. {(statsError as Error).message}</Alert>
+          <Alert severity="error">
+            Failed to load platform stats. {(statsError as Error).message}
+          </Alert>
         )}
 
         {/* ── Health metrics ── */}
         <AppCard>
-          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Platform Health</Typography>
+          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+            Platform Health
+          </Typography>
           {statsLoading && <LinearProgress sx={{ mb: 2 }} />}
           {stats && (
             <>
@@ -424,7 +454,8 @@ export default function AdminDashboardPage() {
                 />
                 {lastBackupAgo !== null && (
                   <Typography variant="caption" color="text.secondary">
-                    Last backup: {lastBackupAgo < 60
+                    Last backup:{' '}
+                    {lastBackupAgo < 60
                       ? `${lastBackupAgo}m ago`
                       : `${Math.round(lastBackupAgo / 60)}h ago`}
                   </Typography>
@@ -497,13 +528,17 @@ export default function AdminDashboardPage() {
 
         {/* ── User moderation ── */}
         <AppCard>
-          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Users</Typography>
+          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+            Users
+          </Typography>
           <UsersTable adminId={adminId} />
         </AppCard>
 
         {/* ── Group moderation ── */}
         <AppCard>
-          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Groups</Typography>
+          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+            Groups
+          </Typography>
           <GroupsTable adminId={adminId} />
         </AppCard>
 
@@ -511,7 +546,9 @@ export default function AdminDashboardPage() {
 
         {/* ── Audit log ── */}
         <AppCard>
-          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Audit Log</Typography>
+          <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+            Audit Log
+          </Typography>
           <AuditLogTable />
         </AppCard>
       </Stack>

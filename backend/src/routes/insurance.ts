@@ -16,17 +16,17 @@ export interface InsuranceClaim {
   id: string;
   groupId: string;
   claimant: string;
-  amount: number;      // in XLM
+  amount: number; // in XLM
   reason: string;
   status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;   // ISO-8601
+  createdAt: string; // ISO-8601
   resolvedAt?: string;
 }
 
 export interface InsurancePool {
   groupId: string;
   enabled: boolean;
-  balance: number;     // in XLM
+  balance: number; // in XLM
   premiumRate: number; // 0.0–1.0  (e.g. 0.05 = 5 % of contribution)
   claims: InsuranceClaim[];
 }
@@ -85,7 +85,9 @@ export function createInsuranceRouter(): Router {
     const pool = getOrCreate(groupId);
 
     if (!pool.enabled) {
-      return next(new AppError('INSURANCE_NOT_ENABLED', 'Insurance pool is not enabled for this group.', 400));
+      return next(
+        new AppError('INSURANCE_NOT_ENABLED', 'Insurance pool is not enabled for this group.', 400)
+      );
     }
 
     const { claimant, amount, reason } = req.body as {
@@ -95,11 +97,15 @@ export function createInsuranceRouter(): Router {
     };
 
     if (!claimant || !amount || !reason) {
-      return next(new AppError('MISSING_FIELDS', 'claimant, amount, and reason are required.', 400));
+      return next(
+        new AppError('MISSING_FIELDS', 'claimant, amount, and reason are required.', 400)
+      );
     }
 
     if (amount > pool.balance) {
-      return next(new AppError('INSUFFICIENT_BALANCE', 'Insufficient insurance pool balance.', 400));
+      return next(
+        new AppError('INSUFFICIENT_BALANCE', 'Insufficient insurance pool balance.', 400)
+      );
     }
 
     const claim: InsuranceClaim = {

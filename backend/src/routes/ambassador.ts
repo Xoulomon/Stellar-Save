@@ -34,7 +34,13 @@ export function createAmbassadorRouter(): Router {
     };
 
     if (!address || reputationScore == null || contributions == null || referrals == null) {
-      return next(new AppError('MISSING_FIELDS', 'Missing required fields: address, reputationScore, contributions, referrals', 400));
+      return next(
+        new AppError(
+          'MISSING_FIELDS',
+          'Missing required fields: address, reputationScore, contributions, referrals',
+          400
+        )
+      );
     }
 
     const tier = evaluateAmbassadorStatus(address, reputationScore, contributions, referrals);
@@ -54,7 +60,13 @@ export function createAmbassadorRouter(): Router {
       distributeRewards(req.params.address, amount);
       return res.json({ success: true });
     } catch (err: unknown) {
-      return next(new AppError('AMBASSADOR_REWARD_FAILED', err instanceof Error ? err.message : 'Unknown error', 404));
+      return next(
+        new AppError(
+          'AMBASSADOR_REWARD_FAILED',
+          err instanceof Error ? err.message : 'Unknown error',
+          404
+        )
+      );
     }
   });
 

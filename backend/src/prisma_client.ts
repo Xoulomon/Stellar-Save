@@ -55,10 +55,15 @@ const prismaSingleton = new PrismaReadReplicaClient();
 export const prisma = new Proxy(prismaSingleton.getClient(), {
   get: (target: any, prop: string) => {
     if (typeof target[prop] === 'function') {
-      const isWrite =
-        ['create', 'update', 'delete', 'upsert', 'createMany', 'updateMany', 'deleteMany'].some(
-          (m) => prop.endsWith(m)
-        );
+      const isWrite = [
+        'create',
+        'update',
+        'delete',
+        'upsert',
+        'createMany',
+        'updateMany',
+        'deleteMany',
+      ].some((m) => prop.endsWith(m));
       const client = prismaSingleton.getClient(isWrite);
       return (client as any)[prop]?.bind(client);
     }

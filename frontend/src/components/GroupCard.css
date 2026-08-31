@@ -3,7 +3,10 @@
   border: 1px solid var(--color-border);
   background-color: var(--color-bg-paper);
   overflow: hidden;
-  transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+  transition:
+    border-color 0.25s,
+    transform 0.25s,
+    box-shadow 0.25s;
   cursor: pointer;
   width: 100%;
   box-sizing: border-box;
@@ -138,7 +141,6 @@
     width: 100%;
   }
 }
-
 
 /* Error state */
 .group-card--error {

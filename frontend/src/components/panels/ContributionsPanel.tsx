@@ -9,7 +9,10 @@ interface ContributionsPanelProps {
   onContributionClick?: (contribution: GroupContribution) => void;
 }
 
-export function ContributionsPanel({ contributions, onContributionClick }: ContributionsPanelProps) {
+export function ContributionsPanel({
+  contributions,
+  onContributionClick,
+}: ContributionsPanelProps) {
   const getStatusVariant = (status: string): 'success' | 'warning' | 'info' | 'danger' => {
     switch (status) {
       case 'completed':

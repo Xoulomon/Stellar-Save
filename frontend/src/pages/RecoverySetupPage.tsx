@@ -25,11 +25,7 @@ import {
   Tooltip,
   IconButton,
 } from '@mui/material';
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 
 import { Button } from '../components/Button';
@@ -132,11 +128,13 @@ function GuardianSetupPanel({ ownerAddress }: { ownerAddress: string }) {
     <AppCard>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
         <ShieldIcon color="primary" />
-        <Typography variant="h6" fontWeight={700}>Guardian Setup</Typography>
+        <Typography variant="h6" fontWeight={700}>
+          Guardian Setup
+        </Typography>
       </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Guardians are trusted Stellar addresses that can co-sign account recovery.
-        Set a threshold of how many must approve before recovery is executed.
+        Guardians are trusted Stellar addresses that can co-sign account recovery. Set a threshold
+        of how many must approve before recovery is executed.
       </Typography>
 
       {isLoading && <LinearProgress sx={{ mb: 2 }} />}
@@ -149,10 +147,15 @@ function GuardianSetupPanel({ ownerAddress }: { ownerAddress: string }) {
           label="Guardian address"
           placeholder="GABC…"
           value={newAddress}
-          onChange={(e) => { setNewAddress(e.target.value); setInputError(null); }}
+          onChange={(e) => {
+            setNewAddress(e.target.value);
+            setInputError(null);
+          }}
           error={Boolean(inputError)}
           helperText={inputError ?? ' '}
-          onKeyDown={(e) => { if (e.key === 'Enter') addGuardian(); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') addGuardian();
+          }}
         />
         <Box sx={{ pt: 0.25 }}>
           <Button variant="outline" onClick={addGuardian} disabled={!newAddress.trim()}>
@@ -189,7 +192,11 @@ function GuardianSetupPanel({ ownerAddress }: { ownerAddress: string }) {
                 {shortenAddress(addr)}
               </Typography>
             </Tooltip>
-            <IconButton size="small" onClick={() => removeGuardian(addr)} aria-label="Remove guardian">
+            <IconButton
+              size="small"
+              onClick={() => removeGuardian(addr)}
+              aria-label="Remove guardian"
+            >
               <DeleteIcon fontSize="small" color="error" />
             </IconButton>
           </Box>
@@ -223,7 +230,11 @@ function GuardianSetupPanel({ ownerAddress }: { ownerAddress: string }) {
         </Box>
       )}
 
-      {saveSuccess && <Alert severity="success" sx={{ mb: 2 }}>Guardians saved successfully.</Alert>}
+      {saveSuccess && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          Guardians saved successfully.
+        </Alert>
+      )}
       {saveMutation.isError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {(saveMutation.error as Error).message}
@@ -267,7 +278,8 @@ function RecoveryRequestCard({ request }: { request: RecoveryRequest }) {
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Typography variant="body2" fontWeight={600}>
-          Recovery to <code style={{ fontSize: '0.8em' }}>{shortenAddress(request.newOwnerAddress)}</code>
+          Recovery to{' '}
+          <code style={{ fontSize: '0.8em' }}>{shortenAddress(request.newOwnerAddress)}</code>
         </Typography>
         <Chip
           label={isExpired && request.status === 'pending' ? 'expired' : request.status}
@@ -333,7 +345,7 @@ function GuardianApprovalsPanel({ guardianAddress }: { guardianAddress: string }
   });
 
   const pendingRequests = requests.filter(
-    (r) => r.status === 'pending' && Date.now() < r.expiresAt,
+    (r) => r.status === 'pending' && Date.now() < r.expiresAt
   );
 
   async function handleApprove(request: RecoveryRequest) {
@@ -355,21 +367,31 @@ function GuardianApprovalsPanel({ guardianAddress }: { guardianAddress: string }
     <AppCard>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
         <HowToRegIcon color="primary" />
-        <Typography variant="h6" fontWeight={700}>Incoming Recovery Requests</Typography>
+        <Typography variant="h6" fontWeight={700}>
+          Incoming Recovery Requests
+        </Typography>
         {pendingRequests.length > 0 && (
           <Chip label={pendingRequests.length} size="small" color="warning" sx={{ ml: 'auto' }} />
         )}
       </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        These recovery requests need your approval as a guardian.
-        Review each one carefully before approving.
+        These recovery requests need your approval as a guardian. Review each one carefully before
+        approving.
       </Typography>
 
       {isLoading && <LinearProgress />}
-      {approveError && <Alert severity="error" sx={{ mb: 2 }}>{approveError}</Alert>}
+      {approveError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {approveError}
+        </Alert>
+      )}
 
       {!isLoading && pendingRequests.length === 0 && (
-        <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center', fontStyle: 'italic' }}>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ py: 2, textAlign: 'center', fontStyle: 'italic' }}
+        >
           No pending recovery requests for your address.
         </Typography>
       )}
@@ -409,7 +431,11 @@ export default function RecoverySetupPage() {
 
   if (status !== 'connected' || !activeAddress) {
     return (
-      <AppLayout title="Social Recovery" subtitle="Configure guardians and approve recovery requests" footerText="Stellar Save">
+      <AppLayout
+        title="Social Recovery"
+        subtitle="Configure guardians and approve recovery requests"
+        footerText="Stellar Save"
+      >
         <Alert severity="info">Connect your wallet to manage social recovery settings.</Alert>
       </AppLayout>
     );
@@ -423,8 +449,8 @@ export default function RecoverySetupPage() {
     >
       <Stack spacing={3}>
         <Alert severity="info" icon={<ShieldIcon />}>
-          Social recovery lets trusted guardians restore access to your account if you lose
-          your private key. Guardians never control your funds — they only co-sign recovery.
+          Social recovery lets trusted guardians restore access to your account if you lose your
+          private key. Guardians never control your funds — they only co-sign recovery.
         </Alert>
 
         <GuardianSetupPanel ownerAddress={activeAddress} />

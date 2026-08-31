@@ -10,7 +10,10 @@ import type { WalletContextValue } from '../wallet/types';
 // Suppress navigate-after-unmount warnings in tests
 vi.mock('../routing/constants', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../routing/constants')>();
-  return { ...actual, buildRoute: { ...actual.buildRoute, groupDetail: (id: string) => `/groups/${id}` } };
+  return {
+    ...actual,
+    buildRoute: { ...actual.buildRoute, groupDetail: (id: string) => `/groups/${id}` },
+  };
 });
 
 const connectedWallet: WalletContextValue = {
@@ -74,14 +77,13 @@ describe('JoinViaInvite', () => {
     renderPage('?groupId=group-42');
     fireEvent.click(screen.getByRole('button', { name: /join group/i }));
 
-    await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent(/joined successfully/i),
+    await waitFor(
+      () => expect(screen.getByRole('alert')).toHaveTextContent(/joined successfully/i),
       { timeout: 3000 }
     );
 
-    await waitFor(() =>
-      expect(screen.getByText('Group Detail')).toBeInTheDocument(),
-      { timeout: 3000 }
-    );
+    await waitFor(() => expect(screen.getByText('Group Detail')).toBeInTheDocument(), {
+      timeout: 3000,
+    });
   });
 });

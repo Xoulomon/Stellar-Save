@@ -69,7 +69,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <div>Hello</div>
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
     expect(screen.getByText('Hello')).toBeInTheDocument();
   });
@@ -78,10 +78,12 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <Bomb shouldThrow={true} />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
-    expect(screen.getByText('An unexpected error occurred while loading this page.')).toBeInTheDocument();
+    expect(
+      screen.getByText('An unexpected error occurred while loading this page.')
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /go home/i })).toBeInTheDocument();
   });
@@ -90,7 +92,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary fallback={<div>Custom error UI</div>}>
         <Bomb shouldThrow={true} />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
     expect(screen.getByText('Custom error UI')).toBeInTheDocument();
   });
@@ -100,11 +102,11 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary onError={onError}>
         <Bomb shouldThrow={true} />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
     expect(onError).toHaveBeenCalledWith(
       expect.any(Error),
-      expect.objectContaining({ componentStack: expect.any(String) }),
+      expect.objectContaining({ componentStack: expect.any(String) })
     );
   });
 
@@ -112,18 +114,24 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <NetworkBomb shouldThrow={true} />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
-    expect(screen.getByText('A network error occurred. Please check your internet connection and try again.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'A network error occurred. Please check your internet connection and try again.'
+      )
+    ).toBeInTheDocument();
   });
 
   it('displays specific error message for unauthorized errors', () => {
     render(
       <ErrorBoundary>
         <AuthBomb shouldThrow={true} />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
-    expect(screen.getByText('You are not authorized to access this resource. Please log in again.')).toBeInTheDocument();
+    expect(
+      screen.getByText('You are not authorized to access this resource. Please log in again.')
+    ).toBeInTheDocument();
   });
 
   it('resets error state when Retry is clicked', () => {
@@ -137,7 +145,7 @@ describe('ErrorBoundary', () => {
     const { rerender } = render(
       <ErrorBoundary>
         <ControlledBomb />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
 
@@ -147,7 +155,7 @@ describe('ErrorBoundary', () => {
     rerender(
       <ErrorBoundary>
         <ControlledBomb />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
     expect(screen.getByText('Safe content')).toBeInTheDocument();
   });
@@ -157,7 +165,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <Bomb shouldThrow={true} />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     fireEvent.click(screen.getByRole('button', { name: /go home/i }));
@@ -169,7 +177,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <Bomb shouldThrow={true} />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     fireEvent.click(screen.getByRole('button', { name: /go home/i }));
@@ -188,7 +196,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <ControlledBomb />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     // First retry - still throws
@@ -212,7 +220,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <Bomb shouldThrow={true} />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     expect(screen.getByText('Development Details')).toBeInTheDocument();
@@ -228,7 +236,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <Bomb shouldThrow={true} />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     expect(screen.queryByText('Development Details')).not.toBeInTheDocument();
@@ -248,7 +256,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary enableErrorReporting={true}>
         <Bomb shouldThrow={true} />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     await waitFor(() => {

@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import {
-  buildGroupContributionsCSV,
-  buildGroupReportPDFHtml,
-} from '../hooks/useGroupReportExport';
+import { buildGroupContributionsCSV, buildGroupReportPDFHtml } from '../hooks/useGroupReportExport';
 
 import type { DetailedGroup } from '../utils/groupApi';
 
@@ -22,18 +19,69 @@ const mockGroup: DetailedGroup = {
   contributionFrequency: 'monthly',
   cycleDuration: 30,
   members: [
-    { id: 'm1', address: 'GAAA1111', name: 'Alice', joinedAt: new Date('2026-01-01'), totalContributions: 200, isActive: true },
-    { id: 'm2', address: 'GBBB2222', name: 'Bob', joinedAt: new Date('2026-01-02'), totalContributions: 100, isActive: true },
+    {
+      id: 'm1',
+      address: 'GAAA1111',
+      name: 'Alice',
+      joinedAt: new Date('2026-01-01'),
+      totalContributions: 200,
+      isActive: true,
+    },
+    {
+      id: 'm2',
+      address: 'GBBB2222',
+      name: 'Bob',
+      joinedAt: new Date('2026-01-02'),
+      totalContributions: 100,
+      isActive: true,
+    },
   ],
   contributions: [
-    { id: 'c1', memberId: 'm1', memberName: 'Alice', amount: 100, timestamp: new Date('2026-01-15'), transactionHash: 'tx_abc', status: 'completed' },
-    { id: 'c2', memberId: 'm2', memberName: 'Bob', amount: 100, timestamp: new Date('2026-01-16'), transactionHash: 'tx_def', status: 'pending' },
+    {
+      id: 'c1',
+      memberId: 'm1',
+      memberName: 'Alice',
+      amount: 100,
+      timestamp: new Date('2026-01-15'),
+      transactionHash: 'tx_abc',
+      status: 'completed',
+    },
+    {
+      id: 'c2',
+      memberId: 'm2',
+      memberName: 'Bob',
+      amount: 100,
+      timestamp: new Date('2026-01-16'),
+      transactionHash: 'tx_def',
+      status: 'pending',
+    },
   ],
   cycles: [
-    { cycleNumber: 1, startDate: new Date('2026-01-01'), endDate: new Date('2026-01-31'), targetAmount: 200, currentAmount: 200, status: 'completed' },
-    { cycleNumber: 2, startDate: new Date('2026-02-01'), endDate: new Date('2026-02-28'), targetAmount: 200, currentAmount: 0, status: 'active' },
+    {
+      cycleNumber: 1,
+      startDate: new Date('2026-01-01'),
+      endDate: new Date('2026-01-31'),
+      targetAmount: 200,
+      currentAmount: 200,
+      status: 'completed',
+    },
+    {
+      cycleNumber: 2,
+      startDate: new Date('2026-02-01'),
+      endDate: new Date('2026-02-28'),
+      targetAmount: 200,
+      currentAmount: 0,
+      status: 'active',
+    },
   ],
-  currentCycle: { cycleNumber: 2, startDate: new Date('2026-02-01'), endDate: new Date('2026-02-28'), targetAmount: 200, currentAmount: 0, status: 'active' },
+  currentCycle: {
+    cycleNumber: 2,
+    startDate: new Date('2026-02-01'),
+    endDate: new Date('2026-02-28'),
+    targetAmount: 200,
+    currentAmount: 0,
+    status: 'active',
+  },
 };
 
 describe('buildGroupContributionsCSV', () => {

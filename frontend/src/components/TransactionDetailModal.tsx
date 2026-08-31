@@ -1,5 +1,13 @@
 import CloseIcon from '@mui/icons-material/Close';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, Box, IconButton } from '@mui/material';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Typography,
+  Box,
+  IconButton,
+} from '@mui/material';
 import React from 'react';
 
 import { Badge } from './Badge';
@@ -13,16 +21,14 @@ interface Props {
   onClose: () => void;
 }
 
-const TransactionDetailModal: React.FC<Props> = ({
-  transaction,
-  isOpen,
-  onClose,
-}) => {
+const TransactionDetailModal: React.FC<Props> = ({ transaction, isOpen, onClose }) => {
   if (!isOpen || !transaction) return null;
 
   return (
     <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 2 }}>
+      <DialogTitle
+        sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 2 }}
+      >
         <Typography variant="h6" component="h2" fontWeight="bold">
           Transaction Details
         </Typography>
@@ -34,13 +40,20 @@ const TransactionDetailModal: React.FC<Props> = ({
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
             <Box>
-              <Typography variant="body2" color="text.secondary">Hash</Typography>
-              <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-all', mt: 0.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                Hash
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ fontFamily: 'monospace', wordBreak: 'break-all', mt: 0.5 }}
+              >
                 {transaction.hash}
               </Typography>
             </Box>
             <Box>
-              <Typography variant="body2" color="text.secondary">Date</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Date
+              </Typography>
               <Typography variant="body2" sx={{ mt: 0.5 }}>
                 {new Date(transaction.createdAt).toLocaleString()}
               </Typography>
@@ -49,8 +62,14 @@ const TransactionDetailModal: React.FC<Props> = ({
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
-              <Typography variant="body2" color="text.secondary">Amount</Typography>
-              <Typography variant="h5" fontWeight="bold" sx={{ color: parseFloat(transaction.amount) > 0 ? 'success.main' : 'error.main' }}>
+              <Typography variant="body2" color="text.secondary">
+                Amount
+              </Typography>
+              <Typography
+                variant="h5"
+                fontWeight="bold"
+                sx={{ color: parseFloat(transaction.amount) > 0 ? 'success.main' : 'error.main' }}
+              >
                 {transaction.amount} {transaction.assetCode}
               </Typography>
             </Box>
@@ -61,14 +80,18 @@ const TransactionDetailModal: React.FC<Props> = ({
 
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
             <Box>
-              <Typography variant="body2" color="text.secondary">From</Typography>
+              <Typography variant="body2" color="text.secondary">
+                From
+              </Typography>
               <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
                 {transaction.from}
               </Typography>
             </Box>
             {transaction.to && (
               <Box>
-                <Typography variant="body2" color="text.secondary">To</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  To
+                </Typography>
                 <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
                   {transaction.to}
                 </Typography>
@@ -78,7 +101,9 @@ const TransactionDetailModal: React.FC<Props> = ({
 
           {transaction.memo && (
             <Box>
-              <Typography variant="body2" color="text.secondary">Memo</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Memo
+              </Typography>
               <Box sx={{ bgcolor: 'action.hover', p: 1.5, borderRadius: 1, mt: 0.5 }}>
                 <Typography variant="body2">{transaction.memo}</Typography>
               </Box>
@@ -93,10 +118,7 @@ const TransactionDetailModal: React.FC<Props> = ({
         <Button
           variant="primary"
           onClick={() =>
-            window.open(
-              `https://stellar.expert/explorer/testnet/tx/${transaction.hash}`,
-              '_blank'
-            )
+            window.open(`https://stellar.expert/explorer/testnet/tx/${transaction.hash}`, '_blank')
           }
           style={{ flex: 1 }}
         >

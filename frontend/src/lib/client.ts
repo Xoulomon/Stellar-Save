@@ -188,7 +188,7 @@ export class StellarSaveClient {
   listGroups(
     cursor: bigint,
     limit: number,
-    statusFilter?: string,
+    statusFilter?: string
   ): Promise<Record<string, unknown>[]> {
     return _listGroups(cursor, limit, statusFilter);
   }

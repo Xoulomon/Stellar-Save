@@ -36,12 +36,7 @@ export function LoadingState({
     .join(' ');
 
   return (
-    <div
-      className={rootClass}
-      role="status"
-      aria-live="polite"
-      aria-label={message}
-    >
+    <div className={rootClass} role="status" aria-live="polite" aria-label={message}>
       <span className="loading-state__spinner" aria-hidden="true" />
       <p className="loading-state__message">{message}</p>
     </div>

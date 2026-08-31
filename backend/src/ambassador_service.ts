@@ -20,10 +20,11 @@ export function evaluateAmbassadorStatus(
   address: string,
   reputationScore: number,
   contributions: number,
-  referrals: number,
+  referrals: number
 ): AmbassadorTier | null {
   if (reputationScore >= 0.95 && contributions >= 30 && referrals >= 10) return AmbassadorTier.Gold;
-  if (reputationScore >= 0.85 && contributions >= 15 && referrals >= 3) return AmbassadorTier.Silver;
+  if (reputationScore >= 0.85 && contributions >= 15 && referrals >= 3)
+    return AmbassadorTier.Silver;
   if (reputationScore >= 0.7 && contributions >= 5) return AmbassadorTier.Bronze;
   return null;
 }
@@ -47,7 +48,7 @@ export function saveAmbassadorProfile(
   tier: AmbassadorTier,
   reputationScore: number,
   contributionCount: number,
-  referrals: number,
+  referrals: number
 ): AmbassadorProfile {
   const existing = store.get(address);
   const profile: AmbassadorProfile = {

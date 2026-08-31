@@ -72,17 +72,21 @@ export class TransactionDecoderService {
         sequenceNumber: tx.sequence,
         operations,
         memo: tx.memo?.value?.toString(),
-        timeBounds: tx.timeBounds ? {
-          minTime: new Date(parseInt(tx.timeBounds.minTime) * 1000).toISOString(),
-          maxTime: new Date(parseInt(tx.timeBounds.maxTime) * 1000).toISOString(),
-        } : undefined,
+        timeBounds: tx.timeBounds
+          ? {
+              minTime: new Date(parseInt(tx.timeBounds.minTime) * 1000).toISOString(),
+              maxTime: new Date(parseInt(tx.timeBounds.maxTime) * 1000).toISOString(),
+            }
+          : undefined,
         overallRiskLevel,
         warnings,
         educationalPrompts,
       };
     } catch (error) {
       logger.error('Failed to decode transaction', { error, transactionXdr });
-      throw new Error(`Transaction decoding failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Transaction decoding failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -219,7 +223,9 @@ export class TransactionDecoderService {
 
       // Validate network
       if (decoded.networkPassphrase !== this.getNetworkPassphrase()) {
-        errors.push(`Network mismatch: expected ${this.getNetworkPassphrase()}, got ${decoded.networkPassphrase}`);
+        errors.push(
+          `Network mismatch: expected ${this.getNetworkPassphrase()}, got ${decoded.networkPassphrase}`
+        );
       }
 
       // Check time bounds
@@ -248,7 +254,9 @@ export class TransactionDecoderService {
         riskFactors,
       };
     } catch (error) {
-      errors.push(`Transaction validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      errors.push(
+        `Transaction validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
       return {
         isValid: false,
         errors,
@@ -270,8 +278,10 @@ export class TransactionDecoderService {
     }
 
     // Check if origin is localhost (for development)
-    if (config.nodeEnv === 'development' &&
-        (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+    if (
+      config.nodeEnv === 'development' &&
+      (origin.includes('localhost') || origin.includes('127.0.0.1'))
+    ) {
       return { valid: true };
     }
 
@@ -291,31 +301,31 @@ export class TransactionDecoderService {
       prompts.push(
         '🛡️ HIGH RISK: Please carefully review all transaction details before signing.',
         '🔍 Verify the recipient address matches your intended destination.',
-        '💡 Never sign transactions from untrusted websites or applications.',
+        '💡 Never sign transactions from untrusted websites or applications.'
       );
     }
 
-    if (operations.some(op => op.type === 'setOptions')) {
+    if (operations.some((op) => op.type === 'setOptions')) {
       prompts.push(
         '⚙️ This transaction modifies your account security settings.',
         '🔑 Changing signers or thresholds can affect how your account is controlled.',
-        '⚠️ Only proceed if you initiated this change.',
+        '⚠️ Only proceed if you initiated this change.'
       );
     }
 
-    if (operations.some(op => op.type === 'invokeHostFunction')) {
+    if (operations.some((op) => op.type === 'invokeHostFunction')) {
       prompts.push(
         '📜 This transaction executes a smart contract function.',
         '🔍 Verify the contract address is from a trusted source.',
-        '💡 Malicious contracts can drain your funds or compromise your account.',
+        '💡 Malicious contracts can drain your funds or compromise your account.'
       );
     }
 
-    if (operations.some(op => op.type === 'changeTrust')) {
+    if (operations.some((op) => op.type === 'changeTrust')) {
       prompts.push(
         '🤝 This transaction modifies your asset trustlines.',
         '⚠️ Only trust assets from verified issuers.',
-        '💡 Fraudulent assets can be used in phishing attacks.',
+        '💡 Fraudulent assets can be used in phishing attacks.'
       );
     }
 
@@ -324,7 +334,7 @@ export class TransactionDecoderService {
       prompts.push(
         '✅ Always verify transaction details before signing.',
         '🔍 Check the recipient address and amounts carefully.',
-        '🛡️ Only sign transactions you initiated.',
+        '🛡️ Only sign transactions you initiated.'
       );
     }
 
@@ -332,8 +342,8 @@ export class TransactionDecoderService {
   }
 
   private calculateOverallRisk(operations: DecodedOperation[]): 'low' | 'medium' | 'high' {
-    const hasHigh = operations.some(op => op.riskLevel === 'high');
-    const hasMedium = operations.some(op => op.riskLevel === 'medium');
+    const hasHigh = operations.some((op) => op.riskLevel === 'high');
+    const hasMedium = operations.some((op) => op.riskLevel === 'medium');
 
     if (hasHigh) return 'high';
     if (hasMedium) return 'medium';
@@ -350,7 +360,8 @@ export class TransactionDecoderService {
 
     // Check fee
     const feeNum = parseInt(tx.fee);
-    if (feeNum > 100000) { // 0.01 XLM
+    if (feeNum > 100000) {
+      // 0.01 XLM
       warnings.push(`⚠️ Unusually high fee: ${this.stroopsToXlm(tx.fee)} XLM`);
     }
 
@@ -382,7 +393,10 @@ export class TransactionDecoderService {
 
   private getAllowedOrigins(): string[] {
     const corsOrigins = process.env.CORS_ALLOWED_ORIGINS || '';
-    return corsOrigins.split(',').map(o => o.trim()).filter(Boolean);
+    return corsOrigins
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean);
   }
 }
 

@@ -26,7 +26,14 @@ export function createWebhookRouter(): Router {
 
     try {
       const webhook = await (prisma as any).webhook.create({
-        data: { userId, groupId: groupId || null, url, events, secret: webhookSecret, description: description || null },
+        data: {
+          userId,
+          groupId: groupId || null,
+          url,
+          events,
+          secret: webhookSecret,
+          description: description || null,
+        },
       });
       return res.status(201).json({ ...webhook, secret: webhookSecret });
     } catch (err) {
@@ -76,7 +83,11 @@ export function createWebhookRouter(): Router {
 
     const updateData: any = {};
     if (url !== undefined) {
-      try { new URL(url); } catch { return next(new AppError('INVALID_URL', 'Invalid URL', 400)); }
+      try {
+        new URL(url);
+      } catch {
+        return next(new AppError('INVALID_URL', 'Invalid URL', 400));
+      }
       updateData.url = url;
     }
     if (events !== undefined) updateData.events = events;
@@ -102,7 +113,9 @@ export function createWebhookRouter(): Router {
     if (!userId) return next(new AppError('MISSING_FIELDS', 'userId query param is required', 400));
 
     try {
-      const existing = await (prisma as any).webhook.findFirst({ where: { id, userId: userId as string } });
+      const existing = await (prisma as any).webhook.findFirst({
+        where: { id, userId: userId as string },
+      });
       if (!existing) return next(new AppError('WEBHOOK_NOT_FOUND', 'Webhook not found', 404));
 
       await (prisma as any).webhook.delete({ where: { id } });

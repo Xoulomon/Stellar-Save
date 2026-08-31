@@ -10,9 +10,18 @@ describe('ImageStorageService Unit Tests', () => {
   const validJpegBuffer = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
   const validPngBuffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   const validWebpBuffer = Buffer.from([
-    0x52, 0x49, 0x46, 0x46, // RIFF
-    0x24, 0x00, 0x00, 0x00,
-    0x57, 0x45, 0x42, 0x50, // WEBP
+    0x52,
+    0x49,
+    0x46,
+    0x46, // RIFF
+    0x24,
+    0x00,
+    0x00,
+    0x00,
+    0x57,
+    0x45,
+    0x42,
+    0x50, // WEBP
   ]);
   const invalidBuffer = Buffer.from([0x00, 0x11, 0x22, 0x33]);
 
@@ -111,7 +120,9 @@ describe('ImageStorageService Unit Tests', () => {
       });
 
       expect(mockS3Client.send).toHaveBeenCalledTimes(1);
-      expect(result.url).toContain('https://test-bucket.s3.us-east-1.amazonaws.com/groups/group-123/');
+      expect(result.url).toContain(
+        'https://test-bucket.s3.us-east-1.amazonaws.com/groups/group-123/'
+      );
       expect(result.mimeType).toBe('image/png');
     });
 

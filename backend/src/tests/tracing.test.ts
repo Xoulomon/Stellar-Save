@@ -36,13 +36,7 @@
  * when no SDK has been registered.
  */
 
-import {
-  trace,
-  context,
-  SpanStatusCode,
-  type Span,
-  type Tracer,
-} from '@opentelemetry/api';
+import { trace, context, SpanStatusCode, type Span, type Tracer } from '@opentelemetry/api';
 
 // ── Module under test ──────────────────────────────────────────────────────
 
@@ -80,7 +74,7 @@ function captureSpan(span: Span): {
   const ctx = span.spanContext();
   return {
     traceId: ctx.traceId,
-    spanId:  ctx.spanId,
+    spanId: ctx.spanId,
     isRecording: span.isRecording(),
   };
 }
@@ -121,13 +115,17 @@ describe('withSpan() — span naming', () => {
 
   it('named span soroban.invoke <fn> is accepted without error', async () => {
     await expect(
-      withSpan('soroban.invoke contribute', { 'rpc.system': 'soroban', 'soroban.function': 'contribute' }, async () => undefined),
+      withSpan(
+        'soroban.invoke contribute',
+        { 'rpc.system': 'soroban', 'soroban.function': 'contribute' },
+        async () => undefined
+      )
     ).resolves.not.toThrow();
   });
 
   it('plain soroban.rpc span is accepted when no op name is given', async () => {
     await expect(
-      withSpan('soroban.rpc', { 'rpc.system': 'soroban' }, async () => undefined),
+      withSpan('soroban.rpc', { 'rpc.system': 'soroban' }, async () => undefined)
     ).resolves.not.toThrow();
   });
 });
@@ -142,15 +140,13 @@ describe('withSpan() — span attributes', () => {
       'group.id': '42',
     };
     await expect(
-      withSpan('soroban.invoke execute_payout', attrs, async () => undefined),
+      withSpan('soroban.invoke execute_payout', attrs, async () => undefined)
     ).resolves.not.toThrow();
   });
 
   it('numeric and boolean attribute values are accepted', async () => {
-    const attrs = { 'http.status_code': 200, 'db.rows_affected': 5, 'error': false };
-    await expect(
-      withSpan('db.insert_event', attrs, async () => undefined),
-    ).resolves.not.toThrow();
+    const attrs = { 'http.status_code': 200, 'db.rows_affected': 5, error: false };
+    await expect(withSpan('db.insert_event', attrs, async () => undefined)).resolves.not.toThrow();
   });
 });
 
@@ -165,13 +161,17 @@ describe('withSpan() — status handling', () => {
   it('re-throws the original error when work function throws', async () => {
     const boom = new Error('something went wrong');
     await expect(
-      withSpan('err.span', {}, async () => { throw boom; }),
+      withSpan('err.span', {}, async () => {
+        throw boom;
+      })
     ).rejects.toThrow('something went wrong');
   });
 
   it('re-throws a non-Error value as-is', async () => {
     await expect(
-      withSpan('throw-string', {}, async () => { throw 'oops'; }),
+      withSpan('throw-string', {}, async () => {
+        throw 'oops';
+      })
     ).rejects.toBe('oops');
   });
 });
@@ -184,16 +184,18 @@ describe('withSpan() — span lifecycle (no leaks)', () => {
     const tracer = getTracer();
     const spanSpy: Span = {
       ...tracer.startSpan('__dummy__'),
-      end: () => { endCalled = true; },
-      setAttribute:    () => spanSpy,
-      setAttributes:   () => spanSpy,
-      addEvent:        () => spanSpy,
-      addLink:         () => spanSpy,
-      setStatus:       () => spanSpy,
-      updateName:      () => spanSpy,
+      end: () => {
+        endCalled = true;
+      },
+      setAttribute: () => spanSpy,
+      setAttributes: () => spanSpy,
+      addEvent: () => spanSpy,
+      addLink: () => spanSpy,
+      setStatus: () => spanSpy,
+      updateName: () => spanSpy,
       recordException: () => undefined,
-      isRecording:     () => true,
-      spanContext:     () => tracer.startSpan('__dummy__').spanContext(),
+      isRecording: () => true,
+      spanContext: () => tracer.startSpan('__dummy__').spanContext(),
     };
 
     // Replace the active span with our spy via context propagation
@@ -288,7 +290,9 @@ describe('SorobanClientPool.withClient() — span name and RPC wrapping', () => 
     });
 
     try {
-      await pool.withClient(async () => { throw new Error('rpc failure'); }, 'contribute');
+      await pool.withClient(async () => {
+        throw new Error('rpc failure');
+      }, 'contribute');
     } catch {
       // expected
     }
@@ -308,10 +312,10 @@ describe('Async boundary continuity', () => {
   it('nested withSpan calls inherit the parent context (no context bleed)', async () => {
     const outcomes: string[] = [];
 
-    await withSpan('parent.span', { 'level': 'parent' }, async (parentSpan) => {
+    await withSpan('parent.span', { level: 'parent' }, async (parentSpan) => {
       outcomes.push('parent-started');
 
-      await withSpan('child.span', { 'level': 'child' }, async (_childSpan) => {
+      await withSpan('child.span', { level: 'child' }, async (_childSpan) => {
         outcomes.push('child-started');
 
         // Verify the parent span is still accessible in the enclosing scope
@@ -324,12 +328,7 @@ describe('Async boundary continuity', () => {
       outcomes.push('parent-done');
     });
 
-    expect(outcomes).toEqual([
-      'parent-started',
-      'child-started',
-      'child-done',
-      'parent-done',
-    ]);
+    expect(outcomes).toEqual(['parent-started', 'child-started', 'child-done', 'parent-done']);
   });
 
   it('async work awaited inside withSpan resolves correctly', async () => {
@@ -376,23 +375,27 @@ describe('startTracing() — disabled-path safety', () => {
 describe('Span naming conventions — documented in distributed-tracing.md', () => {
   const NAMED_SPANS: [string, Record<string, string | number | boolean>][] = [
     // Soroban contract calls
-    ['soroban.invoke contribute',        { 'rpc.system': 'soroban', 'soroban.function': 'contribute'      }],
-    ['soroban.invoke execute_payout',    { 'rpc.system': 'soroban', 'soroban.function': 'execute_payout'  }],
-    ['soroban.invoke create_group',      { 'rpc.system': 'soroban', 'soroban.function': 'create_group'    }],
-    ['soroban.invoke join_group',        { 'rpc.system': 'soroban', 'soroban.function': 'join_group'      }],
+    ['soroban.invoke contribute', { 'rpc.system': 'soroban', 'soroban.function': 'contribute' }],
+    [
+      'soroban.invoke execute_payout',
+      { 'rpc.system': 'soroban', 'soroban.function': 'execute_payout' },
+    ],
+    [
+      'soroban.invoke create_group',
+      { 'rpc.system': 'soroban', 'soroban.function': 'create_group' },
+    ],
+    ['soroban.invoke join_group', { 'rpc.system': 'soroban', 'soroban.function': 'join_group' }],
     // Generic RPC
-    ['soroban.rpc',                      { 'rpc.system': 'soroban'                                        }],
+    ['soroban.rpc', { 'rpc.system': 'soroban' }],
     // Indexer spans
-    ['indexer.poll',                     { 'service': 'indexer'                                           }],
-    ['indexer.process_event',            { 'service': 'indexer', 'event.type': 'payout_executed'          }],
-    ['indexer.db_write',                 { 'service': 'indexer', 'db.system': 'postgresql'                }],
+    ['indexer.poll', { service: 'indexer' }],
+    ['indexer.process_event', { service: 'indexer', 'event.type': 'payout_executed' }],
+    ['indexer.db_write', { service: 'indexer', 'db.system': 'postgresql' }],
   ];
 
   for (const [spanName, attrs] of NAMED_SPANS) {
     it(`span "${spanName}" with documented attributes is accepted`, async () => {
-      await expect(
-        withSpan(spanName, attrs, async () => undefined),
-      ).resolves.not.toThrow();
+      await expect(withSpan(spanName, attrs, async () => undefined)).resolves.not.toThrow();
     });
   }
 });

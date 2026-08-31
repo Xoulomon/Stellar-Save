@@ -45,7 +45,7 @@ describe('Admin Endpoints Authorization', () => {
       const req = {
         method: 'PATCH',
         path: '/admin/users/user_123',
-        body: { updates: { name: 'Updated' }, adminId: 'admin_001' }
+        body: { updates: { name: 'Updated' }, adminId: 'admin_001' },
       };
       expect(req.body.adminId).toBe('admin_001');
     });
@@ -54,7 +54,7 @@ describe('Admin Endpoints Authorization', () => {
       const req = {
         method: 'PATCH',
         path: '/admin/users/user_123',
-        body: { updates: { name: 'Updated' } } // Missing adminId
+        body: { updates: { name: 'Updated' } }, // Missing adminId
       };
       expect(req.body.adminId).toBeUndefined();
     });
@@ -63,7 +63,7 @@ describe('Admin Endpoints Authorization', () => {
       const req = {
         method: 'DELETE',
         path: '/admin/users/user_123',
-        body: { adminId: 'admin_001' }
+        body: { adminId: 'admin_001' },
       };
       expect(req.body.adminId).toBe('admin_001');
     });
@@ -72,7 +72,7 @@ describe('Admin Endpoints Authorization', () => {
       const req = {
         method: 'DELETE',
         path: '/admin/users/user_123',
-        body: {} // Missing adminId
+        body: {}, // Missing adminId
       };
       expect(req.body.adminId).toBeUndefined();
     });
@@ -88,7 +88,7 @@ describe('Admin Endpoints Authorization', () => {
       const req = {
         method: 'POST',
         path: '/admin/groups/group_123/flag',
-        body: { flagged: true, adminId: 'admin_001' }
+        body: { flagged: true, adminId: 'admin_001' },
       };
       expect(typeof req.body.flagged).toBe('boolean');
       expect(req.body.adminId).toBe('admin_001');
@@ -98,7 +98,7 @@ describe('Admin Endpoints Authorization', () => {
       const req = {
         method: 'POST',
         path: '/admin/groups/group_123/flag',
-        body: { flagged: 'true', adminId: 'admin_001' } // String instead of boolean
+        body: { flagged: 'true', adminId: 'admin_001' }, // String instead of boolean
       };
       expect(typeof req.body.flagged).not.toBe('boolean');
     });
@@ -107,7 +107,7 @@ describe('Admin Endpoints Authorization', () => {
       const req = {
         method: 'POST',
         path: '/admin/groups/group_123/flag',
-        body: { flagged: true } // Missing adminId
+        body: { flagged: true }, // Missing adminId
       };
       expect(req.body.adminId).toBeUndefined();
     });
@@ -133,7 +133,7 @@ describe('Admin Endpoints Authorization', () => {
         targetType: 'Member',
         adminId: 'admin_001',
         timestamp: Date.now(),
-        metadata: { changes: { name: 'New Name' } }
+        metadata: { changes: { name: 'New Name' } },
       };
       expect(action.type).toBe('UPDATE_USER');
       expect(action.adminId).toBe('admin_001');
@@ -145,7 +145,7 @@ describe('Admin Endpoints Authorization', () => {
         targetId: 'user_123',
         targetType: 'Member',
         adminId: 'admin_001',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
       expect(action.type).toBe('DELETE_USER');
       expect(action.adminId).toBe('admin_001');
@@ -158,7 +158,7 @@ describe('Admin Endpoints Authorization', () => {
         targetType: 'Group',
         adminId: 'admin_001',
         timestamp: Date.now(),
-        metadata: { flagged: true }
+        metadata: { flagged: true },
       };
       expect(action.type).toBe('FLAG_GROUP');
       expect(action.adminId).toBe('admin_001');
@@ -174,7 +174,7 @@ describe('Admin Endpoints Authorization', () => {
         '/admin/users/:id',
         '/admin/groups',
         '/admin/groups/:id/flag',
-        '/admin/audit-logs'
+        '/admin/audit-logs',
       ];
 
       for (const endpoint of adminEndpoints) {
@@ -187,8 +187,8 @@ describe('Admin Endpoints Authorization', () => {
       // Mock response object
       const res = {
         status: (code: number) => ({
-          json: (data: any) => ({ statusCode: code, body: data })
-        })
+          json: (data: any) => ({ statusCode: code, body: data }),
+        }),
       };
 
       // Without auth header

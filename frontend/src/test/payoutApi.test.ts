@@ -48,7 +48,6 @@ import {
   getNextRecipient,
 } from '../utils/payoutApi';
 
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const mockGetPayoutSchedule = contractClient.getPayoutSchedule as ReturnType<typeof vi.fn>;
@@ -74,10 +73,7 @@ describe('getNextRecipient', () => {
   });
 
   it('returns null when all members have been paid', async () => {
-    mockGetPayoutSchedule.mockResolvedValue([
-      makeEntry('ADDR1'),
-      makeEntry('ADDR2'),
-    ]);
+    mockGetPayoutSchedule.mockResolvedValue([makeEntry('ADDR1'), makeEntry('ADDR2')]);
     mockHasReceivedPayout.mockResolvedValue(true);
     expect(await getNextRecipient('1')).toBeNull();
   });
@@ -96,12 +92,8 @@ describe('getNextRecipient', () => {
   });
 
   it('stops iterating after finding the first unpaid entry', async () => {
-    mockGetPayoutSchedule.mockResolvedValue([
-      makeEntry('ADDR1'),
-      makeEntry('ADDR2'),
-    ]);
-    mockHasReceivedPayout
-      .mockResolvedValueOnce(false);
+    mockGetPayoutSchedule.mockResolvedValue([makeEntry('ADDR1'), makeEntry('ADDR2')]);
+    mockHasReceivedPayout.mockResolvedValueOnce(false);
     await getNextRecipient('1');
     expect(mockHasReceivedPayout).toHaveBeenCalledTimes(1);
   });
@@ -113,17 +105,23 @@ describe('getNextRecipient', () => {
         fc.integer({ min: 0, max: 8 }).chain((len) =>
           fc.tuple(
             fc.array(
-              fc.record({ recipient: fc.string({ minLength: 1 }), cycle: fc.integer({ min: 0 }), payout_date: fc.bigInt({ min: 0n, max: 9999999999n }) }),
-              { minLength: len, maxLength: len },
+              fc.record({
+                recipient: fc.string({ minLength: 1 }),
+                cycle: fc.integer({ min: 0 }),
+                payout_date: fc.bigInt({ min: 0n, max: 9999999999n }),
+              }),
+              { minLength: len, maxLength: len }
             ),
-            fc.array(fc.boolean(), { minLength: len, maxLength: len }),
-          ),
+            fc.array(fc.boolean(), { minLength: len, maxLength: len })
+          )
         ),
         async ([schedule, flags]) => {
           vi.clearAllMocks();
           mockGetPayoutSchedule.mockResolvedValue(schedule);
           let callIdx = 0;
-          mockHasReceivedPayout.mockImplementation(() => Promise.resolve(flags[callIdx++] ?? false));
+          mockHasReceivedPayout.mockImplementation(() =>
+            Promise.resolve(flags[callIdx++] ?? false)
+          );
 
           const result = await getNextRecipient('1');
           const firstUnpaidIdx = flags.findIndex((f) => !f);
@@ -133,9 +131,9 @@ describe('getNextRecipient', () => {
           } else {
             expect(result).toBe(schedule[firstUnpaidIdx].recipient);
           }
-        },
+        }
       ),
-      { numRuns: 100 },
+      { numRuns: 100 }
     );
   });
 });
@@ -200,7 +198,7 @@ describe('getPayoutHistory', () => {
     const paidMap: Record<string, boolean> = { ADDR1: true, ADDR2: false };
     mockGetPayoutSchedule.mockResolvedValue(schedule);
     mockHasReceivedPayout.mockImplementation((_gid: bigint, addr: string) =>
-      Promise.resolve(paidMap[addr] ?? false),
+      Promise.resolve(paidMap[addr] ?? false)
     );
     const result = await getPayoutHistory('1');
     expect(result).toHaveLength(1);
@@ -216,17 +214,23 @@ describe('getPayoutHistory', () => {
         fc.integer({ min: 0, max: 8 }).chain((len) =>
           fc.tuple(
             fc.array(
-              fc.record({ recipient: fc.string({ minLength: 1 }), cycle: fc.integer({ min: 0 }), payout_date: fc.bigInt({ min: 0n, max: 9999999999n }) }),
-              { minLength: len, maxLength: len },
+              fc.record({
+                recipient: fc.string({ minLength: 1 }),
+                cycle: fc.integer({ min: 0 }),
+                payout_date: fc.bigInt({ min: 0n, max: 9999999999n }),
+              }),
+              { minLength: len, maxLength: len }
             ),
-            fc.array(fc.boolean(), { minLength: len, maxLength: len }),
-          ),
+            fc.array(fc.boolean(), { minLength: len, maxLength: len })
+          )
         ),
         async ([schedule, flags]) => {
           vi.clearAllMocks();
           mockGetPayoutSchedule.mockResolvedValue(schedule);
           let callIdx = 0;
-          mockHasReceivedPayout.mockImplementation(() => Promise.resolve(flags[callIdx++] ?? false));
+          mockHasReceivedPayout.mockImplementation(() =>
+            Promise.resolve(flags[callIdx++] ?? false)
+          );
 
           const result = await getPayoutHistory('1');
           const expectedCount = flags.filter(Boolean).length;
@@ -236,23 +240,20 @@ describe('getPayoutHistory', () => {
             expect(entry.status).toBe('completed');
             expect(entry.paidAt).toBeInstanceOf(Date);
           });
-        },
+        }
       ),
-      { numRuns: 100 },
+      { numRuns: 100 }
     );
   });
 
   // Property 8: timestamp conversion round-trip
   it('[Property 8] timestamp conversion round-trip', () => {
     fc.assert(
-      fc.property(
-        fc.bigInt({ min: 0n, max: 9999999999n }),
-        (ts) => {
-          const date = new Date(Number(ts * 1000n));
-          expect(date.getTime()).toBe(Number(ts) * 1000);
-        },
-      ),
-      { numRuns: 100 },
+      fc.property(fc.bigInt({ min: 0n, max: 9999999999n }), (ts) => {
+        const date = new Date(Number(ts * 1000n));
+        expect(date.getTime()).toBe(Number(ts) * 1000);
+      }),
+      { numRuns: 100 }
     );
   });
 });
@@ -275,7 +276,7 @@ describe('getPayoutQueue', () => {
     mockGetMemberCount.mockResolvedValue(3);
     mockGetGroupBalance.mockResolvedValue(30_000_000n);
     mockHasReceivedPayout.mockImplementation((_gid: bigint, addr: string) =>
-      Promise.resolve(paidMap[addr] ?? false),
+      Promise.resolve(paidMap[addr] ?? false)
     );
 
     const result = await getPayoutQueue('1');
@@ -302,16 +303,18 @@ describe('getPayoutQueue', () => {
         async (paidFlags) => {
           vi.clearAllMocks();
           const schedule = paidFlags.map((_, i) =>
-            makeEntry(`ADDR${i}`, i, BigInt(1700000000 + i * 86400)),
+            makeEntry(`ADDR${i}`, i, BigInt(1700000000 + i * 86400))
           );
           mockGetPayoutSchedule.mockResolvedValue(schedule);
           mockGetMemberCount.mockResolvedValue(schedule.length);
           mockGetGroupBalance.mockResolvedValue(BigInt(schedule.length) * 10_000_000n);
           // Use address-based lookup since Promise.all resolves in parallel
           const paidByAddr: Record<string, boolean> = {};
-          schedule.forEach((e, i) => { paidByAddr[e.recipient] = paidFlags[i]; });
+          schedule.forEach((e, i) => {
+            paidByAddr[e.recipient] = paidFlags[i];
+          });
           mockHasReceivedPayout.mockImplementation((_gid: bigint, addr: string) =>
-            Promise.resolve(paidByAddr[addr] ?? false),
+            Promise.resolve(paidByAddr[addr] ?? false)
           );
 
           const result = await getPayoutQueue('1');
@@ -330,9 +333,9 @@ describe('getPayoutQueue', () => {
               else if (i > firstUnpaidIdx) expect(statuses[i]).toBe('upcoming');
             });
           }
-        },
+        }
       ),
-      { numRuns: 100 },
+      { numRuns: 100 }
     );
   });
 
@@ -345,7 +348,7 @@ describe('getPayoutQueue', () => {
         async (balance, memberCount) => {
           vi.clearAllMocks();
           const schedule = Array.from({ length: memberCount }, (_, i) =>
-            makeEntry(`ADDR${i}`, i, BigInt(1700000000 + i * 86400)),
+            makeEntry(`ADDR${i}`, i, BigInt(1700000000 + i * 86400))
           );
           mockGetPayoutSchedule.mockResolvedValue(schedule);
           mockGetMemberCount.mockResolvedValue(memberCount);
@@ -357,9 +360,9 @@ describe('getPayoutQueue', () => {
           result.entries.forEach((entry) => {
             expect(entry.amount).toBeCloseTo(expectedAmount, 10);
           });
-        },
+        }
       ),
-      { numRuns: 100 },
+      { numRuns: 100 }
     );
   });
 });
@@ -376,10 +379,13 @@ describe('error handling', () => {
           vi.clearAllMocks();
           const err = new ContractError(code ?? null, message);
           mockGetPayoutSchedule.mockRejectedValue(err);
-          await expect(getNextRecipient('1')).rejects.toMatchObject({ code: code ?? null, message });
-        },
+          await expect(getNextRecipient('1')).rejects.toMatchObject({
+            code: code ?? null,
+            message,
+          });
+        }
       ),
-      { numRuns: 100 },
+      { numRuns: 100 }
     );
   });
 
@@ -391,10 +397,13 @@ describe('error handling', () => {
           vi.clearAllMocks();
           const err = new ContractError(code ?? null, message);
           mockGetPayoutSchedule.mockRejectedValue(err);
-          await expect(getPayoutHistory('1')).rejects.toMatchObject({ code: code ?? null, message });
-        },
+          await expect(getPayoutHistory('1')).rejects.toMatchObject({
+            code: code ?? null,
+            message,
+          });
+        }
       ),
-      { numRuns: 100 },
+      { numRuns: 100 }
     );
   });
 
@@ -408,25 +417,22 @@ describe('error handling', () => {
           mockGetPayoutSchedule.mockRejectedValue(err);
           mockGetMemberCount.mockResolvedValue(0);
           await expect(getPayoutQueue('1')).rejects.toMatchObject({ code: code ?? null, message });
-        },
+        }
       ),
-      { numRuns: 100 },
+      { numRuns: 100 }
     );
   });
 
   // Property 2: Non-ContractError normalisation
   it('[Property 2] non-ContractError is normalised to ContractError', async () => {
     await fc.assert(
-      fc.asyncProperty(
-        fc.string({ minLength: 1 }),
-        async (msg) => {
-          vi.clearAllMocks();
-          mockGetPayoutSchedule.mockRejectedValue(new Error(msg));
-          const caught = await getNextRecipient('1').catch((e) => e);
-          expect(caught).toBeInstanceOf(ContractError);
-        },
-      ),
-      { numRuns: 100 },
+      fc.asyncProperty(fc.string({ minLength: 1 }), async (msg) => {
+        vi.clearAllMocks();
+        mockGetPayoutSchedule.mockRejectedValue(new Error(msg));
+        const caught = await getNextRecipient('1').catch((e) => e);
+        expect(caught).toBeInstanceOf(ContractError);
+      }),
+      { numRuns: 100 }
     );
   });
 
@@ -434,23 +440,37 @@ describe('error handling', () => {
   it('[Property 3] hasReceivedPayout called N times for getPayoutHistory', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.array(fc.record({ recipient: fc.string({ minLength: 1 }), cycle: fc.integer({ min: 0 }), payout_date: fc.bigInt({ min: 0n, max: 9999999999n }) }), { minLength: 0, maxLength: 10 }),
+        fc.array(
+          fc.record({
+            recipient: fc.string({ minLength: 1 }),
+            cycle: fc.integer({ min: 0 }),
+            payout_date: fc.bigInt({ min: 0n, max: 9999999999n }),
+          }),
+          { minLength: 0, maxLength: 10 }
+        ),
         async (schedule) => {
           vi.clearAllMocks();
           mockGetPayoutSchedule.mockResolvedValue(schedule);
           mockHasReceivedPayout.mockResolvedValue(false);
           await getPayoutHistory('1');
           expect(mockHasReceivedPayout).toHaveBeenCalledTimes(schedule.length);
-        },
+        }
       ),
-      { numRuns: 100 },
+      { numRuns: 100 }
     );
   });
 
   it('[Property 3] hasReceivedPayout called N times for getPayoutQueue', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.array(fc.record({ recipient: fc.string({ minLength: 1 }), cycle: fc.integer({ min: 0 }), payout_date: fc.bigInt({ min: 0n, max: 9999999999n }) }), { minLength: 0, maxLength: 10 }),
+        fc.array(
+          fc.record({
+            recipient: fc.string({ minLength: 1 }),
+            cycle: fc.integer({ min: 0 }),
+            payout_date: fc.bigInt({ min: 0n, max: 9999999999n }),
+          }),
+          { minLength: 0, maxLength: 10 }
+        ),
         async (schedule) => {
           vi.clearAllMocks();
           mockGetPayoutSchedule.mockResolvedValue(schedule);
@@ -459,25 +479,32 @@ describe('error handling', () => {
           mockHasReceivedPayout.mockResolvedValue(false);
           await getPayoutQueue('1');
           expect(mockHasReceivedPayout).toHaveBeenCalledTimes(schedule.length);
-        },
+        }
       ),
-      { numRuns: 100 },
+      { numRuns: 100 }
     );
   });
 
   it('[Property 3] hasReceivedPayout called at most N times for getNextRecipient', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.array(fc.record({ recipient: fc.string({ minLength: 1 }), cycle: fc.integer({ min: 0 }), payout_date: fc.bigInt({ min: 0n, max: 9999999999n }) }), { minLength: 0, maxLength: 10 }),
+        fc.array(
+          fc.record({
+            recipient: fc.string({ minLength: 1 }),
+            cycle: fc.integer({ min: 0 }),
+            payout_date: fc.bigInt({ min: 0n, max: 9999999999n }),
+          }),
+          { minLength: 0, maxLength: 10 }
+        ),
         async (schedule) => {
           vi.clearAllMocks();
           mockGetPayoutSchedule.mockResolvedValue(schedule);
           mockHasReceivedPayout.mockResolvedValue(true);
           await getNextRecipient('1');
           expect(mockHasReceivedPayout.mock.calls.length).toBeLessThanOrEqual(schedule.length);
-        },
+        }
       ),
-      { numRuns: 100 },
+      { numRuns: 100 }
     );
   });
 });

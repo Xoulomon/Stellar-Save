@@ -1,12 +1,8 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 
-import "./StreakDisplay.css";
-import {
-  fetchReferralRewards,
-  claimReferralRewards,
-  stroopsToXlm,
-} from '../utils/referralApi';
+import './StreakDisplay.css';
+import { fetchReferralRewards, claimReferralRewards, stroopsToXlm } from '../utils/referralApi';
 
 // ── Badge definitions ─────────────────────────────────────────────────────────
 
@@ -17,10 +13,10 @@ export interface StreakBadge {
 }
 
 export const STREAK_BADGES: StreakBadge[] = [
-  { threshold: 5, label: "Starter", icon: "🌱" },
-  { threshold: 10, label: "Consistent", icon: "🔥" },
-  { threshold: 20, label: "Dedicated", icon: "⚡" },
-  { threshold: 50, label: "Legend", icon: "🏆" },
+  { threshold: 5, label: 'Starter', icon: '🌱' },
+  { threshold: 10, label: 'Consistent', icon: '🔥' },
+  { threshold: 20, label: 'Dedicated', icon: '⚡' },
+  { threshold: 50, label: 'Legend', icon: '🏆' },
 ];
 
 export function getEarnedBadges(streak: number): StreakBadge[] {
@@ -49,7 +45,11 @@ function CelebrationBurst({ active }: { active: boolean }) {
   return (
     <div className="streak-celebration" aria-hidden="true">
       {['✨', '🎉', '⭐', '🌟', '✨'].map((emoji, i) => (
-        <span key={i} className="streak-celebration-particle" style={{ '--i': i } as React.CSSProperties}>
+        <span
+          key={i}
+          className="streak-celebration-particle"
+          style={{ '--i': i } as React.CSSProperties}
+        >
           {emoji}
         </span>
       ))}
@@ -161,7 +161,7 @@ export function StreakDisplay({
 
   return (
     <div
-      className={`streak-display${atRisk ? " streak-display--at-risk" : ""}${celebrating ? " streak-display--celebrating" : ""}`}
+      className={`streak-display${atRisk ? ' streak-display--at-risk' : ''}${celebrating ? ' streak-display--celebrating' : ''}`}
       data-testid="streak-display"
     >
       <CelebrationBurst active={celebrating} />
@@ -199,10 +199,7 @@ export function StreakDisplay({
             aria-valuemax={nextMilestone.threshold}
             aria-label={`Progress to ${nextMilestone.label} badge`}
           >
-            <div
-              className="streak-progress-fill"
-              style={{ width: `${progressToNext}%` }}
-            />
+            <div className="streak-progress-fill" style={{ width: `${progressToNext}%` }} />
           </div>
           <span className="streak-progress-sub">
             {currentStreak} / {nextMilestone.threshold} contributions

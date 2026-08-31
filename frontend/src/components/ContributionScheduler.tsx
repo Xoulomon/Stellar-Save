@@ -89,7 +89,10 @@ export function ContributionScheduler({ groupId, groupName, contributionAmount }
   // ── Add ──────────────────────────────────────────────────────────────────
   function handleAdd() {
     const err = validate(form);
-    if (err) { setFormError(err); return; }
+    if (err) {
+      setFormError(err);
+      return;
+    }
     setFormError(null);
     add({
       groupId,
@@ -132,8 +135,8 @@ export function ContributionScheduler({ groupId, groupName, contributionAmount }
       {/* Balance warning */}
       {lowBalance && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          Your balance ({xlmBalance} XLM) may be insufficient to cover all scheduled
-          contributions ({totalScheduled} XLM total).
+          Your balance ({xlmBalance} XLM) may be insufficient to cover all scheduled contributions (
+          {totalScheduled} XLM total).
         </Alert>
       )}
 
@@ -289,7 +292,7 @@ export function ContributionScheduler({ groupId, groupName, contributionAmount }
                     </IconButton>
                   </Tooltip>
                 </Box>
-              ),
+              )
             )}
           </Stack>
         </>

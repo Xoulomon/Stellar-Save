@@ -18,7 +18,9 @@ vi.mock('../ui', () => ({
       {children}
     </div>
   ),
-  AppCard: ({ children }: { children: React.ReactNode }) => <div data-testid="app-card">{children}</div>,
+  AppCard: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="app-card">{children}</div>
+  ),
 }));
 
 vi.mock('../hooks/useWallet', () => ({

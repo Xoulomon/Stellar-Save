@@ -6,9 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { WalletProvider, WalletContext } from './WalletProvider';
 
-
 import type { WalletContextValue } from './types';
-
 
 // Mock StellarWalletsKit
 vi.mock('@creit.tech/stellar-wallets-kit', () => ({

@@ -124,8 +124,13 @@
 }
 
 @keyframes countdown-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 transparent; }
-  50%       { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-danger) 15%, transparent); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-danger) 15%, transparent);
+  }
 }
 
 /* ─── State variants ─────────────────────────────────────────────────────── */
@@ -159,14 +164,23 @@
   height: 2.5rem;
   width: 160px;
   border-radius: 6px;
-  background: linear-gradient(90deg, var(--color-bg-secondary) 25%, var(--color-border) 50%, var(--color-bg-secondary) 75%);
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-secondary) 25%,
+    var(--color-border) 50%,
+    var(--color-bg-secondary) 75%
+  );
   background-size: 200% 100%;
   animation: countdown-shimmer 1.4s infinite;
 }
 
 @keyframes countdown-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */

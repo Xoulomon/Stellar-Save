@@ -2,13 +2,7 @@
  * OfflineIndicator.tsx — Shows connection status and sync queue
  */
 
-import {
-  CloudOff,
-  CloudQueue,
-  CloudDone,
-  Sync,
-  Warning,
-} from '@mui/icons-material';
+import { CloudOff, CloudQueue, CloudDone, Sync, Warning } from '@mui/icons-material';
 import { Box, Chip, Tooltip, Typography } from '@mui/material';
 
 import { useSyncStatus } from '../hooks/offline';
@@ -31,7 +25,8 @@ export function OfflineIndicator(): JSX.Element | null {
   };
 
   const getStatusLabel = () => {
-    if (connectionStatus === 'offline') return `Offline${queueCount > 0 ? ` (${queueCount} queued)` : ''}`;
+    if (connectionStatus === 'offline')
+      return `Offline${queueCount > 0 ? ` (${queueCount} queued)` : ''}`;
     if (syncStatus === 'syncing') return 'Syncing...';
     if (syncStatus === 'error') return 'Sync error';
     if (queueCount > 0) return `${queueCount} pending`;
@@ -52,7 +47,9 @@ export function OfflineIndicator(): JSX.Element | null {
     if (connectionStatus === 'offline') {
       parts.push('You are currently offline');
       if (queueCount > 0) {
-        parts.push(`${queueCount} action${queueCount > 1 ? 's' : ''} will be synced when connection is restored`);
+        parts.push(
+          `${queueCount} action${queueCount > 1 ? 's' : ''} will be synced when connection is restored`
+        );
       }
     } else if (syncStatus === 'syncing') {
       parts.push('Syncing data with server...');
@@ -73,11 +70,7 @@ export function OfflineIndicator(): JSX.Element | null {
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       <Tooltip
         title={
-          <Typography
-            variant="body2"
-            component="div"
-            sx={{ whiteSpace: 'pre-line' }}
-          >
+          <Typography variant="body2" component="div" sx={{ whiteSpace: 'pre-line' }}>
             {getTooltipText()}
           </Typography>
         }

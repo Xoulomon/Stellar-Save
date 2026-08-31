@@ -4,7 +4,12 @@ import { config } from './config';
 import { backupJobsTotal } from './metrics';
 
 export interface S3Client {
-  putObject(params: { Bucket: string; Key: string; Body: Buffer; ContentType: string }): Promise<void>;
+  putObject(params: {
+    Bucket: string;
+    Key: string;
+    Body: Buffer;
+    ContentType: string;
+  }): Promise<void>;
   getObject(params: { Bucket: string; Key: string }): Promise<Buffer>;
   listObjects(params: { Bucket: string; Prefix: string }): Promise<string[]>;
   deleteObject(params: { Bucket: string; Key: string }): Promise<void>;
@@ -24,18 +29,43 @@ export class S3HttpClient implements S3Client {
     this.secretAccessKey = config.aws.secretAccessKey;
   }
 
-  private sign(method: string, key: string, body: Buffer, contentType: string): Record<string, string> {
-    const date = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '').slice(0, 15) + 'Z';
+  private sign(
+    method: string,
+    key: string,
+    body: Buffer,
+    contentType: string
+  ): Record<string, string> {
+    const date =
+      new Date()
+        .toISOString()
+        .replace(/[:-]|\.\d{3}/g, '')
+        .slice(0, 15) + 'Z';
     const dateShort = date.slice(0, 8);
     const host = `${this.bucket}.s3.${this.region}.amazonaws.com`;
     const payloadHash = crypto.createHash('sha256').update(body).digest('hex');
     const canonicalHeaders = `content-type:${contentType}\nhost:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${date}\n`;
     const signedHeaders = 'content-type;host;x-amz-content-sha256;x-amz-date';
-    const canonicalRequest = [method, `/${key}`, '', canonicalHeaders, signedHeaders, payloadHash].join('\n');
+    const canonicalRequest = [
+      method,
+      `/${key}`,
+      '',
+      canonicalHeaders,
+      signedHeaders,
+      payloadHash,
+    ].join('\n');
     const credentialScope = `${dateShort}/${this.region}/s3/aws4_request`;
-    const stringToSign = ['AWS4-HMAC-SHA256', date, credentialScope, crypto.createHash('sha256').update(canonicalRequest).digest('hex')].join('\n');
-    const hmac = (key: Buffer, data: string) => crypto.createHmac('sha256', key).update(data).digest();
-    const signingKey = hmac(hmac(hmac(hmac(Buffer.from(`AWS4${this.secretAccessKey}`), dateShort), this.region), 's3'), 'aws4_request');
+    const stringToSign = [
+      'AWS4-HMAC-SHA256',
+      date,
+      credentialScope,
+      crypto.createHash('sha256').update(canonicalRequest).digest('hex'),
+    ].join('\n');
+    const hmac = (key: Buffer, data: string) =>
+      crypto.createHmac('sha256', key).update(data).digest();
+    const signingKey = hmac(
+      hmac(hmac(hmac(Buffer.from(`AWS4${this.secretAccessKey}`), dateShort), this.region), 's3'),
+      'aws4_request'
+    );
     const signature = crypto.createHmac('sha256', signingKey).update(stringToSign).digest('hex');
     return {
       Authorization: `AWS4-HMAC-SHA256 Credential=${this.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`,
@@ -45,7 +75,17 @@ export class S3HttpClient implements S3Client {
     };
   }
 
-  async putObject({ Bucket, Key, Body, ContentType }: { Bucket: string; Key: string; Body: Buffer; ContentType: string }): Promise<void> {
+  async putObject({
+    Bucket,
+    Key,
+    Body,
+    ContentType,
+  }: {
+    Bucket: string;
+    Key: string;
+    Body: Buffer;
+    ContentType: string;
+  }): Promise<void> {
     const url = `https://${Bucket}.s3.${this.region}.amazonaws.com/${Key}`;
     const headers = this.sign('PUT', Key, Body, ContentType);
     const res = await fetch(url, { method: 'PUT', headers, body: Body as unknown as BodyInit });
@@ -54,16 +94,36 @@ export class S3HttpClient implements S3Client {
 
   async getObject({ Bucket, Key }: { Bucket: string; Key: string }): Promise<Buffer> {
     const emptyHash = crypto.createHash('sha256').update(Buffer.alloc(0)).digest('hex');
-    const date = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '').slice(0, 15) + 'Z';
+    const date =
+      new Date()
+        .toISOString()
+        .replace(/[:-]|\.\d{3}/g, '')
+        .slice(0, 15) + 'Z';
     const dateShort = date.slice(0, 8);
     const host = `${Bucket}.s3.${this.region}.amazonaws.com`;
     const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${emptyHash}\nx-amz-date:${date}\n`;
     const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
-    const canonicalRequest = ['GET', `/${Key}`, '', canonicalHeaders, signedHeaders, emptyHash].join('\n');
+    const canonicalRequest = [
+      'GET',
+      `/${Key}`,
+      '',
+      canonicalHeaders,
+      signedHeaders,
+      emptyHash,
+    ].join('\n');
     const credentialScope = `${dateShort}/${this.region}/s3/aws4_request`;
-    const stringToSign = ['AWS4-HMAC-SHA256', date, credentialScope, crypto.createHash('sha256').update(canonicalRequest).digest('hex')].join('\n');
-    const hmac = (key: Buffer, data: string) => crypto.createHmac('sha256', key).update(data).digest();
-    const signingKey = hmac(hmac(hmac(hmac(Buffer.from(`AWS4${this.secretAccessKey}`), dateShort), this.region), 's3'), 'aws4_request');
+    const stringToSign = [
+      'AWS4-HMAC-SHA256',
+      date,
+      credentialScope,
+      crypto.createHash('sha256').update(canonicalRequest).digest('hex'),
+    ].join('\n');
+    const hmac = (key: Buffer, data: string) =>
+      crypto.createHmac('sha256', key).update(data).digest();
+    const signingKey = hmac(
+      hmac(hmac(hmac(Buffer.from(`AWS4${this.secretAccessKey}`), dateShort), this.region), 's3'),
+      'aws4_request'
+    );
     const signature = crypto.createHmac('sha256', signingKey).update(stringToSign).digest('hex');
     const url = `https://${host}/${Key}`;
     const res = await fetch(url, {
@@ -79,17 +139,32 @@ export class S3HttpClient implements S3Client {
 
   async listObjects({ Bucket, Prefix }: { Bucket: string; Prefix: string }): Promise<string[]> {
     const emptyHash = crypto.createHash('sha256').update(Buffer.alloc(0)).digest('hex');
-    const date = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '').slice(0, 15) + 'Z';
+    const date =
+      new Date()
+        .toISOString()
+        .replace(/[:-]|\.\d{3}/g, '')
+        .slice(0, 15) + 'Z';
     const dateShort = date.slice(0, 8);
     const host = `${Bucket}.s3.${this.region}.amazonaws.com`;
     const query = `list-type=2&prefix=${encodeURIComponent(Prefix)}`;
     const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${emptyHash}\nx-amz-date:${date}\n`;
     const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
-    const canonicalRequest = ['GET', '/', query, canonicalHeaders, signedHeaders, emptyHash].join('\n');
+    const canonicalRequest = ['GET', '/', query, canonicalHeaders, signedHeaders, emptyHash].join(
+      '\n'
+    );
     const credentialScope = `${dateShort}/${this.region}/s3/aws4_request`;
-    const stringToSign = ['AWS4-HMAC-SHA256', date, credentialScope, crypto.createHash('sha256').update(canonicalRequest).digest('hex')].join('\n');
-    const hmac = (key: Buffer, data: string) => crypto.createHmac('sha256', key).update(data).digest();
-    const signingKey = hmac(hmac(hmac(hmac(Buffer.from(`AWS4${this.secretAccessKey}`), dateShort), this.region), 's3'), 'aws4_request');
+    const stringToSign = [
+      'AWS4-HMAC-SHA256',
+      date,
+      credentialScope,
+      crypto.createHash('sha256').update(canonicalRequest).digest('hex'),
+    ].join('\n');
+    const hmac = (key: Buffer, data: string) =>
+      crypto.createHmac('sha256', key).update(data).digest();
+    const signingKey = hmac(
+      hmac(hmac(hmac(Buffer.from(`AWS4${this.secretAccessKey}`), dateShort), this.region), 's3'),
+      'aws4_request'
+    );
     const signature = crypto.createHmac('sha256', signingKey).update(stringToSign).digest('hex');
     const url = `https://${host}/?${query}`;
     const res = await fetch(url, {
@@ -110,16 +185,36 @@ export class S3HttpClient implements S3Client {
 
   async deleteObject({ Bucket, Key }: { Bucket: string; Key: string }): Promise<void> {
     const emptyHash = crypto.createHash('sha256').update(Buffer.alloc(0)).digest('hex');
-    const date = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '').slice(0, 15) + 'Z';
+    const date =
+      new Date()
+        .toISOString()
+        .replace(/[:-]|\.\d{3}/g, '')
+        .slice(0, 15) + 'Z';
     const dateShort = date.slice(0, 8);
     const host = `${Bucket}.s3.${this.region}.amazonaws.com`;
     const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${emptyHash}\nx-amz-date:${date}\n`;
     const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
-    const canonicalRequest = ['DELETE', `/${Key}`, '', canonicalHeaders, signedHeaders, emptyHash].join('\n');
+    const canonicalRequest = [
+      'DELETE',
+      `/${Key}`,
+      '',
+      canonicalHeaders,
+      signedHeaders,
+      emptyHash,
+    ].join('\n');
     const credentialScope = `${dateShort}/${this.region}/s3/aws4_request`;
-    const stringToSign = ['AWS4-HMAC-SHA256', date, credentialScope, crypto.createHash('sha256').update(canonicalRequest).digest('hex')].join('\n');
-    const hmac = (key: Buffer, data: string) => crypto.createHmac('sha256', key).update(data).digest();
-    const signingKey = hmac(hmac(hmac(hmac(Buffer.from(`AWS4${this.secretAccessKey}`), dateShort), this.region), 's3'), 'aws4_request');
+    const stringToSign = [
+      'AWS4-HMAC-SHA256',
+      date,
+      credentialScope,
+      crypto.createHash('sha256').update(canonicalRequest).digest('hex'),
+    ].join('\n');
+    const hmac = (key: Buffer, data: string) =>
+      crypto.createHmac('sha256', key).update(data).digest();
+    const signingKey = hmac(
+      hmac(hmac(hmac(Buffer.from(`AWS4${this.secretAccessKey}`), dateShort), this.region), 's3'),
+      'aws4_request'
+    );
     const signature = crypto.createHmac('sha256', signingKey).update(stringToSign).digest('hex');
     const url = `https://${host}/${Key}`;
     const res = await fetch(url, {
@@ -158,7 +253,10 @@ export class BackupService {
   }
 
   /** Compute incremental diff against a base snapshot */
-  private computeIncremental(current: Record<string, unknown>, _baseKey: string): Record<string, unknown> {
+  private computeIncremental(
+    current: Record<string, unknown>,
+    _baseKey: string
+  ): Record<string, unknown> {
     // Simplified: in production, diff against the base backup fetched from S3
     return { ...current, type: 'incremental' };
   }
@@ -188,7 +286,12 @@ export class BackupService {
       const checksum = crypto.createHash('sha256').update(body).digest('hex');
       const s3Key = `backups/${job.type}/${job.id}.json`;
 
-      await this.s3.putObject({ Bucket: this.bucket, Key: s3Key, Body: body, ContentType: 'application/json' });
+      await this.s3.putObject({
+        Bucket: this.bucket,
+        Key: s3Key,
+        Body: body,
+        ContentType: 'application/json',
+      });
 
       job.status = 'completed';
       job.completedAt = Date.now();
@@ -212,7 +315,7 @@ export class BackupService {
   }
 
   getLatestCompleted(type?: BackupType): BackupJob | undefined {
-    return this.listJobs().find(j => j.status === 'completed' && (!type || j.type === type));
+    return this.listJobs().find((j) => j.status === 'completed' && (!type || j.type === type));
   }
 
   async pruneOldBackups(): Promise<number> {

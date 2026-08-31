@@ -14,7 +14,13 @@ export const recommendationResolvers = {
   Mutation: {
     setPreferences: (
       _: unknown,
-      args: { userId: string; minContribution?: number; maxContribution?: number; preferredDuration?: number; tags: string[] }
+      args: {
+        userId: string;
+        minContribution?: number;
+        maxContribution?: number;
+        preferredDuration?: number;
+        tags: string[];
+      }
     ) => {
       engine.setPreference(args);
       return true;
@@ -23,6 +29,6 @@ export const recommendationResolvers = {
 
   RecommendationResult: {
     groups: (result: { recommendations: string[] }) =>
-      mockGroups.filter(g => result.recommendations.includes(g.id)),
+      mockGroups.filter((g) => result.recommendations.includes(g.id)),
   },
 };

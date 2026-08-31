@@ -65,14 +65,14 @@ export async function fetchPlatformStats(): Promise<PlatformStats> {
 export async function fetchAdminUsers(): Promise<AdminUser[]> {
   const res = await fetch(`${API_BASE}/admin/users`);
   if (!res.ok) throw new Error('Failed to fetch users');
-  const data = await res.json() as { users: AdminUser[] };
+  const data = (await res.json()) as { users: AdminUser[] };
   return data.users;
 }
 
 export async function updateAdminUser(
   id: string,
   updates: Partial<AdminUser>,
-  adminId: string,
+  adminId: string
 ): Promise<AdminUser> {
   const res = await fetch(`${API_BASE}/admin/users/${encodeURIComponent(id)}`, {
     method: 'PATCH',
@@ -80,7 +80,7 @@ export async function updateAdminUser(
     body: JSON.stringify({ updates, adminId }),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Update failed' })) as { error: string };
+    const err = (await res.json().catch(() => ({ error: 'Update failed' }))) as { error: string };
     throw new Error(err.error ?? 'Update failed');
   }
   return res.json() as Promise<AdminUser>;
@@ -93,7 +93,7 @@ export async function deleteAdminUser(id: string, adminId: string): Promise<void
     body: JSON.stringify({ adminId }),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Delete failed' })) as { error: string };
+    const err = (await res.json().catch(() => ({ error: 'Delete failed' }))) as { error: string };
     throw new Error(err.error ?? 'Delete failed');
   }
 }
@@ -103,14 +103,14 @@ export async function deleteAdminUser(id: string, adminId: string): Promise<void
 export async function fetchAdminGroups(): Promise<AdminGroup[]> {
   const res = await fetch(`${API_BASE}/admin/groups`);
   if (!res.ok) throw new Error('Failed to fetch groups');
-  const data = await res.json() as { groups: AdminGroup[] };
+  const data = (await res.json()) as { groups: AdminGroup[] };
   return data.groups;
 }
 
 export async function flagGroup(
   groupId: string,
   flagged: boolean,
-  adminId: string,
+  adminId: string
 ): Promise<AdminGroup> {
   const res = await fetch(`${API_BASE}/admin/groups/${encodeURIComponent(groupId)}/flag`, {
     method: 'POST',
@@ -118,7 +118,9 @@ export async function flagGroup(
     body: JSON.stringify({ flagged, adminId }),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Flag action failed' })) as { error: string };
+    const err = (await res.json().catch(() => ({ error: 'Flag action failed' }))) as {
+      error: string;
+    };
     throw new Error(err.error ?? 'Flag action failed');
   }
   return res.json() as Promise<AdminGroup>;
@@ -129,7 +131,7 @@ export async function flagGroup(
 export async function fetchAuditLogs(): Promise<AuditLog[]> {
   const res = await fetch(`${API_BASE}/admin/audit-logs`);
   if (!res.ok) throw new Error('Failed to fetch audit logs');
-  const data = await res.json() as { logs: AuditLog[] };
+  const data = (await res.json()) as { logs: AuditLog[] };
   return data.logs;
 }
 
@@ -143,5 +145,8 @@ export async function fetchAuditLogs(): Promise<AuditLog[]> {
 export function isAdminAddress(address: string): boolean {
   const raw = env.VITE_ADMIN_ADDRESSES;
   if (!raw) return false;
-  return raw.split(',').map((a) => a.trim()).includes(address);
+  return raw
+    .split(',')
+    .map((a) => a.trim())
+    .includes(address);
 }

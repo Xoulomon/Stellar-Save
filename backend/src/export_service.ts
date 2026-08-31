@@ -56,7 +56,7 @@ export class ExportService {
 
       const userData = {
         preferences: this.preferences.get(job.userId),
-        interactions: this.interactions.filter(i => i.userId === job.userId)
+        interactions: this.interactions.filter((i) => i.userId === job.userId),
       };
 
       let content: string;

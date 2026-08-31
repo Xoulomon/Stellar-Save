@@ -13,18 +13,32 @@ function makeReqRes(path: string) {
     statusCode: 200,
     body: null as unknown,
     headers,
-    status(code: number) { this.statusCode = code; return this; },
-    json(body: unknown) { this.body = body; return this; },
-    setHeader(k: string, v: string) { headers[k] = v; },
+    status(code: number) {
+      this.statusCode = code;
+      return this;
+    },
+    json(body: unknown) {
+      this.body = body;
+      return this;
+    },
+    setHeader(k: string, v: string) {
+      headers[k] = v;
+    },
   };
   const req = { path, apiVersion: undefined as string | undefined };
   return { req, res };
 }
 
-function runMiddleware(path: string): { req: ReturnType<typeof makeReqRes>['req']; res: ReturnType<typeof makeReqRes>['res']; nextCalled: boolean } {
+function runMiddleware(path: string): {
+  req: ReturnType<typeof makeReqRes>['req'];
+  res: ReturnType<typeof makeReqRes>['res'];
+  nextCalled: boolean;
+} {
   const { req, res } = makeReqRes(path);
   let nextCalled = false;
-  versionMiddleware(req as any, res as any, () => { nextCalled = true; });
+  versionMiddleware(req as any, res as any, () => {
+    nextCalled = true;
+  });
   return { req, res, nextCalled };
 }
 
@@ -72,9 +86,15 @@ console.log('\n🧪 Deprecation Header Tests');
   if (isV1Deprecated) {
     assert(res.headers['Deprecation'] === 'true', 'deprecated version sets Deprecation header');
     assert(!!res.headers['Sunset'], 'deprecated version sets Sunset header');
-    assert(!!res.headers['X-API-Deprecation-Notice'], 'deprecated version sets X-API-Deprecation-Notice');
+    assert(
+      !!res.headers['X-API-Deprecation-Notice'],
+      'deprecated version sets X-API-Deprecation-Notice'
+    );
   } else {
-    assert(res.headers['Deprecation'] === undefined, 'non-deprecated version has no Deprecation header');
+    assert(
+      res.headers['Deprecation'] === undefined,
+      'non-deprecated version has no Deprecation header'
+    );
   }
 }
 

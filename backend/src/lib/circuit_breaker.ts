@@ -91,7 +91,9 @@ export class CircuitBreaker<TArgs extends any[] = any[], TResult = any> {
     const currentState = this.getState();
 
     if (currentState === CircuitState.OPEN) {
-      const openErr = new CircuitBreakerOpenError('Circuit breaker is OPEN — anchor request blocked');
+      const openErr = new CircuitBreakerOpenError(
+        'Circuit breaker is OPEN — anchor request blocked'
+      );
       if (this.fallback) {
         return this.fallback(openErr, ...args);
       }

@@ -9,12 +9,41 @@ import { Group } from '../models';
  */
 
 const groups: Group[] = [
-  { id: '1', name: 'Weekly Savers', contributionAmount: 100, cycleDuration: 604800, maxMembers: 10, currentMembers: 5, status: 'Active', tags: ['weekly'] },
-  { id: '2', name: 'Full Circle', contributionAmount: 50, cycleDuration: 604800, maxMembers: 5, currentMembers: 5, status: 'Active', tags: [] },
-  { id: '3', name: 'Closed Circle', contributionAmount: 50, cycleDuration: 604800, maxMembers: 8, currentMembers: 2, status: 'Completed', tags: [] },
+  {
+    id: '1',
+    name: 'Weekly Savers',
+    contributionAmount: 100,
+    cycleDuration: 604800,
+    maxMembers: 10,
+    currentMembers: 5,
+    status: 'Active',
+    tags: ['weekly'],
+  },
+  {
+    id: '2',
+    name: 'Full Circle',
+    contributionAmount: 50,
+    cycleDuration: 604800,
+    maxMembers: 5,
+    currentMembers: 5,
+    status: 'Active',
+    tags: [],
+  },
+  {
+    id: '3',
+    name: 'Closed Circle',
+    contributionAmount: 50,
+    cycleDuration: 604800,
+    maxMembers: 8,
+    currentMembers: 2,
+    status: 'Completed',
+    tags: [],
+  },
 ];
 
-function makeService(repository: GroupsRepository = new InMemoryGroupsRepository(groups)): GroupsService {
+function makeService(
+  repository: GroupsRepository = new InMemoryGroupsRepository(groups)
+): GroupsService {
   return new GroupsService(repository);
 }
 

@@ -56,7 +56,7 @@ describe('NotificationTransport', () => {
           title: 'Test Title',
           body: 'Test message',
           id: 'test-notification-1',
-        }),
+        })
       );
     });
 
@@ -100,7 +100,7 @@ describe('NotificationTransport', () => {
         expect.objectContaining({
           success: true,
           channel: 'browser',
-        }),
+        })
       );
     });
 
@@ -128,7 +128,7 @@ describe('NotificationTransport', () => {
         expect.objectContaining({
           success: true,
           channel: 'browser',
-        }),
+        })
       );
     });
 
@@ -177,7 +177,7 @@ describe('NotificationTransport', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: expect.stringContaining('Test Title'),
-        }),
+        })
       );
 
       expect(results[0].success).toBe(true);
@@ -213,7 +213,7 @@ describe('NotificationTransport', () => {
 
       expect(global.fetch).toHaveBeenCalledWith(
         'https://custom.endpoint.com/notify',
-        expect.any(Object),
+        expect.any(Object)
       );
     });
   });
@@ -239,7 +239,7 @@ describe('NotificationTransport', () => {
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-        }),
+        })
       );
 
       expect(results[0].success).toBe(true);
@@ -257,17 +257,15 @@ describe('NotificationTransport', () => {
       vi.useFakeTimers();
 
       let abortCalled = false;
-      global.fetch = vi.fn().mockImplementation(
-        (_url, { signal }: { signal: AbortSignal }) => {
-          signal.addEventListener('abort', () => {
-            abortCalled = true;
-          });
+      global.fetch = vi.fn().mockImplementation((_url, { signal }: { signal: AbortSignal }) => {
+        signal.addEventListener('abort', () => {
+          abortCalled = true;
+        });
 
-          return new Promise(() => {
-            // Never resolves (simulating timeout)
-          });
-        },
-      );
+        return new Promise(() => {
+          // Never resolves (simulating timeout)
+        });
+      });
 
       const notifWithTimeout: TransportNotification = {
         ...mockNotification,

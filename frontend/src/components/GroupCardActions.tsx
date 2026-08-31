@@ -16,7 +16,10 @@ export function GroupCardActions({ onViewDetails, onJoin, groupName }: GroupCard
         <Button
           variant="secondary"
           size="sm"
-          onClick={(e) => { e.stopPropagation(); onViewDetails(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewDetails();
+          }}
           aria-label={`View details${label}`}
         >
           View Details
@@ -26,7 +29,10 @@ export function GroupCardActions({ onViewDetails, onJoin, groupName }: GroupCard
         <Button
           variant="primary"
           size="sm"
-          onClick={(e) => { e.stopPropagation(); onJoin(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onJoin();
+          }}
           aria-label={`Join group${label}`}
         >
           Join Group

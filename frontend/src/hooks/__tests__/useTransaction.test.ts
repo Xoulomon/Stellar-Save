@@ -70,9 +70,7 @@ describe('useTransaction', () => {
   it('surfaces the rejection reason of a mocked Stellar SDK submitTransaction call', async () => {
     const { Horizon } = await import('@stellar/stellar-sdk');
     const server = new Horizon.Server('https://horizon-testnet.stellar.org');
-    (server.submitTransaction as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error('bad_seq')
-    );
+    (server.submitTransaction as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('bad_seq'));
 
     const { result } = renderHook(() => useTransaction());
     await act(async () => {

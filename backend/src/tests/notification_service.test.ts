@@ -1,7 +1,14 @@
 import { NotificationService } from '../src/notification_service';
-import { PushNotificationService, FirebaseProvider, OneSignalProvider } from '../src/push_notification_service';
+import {
+  PushNotificationService,
+  FirebaseProvider,
+  OneSignalProvider,
+} from '../src/push_notification_service';
 import { UserPreferenceManager } from '../src/user_preference_manager';
-import { NotificationTemplateManager, NotificationEventType } from '../src/notification_template_manager';
+import {
+  NotificationTemplateManager,
+  NotificationEventType,
+} from '../src/notification_template_manager';
 import { PrismaClient } from '@prisma/client';
 
 // Mock Prisma

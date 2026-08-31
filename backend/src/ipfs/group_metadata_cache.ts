@@ -29,7 +29,7 @@ export class GroupMetadataCache {
   async cacheMetadata(
     groupId: string,
     contractId: string,
-    metadata: GroupMetadata,
+    metadata: GroupMetadata
   ): Promise<string> {
     const payload = {
       ...metadata,
@@ -44,7 +44,7 @@ export class GroupMetadataCache {
     await redis.setex(
       `${METADATA_CACHE_PREFIX}:${contractId}:${groupId}`,
       METADATA_CACHE_TTL,
-      payloadJson,
+      payloadJson
     );
 
     await this.pinning.pinContent(result.cid, groupId, contractId, 0);
@@ -61,7 +61,7 @@ export class GroupMetadataCache {
 
   async getCachedMetadata(
     groupId: string,
-    contractId: string,
+    contractId: string
   ): Promise<{ metadata: GroupMetadata | null; cid: string | null }> {
     const cached = await redis.get(`${METADATA_CACHE_PREFIX}:${contractId}:${groupId}`);
     if (cached) {
@@ -78,7 +78,7 @@ export class GroupMetadataCache {
       await redis.setex(
         `${METADATA_CACHE_PREFIX}:${contractId}:${groupId}`,
         METADATA_CACHE_TTL,
-        raw,
+        raw
       );
       await this.pinning.recordAccess(cid);
       return { metadata, cid };
@@ -110,7 +110,10 @@ export class GroupMetadataCache {
     return cid as string | null;
   }
 
-  async getPinStatus(groupId: string, contractId: string): Promise<{
+  async getPinStatus(
+    groupId: string,
+    contractId: string
+  ): Promise<{
     cid: string | null;
     pinned: boolean;
     accessCount: number;

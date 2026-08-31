@@ -12,8 +12,9 @@ const PAYOUT_EVENT_TYPES: string[] = ['payout_executed'];
 const MISSED_CONTRIBUTION_TYPES: string[] = ['contribution_missed'];
 
 // Fail fast if topics drift from the canonical schema
-const unknownTopics = [...PAYOUT_EVENT_TYPES, ...MISSED_CONTRIBUTION_TYPES]
-  .filter(t => !CONTRACT_EVENT_TOPICS.includes(t as any));
+const unknownTopics = [...PAYOUT_EVENT_TYPES, ...MISSED_CONTRIBUTION_TYPES].filter(
+  (t) => !CONTRACT_EVENT_TOPICS.includes(t as any)
+);
 if (unknownTopics.length) {
   throw new Error(`[contract_event_indexer] Unknown event topics: ${unknownTopics.join(', ')}`);
 }
@@ -33,7 +34,8 @@ function extractMemberAddresses(event: any): string[] {
   const topicsArr: unknown[] = Array.isArray(event.topic) ? event.topic : [];
   for (const t of topicsArr) {
     if (typeof t === 'string' && t.startsWith('G')) addresses.push(t);
-    else if (typeof t === 'object' && t !== null && 'address' in t) addresses.push((t as any).address);
+    else if (typeof t === 'object' && t !== null && 'address' in t)
+      addresses.push((t as any).address);
   }
 
   const data = event.data ?? {};
@@ -51,7 +53,12 @@ export class ContractEventIndexer {
   private isRunning = false;
   private webPush?: WebPushService;
 
-  constructor(horizonUrl: string, contractId: string, databaseUrl: string, webPush?: WebPushService) {
+  constructor(
+    horizonUrl: string,
+    contractId: string,
+    databaseUrl: string,
+    webPush?: WebPushService
+  ) {
     this.server = new Horizon.Server(horizonUrl);
     this.contractId = contractId;
     process.env.DATABASE_URL = databaseUrl;
@@ -69,8 +76,8 @@ export class ContractEventIndexer {
     logger.info('Starting contract event indexer...');
 
     try {
-      const startLedger = lastLedger ?? await this.loadStartLedger();
-      this.streamEvents(startLedger).catch(err => {
+      const startLedger = lastLedger ?? (await this.loadStartLedger());
+      this.streamEvents(startLedger).catch((err) => {
         logger.error('Fatal error in stream loop:', err);
         this.isRunning = false;
       });
@@ -156,7 +163,10 @@ export class ContractEventIndexer {
           // every iteration (#1511).
           const data: any = await withHorizonCircuit(async () => {
             const response = await fetchWithCorrelationId(url.toString());
-            sorobanRpcCallsTotal.inc({ method: 'getEvents', status: response.ok ? 'success' : 'error' });
+            sorobanRpcCallsTotal.inc({
+              method: 'getEvents',
+              status: response.ok ? 'success' : 'error',
+            });
             if (!response.ok) {
               throw new Error(`HTTP ${response.status} from ${url}`);
             }
@@ -178,13 +188,13 @@ export class ContractEventIndexer {
                 await this.storeEventFromHorizon(event);
                 await this.notifyOnEvent(event);
               }
-            },
+            }
           );
 
           // Update cursor to the last processed event and keep draining (no delay).
           cursor = records[records.length - 1].paging_token;
           return 0;
-        },
+        }
       ).catch((error) => {
         logger.error('[ContractEventIndexer] Poll error:', error);
         return ERROR_BACKOFF_MS;
@@ -242,7 +252,11 @@ export class ContractEventIndexer {
     try {
       const stored = await withSpan(
         'indexer.db.insert_event',
-        { 'db.system': 'postgresql', 'db.operation': 'insert', 'event.type': event.type || 'unknown' },
+        {
+          'db.system': 'postgresql',
+          'db.operation': 'insert',
+          'event.type': event.type || 'unknown',
+        },
         () =>
           this.prisma.contractEvent.create({
             data: {
@@ -255,7 +269,7 @@ export class ContractEventIndexer {
               timestamp: event.createdAt ? new Date(event.createdAt) : new Date(),
               blockTime: event.createdAt ? new Date(event.createdAt) : new Date(),
             },
-          }),
+          })
       );
       logger.info(`Stored event: ${event.type} in ledger ${event.ledger}`);
       eventsIndexedTotal.inc({ event_type: event.type || 'unknown' });
@@ -274,13 +288,19 @@ export class ContractEventIndexer {
       const webhookEvent = this.mapToWebhookEvent(stored.eventType);
       if (webhookEvent) {
         const groupId = this.extractGroupId(stored.data);
-        deliverWebhookEvent(webhookEvent, {
-          contractId: stored.contractId,
-          txHash: stored.txHash,
-          ledgerSeq: stored.ledgerSeq,
-          timestamp: stored.timestamp.toISOString(),
-          data: stored.data,
-        }, groupId).catch(() => {/* non-blocking */});
+        deliverWebhookEvent(
+          webhookEvent,
+          {
+            contractId: stored.contractId,
+            txHash: stored.txHash,
+            ledgerSeq: stored.ledgerSeq,
+            timestamp: stored.timestamp.toISOString(),
+            data: stored.data,
+          },
+          groupId
+        ).catch(() => {
+          /* non-blocking */
+        });
       }
 
       // Update member reputation for contribution events
@@ -289,7 +309,9 @@ export class ContractEventIndexer {
         const memberAddress = data?.member || data?.address;
         if (memberAddress) {
           // Treat all indexed contributions as on-time (late detection requires cycle data)
-          recordContribution(String(memberAddress), true).catch(() => {/* non-blocking */});
+          recordContribution(String(memberAddress), true).catch(() => {
+            /* non-blocking */
+          });
         }
       }
     } catch (error) {
@@ -315,7 +337,9 @@ export class ContractEventIndexer {
         data: { eventType, txHash: event.transactionHash ?? event.txHash, groupId, amount },
       };
       await this.webPush.sendToMembers(members, payload);
-      logger.info(`Push notification sent for payout event (ledger ${event.ledger ?? event.ledgerSeq})`);
+      logger.info(
+        `Push notification sent for payout event (ledger ${event.ledger ?? event.ledgerSeq})`
+      );
       return;
     }
 
@@ -330,7 +354,9 @@ export class ContractEventIndexer {
         data: { eventType, txHash: event.transactionHash ?? event.txHash, groupId, amount },
       };
       await this.webPush.sendToMembers(members, payload);
-      logger.info(`Push notification sent for missed-contribution event (ledger ${event.ledger ?? event.ledgerSeq})`);
+      logger.info(
+        `Push notification sent for missed-contribution event (ledger ${event.ledger ?? event.ledgerSeq})`
+      );
     }
   }
 
@@ -368,7 +394,9 @@ export class ContractEventIndexer {
         latencyMs: Date.now() - start,
         error: isCircuitOpenError(err)
           ? 'Horizon circuit breaker is OPEN'
-          : err instanceof Error ? err.message : String(err),
+          : err instanceof Error
+            ? err.message
+            : String(err),
       };
     }
   }

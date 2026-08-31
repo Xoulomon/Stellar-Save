@@ -57,7 +57,14 @@ export function TransactionExportButton({ transactions }: Props) {
           </p>
 
           {/* Format */}
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: '0.5rem',
+              fontSize: '0.8rem',
+              color: 'var(--color-text-secondary)',
+            }}
+          >
             Format
           </label>
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -74,7 +81,15 @@ export function TransactionExportButton({ transactions }: Props) {
           </div>
 
           {/* Date range */}
-          <label htmlFor="export-date-from" style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
+          <label
+            htmlFor="export-date-from"
+            style={{
+              display: 'block',
+              marginBottom: '0.25rem',
+              fontSize: '0.8rem',
+              color: 'var(--color-text-secondary)',
+            }}
+          >
             From date
           </label>
           <input
@@ -82,10 +97,27 @@ export function TransactionExportButton({ transactions }: Props) {
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            style={{ width: '100%', marginBottom: '0.5rem', padding: '0.4rem', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-bg-input)', color: 'var(--color-text-primary)', boxSizing: 'border-box' }}
+            style={{
+              width: '100%',
+              marginBottom: '0.5rem',
+              padding: '0.4rem',
+              borderRadius: 4,
+              border: '1px solid var(--color-border)',
+              background: 'var(--color-bg-input)',
+              color: 'var(--color-text-primary)',
+              boxSizing: 'border-box',
+            }}
           />
 
-          <label htmlFor="export-date-to" style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
+          <label
+            htmlFor="export-date-to"
+            style={{
+              display: 'block',
+              marginBottom: '0.25rem',
+              fontSize: '0.8rem',
+              color: 'var(--color-text-secondary)',
+            }}
+          >
             To date
           </label>
           <input
@@ -93,10 +125,25 @@ export function TransactionExportButton({ transactions }: Props) {
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            style={{ width: '100%', marginBottom: '0.75rem', padding: '0.4rem', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-bg-input)', color: 'var(--color-text-primary)', boxSizing: 'border-box' }}
+            style={{
+              width: '100%',
+              marginBottom: '0.75rem',
+              padding: '0.4rem',
+              borderRadius: 4,
+              border: '1px solid var(--color-border)',
+              background: 'var(--color-bg-input)',
+              color: 'var(--color-text-primary)',
+              boxSizing: 'border-box',
+            }}
           />
 
-          <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', margin: '0 0 0.75rem' }}>
+          <p
+            style={{
+              fontSize: '0.75rem',
+              color: 'var(--color-text-secondary)',
+              margin: '0 0 0.75rem',
+            }}
+          >
             {transactions.length} transaction{transactions.length !== 1 ? 's' : ''} available
           </p>
 
@@ -104,7 +151,11 @@ export function TransactionExportButton({ transactions }: Props) {
             <button className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>
               Cancel
             </button>
-            <button className="btn btn-primary btn-sm" onClick={handleExport} aria-label={`Download ${format.toUpperCase()}`}>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={handleExport}
+              aria-label={`Download ${format.toUpperCase()}`}
+            >
               Download {format.toUpperCase()}
             </button>
           </div>

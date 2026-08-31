@@ -7,12 +7,7 @@
  *
  * Depends on WalletConnectionProvider being present in the tree.
  */
-import React, {
-  createContext,
-  useCallback,
-  ReactNode,
-  useContext,
-} from 'react';
+import React, { createContext, useCallback, ReactNode, useContext } from 'react';
 import { StellarWalletsKit } from '@creit.tech/stellar-wallets-kit';
 
 // ── Context shape ─────────────────────────────────────────────────────────────
@@ -24,7 +19,7 @@ export interface WalletSigningContextValue {
    */
   signTransaction: (
     xdr: string,
-    opts?: { networkPassphrase?: string; address?: string },
+    opts?: { networkPassphrase?: string; address?: string }
   ) => Promise<string>;
 
   /**
@@ -34,30 +29,23 @@ export interface WalletSigningContextValue {
    *
    * @throws Error if the current wallet does not support message signing.
    */
-  signMessage: (
-    message: string,
-    opts?: { address?: string },
-  ) => Promise<string>;
+  signMessage: (message: string, opts?: { address?: string }) => Promise<string>;
 }
 
-export const WalletSigningContext = createContext<
-  WalletSigningContextValue | undefined
->(undefined);
+export const WalletSigningContext = createContext<WalletSigningContextValue | undefined>(undefined);
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
-export const WalletSigningProvider: React.FC<{ children: ReactNode }> = ({
-  children,
-}) => {
+export const WalletSigningProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const signTransaction = useCallback(
     async (
       xdr: string,
-      opts?: { networkPassphrase?: string; address?: string },
+      opts?: { networkPassphrase?: string; address?: string }
     ): Promise<string> => {
       const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdr, opts);
       return signedTxXdr;
     },
-    [],
+    []
   );
 
   const signMessage = useCallback(
@@ -67,23 +55,19 @@ export const WalletSigningProvider: React.FC<{ children: ReactNode }> = ({
         const result = await (
           kit.signMessage as (
             msg: string,
-            o?: { address?: string },
+            o?: { address?: string }
           ) => Promise<{ signedMessage?: string; signature?: string }>
         )(message, opts);
         return result.signedMessage ?? result.signature ?? '';
       }
       throw new Error('Message signing is not supported by the current wallet.');
     },
-    [],
+    []
   );
 
   const value: WalletSigningContextValue = { signTransaction, signMessage };
 
-  return (
-    <WalletSigningContext.Provider value={value}>
-      {children}
-    </WalletSigningContext.Provider>
-  );
+  return <WalletSigningContext.Provider value={value}>{children}</WalletSigningContext.Provider>;
 };
 
 // ── Narrow hook ───────────────────────────────────────────────────────────────
@@ -91,9 +75,7 @@ export const WalletSigningProvider: React.FC<{ children: ReactNode }> = ({
 export function useWalletSigning(): WalletSigningContextValue {
   const ctx = useContext(WalletSigningContext);
   if (!ctx) {
-    throw new Error(
-      'useWalletSigning must be used within WalletSigningProvider.',
-    );
+    throw new Error('useWalletSigning must be used within WalletSigningProvider.');
   }
   return ctx;
 }

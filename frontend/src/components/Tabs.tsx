@@ -36,14 +36,9 @@ export function Tabs({
     orientation,
   });
 
-  const activeTabContent = tabs.find(tab => tab.id === activeTab)?.content;
+  const activeTabContent = tabs.find((tab) => tab.id === activeTab)?.content;
 
-  const classes = [
-    'tabs',
-    `tabs-${variant}`,
-    `tabs-${orientation}`,
-    className,
-  ]
+  const classes = ['tabs', `tabs-${variant}`, `tabs-${orientation}`, className]
     .filter(Boolean)
     .join(' ');
 

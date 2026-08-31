@@ -36,9 +36,36 @@ vi.mock('react-router-dom', async () => {
 const mockFetchGroups = vi.mocked(fetchGroups);
 
 const mockGroups: PublicGroup[] = [
-  { id: '1', name: 'Alpha Savers', description: 'First group', memberCount: 5, contributionAmount: 100, currency: 'XLM', status: 'active', createdAt: new Date('2024-01-01') },
-  { id: '2', name: 'Beta Circle', description: 'Second group', memberCount: 3, contributionAmount: 50, currency: 'XLM', status: 'pending', createdAt: new Date('2024-02-01') },
-  { id: '3', name: 'Gamma Fund', description: 'Third group', memberCount: 8, contributionAmount: 200, currency: 'XLM', status: 'completed', createdAt: new Date('2024-03-01') },
+  {
+    id: '1',
+    name: 'Alpha Savers',
+    description: 'First group',
+    memberCount: 5,
+    contributionAmount: 100,
+    currency: 'XLM',
+    status: 'active',
+    createdAt: new Date('2024-01-01'),
+  },
+  {
+    id: '2',
+    name: 'Beta Circle',
+    description: 'Second group',
+    memberCount: 3,
+    contributionAmount: 50,
+    currency: 'XLM',
+    status: 'pending',
+    createdAt: new Date('2024-02-01'),
+  },
+  {
+    id: '3',
+    name: 'Gamma Fund',
+    description: 'Third group',
+    memberCount: 8,
+    contributionAmount: 200,
+    currency: 'XLM',
+    status: 'completed',
+    createdAt: new Date('2024-03-01'),
+  },
 ];
 
 function renderPage() {
@@ -73,7 +100,9 @@ describe('BrowseGroupsPage', () => {
   it("renders with title 'Browse Groups' and subtitle 'Discover recommended groups based on your preferences and activity'", async () => {
     renderPage();
     expect(screen.getAllByText('Browse Groups').length).toBeGreaterThan(0);
-    expect(screen.getByText('Discover recommended groups based on your preferences and activity')).toBeInTheDocument();
+    expect(
+      screen.getByText('Discover recommended groups based on your preferences and activity')
+    ).toBeInTheDocument();
   });
 
   it('calls fetchGroups once on mount', async () => {
@@ -174,13 +203,16 @@ describe('BrowseGroupsPage', () => {
 
   it('loads more recommendations when the sentinel intersects', async () => {
     const observers: IntersectionObserverCallback[] = [];
-    vi.stubGlobal('IntersectionObserver', vi.fn((callback: IntersectionObserverCallback) => {
-      observers.push(callback);
-      return {
-        observe: () => undefined,
-        disconnect: () => undefined,
-      } as unknown as IntersectionObserver;
-    }));
+    vi.stubGlobal(
+      'IntersectionObserver',
+      vi.fn((callback: IntersectionObserverCallback) => {
+        observers.push(callback);
+        return {
+          observe: () => undefined,
+          disconnect: () => undefined,
+        } as unknown as IntersectionObserver;
+      })
+    );
 
     const manyGroups: PublicGroup[] = Array.from({ length: 12 }, (_, index) => ({
       id: `${index + 1}`,
@@ -199,18 +231,26 @@ describe('BrowseGroupsPage', () => {
     // The discovery feed ranks by recommendation score (higher memberCount
     // scores higher), so with initialPageSize: 6 the first item shown is
     // "Group 12" (memberCount 12), not "Group 1".
-    await waitFor(() => expect(screen.getByText('Group 12')).toBeInTheDocument(), { timeout: 3000 });
+    await waitFor(() => expect(screen.getByText('Group 12')).toBeInTheDocument(), {
+      timeout: 3000,
+    });
     expect(observers).toHaveLength(1);
     expect(screen.queryByText('Group 1')).not.toBeInTheDocument();
 
     act(() => {
-      observers[0]([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+      observers[0](
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver
+      );
     });
 
     // After loadMore, all 12 (including the lowest-ranked "Group 1") are visible.
-    await waitFor(() => {
-      expect(screen.getByText('Group 1')).toBeInTheDocument();
-    }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText('Group 1')).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it('aria-live region is present in the DOM', () => {
@@ -220,7 +260,7 @@ describe('BrowseGroupsPage', () => {
   });
 
   it('route config contains GROUPS_BROWSE entry', () => {
-    const entry = routeConfig.find(r => r.path === ROUTES.GROUPS_BROWSE);
+    const entry = routeConfig.find((r) => r.path === ROUTES.GROUPS_BROWSE);
     expect(entry).toBeDefined();
     expect(entry?.path).toBe('/groups/browse');
   });

@@ -14,29 +14,50 @@ import { api } from '../utils/api';
 import type { RampTransaction, RampTransactionType, RampInitResponse } from '../types/ramp';
 
 export interface UseRampResult {
-  initiateDeposit: (params: { anchorDomain: string; assetCode: string; assetIssuer?: string; amount?: string; stellarAccount?: string }) => Promise<RampInitResponse>;
-  initiateWithdraw: (params: { anchorDomain: string; assetCode: string; assetIssuer?: string; amount?: string; stellarAccount?: string }) => Promise<RampInitResponse>;
+  initiateDeposit: (params: {
+    anchorDomain: string;
+    assetCode: string;
+    assetIssuer?: string;
+    amount?: string;
+    stellarAccount?: string;
+  }) => Promise<RampInitResponse>;
+  initiateWithdraw: (params: {
+    anchorDomain: string;
+    assetCode: string;
+    assetIssuer?: string;
+    amount?: string;
+    stellarAccount?: string;
+  }) => Promise<RampInitResponse>;
   getTransaction: (id: string) => Promise<RampTransaction | null>;
   pollStatus: (id: string, intervalMs?: number) => Promise<RampTransaction | null>;
 }
 
 export function useRamp(): UseRampResult {
   const initiate = useCallback(
-    async (type: RampTransactionType, params: { anchorDomain: string; assetCode: string; assetIssuer?: string; amount?: string; stellarAccount?: string }): Promise<RampInitResponse> => {
+    async (
+      type: RampTransactionType,
+      params: {
+        anchorDomain: string;
+        assetCode: string;
+        assetIssuer?: string;
+        amount?: string;
+        stellarAccount?: string;
+      }
+    ): Promise<RampInitResponse> => {
       const path = type === 'deposit' ? '/ramp/deposit' : '/ramp/withdraw';
       return api.post<RampInitResponse>(path, params);
     },
-    [],
+    []
   );
 
   const initiateDeposit = useCallback(
     (params: Parameters<typeof initiate>[1]) => initiate('deposit', params),
-    [initiate],
+    [initiate]
   );
 
   const initiateWithdraw = useCallback(
     (params: Parameters<typeof initiate>[1]) => initiate('withdraw', params),
-    [initiate],
+    [initiate]
   );
 
   const getTransaction = useCallback(async (id: string): Promise<RampTransaction | null> => {
@@ -57,13 +78,16 @@ export function useRamp(): UseRampResult {
         return null;
       }
     },
-    [],
+    []
   );
 
   return { initiateDeposit, initiateWithdraw, getTransaction, pollStatus };
 }
 
-export function useRampTransactionPoller(txId: string | null, enabled = true): RampTransaction | null {
+export function useRampTransactionPoller(
+  txId: string | null,
+  enabled = true
+): RampTransaction | null {
   const [record, setRecord] = useState<RampTransaction | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 

@@ -74,9 +74,7 @@ describe('Group Metadata Types', () => {
     // Invalid names
     const invalidNames = ['AB', 'A'.repeat(51)];
     invalidNames.forEach((name) => {
-      expect(
-        name.length < 3 || name.length > 50,
-      ).toBe(true);
+      expect(name.length < 3 || name.length > 50).toBe(true);
     });
   });
 

@@ -239,9 +239,7 @@ describe('applyGroupFilters', () => {
   });
 
   it('handles special characters in search query without throwing', () => {
-    expect(() =>
-      applyGroupFilters(groups, { searchQuery: '(.*?)[(special)]' }),
-    ).not.toThrow();
+    expect(() => applyGroupFilters(groups, { searchQuery: '(.*?)[(special)]' })).not.toThrow();
   });
 
   it('applies all four filters simultaneously', () => {

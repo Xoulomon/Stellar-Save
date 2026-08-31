@@ -18,8 +18,11 @@ import { HardwareWalletSetup } from './HardwareWalletSetup';
 import { disconnectDevice, updatePersistedState } from '../wallet/hardware/hardwareService';
 import { HARDWARE_WALLET_I18N } from '../wallet/hardware/types';
 
-import type { HardwareAccount, HardwareDeviceInfo, HardwareWalletState } from '../wallet/hardware/types';
-
+import type {
+  HardwareAccount,
+  HardwareDeviceInfo,
+  HardwareWalletState,
+} from '../wallet/hardware/types';
 
 interface HardwareWalletManageProps {
   state: HardwareWalletState;
@@ -42,11 +45,14 @@ export function HardwareWalletManage({ state, onStateChange }: HardwareWalletMan
     });
   }, [onStateChange]);
 
-  const handleSelectAccount = useCallback((account: HardwareAccount) => {
-    setSelectedAccount(account);
-    updatePersistedState({ selectedAccount: account });
-    onStateChange({ ...state, selectedAccount: account });
-  }, [state, onStateChange]);
+  const handleSelectAccount = useCallback(
+    (account: HardwareAccount) => {
+      setSelectedAccount(account);
+      updatePersistedState({ selectedAccount: account });
+      onStateChange({ ...state, selectedAccount: account });
+    },
+    [state, onStateChange]
+  );
 
   const handleSetupComplete = useCallback(() => {
     setSetupOpen(false);
@@ -68,7 +74,9 @@ export function HardwareWalletManage({ state, onStateChange }: HardwareWalletMan
 
         <Dialog open={setupOpen} onClose={() => setSetupOpen(false)} maxWidth="sm" fullWidth>
           <DialogTitle>
-            <Typography variant="h6" fontWeight={700}>Setup Hardware Wallet</Typography>
+            <Typography variant="h6" fontWeight={700}>
+              Setup Hardware Wallet
+            </Typography>
           </DialogTitle>
           <DialogContent>
             <HardwareWalletSetup
@@ -89,9 +97,12 @@ export function HardwareWalletManage({ state, onStateChange }: HardwareWalletMan
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
               <Stack>
-                <Typography variant="subtitle2" fontWeight={700}>{state.device.name}</Typography>
+                <Typography variant="subtitle2" fontWeight={700}>
+                  {state.device.name}
+                </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {HARDWARE_WALLET_I18N[state.device.type]} · {HARDWARE_WALLET_I18N[state.device.connection]}
+                  {HARDWARE_WALLET_I18N[state.device.type]} ·{' '}
+                  {HARDWARE_WALLET_I18N[state.device.connection]}
                   {state.device.firmwareVersion && ` · FW ${state.device.firmwareVersion}`}
                 </Typography>
               </Stack>
@@ -113,7 +124,9 @@ export function HardwareWalletManage({ state, onStateChange }: HardwareWalletMan
       )}
 
       {/* Accounts */}
-      <Typography variant="subtitle2" fontWeight={700}>Accounts</Typography>
+      <Typography variant="subtitle2" fontWeight={700}>
+        Accounts
+      </Typography>
       {state.accounts.map((account, i) => (
         <Card
           key={account.index}
@@ -135,7 +148,11 @@ export function HardwareWalletManage({ state, onStateChange }: HardwareWalletMan
                 <Typography variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}>
                   {account.address.slice(0, 12)}...{account.address.slice(-8)}
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', fontSize: '0.65rem' }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ fontFamily: 'monospace', fontSize: '0.65rem' }}
+                >
                   {account.path}
                 </Typography>
               </Stack>
@@ -161,7 +178,9 @@ export function HardwareWalletManage({ state, onStateChange }: HardwareWalletMan
 
       <Dialog open={setupOpen} onClose={() => setSetupOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          <Typography variant="h6" fontWeight={700}>Change Hardware Wallet</Typography>
+          <Typography variant="h6" fontWeight={700}>
+            Change Hardware Wallet
+          </Typography>
         </DialogTitle>
         <DialogContent>
           <HardwareWalletSetup

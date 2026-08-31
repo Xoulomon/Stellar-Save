@@ -58,15 +58,13 @@ export interface WalletConnectionContextValue {
   switchAccount: (address: string) => void;
 }
 
-export const WalletConnectionContext = createContext<
-  WalletConnectionContextValue | undefined
->(undefined);
+export const WalletConnectionContext = createContext<WalletConnectionContextValue | undefined>(
+  undefined
+);
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
-export const WalletConnectionProvider: React.FC<{ children: ReactNode }> = ({
-  children,
-}) => {
+export const WalletConnectionProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [status, setStatus] = useState<WalletConnectionStatus>('idle');
   const [activeAddress, setActiveAddress] = useState<string | null>(null);
   const [network, setNetwork] = useState<string | null>(null);
@@ -80,9 +78,7 @@ export const WalletConnectionProvider: React.FC<{ children: ReactNode }> = ({
 
   const refreshWallets = useCallback(async () => {
     const supported = await StellarWalletsKit.refreshSupportedWallets();
-    setWallets(
-      supported.map((w) => ({ id: w.id, name: w.name, installed: w.isAvailable })),
-    );
+    setWallets(supported.map((w) => ({ id: w.id, name: w.name, installed: w.isAvailable })));
   }, []);
 
   // Restore persisted session on mount
@@ -166,9 +162,7 @@ export const WalletConnectionProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   return (
-    <WalletConnectionContext.Provider value={value}>
-      {children}
-    </WalletConnectionContext.Provider>
+    <WalletConnectionContext.Provider value={value}>{children}</WalletConnectionContext.Provider>
   );
 };
 
@@ -177,9 +171,7 @@ export const WalletConnectionProvider: React.FC<{ children: ReactNode }> = ({
 export function useWalletConnection(): WalletConnectionContextValue {
   const ctx = useContext(WalletConnectionContext);
   if (!ctx) {
-    throw new Error(
-      'useWalletConnection must be used within WalletConnectionProvider.',
-    );
+    throw new Error('useWalletConnection must be used within WalletConnectionProvider.');
   }
   return ctx;
 }

@@ -68,37 +68,27 @@ describe('PayoutStatusScreen — queue position', () => {
   });
 
   it("shows the user's queue position number", () => {
-    render(
-      <PayoutStatusScreen data={BASE_DATA} currentUserAddress={USER_ADDRESS} />
-    );
+    render(<PayoutStatusScreen data={BASE_DATA} currentUserAddress={USER_ADDRESS} />);
     expect(screen.getByText('#2')).toBeInTheDocument();
   });
 
   it('shows total member count alongside position', () => {
-    render(
-      <PayoutStatusScreen data={BASE_DATA} currentUserAddress={USER_ADDRESS} />
-    );
+    render(<PayoutStatusScreen data={BASE_DATA} currentUserAddress={USER_ADDRESS} />);
     expect(screen.getByText(/4 member/i)).toBeInTheDocument();
   });
 
   it('labels the user position as "Up Next!" when status is next', () => {
-    render(
-      <PayoutStatusScreen data={BASE_DATA} currentUserAddress={USER_ADDRESS} />
-    );
+    render(<PayoutStatusScreen data={BASE_DATA} currentUserAddress={USER_ADDRESS} />);
     expect(screen.getByText('Up Next!')).toBeInTheDocument();
   });
 
   it('labels the user position as "Paid" when status is completed', () => {
-    render(
-      <PayoutStatusScreen data={BASE_DATA} currentUserAddress={PAID_ADDRESS} />
-    );
+    render(<PayoutStatusScreen data={BASE_DATA} currentUserAddress={PAID_ADDRESS} />);
     expect(screen.getByText('Paid')).toBeInTheDocument();
   });
 
   it('shows progress: 1 of 4 paid out', () => {
-    render(
-      <PayoutStatusScreen data={BASE_DATA} currentUserAddress={USER_ADDRESS} />
-    );
+    render(<PayoutStatusScreen data={BASE_DATA} currentUserAddress={USER_ADDRESS} />);
     expect(screen.getByText(/1 of 4 paid out/i)).toBeInTheDocument();
   });
 });
@@ -107,31 +97,23 @@ describe('PayoutStatusScreen — queue position', () => {
 
 describe('PayoutStatusScreen — estimated date', () => {
   it("shows the user's estimated payout date", () => {
-    render(
-      <PayoutStatusScreen data={BASE_DATA} currentUserAddress={USER_ADDRESS} />
-    );
+    render(<PayoutStatusScreen data={BASE_DATA} currentUserAddress={USER_ADDRESS} />);
     // Jun 1, 2026 formatted as "Jun 1, 2026"
     expect(screen.getByText(/Jun 1, 2026/i)).toBeInTheDocument();
   });
 
   it('shows "Received on" label when payout is completed', () => {
-    render(
-      <PayoutStatusScreen data={BASE_DATA} currentUserAddress={PAID_ADDRESS} />
-    );
+    render(<PayoutStatusScreen data={BASE_DATA} currentUserAddress={PAID_ADDRESS} />);
     expect(screen.getByText(/Received on/i)).toBeInTheDocument();
   });
 
   it('shows "Estimated date" label when payout is upcoming/next', () => {
-    render(
-      <PayoutStatusScreen data={BASE_DATA} currentUserAddress={USER_ADDRESS} />
-    );
+    render(<PayoutStatusScreen data={BASE_DATA} currentUserAddress={USER_ADDRESS} />);
     expect(screen.getByText(/Estimated date/i)).toBeInTheDocument();
   });
 
   it('shows payout amount for current user', () => {
-    render(
-      <PayoutStatusScreen data={BASE_DATA} currentUserAddress={USER_ADDRESS} />
-    );
+    render(<PayoutStatusScreen data={BASE_DATA} currentUserAddress={USER_ADDRESS} />);
     expect(screen.getByText(/400 XLM/i)).toBeInTheDocument();
   });
 });
@@ -140,36 +122,28 @@ describe('PayoutStatusScreen — estimated date', () => {
 
 describe('PayoutStatusScreen — explorer link', () => {
   it('shows explorer link when user has a paid txHash', () => {
-    render(
-      <PayoutStatusScreen data={BASE_DATA} currentUserAddress={PAID_ADDRESS} />
-    );
+    render(<PayoutStatusScreen data={BASE_DATA} currentUserAddress={PAID_ADDRESS} />);
     const link = screen.getByRole('link', { name: /view payout transaction/i });
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute('href', expect.stringContaining(TX_HASH));
   });
 
   it('explorer link opens in a new tab with noopener noreferrer', () => {
-    render(
-      <PayoutStatusScreen data={BASE_DATA} currentUserAddress={PAID_ADDRESS} />
-    );
+    render(<PayoutStatusScreen data={BASE_DATA} currentUserAddress={PAID_ADDRESS} />);
     const link = screen.getByRole('link', { name: /view payout transaction/i });
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   it('does not show explorer link when payout is not yet completed', () => {
-    render(
-      <PayoutStatusScreen data={BASE_DATA} currentUserAddress={USER_ADDRESS} />
-    );
+    render(<PayoutStatusScreen data={BASE_DATA} currentUserAddress={USER_ADDRESS} />);
     expect(
       screen.queryByRole('link', { name: /view payout transaction/i })
     ).not.toBeInTheDocument();
   });
 
   it('explorer link URL contains the stellar.expert domain', () => {
-    render(
-      <PayoutStatusScreen data={BASE_DATA} currentUserAddress={PAID_ADDRESS} />
-    );
+    render(<PayoutStatusScreen data={BASE_DATA} currentUserAddress={PAID_ADDRESS} />);
     const link = screen.getByRole('link', { name: /view payout transaction/i });
     expect(link.getAttribute('href')).toMatch(/stellar\.expert/);
   });
@@ -180,9 +154,7 @@ describe('PayoutStatusScreen — explorer link', () => {
 describe('PayoutStatusScreen — wallet not connected', () => {
   it('shows connect wallet prompt when no address is provided', () => {
     render(<PayoutStatusScreen data={BASE_DATA} />);
-    expect(
-      screen.getByText(/connect your wallet/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/connect your wallet/i)).toBeInTheDocument();
   });
 
   it('does not render the user position card without an address', () => {

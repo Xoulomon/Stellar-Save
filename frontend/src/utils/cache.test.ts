@@ -11,7 +11,7 @@ describe('CacheService', () => {
   beforeEach(() => {
     cache = new CacheService({ prefix: 'test-' });
     // Clear localStorage prefix
-    Object.keys(localStorage).forEach(key => {
+    Object.keys(localStorage).forEach((key) => {
       if (key.startsWith('test-')) localStorage.removeItem(key);
     });
     cache.clear();
@@ -30,7 +30,7 @@ describe('CacheService', () => {
 
   it('should expire value after TTL', async () => {
     cache.set(KEY, VALUE, TTL_SHORT);
-    await new Promise(r => setTimeout(r, TTL_SHORT + 10));
+    await new Promise((r) => setTimeout(r, TTL_SHORT + 10));
     expect(cache.get(KEY)).toBeNull();
     expect(cache.has(KEY)).toBe(false);
   });

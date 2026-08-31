@@ -26,7 +26,7 @@ describe('RouteBoundary', () => {
     render(
       <RouteBoundary>
         <BrokenPage shouldThrow={false} />
-      </RouteBoundary>,
+      </RouteBoundary>
     );
     expect(screen.getByText('Page rendered successfully')).toBeInTheDocument();
   });
@@ -35,7 +35,7 @@ describe('RouteBoundary', () => {
     render(
       <RouteBoundary>
         <BrokenPage shouldThrow={true} />
-      </RouteBoundary>,
+      </RouteBoundary>
     );
     // Fallback heading from ErrorBoundary
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
@@ -45,7 +45,7 @@ describe('RouteBoundary', () => {
     render(
       <RouteBoundary>
         <BrokenPage shouldThrow={true} />
-      </RouteBoundary>,
+      </RouteBoundary>
     );
     expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
   });
@@ -54,7 +54,7 @@ describe('RouteBoundary', () => {
     render(
       <RouteBoundary>
         <BrokenPage shouldThrow={true} />
-      </RouteBoundary>,
+      </RouteBoundary>
     );
     expect(screen.getByRole('button', { name: /go home/i })).toBeInTheDocument();
   });
@@ -70,7 +70,7 @@ describe('RouteBoundary', () => {
     const { rerender } = render(
       <RouteBoundary>
         <ControlledPage />
-      </RouteBoundary>,
+      </RouteBoundary>
     );
 
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
@@ -82,7 +82,7 @@ describe('RouteBoundary', () => {
     rerender(
       <RouteBoundary>
         <ControlledPage />
-      </RouteBoundary>,
+      </RouteBoundary>
     );
 
     expect(screen.getByText('Page recovered')).toBeInTheDocument();
@@ -93,7 +93,7 @@ describe('RouteBoundary', () => {
     const { unmount } = render(
       <RouteBoundary>
         <BrokenPage shouldThrow={false} />
-      </RouteBoundary>,
+      </RouteBoundary>
     );
     expect(screen.getByText('Page rendered successfully')).toBeInTheDocument();
     unmount();
@@ -101,7 +101,7 @@ describe('RouteBoundary', () => {
     render(
       <RouteBoundary>
         <BrokenPage shouldThrow={true} />
-      </RouteBoundary>,
+      </RouteBoundary>
     );
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
   });

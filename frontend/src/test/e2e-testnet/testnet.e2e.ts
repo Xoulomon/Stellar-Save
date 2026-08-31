@@ -41,7 +41,9 @@ try {
     if (key && rest.length) process.env[key.trim()] = rest.join('=').trim();
   }
 } catch {
-  console.error('❌  .env.testnet not found. Copy .env.testnet.example → .env.testnet and fill in values.');
+  console.error(
+    '❌  .env.testnet not found. Copy .env.testnet.example → .env.testnet and fill in values.'
+  );
   process.exit(1);
 }
 
@@ -80,21 +82,29 @@ async function ensureFunded(publicKey: string): Promise<void> {
     // Wait for account to appear
     for (let i = 0; i < 10; i++) {
       await sleep(2000);
-      try { await server.getAccount(publicKey); return; } catch { /* retry */ }
+      try {
+        await server.getAccount(publicKey);
+        return;
+      } catch {
+        /* retry */
+      }
     }
     throw new Error('Account did not appear after Friendbot funding');
   }
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(r => setTimeout(r, ms));
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 /**
  * Build, simulate, sign with a local keypair, and submit a transaction.
  * Returns the transaction hash.
  */
-async function submitTx(keypair: Keypair, operation: ReturnType<Contract['call']>): Promise<string> {
+async function submitTx(
+  keypair: Keypair,
+  operation: ReturnType<Contract['call']>
+): Promise<string> {
   const account = await server.getAccount(keypair.publicKey());
 
   const tx = new TransactionBuilder(account, {
@@ -203,23 +213,25 @@ async function main(): Promise<void> {
   let groupId: bigint = 0n;
 
   await test('create_group submits and confirms on-chain', async () => {
-    const totalBefore = await readContract<bigint>(
-      contract.call('get_total_groups_created')
+    const totalBefore = await readContract<bigint>(contract.call('get_total_groups_created'));
+
+    await submitTx(
+      keypairA,
+      contract.call(
+        'create_group',
+        new Address(keypairA.publicKey()).toScVal(),
+        nativeToScVal(10_000_000n, { type: 'i128' }), // 1 XLM
+        nativeToScVal(604800n, { type: 'u64' }), // 1 week
+        nativeToScVal(5, { type: 'u32' }) // max 5 members
+      )
     );
 
-    await submitTx(keypairA, contract.call(
-      'create_group',
-      new Address(keypairA.publicKey()).toScVal(),
-      nativeToScVal(10_000_000n, { type: 'i128' }),  // 1 XLM
-      nativeToScVal(604800n, { type: 'u64' }),         // 1 week
-      nativeToScVal(5, { type: 'u32' }),               // max 5 members
-    ));
+    const totalAfter = await readContract<bigint>(contract.call('get_total_groups_created'));
 
-    const totalAfter = await readContract<bigint>(
-      contract.call('get_total_groups_created')
+    assert(
+      totalAfter > totalBefore,
+      `group count should increase (was ${totalBefore}, now ${totalAfter})`
     );
-
-    assert(totalAfter > totalBefore, `group count should increase (was ${totalBefore}, now ${totalAfter})`);
     groupId = totalAfter;
   });
 
@@ -249,21 +261,20 @@ async function main(): Promise<void> {
   let multiGroupId: bigint = 0n;
 
   await test('Wallet A creates a new group for multi-user test', async () => {
-    const totalBefore = await readContract<bigint>(
-      contract.call('get_total_groups_created')
+    const totalBefore = await readContract<bigint>(contract.call('get_total_groups_created'));
+
+    await submitTx(
+      keypairA,
+      contract.call(
+        'create_group',
+        new Address(keypairA.publicKey()).toScVal(),
+        nativeToScVal(5_000_000n, { type: 'i128' }), // 0.5 XLM
+        nativeToScVal(604800n, { type: 'u64' }),
+        nativeToScVal(10, { type: 'u32' })
+      )
     );
 
-    await submitTx(keypairA, contract.call(
-      'create_group',
-      new Address(keypairA.publicKey()).toScVal(),
-      nativeToScVal(5_000_000n, { type: 'i128' }),   // 0.5 XLM
-      nativeToScVal(604800n, { type: 'u64' }),
-      nativeToScVal(10, { type: 'u32' }),
-    ));
-
-    const totalAfter = await readContract<bigint>(
-      contract.call('get_total_groups_created')
-    );
+    const totalAfter = await readContract<bigint>(contract.call('get_total_groups_created'));
     assert(totalAfter > totalBefore, 'group count should increase');
     multiGroupId = totalAfter;
   });
@@ -273,16 +284,22 @@ async function main(): Promise<void> {
       contract.call('get_member_count', nativeToScVal(multiGroupId, { type: 'u64' }))
     );
 
-    await submitTx(keypairB, contract.call(
-      'join_group',
-      nativeToScVal(multiGroupId, { type: 'u64' }),
-      new Address(keypairB.publicKey()).toScVal(),
-    ));
+    await submitTx(
+      keypairB,
+      contract.call(
+        'join_group',
+        nativeToScVal(multiGroupId, { type: 'u64' }),
+        new Address(keypairB.publicKey()).toScVal()
+      )
+    );
 
     const membersAfter = await readContract<number>(
       contract.call('get_member_count', nativeToScVal(multiGroupId, { type: 'u64' }))
     );
-    assert(membersAfter > membersBefore, `member count should increase (was ${membersBefore}, now ${membersAfter})`);
+    assert(
+      membersAfter > membersBefore,
+      `member count should increase (was ${membersBefore}, now ${membersAfter})`
+    );
   });
 
   await test('on-chain member count reflects both users', async () => {
@@ -298,17 +315,23 @@ async function main(): Promise<void> {
   await test('joining a group twice returns AlreadyMember error (code 2001)', async () => {
     let threw = false;
     try {
-      await submitTx(keypairB, contract.call(
-        'join_group',
-        nativeToScVal(multiGroupId, { type: 'u64' }),
-        new Address(keypairB.publicKey()).toScVal(),
-      ));
+      await submitTx(
+        keypairB,
+        contract.call(
+          'join_group',
+          nativeToScVal(multiGroupId, { type: 'u64' }),
+          new Address(keypairB.publicKey()).toScVal()
+        )
+      );
     } catch (err) {
       threw = true;
       const msg = (err as Error).message;
       // Contract error 2001 = AlreadyMember
       assert(
-        msg.includes('2001') || msg.includes('already') || msg.includes('AlreadyMember') || msg.includes('failed'),
+        msg.includes('2001') ||
+          msg.includes('already') ||
+          msg.includes('AlreadyMember') ||
+          msg.includes('failed'),
         `expected AlreadyMember error, got: ${msg}`
       );
     }
@@ -317,35 +340,40 @@ async function main(): Promise<void> {
 
   await test('joining a full group returns GroupFull error (code 1002)', async () => {
     // Create a group with max_members = 1 (only creator, immediately full)
-    const totalBefore = await readContract<bigint>(
-      contract.call('get_total_groups_created')
+    const totalBefore = await readContract<bigint>(contract.call('get_total_groups_created'));
+
+    await submitTx(
+      keypairA,
+      contract.call(
+        'create_group',
+        new Address(keypairA.publicKey()).toScVal(),
+        nativeToScVal(1_000_000n, { type: 'i128' }),
+        nativeToScVal(604800n, { type: 'u64' }),
+        nativeToScVal(1, { type: 'u32' }) // max 1 member → immediately full
+      )
     );
 
-    await submitTx(keypairA, contract.call(
-      'create_group',
-      new Address(keypairA.publicKey()).toScVal(),
-      nativeToScVal(1_000_000n, { type: 'i128' }),
-      nativeToScVal(604800n, { type: 'u64' }),
-      nativeToScVal(1, { type: 'u32' }),  // max 1 member → immediately full
-    ));
-
-    const fullGroupId = (await readContract<bigint>(
-      contract.call('get_total_groups_created')
-    ));
+    const fullGroupId = await readContract<bigint>(contract.call('get_total_groups_created'));
     assert(fullGroupId > totalBefore, 'full group should be created');
 
     let threw = false;
     try {
-      await submitTx(keypairB, contract.call(
-        'join_group',
-        nativeToScVal(fullGroupId, { type: 'u64' }),
-        new Address(keypairB.publicKey()).toScVal(),
-      ));
+      await submitTx(
+        keypairB,
+        contract.call(
+          'join_group',
+          nativeToScVal(fullGroupId, { type: 'u64' }),
+          new Address(keypairB.publicKey()).toScVal()
+        )
+      );
     } catch (err) {
       threw = true;
       const msg = (err as Error).message;
       assert(
-        msg.includes('1002') || msg.includes('full') || msg.includes('GroupFull') || msg.includes('failed'),
+        msg.includes('1002') ||
+          msg.includes('full') ||
+          msg.includes('GroupFull') ||
+          msg.includes('failed'),
         `expected GroupFull error, got: ${msg}`
       );
     }
@@ -363,7 +391,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('\n💥 Unexpected error:', err);
   process.exit(1);
 });

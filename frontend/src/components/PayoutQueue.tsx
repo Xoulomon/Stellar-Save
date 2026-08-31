@@ -1,51 +1,48 @@
-import { useRef } from "react"
+import { useRef } from 'react';
 
-import { getExplorerTxUrl } from "../utils/explorerUrl"
+import { getExplorerTxUrl } from '../utils/explorerUrl';
 
-import type { PayoutQueueData, PayoutEntry, PayoutStatus } from "../types/contribution"
+import type { PayoutQueueData, PayoutEntry, PayoutStatus } from '../types/contribution';
 
 function formatAddress(address: string): string {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
 function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-const STATUS_CONFIG: Record<PayoutStatus, { label: string; rowClass: string; badgeClass: string; dot: string }> = {
+const STATUS_CONFIG: Record<
+  PayoutStatus,
+  { label: string; rowClass: string; badgeClass: string; dot: string }
+> = {
   completed: {
-    label: "Paid",
-    rowClass: "bg-gray-50 border-gray-200 opacity-75",
-    badgeClass: "bg-gray-100 text-gray-500",
-    dot: "bg-gray-400",
+    label: 'Paid',
+    rowClass: 'bg-gray-50 border-gray-200 opacity-75',
+    badgeClass: 'bg-gray-100 text-gray-500',
+    dot: 'bg-gray-400',
   },
   next: {
-    label: "Next",
-    rowClass: "bg-indigo-50 border-indigo-300 ring-2 ring-indigo-200",
-    badgeClass: "bg-indigo-100 text-indigo-700 font-bold animate-pulse",
-    dot: "bg-indigo-500",
+    label: 'Next',
+    rowClass: 'bg-indigo-50 border-indigo-300 ring-2 ring-indigo-200',
+    badgeClass: 'bg-indigo-100 text-indigo-700 font-bold animate-pulse',
+    dot: 'bg-indigo-500',
   },
   upcoming: {
-    label: "Upcoming",
-    rowClass: "bg-white border-gray-100",
-    badgeClass: "bg-yellow-50 text-yellow-600",
-    dot: "bg-yellow-400",
+    label: 'Upcoming',
+    rowClass: 'bg-white border-gray-100',
+    badgeClass: 'bg-yellow-50 text-yellow-600',
+    dot: 'bg-yellow-400',
   },
-}
+};
 
-function PayoutRow({
-  entry,
-  isCurrentUser,
-}: {
-  entry: PayoutEntry
-  isCurrentUser: boolean
-}) {
-  const config = STATUS_CONFIG[entry.status]
+function PayoutRow({ entry, isCurrentUser }: { entry: PayoutEntry; isCurrentUser: boolean }) {
+  const config = STATUS_CONFIG[entry.status];
 
   return (
     <div
       className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${config.rowClass} ${
-        isCurrentUser ? "ring-2 ring-purple-300" : ""
+        isCurrentUser ? 'ring-2 ring-purple-300' : ''
       }`}
     >
       {/* Position number */}
@@ -67,7 +64,7 @@ function PayoutRow({
           )}
         </div>
         <p className="text-xs text-gray-500">
-          {entry.status === "completed" && entry.paidAt
+          {entry.status === 'completed' && entry.paidAt
             ? `Paid on ${formatDate(entry.paidAt)}`
             : `Est. ${formatDate(entry.estimatedDate)}`}
         </p>
@@ -91,27 +88,27 @@ function PayoutRow({
         </span>
       </div>
     </div>
-  )
+  );
 }
 
 export interface PayoutQueueProps {
-  data: PayoutQueueData
-  maxHeight?: number
+  data: PayoutQueueData;
+  maxHeight?: number;
 }
 
 export function PayoutQueue({ data, maxHeight = 480 }: PayoutQueueProps) {
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const completed = data.entries.filter((e) => e.status === "completed")
-  const next = data.entries.find((e) => e.status === "next")
-  const upcoming = data.entries.filter((e) => e.status === "upcoming")
-  const completedCount = completed.length
-  const progress = (completedCount / data.totalMembers) * 100
+  const completed = data.entries.filter((e) => e.status === 'completed');
+  const next = data.entries.find((e) => e.status === 'next');
+  const upcoming = data.entries.filter((e) => e.status === 'upcoming');
+  const completedCount = completed.length;
+  const progress = (completedCount / data.totalMembers) * 100;
 
   const scrollToNext = () => {
-    const el = scrollRef.current?.querySelector("[data-next]")
-    el?.scrollIntoView({ behavior: "smooth", block: "center" })
-  }
+    const el = scrollRef.current?.querySelector('[data-next]');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -133,7 +130,9 @@ export function PayoutQueue({ data, maxHeight = 480 }: PayoutQueueProps) {
         {/* Progress */}
         <div className="mt-3">
           <div className="flex justify-between text-xs text-indigo-200 mb-1">
-            <span>{completedCount} of {data.totalMembers} paid out</span>
+            <span>
+              {completedCount} of {data.totalMembers} paid out
+            </span>
             <span>{Math.round(progress)}%</span>
           </div>
           <div className="w-full bg-white/20 rounded-full h-1.5">
@@ -146,11 +145,7 @@ export function PayoutQueue({ data, maxHeight = 480 }: PayoutQueueProps) {
       </div>
 
       {/* Scrollable list */}
-      <div
-        ref={scrollRef}
-        className="overflow-y-auto px-4 py-3 space-y-2"
-        style={{ maxHeight }}
-      >
+      <div ref={scrollRef} className="overflow-y-auto px-4 py-3 space-y-2" style={{ maxHeight }}>
         {/* Completed */}
         {completed.length > 0 && (
           <div>
@@ -207,7 +202,7 @@ export function PayoutQueue({ data, maxHeight = 480 }: PayoutQueueProps) {
         <span>{upcoming.length + (next ? 1 : 0)} remaining</span>
       </div>
     </div>
-  )
+  );
 }
 
-export default PayoutQueue
+export default PayoutQueue;

@@ -201,7 +201,7 @@ describe('validateAndTransformFormData', () => {
 
   it('rejects a member count over the contract limit', () => {
     const result = validateAndTransformFormData(
-      validForm({ maxMembers: String(MAX_MEMBERS_LIMIT + 1) }),
+      validForm({ maxMembers: String(MAX_MEMBERS_LIMIT + 1) })
     );
     expect(result.success).toBe(false);
   });
@@ -279,7 +279,7 @@ interface NameUniquenessChecker {
 
 async function validateNameUniqueness(
   name: string,
-  isNameTaken: NameUniquenessChecker,
+  isNameTaken: NameUniquenessChecker
 ): Promise<string | null> {
   const syncError = fieldValidators.name(name);
   if (syncError) {
@@ -308,7 +308,7 @@ describe('async name uniqueness validation', () => {
   it('fails when the name is taken', async () => {
     isNameTaken.mockResolvedValue(true);
     await expect(validateNameUniqueness('Savings Circle', isNameTaken)).resolves.toMatch(
-      /already exists/i,
+      /already exists/i
     );
   });
 
@@ -319,7 +319,9 @@ describe('async name uniqueness validation', () => {
 
   it('surfaces a retry message when the lookup rejects', async () => {
     isNameTaken.mockRejectedValue(new Error('network down'));
-    await expect(validateNameUniqueness('Savings Circle', isNameTaken)).resolves.toMatch(/try again/i);
+    await expect(validateNameUniqueness('Savings Circle', isNameTaken)).resolves.toMatch(
+      /try again/i
+    );
   });
 });
 
@@ -335,7 +337,7 @@ describe('mocked submission handler', () => {
     }
     expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'Savings Circle', min_members: MIN_MEMBERS }),
+      expect.objectContaining({ name: 'Savings Circle', min_members: MIN_MEMBERS })
     );
   });
 

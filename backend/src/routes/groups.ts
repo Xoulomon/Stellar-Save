@@ -8,7 +8,9 @@ import { InMemoryGroupsRepository } from '../services/group/groups.repository';
  * data access here, so the same behaviour is testable through GroupsService
  * without spinning up HTTP.
  */
-export function createGroupsRouter(service: GroupsService = new GroupsService(new InMemoryGroupsRepository())): Router {
+export function createGroupsRouter(
+  service: GroupsService = new GroupsService(new InMemoryGroupsRepository())
+): Router {
   const router = Router();
 
   router.get('/groups', async (_req, res) => {

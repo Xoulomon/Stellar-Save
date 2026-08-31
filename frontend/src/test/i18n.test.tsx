@@ -45,7 +45,9 @@ describe('i18n translations', () => {
   });
 
   it('interpolates variables in translation strings', () => {
-    const result = i18n.t('settings.footerText', { defaultValue: 'Stellar Save - Built for transparent, on-chain savings' });
+    const result = i18n.t('settings.footerText', {
+      defaultValue: 'Stellar Save - Built for transparent, on-chain savings',
+    });
     expect(result).toContain('Stellar Save');
   });
 });

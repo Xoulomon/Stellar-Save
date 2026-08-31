@@ -8,7 +8,11 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { NotificationTransport } from '../notifications/NotificationTransport';
 import { NotificationUI } from '../notifications/NotificationUI';
-import type { NotificationMessage, TransportNotification, DeliveryChannel } from '../notifications/types';
+import type {
+  NotificationMessage,
+  TransportNotification,
+  DeliveryChannel,
+} from '../notifications/types';
 import * as notificationPermission from '../notifications/notificationPermission';
 import * as swRegistration from '../notifications/serviceWorkerRegistration';
 
@@ -213,7 +217,7 @@ describe('Notification System Integration', () => {
 
       // Deliver all via transport
       const deliveryResults = await Promise.all(
-        notifications.map((n) => transport.send(n, ['browser'])),
+        notifications.map((n) => transport.send(n, ['browser']))
       );
 
       expect(deliveryResults).toHaveLength(3);

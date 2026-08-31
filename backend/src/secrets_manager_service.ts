@@ -47,10 +47,13 @@ export class SecretsManagerService {
   constructor() {
     this.client = new SecretsManagerClient({
       region: config.aws.region,
-      credentials: config.aws.accessKeyId && config.aws.secretAccessKey ? {
-        accessKeyId: config.aws.accessKeyId,
-        secretAccessKey: config.aws.secretAccessKey,
-      } : undefined,
+      credentials:
+        config.aws.accessKeyId && config.aws.secretAccessKey
+          ? {
+              accessKeyId: config.aws.accessKeyId,
+              secretAccessKey: config.aws.secretAccessKey,
+            }
+          : undefined,
     });
   }
 
@@ -98,7 +101,9 @@ export class SecretsManagerService {
         secretName,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      throw new Error(`Failed to retrieve secret ${secretName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to retrieve secret ${secretName}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -158,10 +163,7 @@ export class SecretsManagerService {
   /**
    * Enable automatic rotation for a secret
    */
-  async enableRotation(
-    secretName: string,
-    rotationConfig: RotationConfig
-  ): Promise<void> {
+  async enableRotation(secretName: string, rotationConfig: RotationConfig): Promise<void> {
     try {
       const command = new UpdateSecretCommand({
         SecretId: secretName,
@@ -338,16 +340,11 @@ export async function migrateSecretToAWS(
   description: string
 ): Promise<void> {
   try {
-    await secretsManager.createSecret(
-      secretName,
-      envVarValue,
-      description,
-      {
-        Environment: config.nodeEnv,
-        ManagedBy: 'stellar-save-backend',
-        CreatedAt: new Date().toISOString(),
-      }
-    );
+    await secretsManager.createSecret(secretName, envVarValue, description, {
+      Environment: config.nodeEnv,
+      ManagedBy: 'stellar-save-backend',
+      CreatedAt: new Date().toISOString(),
+    });
 
     logger.info('Secret migrated to AWS Secrets Manager', {
       secretName,

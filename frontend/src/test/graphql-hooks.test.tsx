@@ -96,7 +96,15 @@ const GET_GROUPS_RESPONSE: GetGroupsQuery = {
 const GET_GROUP_RESPONSE: GetGroupQuery = {
   group: {
     ...groupFragment,
-    members: [{ __typename: 'Member', id: 'm1', address: 'GAAA...', name: 'Alice', joinedAt: 1_700_000_000 }],
+    members: [
+      {
+        __typename: 'Member',
+        id: 'm1',
+        address: 'GAAA...',
+        name: 'Alice',
+        joinedAt: 1_700_000_000,
+      },
+    ],
     transactions: [txFragment],
   },
 };
@@ -158,7 +166,7 @@ describe('useGetGroupsQuery', () => {
   it('exposes a static getKey method', () => {
     expect(typeof useGetGroupsQuery.getKey).toBe('function');
     expect(useGetGroupsQuery.getKey()).toEqual(['GetGroups']);
-    expect(useGetGroupsQuery.getKey({ })).toEqual(['GetGroups', {}]);
+    expect(useGetGroupsQuery.getKey({})).toEqual(['GetGroups', {}]);
   });
 
   it('exposes a static fetcher method', () => {
@@ -238,7 +246,7 @@ describe('useGetMembersQuery', () => {
 
     expect(result.current.data?.members).toHaveLength(1);
     expect(result.current.data?.members[0].address).toBe(
-      'GAAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHIIIIJJJJKKKKLLLLMMMMNNNN',
+      'GAAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHIIIIJJJJKKKKLLLLMMMMNNNN'
     );
   });
 
@@ -377,10 +385,9 @@ describe('useSetPreferencesMutation', () => {
     mockFetcherThunk.mockResolvedValueOnce(SET_PREFERENCES_RESPONSE);
     const onSuccess = vi.fn();
 
-    const { result } = renderHook(
-      () => useSetPreferencesMutation({ onSuccess }),
-      { wrapper: makeWrapper() },
-    );
+    const { result } = renderHook(() => useSetPreferencesMutation({ onSuccess }), {
+      wrapper: makeWrapper(),
+    });
 
     const vars: SetPreferencesMutationVariables = { userId: 'u1', tags: ['test'] };
     result.current.mutate(vars);

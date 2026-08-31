@@ -30,7 +30,6 @@ import { useWallet } from '../hooks/useWallet';
 
 import type { Transaction, TransactionType } from '../types/transaction';
 
-
 // ── Horizon fetch ─────────────────────────────────────────────────────────────
 
 const HORIZON_URLS: Record<string, string> = {
@@ -55,7 +54,7 @@ interface HorizonPayment {
 async function fetchHorizonTransactions(
   address: string,
   network: string,
-  contractId?: string,
+  contractId?: string
 ): Promise<Transaction[]> {
   const base = HORIZON_URLS[network] ?? HORIZON_URLS.TESTNET;
   const url = `${base}/accounts/${address}/payments?limit=50&order=desc`;
@@ -86,11 +85,70 @@ async function fetchHorizonTransactions(
 // ── Mock fallback ─────────────────────────────────────────────────────────────
 
 const MOCK_TRANSACTIONS: Transaction[] = [
-  { id: '1', hash: 'abc123def456abc123def456abc123de', createdAt: '2026-04-20T10:30:00Z', type: 'deposit', amount: '+250', assetCode: 'XLM', from: 'GABC...', to: 'GDEF...', memo: 'Group contribution cycle 2', status: 'success', fee: '0.00001' },
-  { id: '2', hash: 'def456ghi789def456ghi789def456gh', createdAt: '2026-04-15T14:22:00Z', type: 'payment', amount: '+1000', assetCode: 'XLM', from: 'GDEF...', to: 'GABC...', memo: 'Payout cycle 1', status: 'success', fee: '0.00001' },
-  { id: '3', hash: 'ghi789jkl012ghi789jkl012ghi789jk', createdAt: '2026-03-20T09:15:00Z', type: 'deposit', amount: '+250', assetCode: 'XLM', from: 'GABC...', to: 'GDEF...', memo: 'Group contribution cycle 1', status: 'success', fee: '0.00001' },
-  { id: '4', hash: 'jkl012mno345jkl012mno345jkl012mn', createdAt: '2026-03-10T16:45:00Z', type: 'withdraw', amount: '-45.50', assetCode: 'USDC', from: 'GABC...', to: 'GXYZ...', memo: '', status: 'success', fee: '0.00001' },
-  { id: '5', hash: 'mno345pqr678mno345pqr678mno345pq', createdAt: '2026-02-28T11:20:00Z', type: 'claimable', amount: '+15.75', assetCode: 'USDC', from: 'GXYZ...', memo: 'Reward claim', status: 'pending', fee: '0.00001' },
+  {
+    id: '1',
+    hash: 'abc123def456abc123def456abc123de',
+    createdAt: '2026-04-20T10:30:00Z',
+    type: 'deposit',
+    amount: '+250',
+    assetCode: 'XLM',
+    from: 'GABC...',
+    to: 'GDEF...',
+    memo: 'Group contribution cycle 2',
+    status: 'success',
+    fee: '0.00001',
+  },
+  {
+    id: '2',
+    hash: 'def456ghi789def456ghi789def456gh',
+    createdAt: '2026-04-15T14:22:00Z',
+    type: 'payment',
+    amount: '+1000',
+    assetCode: 'XLM',
+    from: 'GDEF...',
+    to: 'GABC...',
+    memo: 'Payout cycle 1',
+    status: 'success',
+    fee: '0.00001',
+  },
+  {
+    id: '3',
+    hash: 'ghi789jkl012ghi789jkl012ghi789jk',
+    createdAt: '2026-03-20T09:15:00Z',
+    type: 'deposit',
+    amount: '+250',
+    assetCode: 'XLM',
+    from: 'GABC...',
+    to: 'GDEF...',
+    memo: 'Group contribution cycle 1',
+    status: 'success',
+    fee: '0.00001',
+  },
+  {
+    id: '4',
+    hash: 'jkl012mno345jkl012mno345jkl012mn',
+    createdAt: '2026-03-10T16:45:00Z',
+    type: 'withdraw',
+    amount: '-45.50',
+    assetCode: 'USDC',
+    from: 'GABC...',
+    to: 'GXYZ...',
+    memo: '',
+    status: 'success',
+    fee: '0.00001',
+  },
+  {
+    id: '5',
+    hash: 'mno345pqr678mno345pqr678mno345pq',
+    createdAt: '2026-02-28T11:20:00Z',
+    type: 'claimable',
+    amount: '+15.75',
+    assetCode: 'USDC',
+    from: 'GXYZ...',
+    memo: 'Reward claim',
+    status: 'pending',
+    fee: '0.00001',
+  },
 ];
 
 // ── Column definitions ────────────────────────────────────────────────────────
@@ -105,9 +163,10 @@ const TYPE_COLORS: Record<string, 'success' | 'primary' | 'warning' | 'error' | 
 };
 
 function buildColumns(network: string): GridColDef[] {
-  const explorerBase = network === 'MAINNET'
-    ? 'https://stellar.expert/explorer/public/tx'
-    : 'https://stellar.expert/explorer/testnet/tx';
+  const explorerBase =
+    network === 'MAINNET'
+      ? 'https://stellar.expert/explorer/public/tx'
+      : 'https://stellar.expert/explorer/testnet/tx';
 
   return [
     {
@@ -189,7 +248,13 @@ function buildColumns(network: string): GridColDef[] {
         <Chip
           label={params.value}
           size="small"
-          color={params.value === 'success' ? 'success' : params.value === 'pending' ? 'warning' : 'error'}
+          color={
+            params.value === 'success'
+              ? 'success'
+              : params.value === 'pending'
+                ? 'warning'
+                : 'error'
+          }
         />
       ),
     },
@@ -279,13 +344,18 @@ export function TransactionHistory({
 
   const uniqueTypes = useMemo(
     () => Array.from(new Set(transactions.map((t) => t.type))),
-    [transactions],
+    [transactions]
   );
 
   return (
     <Box>
       {/* Toolbar */}
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }} alignItems={{ sm: 'center' }}>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={2}
+        sx={{ mb: 2 }}
+        alignItems={{ sm: 'center' }}
+      >
         <Typography variant="h3" sx={{ flex: 1 }}>
           Transaction History
         </Typography>
@@ -299,7 +369,9 @@ export function TransactionHistory({
         >
           <MenuItem value="all">All types</MenuItem>
           {uniqueTypes.map((t) => (
-            <MenuItem key={t} value={t} sx={{ textTransform: 'capitalize' }}>{t}</MenuItem>
+            <MenuItem key={t} value={t} sx={{ textTransform: 'capitalize' }}>
+              {t}
+            </MenuItem>
           ))}
         </TextField>
         {!address && (
@@ -309,7 +381,11 @@ export function TransactionHistory({
         )}
       </Stack>
 
-      {error && <Alert severity="warning" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       {/* DataGrid */}
       <Box sx={{ height: 480, width: '100%' }}>
@@ -326,12 +402,26 @@ export function TransactionHistory({
           density="compact"
           slots={{
             loadingOverlay: () => (
-              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: '100%',
+                }}
+              >
                 <CircularProgress size={32} />
               </Box>
             ),
             noRowsOverlay: () => (
-              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: '100%',
+                }}
+              >
                 <Typography color="text.secondary">No transactions found</Typography>
               </Box>
             ),

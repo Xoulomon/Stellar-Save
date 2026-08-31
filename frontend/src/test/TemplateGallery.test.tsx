@@ -10,10 +10,16 @@ import type { GroupTemplate } from '../types/template';
 
 const template: GroupTemplate = GROUP_TEMPLATES[0]; // Weekly Saver
 
-function renderCard(overrides?: Partial<{ onUse: (t: GroupTemplate) => void; onPreview: (t: GroupTemplate) => void }>) {
+function renderCard(
+  overrides?: Partial<{ onUse: (t: GroupTemplate) => void; onPreview: (t: GroupTemplate) => void }>
+) {
   const onUse = overrides?.onUse ?? vi.fn();
   const onPreview = overrides?.onPreview ?? vi.fn();
-  return { onUse, onPreview, ...render(<TemplateCard template={template} onUse={onUse} onPreview={onPreview} />) };
+  return {
+    onUse,
+    onPreview,
+    ...render(<TemplateCard template={template} onUse={onUse} onPreview={onPreview} />),
+  };
 }
 
 describe('TemplateCard', () => {

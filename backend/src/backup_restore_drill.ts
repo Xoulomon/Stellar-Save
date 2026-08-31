@@ -56,7 +56,7 @@ function createAlert(
   level: 'warning' | 'error',
   message: string,
   backupJobId?: string,
-  run?: RestoreDrillRun,
+  run?: RestoreDrillRun
 ): RestoreDrillAlert {
   return {
     id: crypto.randomUUID(),
@@ -191,7 +191,9 @@ export class BackupRestoreDrill {
       run.integrityChecks.push('checksum-verified', 'payload-parsed', 'record-count-available');
 
       if (!restoredPayload) {
-        return failed(`Restore drill did not materialise an ephemeral snapshot for backup ${latest.id}`);
+        return failed(
+          `Restore drill did not materialise an ephemeral snapshot for backup ${latest.id}`
+        );
       }
 
       const integrityIssues: string[] = [];
@@ -202,11 +204,15 @@ export class BackupRestoreDrill {
         integrityIssues.push('invalid record count');
       }
       if (restored.restoreDurationMs > this.config.maxRestoreDurationMs) {
-        integrityIssues.push(`restore exceeded RTO threshold (${restored.restoreDurationMs}ms > ${this.config.maxRestoreDurationMs}ms)`);
+        integrityIssues.push(
+          `restore exceeded RTO threshold (${restored.restoreDurationMs}ms > ${this.config.maxRestoreDurationMs}ms)`
+        );
       }
 
       if (integrityIssues.length > 0) {
-        return failed(`Restore drill integrity failure for backup ${latest.id}: ${integrityIssues.join('; ')}`);
+        return failed(
+          `Restore drill integrity failure for backup ${latest.id}: ${integrityIssues.join('; ')}`
+        );
       }
 
       run.status = 'passed';

@@ -44,7 +44,7 @@ interface ContributionData {
  */
 export function useContributions(
   groupId: string | null | undefined,
-  options: UseContributionsOptions = {},
+  options: UseContributionsOptions = {}
 ): UseContributionsReturn {
   const { refreshInterval } = options;
   const queryClient = useQueryClient();
@@ -89,7 +89,14 @@ export function useContributions(
         .filter((d): d is Date => d != null)
         .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
 
-    return { totalContributions, completedCount, pendingCount, failedCount, totalAmount, lastContributionDate };
+    return {
+      totalContributions,
+      completedCount,
+      pendingCount,
+      failedCount,
+      totalAmount,
+      lastContributionDate,
+    };
   }, [contributions]);
 
   return { contributions, currentCycle, status, isLoading, error: error?.message ?? null, refresh };

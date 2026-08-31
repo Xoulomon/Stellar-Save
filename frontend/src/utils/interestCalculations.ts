@@ -104,11 +104,7 @@ export function periodContainsLeapDay(start: Date, end: Date): boolean {
 /**
  * Resolves the year basis (denominator) for a given convention and period.
  */
-function resolveYearBasis(
-  convention: DayCountConvention,
-  start: Date,
-  end: Date,
-): number {
+function resolveYearBasis(convention: DayCountConvention, start: Date, end: Date): number {
   switch (convention) {
     case 'actual/360':
       return 360;
@@ -131,7 +127,7 @@ function resolveYearBasis(
  */
 export function roundHalfAwayFromZero(value: number, places: number): number {
   const factor = Math.pow(10, places);
-  return (Math.sign(value) || 1) * Math.round(Math.abs(value) * factor) / factor;
+  return ((Math.sign(value) || 1) * Math.round(Math.abs(value) * factor)) / factor;
 }
 
 // ── Core function ─────────────────────────────────────────────────────────────
@@ -171,9 +167,7 @@ export function calculateYield(params: YieldParams): YieldResult {
   }
   const days = daysBetween(startDate, endDate);
   if (days < 0) {
-    throw new RangeError(
-      `endDate must be ≥ startDate (got ${days} days)`,
-    );
+    throw new RangeError(`endDate must be ≥ startDate (got ${days} days)`);
   }
 
   // ── Calculation ─────────────────────────────────────────────────────────
@@ -182,9 +176,7 @@ export function calculateYield(params: YieldParams): YieldResult {
   const rawInterest = principal * annualRate * fractionalYear;
 
   const accruedInterest =
-    decimalPlaces != null
-      ? roundHalfAwayFromZero(rawInterest, decimalPlaces)
-      : rawInterest;
+    decimalPlaces != null ? roundHalfAwayFromZero(rawInterest, decimalPlaces) : rawInterest;
 
   const endBalance =
     decimalPlaces != null

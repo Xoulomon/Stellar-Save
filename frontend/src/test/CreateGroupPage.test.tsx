@@ -17,7 +17,9 @@ vi.mock('../hooks/useWallet', () => ({
 // Mock insurance API to avoid real HTTP requests
 vi.mock('../utils/insuranceApi', () => ({
   updateInsuranceSettings: vi.fn().mockResolvedValue({}),
-  fetchInsurancePool: vi.fn().mockResolvedValue({ enabled: false, balance: 0, premiumRate: 0.05, claims: [] }),
+  fetchInsurancePool: vi
+    .fn()
+    .mockResolvedValue({ enabled: false, balance: 0, premiumRate: 0.05, claims: [] }),
   fileClaim: vi.fn(),
 }));
 
@@ -26,7 +28,9 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: () => vi.fn() };
 });
 
-function renderPage(queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
+function renderPage(
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+) {
   return {
     queryClient,
     ...render(
@@ -34,7 +38,7 @@ function renderPage(queryClient = new QueryClient({ defaultOptions: { queries: {
         <MemoryRouter>
           <CreateGroupPage />
         </MemoryRouter>
-      </QueryClientProvider>,
+      </QueryClientProvider>
     ),
   };
 }

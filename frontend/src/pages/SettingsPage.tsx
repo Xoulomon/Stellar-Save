@@ -35,15 +35,15 @@ export default function SettingsPage() {
             </Typography>
 
             <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
-              {(["light", "dark", "system"] as const).map((opt) => (
+              {(['light', 'dark', 'system'] as const).map((opt) => (
                 <label
                   key={opt}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.4rem",
-                    cursor: "pointer",
-                    fontSize: "0.875rem",
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
                     fontWeight: mode === opt ? 600 : 400,
                   }}
                 >
@@ -53,7 +53,7 @@ export default function SettingsPage() {
                     value={opt}
                     checked={mode === opt}
                     onChange={() => setMode(opt)}
-                    style={{ accentColor: "var(--color-primary)" }}
+                    style={{ accentColor: 'var(--color-primary)' }}
                   />
                   {opt.charAt(0).toUpperCase() + opt.slice(1)}
                 </label>

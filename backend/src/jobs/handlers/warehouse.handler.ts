@@ -5,11 +5,7 @@ import { logger } from '../../logger';
 export class WarehouseHandler {
   private pipeline: WarehouseExportPipeline;
 
-  constructor(opts: {
-    s3Client?: S3Client;
-    bucket: string;
-    alertWebhook?: string;
-  }) {
+  constructor(opts: { s3Client?: S3Client; bucket: string; alertWebhook?: string }) {
     this.pipeline = new WarehouseExportPipeline({
       s3Client: opts.s3Client,
       bucket: opts.bucket,

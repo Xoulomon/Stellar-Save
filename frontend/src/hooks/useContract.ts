@@ -68,7 +68,11 @@ export interface UseContractReturn {
 
   // ── Read operations (no wallet required) ──────────────────────────────────
   getGroup: (groupId: bigint) => Promise<Record<string, unknown>>;
-  listGroups: (cursor: bigint, limit: number, statusFilter?: string) => Promise<Record<string, unknown>[]>;
+  listGroups: (
+    cursor: bigint,
+    limit: number,
+    statusFilter?: string
+  ) => Promise<Record<string, unknown>[]>;
   getTotalGroups: () => Promise<bigint>;
   getMemberCount: (groupId: bigint) => Promise<number>;
   getPayoutPosition: (groupId: bigint, memberAddress: string) => Promise<number>;
@@ -111,7 +115,7 @@ export function useContract(): UseContractReturn {
   async function runMutation<TParams>(
     key: keyof ContractLoadingState,
     params: TParams,
-    fn: (p: TParams) => Promise<string>,
+    fn: (p: TParams) => Promise<string>
   ): Promise<MutationResult> {
     if (!isReady || !activeAddress) {
       const err = new ContractError(null, 'Wallet is not connected.');
@@ -139,130 +143,124 @@ export function useContract(): UseContractReturn {
   const createGroup = useCallback(
     (params: Omit<CreateGroupParams, 'creator'>) =>
       runMutation('createGroup', params, (p) =>
-        stellarSaveClient.createGroup({ ...p, creator: activeAddress! }).then(String),
+        stellarSaveClient.createGroup({ ...p, creator: activeAddress! }).then(String)
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isReady, activeAddress],
+    [isReady, activeAddress]
   );
 
   const joinGroup = useCallback(
     (params: Omit<JoinGroupParams, 'member'>) =>
       runMutation('joinGroup', params, (p) =>
-        stellarSaveClient.joinGroup({ ...p, member: activeAddress! }),
+        stellarSaveClient.joinGroup({ ...p, member: activeAddress! })
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isReady, activeAddress],
+    [isReady, activeAddress]
   );
 
   const contribute = useCallback(
     (params: Omit<ContributeParams, 'member'>) =>
       runMutation('contribute', params, (p) =>
-        stellarSaveClient.contribute({ ...p, member: activeAddress! }),
+        stellarSaveClient.contribute({ ...p, member: activeAddress! })
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isReady, activeAddress],
+    [isReady, activeAddress]
   );
 
   const activateGroup = useCallback(
     (params: Omit<ActivateGroupParams, 'creator'>) =>
       runMutation('activateGroup', params, (p) =>
-        stellarSaveClient.activateGroup({ ...p, creator: activeAddress! }),
+        stellarSaveClient.activateGroup({ ...p, creator: activeAddress! })
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isReady, activeAddress],
+    [isReady, activeAddress]
   );
 
   const executePayout = useCallback(
     (params: Omit<ExecutePayoutParams, 'recipient'>) =>
       runMutation('executePayout', params, (p) =>
-        stellarSaveClient.executePayout({ ...p, recipient: activeAddress! }),
+        stellarSaveClient.executePayout({ ...p, recipient: activeAddress! })
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isReady, activeAddress],
+    [isReady, activeAddress]
   );
 
   const pauseGroup = useCallback(
     (params: Omit<PauseGroupParams, 'caller'>) =>
       runMutation('pauseGroup', params, (p) =>
-        stellarSaveClient.pauseGroup({ ...p, caller: activeAddress! }),
+        stellarSaveClient.pauseGroup({ ...p, caller: activeAddress! })
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isReady, activeAddress],
+    [isReady, activeAddress]
   );
 
   const resumeGroup = useCallback(
     (params: Omit<PauseGroupParams, 'caller'>) =>
       runMutation('resumeGroup', params, (p) =>
-        stellarSaveClient.resumeGroup({ ...p, caller: activeAddress! }),
+        stellarSaveClient.resumeGroup({ ...p, caller: activeAddress! })
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isReady, activeAddress],
+    [isReady, activeAddress]
   );
 
   // ── Read operations ────────────────────────────────────────────────────────
 
-  const getGroup = useCallback(
-    (groupId: bigint) => stellarSaveClient.getGroup(groupId),
-    [],
-  );
+  const getGroup = useCallback((groupId: bigint) => stellarSaveClient.getGroup(groupId), []);
 
   const listGroups = useCallback(
     (cursor: bigint, limit: number, statusFilter?: string) =>
       stellarSaveClient.listGroups(cursor, limit, statusFilter),
-    [],
+    []
   );
 
   const getTotalGroups = useCallback(() => stellarSaveClient.getTotalGroups(), []);
 
   const getMemberCount = useCallback(
     (groupId: bigint) => stellarSaveClient.getMemberCount(groupId),
-    [],
+    []
   );
 
   const getPayoutPosition = useCallback(
     (groupId: bigint, memberAddress: string) =>
       stellarSaveClient.getPayoutPosition(groupId, memberAddress),
-    [],
+    []
   );
 
   const hasReceivedPayout = useCallback(
     (groupId: bigint, memberAddress: string) =>
       stellarSaveClient.hasReceivedPayout(groupId, memberAddress),
-    [],
+    []
   );
 
   const getMemberTotalContributions = useCallback(
     (groupId: bigint, memberAddress: string) =>
       stellarSaveClient.getMemberTotalContributions(groupId, memberAddress),
-    [],
+    []
   );
 
   const getGroupBalance = useCallback(
     (groupId: bigint) => stellarSaveClient.getGroupBalance(groupId),
-    [],
+    []
   );
 
   const getPayoutSchedule = useCallback(
     (groupId: bigint) => stellarSaveClient.getPayoutSchedule(groupId),
-    [],
+    []
   );
 
   const getContributionDeadline = useCallback(
     (groupId: bigint, cycleNumber: number) =>
       stellarSaveClient.getContributionDeadline(groupId, cycleNumber),
-    [],
+    []
   );
 
   const isCycleComplete = useCallback(
     (groupId: bigint, cycleNumber: number) =>
       stellarSaveClient.isCycleComplete(groupId, cycleNumber),
-    [],
+    []
   );
 
-  const isPayoutDue = useCallback(
-    (groupId: bigint) => stellarSaveClient.isPayoutDue(groupId),
-    [],
-  );
+  const isPayoutDue = useCallback((groupId: bigint) => stellarSaveClient.isPayoutDue(groupId), []);
 
   return {
     loading,

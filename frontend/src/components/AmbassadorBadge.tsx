@@ -8,7 +8,7 @@ interface AmbassadorBadgeProps {
 const TIER_STYLES: Record<'Bronze' | 'Silver' | 'Gold', React.CSSProperties> = {
   Bronze: { background: '#d97706', color: '#fff' },
   Silver: { background: '#6b7280', color: '#fff' },
-  Gold:   { background: '#eab308', color: '#fff' },
+  Gold: { background: '#eab308', color: '#fff' },
 };
 
 const BASE: React.CSSProperties = {

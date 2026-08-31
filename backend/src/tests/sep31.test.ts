@@ -1,4 +1,9 @@
-import { validateComplianceFields, getQuote, sendPayment, getPaymentStatus } from '../services/sep31';
+import {
+  validateComplianceFields,
+  getQuote,
+  sendPayment,
+  getPaymentStatus,
+} from '../services/sep31';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch as any;
@@ -20,8 +25,13 @@ const TOML = `DIRECT_PAYMENT_SERVER = "https://anchor.example.com/sep31"\n`;
 function mockToml() {
   mockFetch.mockResolvedValueOnce({ ok: true, text: async () => TOML } as any);
 }
-function mockInfo(fields: Record<string, { optional?: boolean }> = { first_name: {}, last_name: {} }) {
-  mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ receive: { USDC: { fields } } }) } as any);
+function mockInfo(
+  fields: Record<string, { optional?: boolean }> = { first_name: {}, last_name: {} }
+) {
+  mockFetch.mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({ receive: { USDC: { fields } } }),
+  } as any);
 }
 
 beforeEach(() => {
@@ -33,13 +43,17 @@ describe('validateComplianceFields', () => {
   it('passes when all required fields are provided', async () => {
     mockToml();
     mockInfo({ first_name: {}, last_name: {} });
-    await expect(validateComplianceFields('anchor.example.com', { first_name: 'Alice', last_name: 'Smith' })).resolves.toBeUndefined();
+    await expect(
+      validateComplianceFields('anchor.example.com', { first_name: 'Alice', last_name: 'Smith' })
+    ).resolves.toBeUndefined();
   });
 
   it('throws when required fields are missing', async () => {
     mockToml();
     mockInfo({ first_name: {}, last_name: {} });
-    await expect(validateComplianceFields('anchor.example.com', { first_name: 'Alice' })).rejects.toThrow('last_name');
+    await expect(
+      validateComplianceFields('anchor.example.com', { first_name: 'Alice' })
+    ).rejects.toThrow('last_name');
   });
 
   it('passes optional-only field schemas with empty fields', async () => {
@@ -52,17 +66,44 @@ describe('validateComplianceFields', () => {
 describe('getQuote', () => {
   it('returns rate, fee, expiresAt from anchor', async () => {
     mockToml();
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ rate: '1.02', fee: '0.50', expires_at: '2026-07-01T00:00:00Z' }) } as any);
-    const quote = await getQuote({ anchorDomain: 'anchor.example.com', sendAsset: 'USDC', receiveAsset: 'NGN', amount: '100' });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ rate: '1.02', fee: '0.50', expires_at: '2026-07-01T00:00:00Z' }),
+    } as any);
+    const quote = await getQuote({
+      anchorDomain: 'anchor.example.com',
+      sendAsset: 'USDC',
+      receiveAsset: 'NGN',
+      amount: '100',
+    });
     expect(quote.rate).toBe('1.02');
     expect(quote.fee).toBe('0.50');
   });
 });
 
 describe('sendPayment', () => {
-  const opts = { anchorDomain: 'anchor.example.com', sendAssetCode: 'USDC', receiveAssetCode: 'NGN', amount: '100', senderId: 'GABC', receiverId: 'receiver-1', fields: { first_name: 'Alice', last_name: 'Smith' } };
-  const anchorResponse = { id: 'anchor-tx-1', stellar_account_id: 'GXYZ', stellar_memo: '12345', stellar_memo_type: 'id' };
-  const dbRecord = { id: 'local-1', ...opts, anchorTxId: 'anchor-tx-1', status: 'pending', stellarAccount: 'GXYZ' };
+  const opts = {
+    anchorDomain: 'anchor.example.com',
+    sendAssetCode: 'USDC',
+    receiveAssetCode: 'NGN',
+    amount: '100',
+    senderId: 'GABC',
+    receiverId: 'receiver-1',
+    fields: { first_name: 'Alice', last_name: 'Smith' },
+  };
+  const anchorResponse = {
+    id: 'anchor-tx-1',
+    stellar_account_id: 'GXYZ',
+    stellar_memo: '12345',
+    stellar_memo_type: 'id',
+  };
+  const dbRecord = {
+    id: 'local-1',
+    ...opts,
+    anchorTxId: 'anchor-tx-1',
+    status: 'pending',
+    stellarAccount: 'GXYZ',
+  };
 
   it('validates fields, calls anchor, stores record', async () => {
     mockToml(); // for validateComplianceFields
@@ -78,7 +119,9 @@ describe('sendPayment', () => {
   it('throws when compliance fields are missing', async () => {
     mockToml();
     mockInfo({ first_name: {}, last_name: {}, id_number: {} });
-    await expect(sendPayment({ ...opts, fields: { first_name: 'Alice' } })).rejects.toThrow('id_number');
+    await expect(sendPayment({ ...opts, fields: { first_name: 'Alice' } })).rejects.toThrow(
+      'id_number'
+    );
   });
 });
 
@@ -88,7 +131,12 @@ describe('getPaymentStatus', () => {
     prisma.crossBorderPayment.findUnique.mockResolvedValue(existing);
     prisma.crossBorderPayment.update.mockResolvedValue({ ...existing, status: 'completed' });
     mockToml();
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ transaction: { status: 'completed', completed_at: '2026-06-30T10:00:00Z' } }) } as any);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        transaction: { status: 'completed', completed_at: '2026-06-30T10:00:00Z' },
+      }),
+    } as any);
     const result = await getPaymentStatus('anchor.example.com', 'local-1');
     expect(result.status).toBe('completed');
     expect(result.completedAt).toBe('2026-06-30T10:00:00Z');

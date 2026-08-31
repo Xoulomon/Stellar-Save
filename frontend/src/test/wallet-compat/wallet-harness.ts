@@ -50,20 +50,16 @@ const DEFAULT_SIGNED_XDR = 'AAAAAQAAA...signed-xdr-stub...';
 
 // === Harness factory
 
-function makeKit(
-  id: WalletId,
-  name: string,
-  opts: WalletHarnessOptions = {},
-): MockWalletKit {
+function makeKit(id: WalletId, name: string, opts: WalletHarnessOptions = {}): MockWalletKit {
   const address = opts.address ?? DEFAULT_ADDRESS;
 
   const getAddress = opts.userRejects
     ? vi.fn().mockRejectedValue(new Error('User rejected the request.'))
     : opts.notInstalled
-    ? vi.fn().mockRejectedValue(new Error(`${name} is not installed.`))
-    : opts.connectionError
-    ? vi.fn().mockRejectedValue(new Error(opts.connectionError))
-    : vi.fn().mockResolvedValue({ address });
+      ? vi.fn().mockRejectedValue(new Error(`${name} is not installed.`))
+      : opts.connectionError
+        ? vi.fn().mockRejectedValue(new Error(opts.connectionError))
+        : vi.fn().mockResolvedValue({ address });
 
   const getNetwork = vi.fn().mockResolvedValue({ networkPassphrase: DEFAULT_NETWORK });
 
@@ -74,11 +70,20 @@ function makeKit(
   const disconnect = vi.fn().mockResolvedValue(undefined);
   const setWallet = vi.fn();
 
-  const refreshSupportedWallets = vi.fn().mockResolvedValue([
-    { id, name, isAvailable: !opts.notInstalled },
-  ]);
+  const refreshSupportedWallets = vi
+    .fn()
+    .mockResolvedValue([{ id, name, isAvailable: !opts.notInstalled }]);
 
-  return { id, name, getAddress, getNetwork, signTransaction, disconnect, setWallet, refreshSupportedWallets };
+  return {
+    id,
+    name,
+    getAddress,
+    getNetwork,
+    signTransaction,
+    disconnect,
+    setWallet,
+    refreshSupportedWallets,
+  };
 }
 
 // === Per-wallet factories
@@ -101,12 +106,7 @@ export function inAppHarness(opts?: WalletHarnessOptions): MockWalletKit {
 
 /** Returns one default harness per supported wallet — use to iterate tests. */
 export function walletHarnesses(opts?: WalletHarnessOptions): MockWalletKit[] {
-  return [
-    freighterHarness(opts),
-    albedoHarness(opts),
-    lobstrHarness(opts),
-    inAppHarness(opts),
-  ];
+  return [freighterHarness(opts), albedoHarness(opts), lobstrHarness(opts), inAppHarness(opts)];
 }
 
 /** Returns one harness per wallet configured to reject every prompt. */

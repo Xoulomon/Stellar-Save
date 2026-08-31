@@ -48,7 +48,11 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     let detail: unknown = text;
-    try { detail = JSON.parse(text); } catch { /* keep raw text */ }
+    try {
+      detail = JSON.parse(text);
+    } catch {
+      /* keep raw text */
+    }
     throw new Error(
       typeof detail === 'object' && detail !== null && 'error' in detail
         ? String((detail as Record<string, unknown>).error)

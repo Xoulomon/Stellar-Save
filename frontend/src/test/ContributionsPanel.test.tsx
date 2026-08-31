@@ -54,7 +54,7 @@ describe('ContributionsPanel', () => {
       <ContributionsPanel
         contributions={mockContributions}
         onContributionClick={onContributionClick}
-      />,
+      />
     );
     const firstContribution = screen.getAllByText('Alice')[0];
     fireEvent.click(firstContribution.closest('.group-details-contribution-item')!);

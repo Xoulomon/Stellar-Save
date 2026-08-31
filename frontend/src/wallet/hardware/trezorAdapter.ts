@@ -1,4 +1,9 @@
-import { scanForDevices, connectToDevice, fetchAccounts, signWithHardwareWallet } from './hardwareService';
+import {
+  scanForDevices,
+  connectToDevice,
+  fetchAccounts,
+  signWithHardwareWallet,
+} from './hardwareService';
 
 import type { HardwareDeviceInfo, HardwareAccount, TxApprovalRequest } from './types';
 
@@ -20,7 +25,7 @@ export class TrezorAdapter {
   async signTransaction(
     request: TxApprovalRequest,
     device: HardwareDeviceInfo,
-    onStatusChange?: (status: string) => void,
+    onStatusChange?: (status: string) => void
   ): Promise<string> {
     return signWithHardwareWallet(request, device, onStatusChange);
   }

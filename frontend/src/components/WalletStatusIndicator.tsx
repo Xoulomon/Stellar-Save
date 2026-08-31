@@ -4,15 +4,7 @@ import ErrorIcon from '@mui/icons-material/Error';
 import InfoIcon from '@mui/icons-material/Info';
 import WifiIcon from '@mui/icons-material/Wifi';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
-import {
-  Box,
-  Typography,
-  Chip,
-  IconButton,
-  Tooltip,
-  Stack,
-  CircularProgress,
-} from '@mui/material';
+import { Box, Typography, Chip, IconButton, Tooltip, Stack, CircularProgress } from '@mui/material';
 import { useState, useEffect } from 'react';
 
 import { useClipboard } from '../hooks/useClipboard';
@@ -40,7 +32,9 @@ export function WalletStatusIndicator() {
       try {
         const start = Date.now();
         // Simple ping to Stellar network endpoint
-        const response = await fetch(`https://horizon${network === 'mainnet' ? '' : '-testnet'}.stellar.org/`);
+        const response = await fetch(
+          `https://horizon${network === 'mainnet' ? '' : '-testnet'}.stellar.org/`
+        );
         const end = Date.now();
         if (response.ok) {
           setLatency(end - start);
@@ -60,7 +54,9 @@ export function WalletStatusIndicator() {
     return () => clearInterval(interval);
   }, [status, network]);
 
-  const getConnectionStrength = (latencyMs: number | null): 'excellent' | 'good' | 'poor' | 'offline' => {
+  const getConnectionStrength = (
+    latencyMs: number | null
+  ): 'excellent' | 'good' | 'poor' | 'offline' => {
     if (latencyMs === null) return 'offline';
     if (latencyMs < 200) return 'excellent';
     if (latencyMs < 500) return 'good';
@@ -69,19 +65,27 @@ export function WalletStatusIndicator() {
 
   const getStrengthColor = (strength: string) => {
     switch (strength) {
-      case 'excellent': return '#22c55e';
-      case 'good': return '#f59e0b';
-      case 'poor': return '#ef4444';
-      default: return '#9ca3af';
+      case 'excellent':
+        return '#22c55e';
+      case 'good':
+        return '#f59e0b';
+      case 'poor':
+        return '#ef4444';
+      default:
+        return '#9ca3af';
     }
   };
 
   const getStrengthLabel = (strength: string) => {
     switch (strength) {
-      case 'excellent': return 'Excellent (<200ms)';
-      case 'good': return 'Good (200-500ms)';
-      case 'poor': return 'Poor (>500ms)';
-      default: return 'Offline';
+      case 'excellent':
+        return 'Excellent (<200ms)';
+      case 'good':
+        return 'Good (200-500ms)';
+      case 'poor':
+        return 'Poor (>500ms)';
+      default:
+        return 'Offline';
     }
   };
 
@@ -134,12 +138,7 @@ export function WalletStatusIndicator() {
       {/* Status row */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <CheckCircleIcon sx={{ color: '#22c55e', fontSize: 18 }} />
-        <Chip
-          label={network || 'unknown'}
-          size="small"
-          variant="outlined"
-          color="success"
-        />
+        <Chip label={network || 'unknown'} size="small" variant="outlined" color="success" />
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           {isMeasuringLatency ? (
             <CircularProgress size={14} aria-label="Measuring connection latency" />

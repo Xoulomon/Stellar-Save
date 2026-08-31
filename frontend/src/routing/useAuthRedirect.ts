@@ -15,7 +15,7 @@ export function useAuthRedirect() {
   useEffect(() => {
     if (status === 'connected') {
       const redirectPath = sessionStorage.getItem('redirectAfterAuth');
-      
+
       if (redirectPath && redirectPath !== ROUTES.HOME) {
         sessionStorage.removeItem('redirectAfterAuth');
         navigate(redirectPath, { replace: true });

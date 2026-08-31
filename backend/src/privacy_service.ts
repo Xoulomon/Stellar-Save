@@ -103,7 +103,7 @@ export async function deleteUserData(walletAddress: string): Promise<void> {
 
 export async function createPrivacyRequest(
   walletAddress: string,
-  requestType: 'export' | 'deletion',
+  requestType: 'export' | 'deletion'
 ) {
   return prisma.privacyRequest.create({
     data: { walletAddress, requestType },
@@ -132,8 +132,12 @@ export async function enforceRetention(): Promise<Record<string, number>> {
   const [analyticsEvents, auditLogs, notifications, notificationQueue] = await prisma.$transaction([
     prisma.analyticsEvent.deleteMany({ where: { createdAt: { lt: cutoff } } }),
     prisma.auditLog.deleteMany({ where: { createdAt: { lt: cutoff } } }),
-    prisma.notification.deleteMany({ where: { createdAt: { lt: cutoff }, status: { in: ['sent', 'failed'] } } }),
-    prisma.notificationQueue.deleteMany({ where: { createdAt: { lt: cutoff }, status: 'completed' } }),
+    prisma.notification.deleteMany({
+      where: { createdAt: { lt: cutoff }, status: { in: ['sent', 'failed'] } },
+    }),
+    prisma.notificationQueue.deleteMany({
+      where: { createdAt: { lt: cutoff }, status: 'completed' },
+    }),
   ]);
 
   // Also purge expired refresh tokens

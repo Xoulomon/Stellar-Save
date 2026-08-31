@@ -35,7 +35,7 @@ export class RecommendationEngine {
     if (!pref) return [];
 
     return this.groups
-      .map(group => {
+      .map((group) => {
         let score = 0;
 
         // Contribution amount score
@@ -43,17 +43,20 @@ export class RecommendationEngine {
         if (pref.maxContribution && group.contributionAmount <= pref.maxContribution) score += 1;
 
         // Duration score
-        if (pref.preferredDuration && Math.abs(group.cycleDuration - pref.preferredDuration) < 86400 * 7) {
+        if (
+          pref.preferredDuration &&
+          Math.abs(group.cycleDuration - pref.preferredDuration) < 86400 * 7
+        ) {
           score += 2; // Close to preferred duration (within a week)
         }
 
         // Tags score
-        const matchingTags = group.tags.filter(tag => pref.tags.includes(tag));
+        const matchingTags = group.tags.filter((tag) => pref.tags.includes(tag));
         score += matchingTags.length * 0.5;
 
         return { groupId: group.id, score, algorithm: 'content' };
       })
-      .filter(r => r.score > 0)
+      .filter((r) => r.score > 0)
       .sort((a, b) => b.score - a.score);
   }
 
@@ -61,28 +64,30 @@ export class RecommendationEngine {
     // Simplified User-Based Collaborative Filtering
     const userGroups = new Set(
       this.interactions
-        .filter(i => i.userId === userId && i.interactionType === 'join')
-        .map(i => i.groupId)
+        .filter((i) => i.userId === userId && i.interactionType === 'join')
+        .map((i) => i.groupId)
     );
 
-    const otherUsers = Array.from(new Set(this.interactions.map(i => i.userId))).filter(id => id !== userId);
+    const otherUsers = Array.from(new Set(this.interactions.map((i) => i.userId))).filter(
+      (id) => id !== userId
+    );
 
     const recommendations = new Map<string, number>();
 
-    otherUsers.forEach(otherId => {
+    otherUsers.forEach((otherId) => {
       const otherGroups = new Set(
         this.interactions
-          .filter(i => i.userId === otherId && i.interactionType === 'join')
-          .map(i => i.groupId)
+          .filter((i) => i.userId === otherId && i.interactionType === 'join')
+          .map((i) => i.groupId)
       );
 
       // Calculate Jaccard Similarity
-      const intersection = new Set([...userGroups].filter(id => otherGroups.has(id)));
+      const intersection = new Set([...userGroups].filter((id) => otherGroups.has(id)));
       const union = new Set([...userGroups, ...otherGroups]);
       const similarity = union.size === 0 ? 0 : intersection.size / union.size;
 
       if (similarity > 0) {
-        otherGroups.forEach(groupId => {
+        otherGroups.forEach((groupId) => {
           if (!userGroups.has(groupId)) {
             const currentScore = recommendations.get(groupId) || 0;
             recommendations.set(groupId, currentScore + similarity);

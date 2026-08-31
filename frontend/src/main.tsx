@@ -15,9 +15,11 @@ import './index.css';
 // Initialise distributed tracing (no-op unless VITE_OTEL_ENABLED=true).
 // Loaded lazily so the OpenTelemetry packages stay out of the main bundle.
 if (env.VITE_OTEL_ENABLED) {
-  import('./lib/tracing').then((m) => m.startTracing()).catch(() => {
-    // Tracing must never break app startup.
-  });
+  import('./lib/tracing')
+    .then((m) => m.startTracing())
+    .catch(() => {
+      // Tracing must never break app startup.
+    });
 }
 
 // Register service worker for PWA support (caching, offline, push, updates).

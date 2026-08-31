@@ -1,8 +1,4 @@
-export type WalletConnectionStatus =
-  | "idle"
-  | "connecting"
-  | "connected"
-  | "error";
+export type WalletConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
 export interface WalletConnection {
   address: string;
@@ -32,7 +28,10 @@ export interface WalletContextValue {
   disconnect: () => void;
   switchWallet: (walletId: string) => Promise<void>;
   switchAccount: (address: string) => void;
-  signTransaction: (xdr: string, opts?: { networkPassphrase?: string; address?: string }) => Promise<string>;
+  signTransaction: (
+    xdr: string,
+    opts?: { networkPassphrase?: string; address?: string }
+  ) => Promise<string>;
   signMessage: (message: string, opts?: { address?: string }) => Promise<string>;
 }
 

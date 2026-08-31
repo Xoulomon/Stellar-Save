@@ -16,12 +16,7 @@ function renderContributeButton(
   props: Partial<React.ComponentProps<typeof ContributeButton>> = {}
 ) {
   return render(
-    <ContributeButton
-      amount={100}
-      cycleId={3}
-      walletAddress={WALLET_ADDRESS}
-      {...props}
-    />
+    <ContributeButton amount={100} cycleId={3} walletAddress={WALLET_ADDRESS} {...props} />
   );
 }
 

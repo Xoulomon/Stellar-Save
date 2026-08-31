@@ -107,7 +107,7 @@ export function usePayouts(groupId: string | number | null | undefined): UsePayo
         const maxMembers = Math.max(
           0,
           toNumber(groupData.max_members, schedule.length),
-          schedule.length,
+          schedule.length
         );
 
         const contributionXlm = Number(contributionAmountStroops) / 10_000_000;
@@ -163,7 +163,7 @@ export function usePayouts(groupId: string | number | null | undefined): UsePayo
         }
       }
     },
-    [getGroup, getPayoutSchedule],
+    [getGroup, getPayoutSchedule]
   );
 
   useEffect(() => {

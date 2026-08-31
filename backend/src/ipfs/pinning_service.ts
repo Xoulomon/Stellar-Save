@@ -98,7 +98,7 @@ export class PinningService {
     cid: string,
     groupId: string,
     contractId: string,
-    priority = 0,
+    priority = 0
   ): Promise<PinningJob> {
     const alreadyPinned = await redis.get(`${PINNED_CID_PREFIX}:${cid}`);
     if (alreadyPinned === 'true') {
@@ -149,7 +149,12 @@ export class PinningService {
     }
   }
 
-  async verifyAllPins(): Promise<{ total: number; pinned: number; missing: number; failed: number }> {
+  async verifyAllPins(): Promise<{
+    total: number;
+    pinned: number;
+    missing: number;
+    failed: number;
+  }> {
     const keys = await redis.keys(`${PINNED_CID_PREFIX}:*`);
     let pinned = 0;
     let missing = 0;

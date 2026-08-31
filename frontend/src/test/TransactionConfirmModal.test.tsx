@@ -35,7 +35,7 @@ function renderModal(
     onClose: () => void;
     onSuccess: (hash: string) => void;
     onError: (err: Error) => void;
-  }> = {},
+  }> = {}
 ) {
   const defaults = {
     open: true,

@@ -60,7 +60,7 @@ describe('GroupCardActions', () => {
     render(
       <div onClick={parentClick}>
         <GroupCardActions onViewDetails={onViewDetails} />
-      </div>,
+      </div>
     );
     fireEvent.click(screen.getByRole('button', { name: /view details/i }));
     expect(onViewDetails).toHaveBeenCalledTimes(1);
@@ -74,7 +74,7 @@ describe('GroupCardActions', () => {
     render(
       <div onClick={parentClick}>
         <GroupCardActions onJoin={onJoin} />
-      </div>,
+      </div>
     );
     fireEvent.click(screen.getByRole('button', { name: /join group/i }));
     expect(onJoin).toHaveBeenCalledTimes(1);

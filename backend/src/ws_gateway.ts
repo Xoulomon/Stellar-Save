@@ -142,7 +142,10 @@ export class WebSocketGateway {
       // Backpressure: drop oldest if queue full
       if (client.pendingQueue.length >= MAX_QUEUE_PER_CLIENT) {
         client.pendingQueue.shift();
-        this.send(client, JSON.stringify({ type: 'notice', message: 'event_dropped_backpressure' }));
+        this.send(
+          client,
+          JSON.stringify({ type: 'notice', message: 'event_dropped_backpressure' })
+        );
       }
 
       client.pendingQueue.push(frame);
@@ -197,7 +200,8 @@ export class WebSocketGateway {
       isAdmin = true;
       walletAddress = 'admin';
     } else {
-      const token = tokenFromQuery ?? (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null);
+      const token =
+        tokenFromQuery ?? (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null);
       if (!token) {
         wsAuthRejections.inc();
         ws.close(4001, 'Unauthorized: missing token');
@@ -225,7 +229,9 @@ export class WebSocketGateway {
     this.clients.set(ws, client);
     wsActiveConnections.set(this.clients.size);
 
-    ws.on('pong', () => { client.isAlive = true; });
+    ws.on('pong', () => {
+      client.isAlive = true;
+    });
     ws.on('message', (data) => this.onMessage(client, data.toString()));
     ws.on('close', () => this.onClose(client));
     ws.on('error', (err) => {
@@ -255,7 +261,10 @@ export class WebSocketGateway {
     } else if (type === 'ping') {
       this.send(client, JSON.stringify({ type: 'pong', ts: Date.now() }));
     } else {
-      this.send(client, JSON.stringify({ type: 'error', message: `Unknown message type: ${type}` }));
+      this.send(
+        client,
+        JSON.stringify({ type: 'error', message: `Unknown message type: ${type}` })
+      );
     }
   }
 
@@ -307,7 +316,9 @@ export class WebSocketGateway {
       const heartbeatFrame = JSON.stringify({ type: 'heartbeat', ts: Date.now() });
       for (const [ws, client] of this.clients) {
         if (!client.isAlive) {
-          logger.debug('[WSGateway] Terminating unresponsive client', { wallet: client.walletAddress });
+          logger.debug('[WSGateway] Terminating unresponsive client', {
+            wallet: client.walletAddress,
+          });
           ws.terminate();
           continue;
         }

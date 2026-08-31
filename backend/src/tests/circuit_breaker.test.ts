@@ -19,7 +19,9 @@ describe('CircuitBreaker Unit Tests', () => {
   });
 
   it('handles function timeouts', async () => {
-    const slowFn = jest.fn().mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 10000)));
+    const slowFn = jest
+      .fn()
+      .mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 10000)));
     const breaker = new CircuitBreaker(slowFn, { timeout: 1000 });
 
     const promise = breaker.fire();

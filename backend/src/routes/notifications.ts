@@ -97,7 +97,9 @@ export function createNotificationRouter(): Router {
       const { userId, deviceToken, platform } = req.body;
 
       if (!userId || !deviceToken || !platform) {
-        return next(new AppError('MISSING_FIELDS', 'userId, deviceToken, and platform are required', 400));
+        return next(
+          new AppError('MISSING_FIELDS', 'userId, deviceToken, and platform are required', 400)
+        );
       }
 
       const registered = await UserPreferenceManager.registerDeviceToken(
@@ -120,21 +122,26 @@ export function createNotificationRouter(): Router {
    * DELETE /api/v1/notifications/device-token/:userId/:deviceToken
    * Unregister device token
    */
-  router.delete('/device-token/:userId/:deviceToken', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { userId, deviceToken } = req.params;
+  router.delete(
+    '/device-token/:userId/:deviceToken',
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const { userId, deviceToken } = req.params;
 
-      const unregistered = await UserPreferenceManager.unregisterDeviceToken(userId, deviceToken);
+        const unregistered = await UserPreferenceManager.unregisterDeviceToken(userId, deviceToken);
 
-      res.json({
-        message: 'Device token unregistered',
-        data: unregistered,
-      });
-    } catch (error) {
-      logger.error('Error unregistering device token', { error: String(error) });
-      next(new AppError('DEVICE_TOKEN_UNREGISTER_FAILED', 'Failed to unregister device token', 500));
+        res.json({
+          message: 'Device token unregistered',
+          data: unregistered,
+        });
+      } catch (error) {
+        logger.error('Error unregistering device token', { error: String(error) });
+        next(
+          new AppError('DEVICE_TOKEN_UNREGISTER_FAILED', 'Failed to unregister device token', 500)
+        );
+      }
     }
-  });
+  );
 
   // ========== UNSUBSCRIBE ROUTES ==========
 
@@ -195,7 +202,9 @@ export function createNotificationRouter(): Router {
       const { userId, to, templateId, templateData, subject } = req.body;
 
       if (!to || !templateId || !templateData) {
-        return next(new AppError('MISSING_FIELDS', 'to, templateId, and templateData are required', 400));
+        return next(
+          new AppError('MISSING_FIELDS', 'to, templateId, and templateData are required', 400)
+        );
       }
 
       // Check preferences
@@ -207,11 +216,13 @@ export function createNotificationRouter(): Router {
         );
 
         if (!shouldSend) {
-          return next(new AppError(
-            'EMAIL_NOTIFICATIONS_DISABLED',
-            'User has disabled email notifications for this type',
-            403
-          ));
+          return next(
+            new AppError(
+              'EMAIL_NOTIFICATIONS_DISABLED',
+              'User has disabled email notifications for this type',
+              403
+            )
+          );
         }
       }
 
@@ -236,11 +247,13 @@ export function createNotificationRouter(): Router {
       const { userId, deviceToken, templateId, templateData, title, body } = req.body;
 
       if (!deviceToken || !templateId || !templateData) {
-        return next(new AppError(
-          'MISSING_FIELDS',
-          'deviceToken, templateId, and templateData are required',
-          400
-        ));
+        return next(
+          new AppError(
+            'MISSING_FIELDS',
+            'deviceToken, templateId, and templateData are required',
+            400
+          )
+        );
       }
 
       // Check preferences
@@ -252,11 +265,13 @@ export function createNotificationRouter(): Router {
         );
 
         if (!shouldSend) {
-          return next(new AppError(
-            'PUSH_NOTIFICATIONS_DISABLED',
-            'User has disabled push notifications for this type',
-            403
-          ));
+          return next(
+            new AppError(
+              'PUSH_NOTIFICATIONS_DISABLED',
+              'User has disabled push notifications for this type',
+              403
+            )
+          );
         }
       }
 
@@ -284,15 +299,24 @@ export function createNotificationRouter(): Router {
    */
   router.post('/queue', async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { userId, templateKey, recipient, templateData, notificationType, priority, scheduledFor } =
-        req.body;
+      const {
+        userId,
+        templateKey,
+        recipient,
+        templateData,
+        notificationType,
+        priority,
+        scheduledFor,
+      } = req.body;
 
       if (!userId || !templateKey || !recipient || !templateData || !notificationType) {
-        return next(new AppError(
-          'MISSING_FIELDS',
-          'userId, templateKey, recipient, templateData, and notificationType are required',
-          400
-        ));
+        return next(
+          new AppError(
+            'MISSING_FIELDS',
+            'userId, templateKey, recipient, templateData, and notificationType are required',
+            400
+          )
+        );
       }
 
       const queueId = await notificationService.queueNotification(
@@ -355,7 +379,13 @@ export function createNotificationRouter(): Router {
       });
     } catch (error) {
       logger.error('Error fetching notification history', { error: String(error) });
-      next(new AppError('NOTIFICATION_HISTORY_FETCH_FAILED', 'Failed to fetch notification history', 500));
+      next(
+        new AppError(
+          'NOTIFICATION_HISTORY_FETCH_FAILED',
+          'Failed to fetch notification history',
+          500
+        )
+      );
     }
   });
 
@@ -424,15 +454,24 @@ export function createNotificationRouter(): Router {
    */
   router.post('/templates', async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { templateKey, templateName, templateType, subject, htmlContent, textContent, placeholders } =
-        req.body;
+      const {
+        templateKey,
+        templateName,
+        templateType,
+        subject,
+        htmlContent,
+        textContent,
+        placeholders,
+      } = req.body;
 
       if (!templateKey || !templateName || !templateType || !htmlContent || !textContent) {
-        return next(new AppError(
-          'MISSING_FIELDS',
-          'templateKey, templateName, templateType, htmlContent, and textContent are required',
-          400
-        ));
+        return next(
+          new AppError(
+            'MISSING_FIELDS',
+            'templateKey, templateName, templateType, htmlContent, and textContent are required',
+            400
+          )
+        );
       }
 
       const template = await NotificationTemplateManager.createTemplate({
@@ -504,16 +543,25 @@ export function createNotificationRouter(): Router {
     try {
       const { userId, subscription } = req.body;
 
-      if (!userId || !subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
-        return next(new AppError(
-          'MISSING_FIELDS',
-          'userId and subscription (with endpoint, keys.p256dh, keys.auth) are required',
-          400
-        ));
+      if (
+        !userId ||
+        !subscription?.endpoint ||
+        !subscription?.keys?.p256dh ||
+        !subscription?.keys?.auth
+      ) {
+        return next(
+          new AppError(
+            'MISSING_FIELDS',
+            'userId and subscription (with endpoint, keys.p256dh, keys.auth) are required',
+            400
+          )
+        );
       }
 
       if (!webPushService.isEnabled()) {
-        return next(new AppError('WEB_PUSH_NOT_CONFIGURED', 'Web push not configured on the server', 503));
+        return next(
+          new AppError('WEB_PUSH_NOT_CONFIGURED', 'Web push not configured on the server', 503)
+        );
       }
 
       await webPushService.saveSubscription(userId, subscription);
@@ -541,7 +589,9 @@ export function createNotificationRouter(): Router {
       res.json({ message: 'Push subscription removed' });
     } catch (error) {
       logger.error('Error removing push subscription', { error: String(error) });
-      next(new AppError('PUSH_SUBSCRIPTION_REMOVE_FAILED', 'Failed to remove push subscription', 500));
+      next(
+        new AppError('PUSH_SUBSCRIPTION_REMOVE_FAILED', 'Failed to remove push subscription', 500)
+      );
     }
   });
 
@@ -569,9 +619,15 @@ export function createNotificationRouter(): Router {
 
   router.post('/device-tokens', async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { userId, token, platform } = req.body as { userId?: string; token?: string; platform?: string };
+      const { userId, token, platform } = req.body as {
+        userId?: string;
+        token?: string;
+        platform?: string;
+      };
       if (!userId || !token || !platform) {
-        return next(new AppError('MISSING_FIELDS', 'userId, token, and platform are required', 400));
+        return next(
+          new AppError('MISSING_FIELDS', 'userId, token, and platform are required', 400)
+        );
       }
       if (platform !== 'ios' && platform !== 'android') {
         return next(new AppError('INVALID_PLATFORM', 'platform must be ios or android', 400));
@@ -584,16 +640,19 @@ export function createNotificationRouter(): Router {
     }
   });
 
-  router.delete('/device-tokens/:token', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { token } = req.params;
-      await deviceTokenService.removeToken(token);
-      res.status(204).end();
-    } catch (error) {
-      logger.error('Error removing device token', { error: String(error) });
-      next(new AppError('DEVICE_TOKEN_REMOVE_FAILED', 'Failed to remove device token', 500));
+  router.delete(
+    '/device-tokens/:token',
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const { token } = req.params;
+        await deviceTokenService.removeToken(token);
+        res.status(204).end();
+      } catch (error) {
+        logger.error('Error removing device token', { error: String(error) });
+        next(new AppError('DEVICE_TOKEN_REMOVE_FAILED', 'Failed to remove device token', 500));
+      }
     }
-  });
+  );
 
   return router;
 }

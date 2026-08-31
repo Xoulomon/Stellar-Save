@@ -258,7 +258,10 @@ export class AnalyticsService {
   /**
    * Get cycle-by-cycle stats for a group.
    */
-  async getGroupCycleStats(groupId: string, options?: AnalyticsOptions): Promise<GroupCycleStats[]> {
+  async getGroupCycleStats(
+    groupId: string,
+    options?: AnalyticsOptions
+  ): Promise<GroupCycleStats[]> {
     try {
       const metrics = await this.prisma.groupMetrics.findMany({
         where: {
@@ -482,34 +485,42 @@ export class AnalyticsService {
   async resyncSorobanAnalytics(options: SorobanSyncOptions = {}): Promise<SorobanSyncResult> {
     const syncResult = await this.syncSorobanEvents(options);
 
-    const aggregator = new (await import('./analytics_aggregator')).AnalyticsAggregator(this.prisma);
+    const aggregator = new (await import('./analytics_aggregator')).AnalyticsAggregator(
+      this.prisma
+    );
     await aggregator.runAggregation();
 
     return syncResult;
   }
 
-  private normalizeSorobanEvent(event: any):
-    | {
-        eventType: string;
-        eventName: string;
-        userId?: string;
-        groupId?: string;
-        eventData?: Record<string, any>;
-        sessionId?: string;
-      }
-    | null {
+  private normalizeSorobanEvent(event: any): {
+    eventType: string;
+    eventName: string;
+    userId?: string;
+    groupId?: string;
+    eventData?: Record<string, any>;
+    sessionId?: string;
+  } | null {
     const rawType = String(event.eventType || '').toLowerCase();
     const rawData = (event.data as Record<string, any>) || {};
     const topicString = JSON.stringify(event.topics || []).toLowerCase();
     const payloadString = JSON.stringify(rawData).toLowerCase();
-    const isContribution = rawType.includes('contribution') || topicString.includes('contribution') || payloadString.includes('contribution');
-    const isPayout = rawType.includes('payout') || topicString.includes('payout') || payloadString.includes('payout');
+    const isContribution =
+      rawType.includes('contribution') ||
+      topicString.includes('contribution') ||
+      payloadString.includes('contribution');
+    const isPayout =
+      rawType.includes('payout') ||
+      topicString.includes('payout') ||
+      payloadString.includes('payout');
 
     if (!isContribution && !isPayout) {
       return null;
     }
 
-    const amount = Number(rawData.amount ?? rawData.contribution_amount ?? rawData.payout_amount ?? 0);
+    const amount = Number(
+      rawData.amount ?? rawData.contribution_amount ?? rawData.payout_amount ?? 0
+    );
     const userId = rawData.userId ?? rawData.memberId ?? rawData.member_address ?? event.txHash;
     const groupId = rawData.groupId ?? rawData.group_id ?? event.contractId;
 
@@ -580,7 +591,10 @@ export class AnalyticsService {
               ? platformMetrics.reduce((sum: number, m: any) => sum + m.totalGroups, 0) /
                 platformMetrics.length
               : 0,
-          totalContributions: platformMetrics.reduce((sum: number, m: any) => sum + m.totalContributions, 0),
+          totalContributions: platformMetrics.reduce(
+            (sum: number, m: any) => sum + m.totalContributions,
+            0
+          ),
           totalRevenue: platformMetrics.reduce(
             (sum: number, m: any) => sum + Number(m.totalContributionAmount),
             0
@@ -618,10 +632,7 @@ export class AnalyticsService {
   /**
    * Get existing reports
    */
-  async getReports(
-    reportType?: string,
-    options?: AnalyticsOptions
-  ): Promise<AnalyticsReport[]> {
+  async getReports(reportType?: string, options?: AnalyticsOptions): Promise<AnalyticsReport[]> {
     try {
       const reports = await this.prisma.analyticsReport.findMany({
         where: reportType ? { reportType } : undefined,

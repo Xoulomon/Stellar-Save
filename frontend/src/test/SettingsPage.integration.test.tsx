@@ -25,9 +25,7 @@ describe('SettingsPage Integration - Reminder Preferences', () => {
 
     // Check reminder section
     expect(screen.getByText('Contribution Reminders')).toBeInTheDocument();
-    expect(
-      screen.getByText(/Configure when and how you receive reminders/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Configure when and how you receive reminders/)).toBeInTheDocument();
   });
 
   it('should have the divider between sections', () => {
@@ -72,9 +70,7 @@ describe('SettingsPage Integration - Reminder Preferences', () => {
     await user.click(reminderToggle);
 
     // Options should be hidden
-    expect(
-      screen.queryByText('Remind me before contribution deadline')
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Remind me before contribution deadline')).not.toBeInTheDocument();
   });
 
   it('should persist preferences to localStorage', async () => {

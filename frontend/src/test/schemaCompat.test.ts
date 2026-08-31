@@ -114,7 +114,7 @@ const {
 
 /** Minimum valid contract-ready payload accepted by groupDataSchema. */
 function validContractPayload(
-  overrides: Partial<z.infer<typeof groupDataSchema>> = {},
+  overrides: Partial<z.infer<typeof groupDataSchema>> = {}
 ): z.infer<typeof groupDataSchema> {
   return {
     name: 'Savings Circle',
@@ -136,7 +136,9 @@ function validContractPayload(
 
 describe('schemaCompat: maxMembers range must match backend memberCount (2–20)', () => {
   it('frontend groupDataSchema accepts the backend minimum boundary (2)', () => {
-    const result = groupDataSchema.safeParse(validContractPayload({ max_members: 2, min_members: 2 }));
+    const result = groupDataSchema.safeParse(
+      validContractPayload({ max_members: 2, min_members: 2 })
+    );
     expect(result.success).toBe(true);
   });
 
@@ -146,7 +148,9 @@ describe('schemaCompat: maxMembers range must match backend memberCount (2–20)
   });
 
   it('frontend groupDataSchema rejects max_members = 1 (below backend minimum)', () => {
-    const result = groupDataSchema.safeParse(validContractPayload({ max_members: 1, min_members: 1 }));
+    const result = groupDataSchema.safeParse(
+      validContractPayload({ max_members: 1, min_members: 1 })
+    );
     expect(result.success).toBe(false);
   });
 
@@ -213,7 +217,7 @@ describe('schemaCompat: description — frontend is stricter (required) than bac
 
   it('frontend groupDataSchema accepts a non-empty description', () => {
     const result = groupDataSchema.safeParse(
-      validContractPayload({ description: 'A valid description' }),
+      validContractPayload({ description: 'A valid description' })
     );
     expect(result.success).toBe(true);
   });
@@ -233,30 +237,24 @@ describe('schemaCompat: contribution_amount — stroops conversion boundary', ()
   });
 
   it('groupDataSchema rejects a fractional (non-integer) stroop amount', () => {
-    const result = groupDataSchema.safeParse(
-      validContractPayload({ contribution_amount: 1.5 }),
-    );
+    const result = groupDataSchema.safeParse(validContractPayload({ contribution_amount: 1.5 }));
     expect(result.success).toBe(false);
   });
 
   it('groupDataSchema rejects zero', () => {
-    const result = groupDataSchema.safeParse(
-      validContractPayload({ contribution_amount: 0 }),
-    );
+    const result = groupDataSchema.safeParse(validContractPayload({ contribution_amount: 0 }));
     expect(result.success).toBe(false);
   });
 
   it('groupDataSchema rejects a negative stroop amount', () => {
-    const result = groupDataSchema.safeParse(
-      validContractPayload({ contribution_amount: -1 }),
-    );
+    const result = groupDataSchema.safeParse(validContractPayload({ contribution_amount: -1 }));
     expect(result.success).toBe(false);
   });
 
   it('frontend form MIN_CONTRIBUTION_XLM converts to a valid stroop count', () => {
     const stroops = Math.round(MIN_CONTRIBUTION_XLM * STROOPS_PER_XLM);
     const result = groupDataSchema.safeParse(
-      validContractPayload({ contribution_amount: stroops }),
+      validContractPayload({ contribution_amount: stroops })
     );
     expect(result.success).toBe(true);
   });
@@ -264,7 +262,7 @@ describe('schemaCompat: contribution_amount — stroops conversion boundary', ()
   it('frontend form MAX_CONTRIBUTION_XLM converts to a valid stroop count', () => {
     const stroops = MAX_CONTRIBUTION_XLM * STROOPS_PER_XLM;
     const result = groupDataSchema.safeParse(
-      validContractPayload({ contribution_amount: stroops }),
+      validContractPayload({ contribution_amount: stroops })
     );
     expect(result.success).toBe(true);
   });
@@ -278,35 +276,33 @@ describe('schemaCompat: cycleDuration — frontend allowlist is a strict subset 
   it.each(VALID_CYCLE_DURATIONS)(
     'frontend groupDataSchema accepts supported duration %i seconds',
     (duration) => {
-      const result = groupDataSchema.safeParse(
-        validContractPayload({ cycle_duration: duration }),
-      );
+      const result = groupDataSchema.safeParse(validContractPayload({ cycle_duration: duration }));
       expect(result.success).toBe(true);
-    },
+    }
   );
 
   it('frontend groupDataSchema rejects an arbitrary positive duration not in the allowlist', () => {
     const result = groupDataSchema.safeParse(
-      validContractPayload({ cycle_duration: 3600 }), // 1 hour — not supported
+      validContractPayload({ cycle_duration: 3600 }) // 1 hour — not supported
     );
     expect(result.success).toBe(false);
   });
 
   it('frontend groupDataSchema rejects zero and negative durations', () => {
+    expect(groupDataSchema.safeParse(validContractPayload({ cycle_duration: 0 })).success).toBe(
+      false
+    );
     expect(
-      groupDataSchema.safeParse(validContractPayload({ cycle_duration: 0 })).success,
-    ).toBe(false);
-    expect(
-      groupDataSchema.safeParse(validContractPayload({ cycle_duration: -604800 })).success,
+      groupDataSchema.safeParse(validContractPayload({ cycle_duration: -604800 })).success
     ).toBe(false);
   });
 
   it('VALID_CYCLE_DURATIONS contains exactly 3 entries (1w / 2w / 1m)', () => {
     // Guards against accidentally removing a duration without updating docs.
     expect(VALID_CYCLE_DURATIONS).toHaveLength(3);
-    expect(VALID_CYCLE_DURATIONS).toContain(604800);   // 1 week
-    expect(VALID_CYCLE_DURATIONS).toContain(1209600);  // 2 weeks
-    expect(VALID_CYCLE_DURATIONS).toContain(2592000);  // 1 month
+    expect(VALID_CYCLE_DURATIONS).toContain(604800); // 1 week
+    expect(VALID_CYCLE_DURATIONS).toContain(1209600); // 2 weeks
+    expect(VALID_CYCLE_DURATIONS).toContain(2592000); // 1 month
   });
 });
 
@@ -339,16 +335,16 @@ describe('schemaCompat: insurance fields — frontend-only until Issue #1012 lan
 
   it('insurancePremiumRate is clamped to 0–100', () => {
     expect(
-      groupDataSchema.safeParse(validContractPayload({ insurancePremiumRate: -1 })).success,
+      groupDataSchema.safeParse(validContractPayload({ insurancePremiumRate: -1 })).success
     ).toBe(false);
     expect(
-      groupDataSchema.safeParse(validContractPayload({ insurancePremiumRate: 101 })).success,
+      groupDataSchema.safeParse(validContractPayload({ insurancePremiumRate: 101 })).success
     ).toBe(false);
     expect(
-      groupDataSchema.safeParse(validContractPayload({ insurancePremiumRate: 0 })).success,
+      groupDataSchema.safeParse(validContractPayload({ insurancePremiumRate: 0 })).success
     ).toBe(true);
     expect(
-      groupDataSchema.safeParse(validContractPayload({ insurancePremiumRate: 100 })).success,
+      groupDataSchema.safeParse(validContractPayload({ insurancePremiumRate: 100 })).success
     ).toBe(true);
   });
 
@@ -377,16 +373,12 @@ describe('schemaCompat: insurance fields — frontend-only until Issue #1012 lan
 
 describe('schemaCompat: min_members — frontend-only, contract-enforced on-chain', () => {
   it('groupDataSchema rejects min_members below 2', () => {
-    const result = groupDataSchema.safeParse(
-      validContractPayload({ min_members: 1 }),
-    );
+    const result = groupDataSchema.safeParse(validContractPayload({ min_members: 1 }));
     expect(result.success).toBe(false);
   });
 
   it('groupDataSchema accepts min_members at the boundary (2)', () => {
-    const result = groupDataSchema.safeParse(
-      validContractPayload({ min_members: 2 }),
-    );
+    const result = groupDataSchema.safeParse(validContractPayload({ min_members: 2 }));
     expect(result.success).toBe(true);
   });
 

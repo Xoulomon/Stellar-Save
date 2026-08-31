@@ -4,9 +4,21 @@
  */
 import SecurityIcon from '@mui/icons-material/Security';
 import {
-  Box, Typography, Chip, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Paper, Alert,
-  Dialog, DialogTitle, DialogContent, DialogActions,
+  Box,
+  Typography,
+  Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   LinearProgress,
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -24,11 +36,12 @@ interface InsurancePanelProps {
   memberAddress?: string;
 }
 
-const STATUS_COLORS: Record<InsuranceClaim['status'], 'default' | 'warning' | 'success' | 'error'> = {
-  pending: 'warning',
-  approved: 'success',
-  rejected: 'error',
-};
+const STATUS_COLORS: Record<InsuranceClaim['status'], 'default' | 'warning' | 'success' | 'error'> =
+  {
+    pending: 'warning',
+    approved: 'success',
+    rejected: 'error',
+  };
 
 export function InsurancePanel({ groupId, memberAddress }: InsurancePanelProps) {
   const qc = useQueryClient();
@@ -37,7 +50,11 @@ export function InsurancePanel({ groupId, memberAddress }: InsurancePanelProps) 
   const [claimReason, setClaimReason] = useState('');
   const [claimError, setClaimError] = useState<string | null>(null);
 
-  const { data: pool, isLoading, error } = useQuery({
+  const {
+    data: pool,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: queryKeys.insurance.byGroup(groupId),
     queryFn: () => fetchInsurancePool(groupId),
     staleTime: 30_000,
@@ -70,10 +87,12 @@ export function InsurancePanel({ groupId, memberAddress }: InsurancePanelProps) 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
         <SecurityIcon color="primary" />
         <Box>
-          <Typography variant="h6" fontWeight={700}>Insurance Pool</Typography>
+          <Typography variant="h6" fontWeight={700}>
+            Insurance Pool
+          </Typography>
           <Typography variant="body2" color="text.secondary">
-            Balance: <strong>{pool.balance.toLocaleString()} XLM</strong>
-            {' '}· Premium: <strong>{(pool.premiumRate * 100).toFixed(1)}%</strong> per contribution
+            Balance: <strong>{pool.balance.toLocaleString()} XLM</strong> · Premium:{' '}
+            <strong>{(pool.premiumRate * 100).toFixed(1)}%</strong> per contribution
           </Typography>
         </Box>
         {memberAddress && (
@@ -90,7 +109,9 @@ export function InsurancePanel({ groupId, memberAddress }: InsurancePanelProps) 
             <TableHead>
               <TableRow sx={{ bgcolor: 'action.hover' }}>
                 <TableCell sx={{ fontWeight: 700 }}>Claimant</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700 }}>Amount</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700 }}>
+                  Amount
+                </TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Reason</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
@@ -103,7 +124,14 @@ export function InsurancePanel({ groupId, memberAddress }: InsurancePanelProps) 
                     {claim.claimant.slice(0, 6)}…{claim.claimant.slice(-4)}
                   </TableCell>
                   <TableCell align="right">{claim.amount} XLM</TableCell>
-                  <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <TableCell
+                    sx={{
+                      maxWidth: 200,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {claim.reason}
                   </TableCell>
                   <TableCell>
@@ -145,7 +173,11 @@ export function InsurancePanel({ groupId, memberAddress }: InsurancePanelProps) 
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button variant="secondary" onClick={() => setClaimOpen(false)} disabled={mutation.isPending}>
+          <Button
+            variant="secondary"
+            onClick={() => setClaimOpen(false)}
+            disabled={mutation.isPending}
+          >
             Cancel
           </Button>
           <Button

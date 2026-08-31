@@ -41,12 +41,14 @@ function enabled(): boolean {
  */
 function propagateUrls(): Array<string | RegExp> {
   const csv = env.VITE_OTEL_PROPAGATE_URLS;
-  return csv
-    .split(',')
-    .map((u) => u.trim())
-    .filter(Boolean)
-    // Escape for use as a "contains" regex so query strings still match.
-    .map((u) => new RegExp(u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  return (
+    csv
+      .split(',')
+      .map((u) => u.trim())
+      .filter(Boolean)
+      // Escape for use as a "contains" regex so query strings still match.
+      .map((u) => new RegExp(u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+  );
 }
 
 /**
@@ -106,12 +108,10 @@ export async function startTracing(): Promise<void> {
     });
 
     // eslint-disable-next-line no-console
-    console.info(
-      `[tracing] OpenTelemetry web tracing enabled (sampler ratio=${ratio})`,
-    );
+    console.info(`[tracing] OpenTelemetry web tracing enabled (sampler ratio=${ratio})`);
   } catch (err) {
     started = false;
-     
+
     console.warn('[tracing] web tracing init failed; continuing without it', err);
   }
 }
