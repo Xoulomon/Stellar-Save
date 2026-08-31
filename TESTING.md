@@ -79,3 +79,17 @@ Add to your CI pipeline:
 # Frontend
 - run: cd frontend && npm install && npm test run
 ```
+
+## Test Boundary — Unit vs Integration (Rust contracts)
+
+Tests in `contracts/stellar-save/src/` follow a strict unit/integration boundary
+documented in [`backend/test/TESTING_BOUNDARY.md`](backend/test/TESTING_BOUNDARY.md).
+
+**Rule of thumb:**
+- **Unit tests** (in each `*.rs` module) — test pure logic, data structures, and
+  validation rules with no storage reads/writes
+- **Integration tests** (`payout_executor.rs`) — test storage persistence wiring:
+  correct key used, correct value written, round-trip reads
+
+Overlap audit results are in [`backend/test/AUDIT.md`](backend/test/AUDIT.md).
+
