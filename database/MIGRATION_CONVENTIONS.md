@@ -1,7 +1,7 @@
 # Database Migration Conventions
 
 **Related to:** Issue #1557, Issue #5  
-**Last Updated:** 2024
+**Last Updated:** 2026-08-31
 
 This document establishes conventions for creating, testing, and managing database migrations in the Stellar-Save project.
 
