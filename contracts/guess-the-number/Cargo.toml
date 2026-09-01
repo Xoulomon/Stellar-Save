@@ -21,5 +21,4 @@ stellar-registry = "0.0.4"
 stellar-save-common = { workspace = true }
 
 [dev-dependencies]
-stellar-xdr = { version = "23.0.0", features = ["curr", "serde"] }
 soroban-sdk = { version = "23.0.3", features = ["testutils"] }
