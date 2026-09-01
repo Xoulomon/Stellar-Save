@@ -75,6 +75,14 @@ const envSchema = z.object({
     .string()
     .url('STELLAR_RPC_URL must be a valid URL')
     .default('https://soroban-testnet.stellar.org'),
+  STELLAR_RPC_FALLBACK_URLS: z
+    .string()
+    .default('')
+    .transform((value) => value.split(',').map((url) => url.trim()).filter(Boolean))
+    .refine(
+      (urls) => urls.every((url) => z.string().url().safeParse(url).success),
+      'STELLAR_RPC_FALLBACK_URLS must be a comma-separated list of valid URLs',
+    ),
   STELLAR_NETWORK_PASSPHRASE: z
     .string()
     .default('Test SDF Network ; September 2015'),
@@ -301,6 +309,7 @@ export const config = {
   stellar: {
     network: env.STELLAR_NETWORK,
     rpcUrl: env.STELLAR_RPC_URL,
+    fallbackRpcUrls: env.STELLAR_RPC_FALLBACK_URLS,
     networkPassphrase: env.STELLAR_NETWORK_PASSPHRASE,
   },
 

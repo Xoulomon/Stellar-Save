@@ -32,6 +32,14 @@ export enum CircuitState {
   HALF_OPEN = 'HALF_OPEN',
 }
 
+export interface CircuitBreakerStats {
+  name: string;
+  state: CircuitState;
+  failureCount: number;
+  successCount: number;
+  totalCount: number;
+}
+
 export { CircuitBreakerOpenError };
 
 export class CircuitBreaker<TArgs extends any[] = any[], TResult = any> {

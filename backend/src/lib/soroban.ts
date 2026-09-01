@@ -6,6 +6,7 @@ import { withSorobanCircuit } from './rpc_circuit_breaker';
 
 export interface SorobanPoolConfig {
   rpcUrl: string;
+  fallbackRpcUrls?: string[];
   poolSize?: number;
   acquireTimeoutMs?: number;
 }
@@ -27,10 +28,14 @@ export class SorobanClientPool {
   private acquireTimeouts = 0;
   private readonly total: number;
   private readonly acquireTimeoutMs: number;
+  private readonly fallbackClients: SorobanRpc.Server[];
 
   constructor(config: SorobanPoolConfig) {
     this.total = config.poolSize ?? 5;
     this.acquireTimeoutMs = config.acquireTimeoutMs ?? 5000;
+    this.fallbackClients = (config.fallbackRpcUrls ?? []).map(
+      (rpcUrl) => new SorobanRpc.Server(rpcUrl, { allowHttp: rpcUrl.startsWith('http://') }),
+    );
 
     for (let i = 0; i < this.total; i++) {
       this.pool.push(new SorobanRpc.Server(config.rpcUrl, { allowHttp: config.rpcUrl.startsWith('http://') }));
@@ -94,7 +99,21 @@ export class SorobanClientPool {
       async () => {
         const client = await this.acquire();
         try {
-          return await withSorobanCircuit(() => fn(client));
+          return await withSorobanCircuit(async () => {
+            try {
+              return await fn(client);
+            } catch (primaryError) {
+              for (const fallbackClient of this.fallbackClients) {
+                try {
+                  return await fn(fallbackClient);
+                } catch {
+                  // Continue through the configured endpoints. The breaker sees
+                  // a failure only when every endpoint is unavailable.
+                }
+              }
+              throw primaryError;
+            }
+          });
         } finally {
           this.release(client);
         }
@@ -121,6 +140,7 @@ export function getSorobanPool(): SorobanClientPool {
   if (!_pool) {
     _pool = new SorobanClientPool({
       rpcUrl: config.stellar.rpcUrl,
+      fallbackRpcUrls: config.stellar.fallbackRpcUrls,
       poolSize: config.soroban.poolSize,
       acquireTimeoutMs: config.soroban.poolTimeoutMs,
     });
