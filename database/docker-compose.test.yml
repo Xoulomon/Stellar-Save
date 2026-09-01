@@ -1,0 +1,49 @@
+version: '3.8'
+
+# =============================================================================
+# Docker Compose Configuration for Migration Testing
+# Issue #1557: Database migration rollback tests
+# =============================================================================
+#
+# This configuration provides a PostgreSQL database for testing migrations.
+# The database is ephemeral and destroyed after tests complete.
+#
+# Usage:
+#   # Start test database
+#   docker-compose -f database/docker-compose.test.yml up -d
+#
+#   # Run migration tests
+#   ./database/test-migrations.sh
+#
+#   # Stop and remove test database
+#   docker-compose -f database/docker-compose.test.yml down -v
+#
+# =============================================================================
+
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: stellar-save-postgres-test
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: stellar_save_test
+    ports:
+      - "5433:5432"  # Use non-standard port to avoid conflicts
+    volumes:
+      - test-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+volumes:
+  test-postgres-data:
+    driver: local
+
+networks:
+  test-network:
+    driver: bridge

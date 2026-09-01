@@ -1,0 +1,348 @@
+name: Database Migration Tests
+
+# Issue #1557: Automated testing for database migration rollback
+# Ensures all migrations can apply and rollback cleanly
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'database/migrations/**'
+      - 'database/migrations.test.ts'
+      - 'database/test-migrations.sh'
+      - 'database/package.json'
+      - '.github/workflows/database-migrations.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'database/migrations/**'
+      - 'database/migrations.test.ts'
+      - 'database/test-migrations.sh'
+      - 'database/package.json'
+      - '.github/workflows/database-migrations.yml'
+
+jobs:
+  migration-tests:
+    name: Migration Rollback Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: stellar_save_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: database
+
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/stellar_save_test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: database/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+
+      - name: Run Jest integration tests
+        run: npm test
+        env:
+          CI: true
+
+      - name: Run bash script tests
+        run: bash test-migrations.sh
+
+      - name: Verify all migrations have down files
+        run: |
+          echo "Checking for missing down migrations..."
+          missing_count=0
+          
+          for up_file in migrations/*.sql; do
+            # Skip template
+            if [[ "$up_file" == *"000_template.sql"* ]]; then
+              continue
+            fi
+            
+            # Skip down files
+            if [[ "$up_file" == *".down.sql"* ]]; then
+              continue
+            fi
+            
+            # Check for corresponding down file
+            down_file="${up_file%.sql}.down.sql"
+            if [[ ! -f "$down_file" ]]; then
+              echo "❌ Missing down migration: $down_file"
+              missing_count=$((missing_count + 1))
+            else
+              echo "✓ Found down migration: $down_file"
+            fi
+          done
+          
+          if [[ $missing_count -gt 0 ]]; then
+            echo ""
+            echo "ERROR: $missing_count migration(s) missing down files!"
+            echo "See database/MIGRATION_CONVENTIONS.md for guidelines."
+            exit 1
+          fi
+          
+          echo ""
+          echo "✓ All migrations have corresponding down files"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-test-results
+          path: database/coverage/
+          retention-days: 30
+
+  migration-lint:
+    name: Migration File Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate migration file naming
+        run: |
+          cd database/migrations
+          
+          echo "Validating migration file naming conventions..."
+          invalid_count=0
+          
+          for file in *.sql; do
+            # Skip template
+            if [[ "$file" == "000_template.sql" ]]; then
+              continue
+            fi
+            
+            # Check naming pattern: NNN_description.sql or NNN_description.down.sql
+            if [[ ! "$file" =~ ^[0-9]{3}_[a-z_]+\.(down\.)?sql$ ]]; then
+              echo "❌ Invalid filename: $file"
+              echo "   Expected pattern: NNN_description.sql or NNN_description.down.sql"
+              invalid_count=$((invalid_count + 1))
+            else
+              echo "✓ Valid filename: $file"
+            fi
+          done
+          
+          if [[ $invalid_count -gt 0 ]]; then
+            echo ""
+            echo "ERROR: $invalid_count invalid migration filename(s)!"
+            echo "See database/MIGRATION_CONVENTIONS.md for naming conventions."
+            exit 1
+          fi
+          
+          echo ""
+          echo "✓ All migration files follow naming conventions"
+
+      - name: Check for BEGIN/COMMIT wrappers
+        run: |
+          cd database/migrations
+          
+          echo "Checking for transaction wrappers..."
+          missing_tx=0
+          
+          for file in *.sql; do
+            # Skip template
+            if [[ "$file" == "000_template.sql" ]]; then
+              continue
+            fi
+            
+            # Check for BEGIN and COMMIT
+            if grep -q "BEGIN;" "$file" && grep -q "COMMIT;" "$file"; then
+              echo "✓ $file has transaction wrapper"
+            else
+              echo "❌ $file missing BEGIN/COMMIT wrapper"
+              missing_tx=$((missing_tx + 1))
+            fi
+          done
+          
+          if [[ $missing_tx -gt 0 ]]; then
+            echo ""
+            echo "WARNING: $missing_tx migration(s) missing transaction wrappers"
+            echo "Consider wrapping DDL in BEGIN/COMMIT for atomicity"
+          else
+            echo ""
+            echo "✓ All migrations use transaction wrappers"
+          fi
+
+      - name: Check for idempotency patterns
+        run: |
+          cd database/migrations
+          
+          echo "Checking for idempotency patterns..."
+          non_idempotent=0
+          
+          for file in *.sql; do
+            # Skip template and down files
+            if [[ "$file" == "000_template.sql" || "$file" == *".down.sql" ]]; then
+              continue
+            fi
+            
+            # Check for IF (NOT) EXISTS patterns
+            if grep -q "IF NOT EXISTS\|IF EXISTS" "$file"; then
+              echo "✓ $file uses idempotency checks"
+            else
+              echo "⚠ $file may not be idempotent"
+              non_idempotent=$((non_idempotent + 1))
+            fi
+          done
+          
+          if [[ $non_idempotent -gt 0 ]]; then
+            echo ""
+            echo "WARNING: $non_idempotent migration(s) may not be idempotent"
+            echo "Consider using IF NOT EXISTS / IF EXISTS for safety"
+          else
+            echo ""
+            echo "✓ All migrations appear to be idempotent"
+          fi
+
+  migration-security:
+    name: Migration Security Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for dangerous patterns
+        run: |
+          cd database/migrations
+          
+          echo "Scanning for dangerous SQL patterns..."
+          dangerous_count=0
+          
+          # Patterns that should trigger review
+          patterns=(
+            "DROP DATABASE"
+            "TRUNCATE.*CASCADE"
+            "DELETE FROM.*WHERE 1=1"
+            "UPDATE.*WHERE 1=1"
+            "ALTER TABLE.*DROP COLUMN.*NOT NULL"
+          )
+          
+          for file in *.sql; do
+            # Skip down files (expected to have destructive operations)
+            if [[ "$file" == *".down.sql" ]]; then
+              continue
+            fi
+            
+            for pattern in "${patterns[@]}"; do
+              if grep -iE "$pattern" "$file" > /dev/null; then
+                echo "⚠ $file contains potentially dangerous pattern: $pattern"
+                dangerous_count=$((dangerous_count + 1))
+              fi
+            done
+          done
+          
+          if [[ $dangerous_count -gt 0 ]]; then
+            echo ""
+            echo "WARNING: Found $dangerous_count potentially dangerous pattern(s)"
+            echo "These migrations should be carefully reviewed before applying to production"
+          else
+            echo ""
+            echo "✓ No obvious dangerous patterns found"
+          fi
+
+  migration-docs:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify MIGRATION_CONVENTIONS.md exists
+        run: |
+          if [[ ! -f "database/MIGRATION_CONVENTIONS.md" ]]; then
+            echo "❌ MIGRATION_CONVENTIONS.md not found!"
+            exit 1
+          fi
+          echo "✓ Migration conventions documentation exists"
+
+      - name: Check migration headers
+        run: |
+          cd database/migrations
+          
+          echo "Checking migration file headers..."
+          missing_headers=0
+          
+          for file in *.sql; do
+            # Skip template
+            if [[ "$file" == "000_template.sql" ]]; then
+              continue
+            fi
+            
+            # Check for basic header info
+            if ! grep -q "Migration:" "$file"; then
+              echo "⚠ $file missing migration header"
+              missing_headers=$((missing_headers + 1))
+            fi
+          done
+          
+          if [[ $missing_headers -gt 0 ]]; then
+            echo ""
+            echo "WARNING: $missing_headers migration(s) missing proper headers"
+            echo "Add migration headers as per database/MIGRATION_CONVENTIONS.md"
+          else
+            echo ""
+            echo "✓ All migrations have proper headers"
+          fi
+
+  summary:
+    name: Migration Test Summary
+    runs-on: ubuntu-latest
+    needs: [migration-tests, migration-lint, migration-security, migration-docs]
+    if: always()
+
+    steps:
+      - name: Check job results
+        run: |
+          echo "Migration Test Results:"
+          echo "======================"
+          echo ""
+          echo "Migration Tests: ${{ needs.migration-tests.result }}"
+          echo "File Validation: ${{ needs.migration-lint.result }}"
+          echo "Security Check: ${{ needs.migration-security.result }}"
+          echo "Documentation: ${{ needs.migration-docs.result }}"
+          echo ""
+          
+          if [[ "${{ needs.migration-tests.result }}" != "success" ]]; then
+            echo "❌ Migration tests failed!"
+            exit 1
+          fi
+          
+          if [[ "${{ needs.migration-lint.result }}" != "success" ]]; then
+            echo "❌ Migration file validation failed!"
+            exit 1
+          fi
+          
+          echo "✓ All migration checks passed!"

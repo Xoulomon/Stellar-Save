@@ -1,0 +1,29 @@
+{
+  "name": "database-migrations",
+  "version": "1.0.0",
+  "description": "Database migration testing infrastructure for Stellar-Save",
+  "private": true,
+  "scripts": {
+    "test": "jest --config jest.config.js",
+    "test:watch": "jest --config jest.config.js --watch",
+    "test:coverage": "jest --config jest.config.js --coverage",
+    "test:migrations": "jest migrations.test.ts",
+    "test:migrations:bash": "./test-migrations.sh",
+    "db:up": "docker-compose -f docker-compose.test.yml up -d",
+    "db:down": "docker-compose -f docker-compose.test.yml down -v",
+    "db:logs": "docker-compose -f docker-compose.test.yml logs -f postgres-test",
+    "db:shell": "docker-compose -f docker-compose.test.yml exec postgres-test psql -U postgres -d stellar_save_test"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.11.19",
+    "@types/pg": "^8.11.0",
+    "jest": "^29.7.0",
+    "pg": "^8.11.3",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
