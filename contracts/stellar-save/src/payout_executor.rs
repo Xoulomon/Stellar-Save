@@ -189,7 +189,9 @@ fn identify_recipient_random(
     // Use Soroban PRNG + ledger timestamp as entropy source.
     let prng_val = env.prng().u64_in_range(0..u64::MAX);
     let ledger_salt = env.ledger().timestamp();
-    let idx = ((prng_val.wrapping_add(ledger_salt).wrapping_add(group_id as u64))
+    let idx = ((prng_val
+        .wrapping_add(ledger_salt)
+        .wrapping_add(group_id as u64))
         % eligible.len() as u64) as u32;
 
     Ok(eligible.get(idx).unwrap())
@@ -221,8 +223,7 @@ fn identify_recipient_bid(
             continue;
         }
 
-        let bid_key =
-            StorageKeyBuilder::group_bid_amount(group_id, current_cycle, member.clone());
+        let bid_key = StorageKeyBuilder::group_bid_amount(group_id, current_cycle, member.clone());
         let bid: i128 = env.storage().persistent().get(&bid_key).unwrap_or(0);
         if bid > best_bid {
             best_bid = bid;
@@ -767,7 +768,7 @@ pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
     // Temporary entries are scoped to the current transaction and auto-cleared.
     let reentrancy_key = StorageKeyBuilder::reentrancy_guard();
     let guard_value: u64 = env.storage().temporary().get(&reentrancy_key).unwrap_or(0);
-    
+
     if guard_value != 0 {
         return Err(StellarSaveError::InternalError);
     }
@@ -829,7 +830,13 @@ pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
     }
 
     // Step 5: Identify the recipient for this cycle based on payout position
-    let recipient = identify_recipient(&env, group_id, current_cycle, group.member_count, &group.payout_order)?;
+    let recipient = identify_recipient(
+        &env,
+        group_id,
+        current_cycle,
+        group.member_count,
+        &group.payout_order,
+    )?;
 
     // Step 6: Verify the recipient is eligible to receive the payout
     verify_recipient_eligibility(&env, group_id, &recipient, current_cycle)?;
@@ -1544,4 +1551,84 @@ mod tests {
     }
 
 
+    #[test]
+    fn test_apply_missed_penalties_adds_to_pool() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+        let group_id = 1u64;
+        let cycle = 0u32;
+        let penalty = 500_000i128;
+
+        let group = crate::group::Group::new_with_penalty(
+            group_id, creator, 10_000_000, 604800, 2, 2, 1_000_000, true, penalty,
+        );
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_data(group_id), &group);
+
+        let mut members = soroban_sdk::Vec::new(&env);
+        members.push_back(member.clone());
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_members(group_id), &members);
+
+        // Seed pool with existing contributions
+        let pool_key = StorageKeyBuilder::contribution_cycle_total(group_id, cycle);
+        env.storage().persistent().set(&pool_key, &10_000_000i128);
+
+        // member missed — no contribution record stored
+        apply_missed_contribution_penalties(&env, group_id, cycle, &group).unwrap();
+
+        let pool: i128 = env.storage().persistent().get(&pool_key).unwrap_or(0);
+        assert_eq!(pool, 10_500_000); // 10_000_000 + 500_000 penalty
+    }
+
+    #[test]
+    fn test_apply_missed_penalties_no_op_when_disabled() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        let member = Address::generate(&env);
+        let group_id = 1u64;
+        let cycle = 0u32;
+
+        // penalty_enabled = false
+        let group = crate::group::Group::new_with_penalty(
+            group_id, creator, 10_000_000, 604800, 2, 2, 1_000_000, false, 0,
+        );
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_data(group_id), &group);
+
+        let mut members = soroban_sdk::Vec::new(&env);
+        members.push_back(member.clone());
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_members(group_id), &members);
+
+        // The function should still succeed but apply no penalties
+        apply_missed_contribution_penalties(&env, group_id, cycle, &group).unwrap();
+
+        let penalty_key = StorageKeyBuilder::member_penalty_total(group_id, member.clone());
+        let total: i128 = env.storage().persistent().get(&penalty_key).unwrap_or(0);
+        assert_eq!(total, 0);
+    }
+
+    #[test]
+    fn test_execute_payout_reentrancy_detected() {
+        let env = Env::default();
+        let group_id = 1u64;
+
+        // Create a minimal group with payout_in_progress = true
+        let creator = Address::generate(&env);
+        let mut group =
+            Group::new_with_penalty(group_id, creator, 1_000_000, 3600, 2, 2, 0, 0, false, 0);
+        group.payout_in_progress = true;
+        env.storage()
+            .persistent()
+            .set(&StorageKeyBuilder::group_data(group_id), &group);
+
+        let result = execute_payout(env, group_id);
+        assert_eq!(result, Err(StellarSaveError::ReentrancyDetected));
+    }
 }

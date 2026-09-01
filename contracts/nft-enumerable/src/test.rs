@@ -3,7 +3,7 @@ extern crate std;
 use soroban_sdk::Address;
 
 use crate::contract::ExampleContractClient;
-use crate::test_utils::{create_env, create_client, setup_accounts};
+use crate::test_utils::{create_client, create_env, setup_accounts};
 
 #[test]
 fn enumerable_transfer_override_works() {
@@ -103,4 +103,3 @@ fn enumeration_transfer_and_burn_invariants() {
     assert_eq!(client.balance(&recipient), 1);
     assert_eq!(client.get_owner_token_id(&recipient, &0), 0);
 }
-

@@ -1,10 +1,7 @@
 use soroban_sdk::{Address, Env};
 
 use crate::{
-    error::StellarSaveError,
-    events::EventEmitter,
-    group::Group,
-    storage::StorageKeyBuilder,
+    error::StellarSaveError, events::EventEmitter, group::Group, storage::StorageKeyBuilder,
 };
 
 /// Maximum allowed extension per call: 7 days in seconds.
@@ -78,7 +75,12 @@ pub fn extend_deadline(
     //   new_deadline  = base_deadline + new_total
     let base_deadline = group
         .created_at
-        .checked_add(group.cycle_duration.checked_mul(cycle as u64 + 1).ok_or(StellarSaveError::InternalError)?)
+        .checked_add(
+            group
+                .cycle_duration
+                .checked_mul(cycle as u64 + 1)
+                .ok_or(StellarSaveError::InternalError)?,
+        )
         .ok_or(StellarSaveError::InternalError)?;
     let new_deadline = base_deadline
         .checked_add(new_total)
@@ -117,7 +119,7 @@ mod tests {
             10_000_000, // 1 XLM
             604_800,    // 1 week
             5,
-            1_000_000,  // created_at
+            1_000_000, // created_at
         );
         let key = StorageKeyBuilder::group_data(group_id);
         env.storage().persistent().set(&key, &group);
@@ -170,7 +172,13 @@ mod tests {
         let creator = Address::generate(&env);
         let group_id = setup_group(&env, &creator);
 
-        let result = extend_deadline(&env, creator.clone(), group_id, 0, MAX_EXTENSION_SECONDS + 1);
+        let result = extend_deadline(
+            &env,
+            creator.clone(),
+            group_id,
+            0,
+            MAX_EXTENSION_SECONDS + 1,
+        );
         assert_eq!(result, Err(StellarSaveError::DeadlineExtensionExceedsMax));
     }
 

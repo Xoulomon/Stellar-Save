@@ -34,9 +34,10 @@ mod tests {
             payout_position: 0,
             joined_at: 1000,
         };
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::member_profile(group_id, member.clone()), &profile);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::member_profile(group_id, member.clone()),
+            &profile,
+        );
     }
 
     /// Ok(None) is distinct from Err — proves the Result<Option<>> is necessary.
@@ -66,8 +67,11 @@ mod tests {
             .set(&StorageKeyBuilder::group_data(1), &g);
 
         let result = StellarSaveContract::get_member_payout(env.clone(), 1, non_member);
-        assert_eq!(result.unwrap_err(), StellarSaveError::NotMember,
-            "non-member must return Err(NotMember), not Ok(None)");
+        assert_eq!(
+            result.unwrap_err(),
+            StellarSaveError::NotMember,
+            "non-member must return Err(NotMember), not Ok(None)"
+        );
     }
 
     /// Ok(None) for get_member_rating when no rating yet.
@@ -90,9 +94,10 @@ mod tests {
             payout_position: 0,
             joined_at: 1000,
         };
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::member_profile(1, member.clone()), &profile);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::member_profile(1, member.clone()),
+            &profile,
+        );
 
         let result = crate::rating::get_member_rating(&env, 1, member);
         assert!(result.is_ok(), "group+member exist — must be Ok");

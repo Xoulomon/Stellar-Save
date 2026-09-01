@@ -27,11 +27,7 @@
 
 extern crate std;
 
-use soroban_sdk::{
-    testutils::Address as _,
-    token::TokenClient,
-    Address, Env,
-};
+use soroban_sdk::{testutils::Address as _, token::TokenClient, Address, Env};
 
 use crate::test_utils::{mint, setup, setup_3_member_group};
 use crate::xlm::STROOPS_PER_XLM;
@@ -65,7 +61,10 @@ fn test_dispute_raise_auto_pause_resolve() {
     client.raise_dispute(&group_id, &alice, &s(&env, "late contribution"));
 
     let grp = client.get_group(&group_id);
-    assert!(!grp.paused, "one vote should not auto-pause a 3-member group");
+    assert!(
+        !grp.paused,
+        "one vote should not auto-pause a 3-member group"
+    );
     assert!(!grp.dispute_active);
 
     // Bob votes — 2/3 members → crosses the >50% threshold.
@@ -73,7 +72,10 @@ fn test_dispute_raise_auto_pause_resolve() {
 
     let grp = client.get_group(&group_id);
     assert!(grp.paused, "two votes out of three should auto-pause");
-    assert!(grp.dispute_active, "dispute_active should be true after auto-pause");
+    assert!(
+        grp.dispute_active,
+        "dispute_active should be true after auto-pause"
+    );
     assert!(client.is_paused(&group_id));
 
     // Creator (setup creates the group; the group's creator is the contract-level
@@ -83,7 +85,10 @@ fn test_dispute_raise_auto_pause_resolve() {
 
     let grp = client.get_group(&group_id);
     assert!(!grp.paused, "group should be unpaused after resolve");
-    assert!(!grp.dispute_active, "dispute_active should be cleared after resolve");
+    assert!(
+        !grp.dispute_active,
+        "dispute_active should be cleared after resolve"
+    );
     assert!(!client.is_paused(&group_id));
 }
 
@@ -104,7 +109,8 @@ fn test_dispute_denial_group_stays_paused() {
 
     // Advance the ledger by a large number of seconds — the dispute
     // should still be active because no one resolved it.
-    env.ledger().set_timestamp(env.ledger().timestamp() + 1_000_000);
+    env.ledger()
+        .set_timestamp(env.ledger().timestamp() + 1_000_000);
 
     let grp = client.get_group(&group_id);
     assert!(grp.paused, "group should remain paused without resolution");
@@ -137,7 +143,10 @@ fn test_dispute_double_vote_rejected() {
     client.raise_dispute(&group_id, &alice, &s(&env, "first vote"));
 
     let result = client.try_raise_dispute(&group_id, &alice, &s(&env, "second vote"));
-    assert!(result.is_err(), "second vote from the same member should be rejected");
+    assert!(
+        result.is_err(),
+        "second vote from the same member should be rejected"
+    );
 }
 
 /// Feature: Insurance  Dispute 5 — NotMember
@@ -150,7 +159,10 @@ fn test_dispute_non_member_rejected() {
 
     let outsider = Address::generate(&env);
     let result = client.try_raise_dispute(&group_id, &outsider, &s(&env, "outsider"));
-    assert!(result.is_err(), "non-member should not be able to raise a dispute");
+    assert!(
+        result.is_err(),
+        "non-member should not be able to raise a dispute"
+    );
 }
 
 /// Feature: Insurance  Dispute 6 — Unauthorized resolve
@@ -179,7 +191,10 @@ fn test_dispute_resolve_without_active_dispute_rejected() {
 
     let creator = client.get_group(&group_id).creator.clone();
     let result = client.try_resolve_dispute(&group_id, &creator, &s(&env, "nothing to resolve"));
-    assert!(result.is_err(), "resolve without an active dispute should fail");
+    assert!(
+        result.is_err(),
+        "resolve without an active dispute should fail"
+    );
 }
 
 /// Feature: Insurance  Dispute 8 — Votes reset after resolution
@@ -249,7 +264,10 @@ fn test_claim_completion_reward_happy_path() {
 
     let grp = client.get_group(&group_id);
     let reward_pool = grp.reward_pool;
-    assert!(reward_pool > 0, "reward pool should be positive after contributions");
+    assert!(
+        reward_pool > 0,
+        "reward pool should be positive after contributions"
+    );
 
     let alice_before = tc.balance(&alice);
     let bob_before = tc.balance(&bob);
@@ -260,10 +278,16 @@ fn test_claim_completion_reward_happy_path() {
 
     let expected_share = reward_pool / 2; // equal split between 2 members
 
-    assert_eq!(tc.balance(&alice), alice_before + expected_share,
-        "Alice's balance should increase by her reward share");
-    assert_eq!(tc.balance(&bob), bob_before + expected_share,
-        "Bob's balance should increase by his reward share");
+    assert_eq!(
+        tc.balance(&alice),
+        alice_before + expected_share,
+        "Alice's balance should increase by her reward share"
+    );
+    assert_eq!(
+        tc.balance(&bob),
+        bob_before + expected_share,
+        "Bob's balance should increase by his reward share"
+    );
 }
 
 /// Feature: Insurance  Claim 10 — Group not complete → InvalidState
@@ -290,7 +314,10 @@ fn test_claim_completion_reward_group_not_complete() {
 
     // Attempting to claim before completion must fail
     let result = client.try_claim_completion_reward(&alice, &group_id);
-    assert!(result.is_err(), "claim before group completion should be rejected");
+    assert!(
+        result.is_err(),
+        "claim before group completion should be rejected"
+    );
 }
 
 /// Feature: Insurance  Claim 11 — Missed cycle → RewardNotEligible
@@ -325,7 +352,10 @@ fn test_claim_completion_reward_missed_cycle_not_eligible() {
 
     // Alice missed cycle 0 → RewardNotEligible
     let result = client.try_claim_completion_reward(&alice, &group_id);
-    assert!(result.is_err(), "alice should not be eligible having missed cycle 0");
+    assert!(
+        result.is_err(),
+        "alice should not be eligible having missed cycle 0"
+    );
 
     // Bob contributed in every cycle → eligible
     client.claim_completion_reward(&bob, &group_id);
@@ -410,27 +440,27 @@ fn test_balance_net_zero_after_full_rosca_and_reward_claims() {
     let tc = TokenClient::new(&env, &token);
 
     let initial_alice = tc.balance(&alice);
-    let initial_bob   = tc.balance(&bob);
+    let initial_bob = tc.balance(&bob);
     let initial_carol = tc.balance(&carol);
 
     // Complete all 3 cycles
     client.contribute(&group_id, &alice, &token);
-    client.contribute(&group_id, &bob,   &token);
+    client.contribute(&group_id, &bob, &token);
     client.contribute(&group_id, &carol, &token);
 
     client.contribute(&group_id, &alice, &token);
-    client.contribute(&group_id, &bob,   &token);
+    client.contribute(&group_id, &bob, &token);
     client.contribute(&group_id, &carol, &token);
 
     client.contribute(&group_id, &alice, &token);
-    client.contribute(&group_id, &bob,   &token);
+    client.contribute(&group_id, &bob, &token);
     client.contribute(&group_id, &carol, &token);
 
     assert!(client.is_complete(&group_id));
 
     // All three members claim their reward shares
     client.claim_completion_reward(&alice, &group_id);
-    client.claim_completion_reward(&bob,   &group_id);
+    client.claim_completion_reward(&bob, &group_id);
     client.claim_completion_reward(&carol, &group_id);
 
     // After full ROSCA + reward distribution, each member's balance should be
@@ -445,36 +475,40 @@ fn test_balance_net_zero_after_full_rosca_and_reward_claims() {
     // worse off after claiming their reward), and the total token supply across
     // the three members is conserved (nothing leaks from the contract).
     let final_alice = tc.balance(&alice);
-    let final_bob   = tc.balance(&bob);
+    let final_bob = tc.balance(&bob);
     let final_carol = tc.balance(&carol);
 
     assert!(
         final_alice >= initial_alice,
         "Alice's balance should be >= initial after full ROSCA + claim: initial={} final={}",
-        initial_alice, final_alice
+        initial_alice,
+        final_alice
     );
     assert!(
         final_bob >= initial_bob,
         "Bob's balance should be >= initial after full ROSCA + claim: initial={} final={}",
-        initial_bob, final_bob
+        initial_bob,
+        final_bob
     );
     assert!(
         final_carol >= initial_carol,
         "Carol's balance should be >= initial after full ROSCA + claim: initial={} final={}",
-        initial_carol, final_carol
+        initial_carol,
+        final_carol
     );
 
     // Conservation: total tokens held by members must equal the initial total
     // (any amount left in the contract beyond an epsilon is a leak).
     let total_initial = initial_alice + initial_bob + initial_carol;
-    let total_final   = final_alice + final_bob + final_carol;
+    let total_final = final_alice + final_bob + final_carol;
     // The reward pool may leave dust in the contract if reward_pool % 3 != 0.
     // Allow up to (max_members - 1) stroops of dust.
     let dust_tolerance: i128 = 2; // max_members - 1 = 2 stroops
     assert!(
         total_final >= total_initial - dust_tolerance,
         "Total member balances should be conserved (dust ok): initial={} final={}",
-        total_initial, total_final
+        total_initial,
+        total_final
     );
 }
 
@@ -493,17 +527,17 @@ fn test_balance_correctness_dispute_mid_cycle() {
 
     // Cycle 1: all contribute → payout
     client.contribute(&group_id, &alice, &token);
-    client.contribute(&group_id, &bob,   &token);
+    client.contribute(&group_id, &bob, &token);
     client.contribute(&group_id, &carol, &token);
 
     // Record balance snapshot after cycle 1
     let alice_after_c1 = tc.balance(&alice);
-    let bob_after_c1   = tc.balance(&bob);
+    let bob_after_c1 = tc.balance(&bob);
     let carol_after_c1 = tc.balance(&carol);
 
     // Raise dispute (2 votes → auto-pause)
     client.raise_dispute(&group_id, &alice, &s(&env, "dispute mid cycle"));
-    client.raise_dispute(&group_id, &bob,   &s(&env, "dispute mid cycle"));
+    client.raise_dispute(&group_id, &bob, &s(&env, "dispute mid cycle"));
     assert!(client.is_paused(&group_id));
 
     // Resolve dispute — group resumes
@@ -513,12 +547,12 @@ fn test_balance_correctness_dispute_mid_cycle() {
 
     // Cycle 2: all contribute → payout
     client.contribute(&group_id, &alice, &token);
-    client.contribute(&group_id, &bob,   &token);
+    client.contribute(&group_id, &bob, &token);
     client.contribute(&group_id, &carol, &token);
 
     // Cycle 3: all contribute → payout + completion
     client.contribute(&group_id, &alice, &token);
-    client.contribute(&group_id, &bob,   &token);
+    client.contribute(&group_id, &bob, &token);
     client.contribute(&group_id, &carol, &token);
 
     assert!(client.is_complete(&group_id));
@@ -531,7 +565,7 @@ fn test_balance_correctness_dispute_mid_cycle() {
     // checking that contributions per-cycle were not double-charged.
     // Balance after cycle 1 → same formula as before-dispute.
     let alice_after_complete = tc.balance(&alice);
-    let bob_after_complete   = tc.balance(&bob);
+    let bob_after_complete = tc.balance(&bob);
     let carol_after_complete = tc.balance(&carol);
 
     // Each member should have contributed exactly 2 more × contribution since C1

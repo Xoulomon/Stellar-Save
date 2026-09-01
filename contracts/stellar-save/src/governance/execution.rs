@@ -43,10 +43,8 @@ pub fn execute_dissolution(
 
     for (_, member) in members.iter() {
         // Skip members who already received their payout
-        let payout_pos_key =
-            StorageKeyBuilder::member_payout_eligibility(group_id, member.clone());
-        let payout_position: u32 = match env.storage().persistent().get::<_, u32>(&payout_pos_key)
-        {
+        let payout_pos_key = StorageKeyBuilder::member_payout_eligibility(group_id, member.clone());
+        let payout_position: u32 = match env.storage().persistent().get::<_, u32>(&payout_pos_key) {
             Some(pos) => pos,
             None => continue,
         };
@@ -69,14 +67,14 @@ pub fn execute_dissolution(
         let refund_amount: i128 = match env
             .storage()
             .persistent()
-            .get::<_, crate::contribution::ContributionRecord>(&contrib_key)
-        {
+            .get::<_, crate::contribution::ContributionRecord>(
+            &contrib_key,
+        ) {
             Some(record) => record.amount,
             None => continue,
         };
 
-        let refund_key =
-            StorageKeyBuilder::refund_record(group_id, current_cycle, member.clone());
+        let refund_key = StorageKeyBuilder::refund_record(group_id, current_cycle, member.clone());
         if env.storage().persistent().has(&refund_key) {
             continue;
         }

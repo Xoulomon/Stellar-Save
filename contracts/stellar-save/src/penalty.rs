@@ -12,7 +12,10 @@
 
 use soroban_sdk::{contracttype, Address, Env};
 
-use crate::{auth::is_active_member, error::StellarSaveError, events::EventEmitter, storage::StorageKeyBuilder};
+use crate::{
+    auth::is_active_member, error::StellarSaveError, events::EventEmitter,
+    storage::StorageKeyBuilder,
+};
 
 // ─── Type Aliases ─────────────────────────────────────────────────────────────
 

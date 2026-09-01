@@ -219,14 +219,8 @@ mod tests {
             DEFAULT_MAX_CYCLE_DURATION >= DEFAULT_MIN_CYCLE_DURATION,
             "Max cycle duration must be >= min"
         );
-        assert_eq!(
-            ONE_DAY_SECONDS, 86_400,
-            "One day must be 86400 seconds"
-        );
-        assert_eq!(
-            ONE_WEEK_SECONDS, 604_800,
-            "One week must be 604800 seconds"
-        );
+        assert_eq!(ONE_DAY_SECONDS, 86_400, "One day must be 86400 seconds");
+        assert_eq!(ONE_WEEK_SECONDS, 604_800, "One week must be 604800 seconds");
     }
 
     #[test]
@@ -254,8 +248,7 @@ mod tests {
     #[test]
     fn test_deadline_extension_max_is_one_week() {
         assert_eq!(
-            MAX_DEADLINE_EXTENSION_SECONDS,
-            ONE_WEEK_SECONDS,
+            MAX_DEADLINE_EXTENSION_SECONDS, ONE_WEEK_SECONDS,
             "Max deadline extension must be 7 days"
         );
     }

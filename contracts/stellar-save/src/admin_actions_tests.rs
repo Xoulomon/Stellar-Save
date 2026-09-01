@@ -61,7 +61,11 @@ mod tests {
         store_config(&env, &admin);
         crate::migration::initialize_storage_version(&env);
         let result = StellarSaveContract::migrate_storage(env.clone(), admin.clone());
-        assert!(result.is_ok(), "admin must trigger migrate_storage: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "admin must trigger migrate_storage: {:?}",
+            result.err()
+        );
     }
 
     #[test]
@@ -85,7 +89,10 @@ mod tests {
         let admin = Address::generate(&env);
         store_config(&env, &admin);
         let result = StellarSaveContract::update_contribution_limits(
-            env.clone(), admin.clone(), 500_000, 2_000_000_000,
+            env.clone(),
+            admin.clone(),
+            500_000,
+            2_000_000_000,
         );
         assert!(result.is_ok(), "{:?}", result.err());
     }
@@ -98,7 +105,10 @@ mod tests {
         let attacker = Address::generate(&env);
         store_config(&env, &admin);
         let result = StellarSaveContract::update_contribution_limits(
-            env.clone(), attacker, 500_000, 2_000_000_000,
+            env.clone(),
+            attacker,
+            500_000,
+            2_000_000_000,
         );
         assert_eq!(result.unwrap_err(), StellarSaveError::Unauthorized);
     }
@@ -112,7 +122,8 @@ mod tests {
         let admin = Address::generate(&env);
         let token = Address::generate(&env);
         store_config(&env, &admin);
-        let result = StellarSaveContract::add_allowed_token(env.clone(), admin.clone(), token.clone());
+        let result =
+            StellarSaveContract::add_allowed_token(env.clone(), admin.clone(), token.clone());
         assert!(result.is_ok(), "{:?}", result.err());
         assert!(StellarSaveContract::is_token_allowed(env.clone(), token));
     }
@@ -210,7 +221,12 @@ mod tests {
         env.mock_all_auths();
         let creator = Address::generate(&env);
         store_group(&env, 1, &creator);
-        let cfg = PenaltyConfig { base_penalty_bps: 300, penalty_increment_bps: 300, max_penalty_bps: 1500, recovery_fee_bps: 500 };
+        let cfg = PenaltyConfig {
+            base_penalty_bps: 300,
+            penalty_increment_bps: 300,
+            max_penalty_bps: 1500,
+            recovery_fee_bps: 500,
+        };
         let result = StellarSaveContract::set_penalty_config(env.clone(), 1, creator.clone(), cfg);
         assert!(result.is_ok(), "{:?}", result.err());
     }
@@ -222,7 +238,12 @@ mod tests {
         let creator = Address::generate(&env);
         let attacker = Address::generate(&env);
         store_group(&env, 1, &creator);
-        let cfg = PenaltyConfig { base_penalty_bps: 300, penalty_increment_bps: 300, max_penalty_bps: 1500, recovery_fee_bps: 500 };
+        let cfg = PenaltyConfig {
+            base_penalty_bps: 300,
+            penalty_increment_bps: 300,
+            max_penalty_bps: 1500,
+            recovery_fee_bps: 500,
+        };
         let result = StellarSaveContract::set_penalty_config(env.clone(), 1, attacker, cfg);
         assert_eq!(result.unwrap_err(), StellarSaveError::Unauthorized);
     }

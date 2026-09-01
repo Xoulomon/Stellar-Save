@@ -49,8 +49,7 @@ pub fn request_refund(
         .unwrap_or(GroupStatus::Pending);
 
     // Look up the contribution for the caller
-    let contrib_key =
-        StorageKeyBuilder::contribution_individual(group_id, cycle, caller.clone());
+    let contrib_key = StorageKeyBuilder::contribution_individual(group_id, cycle, caller.clone());
     let contribution: ContributionRecord = env
         .storage()
         .persistent()
@@ -127,8 +126,7 @@ pub fn request_refund(
     // ── Interaction ──────────────────────────────────────────────────────────
     // Transfer funds back to the contributor via the group's token contract.
     // If this traps, Soroban reverts the record written above atomically.
-    let token_client =
-        soroban_sdk::token::TokenClient::new(env, &token_config.token_address);
+    let token_client = soroban_sdk::token::TokenClient::new(env, &token_config.token_address);
     token_client.transfer(
         &env.current_contract_address(),
         &contribution.member_address,

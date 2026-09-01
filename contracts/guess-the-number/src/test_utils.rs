@@ -6,9 +6,7 @@
 #![cfg(test)]
 
 use soroban_sdk::{
-    testutils::Address as _,
-    token::StellarAssetClient,
-    Address, Env, IntoVal, Val, Vec,
+    testutils::Address as _, token::StellarAssetClient, Address, Env, IntoVal, Val, Vec,
 };
 
 use crate::contract::{GuessTheNumber, GuessTheNumberClient};
@@ -78,7 +76,6 @@ pub fn init_test<'a>(env: &'a Env) -> (Address, StellarAssetClient<'a>, GuessThe
     let sac_address = env.as_contract(&client.address, || crate::xlm::contract_id(env));
     (admin, StellarAssetClient::new(env, &sac_address), client)
 }
-
 
 /// Mock the auth context for a function call.
 ///

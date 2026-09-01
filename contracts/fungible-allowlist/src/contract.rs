@@ -6,8 +6,7 @@
 //! accounts.
 
 use soroban_sdk::{
-    contract, contractimpl, symbol_short, Address, Env, MuxedAddress, String,
-    Symbol, Vec,
+    contract, contractimpl, symbol_short, Address, Env, MuxedAddress, String, Symbol, Vec,
 };
 use stellar_access::access_control::{self as access_control, AccessControl};
 use stellar_macros::only_role;

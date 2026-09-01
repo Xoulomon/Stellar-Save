@@ -1,7 +1,7 @@
 //! Helper utilities for formatting and display
 
-use soroban_sdk::{String, Env, Bytes};
 use crate::{Group, StellarSaveError, StorageKeyBuilder};
+use soroban_sdk::{Bytes, Env, String};
 
 /// Validates a group metadata string (name or description).
 ///
@@ -63,7 +63,7 @@ pub fn round_contribution_amount(amount: i128) -> i128 {
     if amount <= 0 {
         return amount;
     }
-    
+
     // Round to nearest ROUNDING_PRECISION
     // For positive numbers: (amount + ROUNDING_PRECISION/2) / ROUNDING_PRECISION * ROUNDING_PRECISION
     let half_precision = ROUNDING_PRECISION / 2;
@@ -71,14 +71,14 @@ pub fn round_contribution_amount(amount: i128) -> i128 {
 }
 
 /// Formats a group ID for display with a "GROUP-" prefix.
-/// 
+///
 /// # Arguments
 /// * `env` - Soroban environment for string allocation
 /// * `group_id` - The numeric group ID to format
-/// 
+///
 /// # Returns
 /// A formatted string in the format "GROUP-{id}"
-/// 
+///
 /// # Example
 /// ```
 /// let formatted = format_group_id(&env, 42);
@@ -115,22 +115,23 @@ pub fn format_group_id(env: &Env, group_id: u64) -> String {
 }
 
 /// Checks if the current cycle deadline (plus grace period) has passed.
-/// 
+///
 /// A member is only considered late once both the cycle deadline AND the
 /// grace period have elapsed.
-/// 
+///
 /// # Arguments
 /// * `group` - The group to check
 /// * `current_time` - Current timestamp in seconds
-/// 
+///
 /// # Returns
 /// `true` if the deadline + grace period has passed, `false` otherwise
 pub fn is_cycle_deadline_passed(group: &Group, current_time: u64) -> bool {
     if !group.started {
         return false;
     }
-    
-    let cycle_deadline = group.started_at + (group.cycle_duration * (group.current_cycle as u64 + 1));
+
+    let cycle_deadline =
+        group.started_at + (group.cycle_duration * (group.current_cycle as u64 + 1));
     current_time > cycle_deadline + group.grace_period_seconds
 }
 
@@ -175,8 +176,8 @@ pub fn calculate_current_cycle(env: &Env, group_id: u64) -> Result<u32, StellarS
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::{Env, Address};
     use crate::group::GroupStatus;
+    use soroban_sdk::{Address, Env};
 
     // ── validate_group_string tests ──────────────────────────────────────────
 
@@ -191,7 +192,10 @@ mod tests {
     fn test_validate_group_string_exactly_max_bytes() {
         let env = Env::default();
         // 64 ASCII characters = 64 bytes
-        let s = String::from_str(&env, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        let s = String::from_str(
+            &env,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        );
         assert_eq!(s.len(), 64);
         assert!(validate_group_string(&s, 64).is_ok());
     }
@@ -200,9 +204,15 @@ mod tests {
     fn test_validate_group_string_exceeds_max_bytes() {
         let env = Env::default();
         // 65 ASCII characters = 65 bytes
-        let s = String::from_str(&env, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        let s = String::from_str(
+            &env,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        );
         assert_eq!(s.len(), 65);
-        assert_eq!(validate_group_string(&s, 64), Err(StellarSaveError::InvalidMetadata));
+        assert_eq!(
+            validate_group_string(&s, 64),
+            Err(StellarSaveError::InvalidMetadata)
+        );
     }
 
     #[test]
@@ -229,7 +239,10 @@ mod tests {
         let desc = "a".repeat(257);
         let s = String::from_str(&env, &desc);
         assert_eq!(s.len(), 257);
-        assert_eq!(validate_group_string(&s, 256), Err(StellarSaveError::InvalidMetadata));
+        assert_eq!(
+            validate_group_string(&s, 256),
+            Err(StellarSaveError::InvalidMetadata)
+        );
     }
 
     #[test]
@@ -247,7 +260,10 @@ mod tests {
         // 33 × "é" = 66 bytes > 64
         let s = String::from_str(&env, "ééééééééééééééééééééééééééééééééé");
         assert!(s.len() > 64);
-        assert_eq!(validate_group_string(&s, 64), Err(StellarSaveError::InvalidMetadata));
+        assert_eq!(
+            validate_group_string(&s, 64),
+            Err(StellarSaveError::InvalidMetadata)
+        );
     }
 
     #[test]
@@ -284,7 +300,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
         let group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000, 0);
-        
+
         assert!(!is_cycle_deadline_passed(&group, 2000));
     }
 
@@ -294,7 +310,7 @@ mod tests {
         let creator = Address::generate(&env);
         let mut group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000, 0);
         group.activate(1000);
-        
+
         // Current time before deadline (started_at + cycle_duration)
         assert!(!is_cycle_deadline_passed(&group, 1000 + 604800));
     }
@@ -305,7 +321,7 @@ mod tests {
         let creator = Address::generate(&env);
         let mut group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000, 0);
         group.activate(1000);
-        
+
         // Current time after deadline (no grace period)
         assert!(is_cycle_deadline_passed(&group, 1000 + 604800 + 1));
     }
@@ -332,7 +348,7 @@ mod tests {
         let mut group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000, 0);
         group.activate(1000);
         group.advance_cycle(&env);
-        
+
         // Deadline for cycle 1 is started_at + (cycle_duration * 2)
         assert!(!is_cycle_deadline_passed(&group, 1000 + 604800 * 2));
         assert!(is_cycle_deadline_passed(&group, 1000 + 604800 * 2 + 1));
@@ -394,7 +410,13 @@ mod tests {
         for n in 1u64..=5 {
             env.ledger().set_timestamp(started_at + cycle_duration * n);
             let result = calculate_current_cycle(&env, 1);
-            assert_eq!(result, Ok(n as u32), "expected cycle {} at time {}", n, started_at + cycle_duration * n);
+            assert_eq!(
+                result,
+                Ok(n as u32),
+                "expected cycle {} at time {}",
+                n,
+                started_at + cycle_duration * n
+            );
         }
     }
 
@@ -411,7 +433,8 @@ mod tests {
         store_group(&env, &group);
 
         // One second before the second cycle boundary → still cycle 1
-        env.ledger().set_timestamp(started_at + cycle_duration * 2 - 1);
+        env.ledger()
+            .set_timestamp(started_at + cycle_duration * 2 - 1);
         let result = calculate_current_cycle(&env, 1);
         assert_eq!(result, Ok(1));
     }
@@ -424,13 +447,23 @@ mod tests {
         let max_members: u32 = 5;
 
         let creator = Address::generate(&env);
-        let mut group = Group::new(1, creator, 1_000_000, cycle_duration, max_members, 2, started_at, 0);
+        let mut group = Group::new(
+            1,
+            creator,
+            1_000_000,
+            cycle_duration,
+            max_members,
+            2,
+            started_at,
+            0,
+        );
         group.member_count = 2;
         group.activate(started_at);
         store_group(&env, &group);
 
         // Far in the future: many more cycles than max_members
-        env.ledger().set_timestamp(started_at + cycle_duration * 1000);
+        env.ledger()
+            .set_timestamp(started_at + cycle_duration * 1000);
         let result = calculate_current_cycle(&env, 1);
         assert_eq!(result, Ok(max_members - 1));
     }

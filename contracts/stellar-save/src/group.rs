@@ -550,7 +550,8 @@ impl Group {
 
     /// Checked variant — returns None instead of panicking on overflow.
     pub fn checked_total_pool_amount(&self) -> Option<i128> {
-        self.contribution_amount.checked_mul(self.max_members as i128)
+        self.contribution_amount
+            .checked_mul(self.max_members as i128)
     }
 
     /// Validates that the group configuration is internally consistent.
