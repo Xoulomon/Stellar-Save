@@ -1,9 +1,5 @@
 import React, { useCallback } from 'react';
-<<<<<<< HEAD
-
-=======
 import { shareOrCopy } from '../lib/clipboard';
->>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import type { MemberBadge } from '../hooks/useMemberBadges';
 import './BadgeGallery.css';
 

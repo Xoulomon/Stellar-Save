@@ -4,12 +4,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // via vi.stubEnv, then re-importing the module fresh.
 
 describe('logger — production mode (IS_DEV = false)', () => {
-  let consoleLog: ReturnType<typeof vi.spyOn>;
   let consoleWarn: ReturnType<typeof vi.spyOn>;
   let consoleError: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    consoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
     consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
   });

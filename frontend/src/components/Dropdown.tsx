@@ -226,7 +226,7 @@ export function Dropdown({
             left: `${coords.left}px`,
           }}
         >
-          {items.map((item, index) => {
+          {items.map((item) => {
             if (item.divider) {
               return <div key={item.id} className="dropdown-divider" role="separator" />;
             }

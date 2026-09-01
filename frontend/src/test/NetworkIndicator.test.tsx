@@ -10,7 +10,7 @@ describe('NetworkIndicator', () => {
   it('displays current network', () => {
     vi.spyOn(useWalletHook, 'useWallet').mockReturnValue({
       network: 'testnet',
-    } as any);
+    } as never);
 
     render(<NetworkIndicator />);
     expect(screen.getByText('testnet')).toBeInTheDocument();
@@ -19,7 +19,7 @@ describe('NetworkIndicator', () => {
   it('defaults to testnet when no network', () => {
     vi.spyOn(useWalletHook, 'useWallet').mockReturnValue({
       network: null,
-    } as any);
+    } as never);
 
     render(<NetworkIndicator />);
     expect(screen.getByText('testnet')).toBeInTheDocument();

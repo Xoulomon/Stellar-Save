@@ -58,7 +58,7 @@ export class NotificationUI {
    * Check if a notification qualifies for UI display based on severity.
    * Can be used to filter which notifications should be shown in the UI.
    */
-  static shouldDisplay(notification: NotificationMessage): boolean {
+  static shouldDisplay(_notification: NotificationMessage): boolean {
     // All notifications can be displayed; callers can add custom logic
     return true;
   }

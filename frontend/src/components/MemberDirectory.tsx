@@ -1,3 +1,5 @@
+import type { MouseEvent, ChangeEvent } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   Box,
   Stack,
@@ -14,21 +16,13 @@ import {
   Alert,
   Tooltip,
 } from '@mui/material';
-import { useState, useMemo, useCallback } from 'react';
+import type { SelectChangeEvent } from '@mui/material';
 import { Link } from 'react-router-dom';
-<<<<<<< HEAD
-
-=======
 import { copyToClipboard } from '../lib/clipboard';
 import type { MemberProfile, MemberDirectoryFilters, MemberSortOption } from '../types/member';
->>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import { DEFAULT_MEMBER_FILTERS } from '../types/member';
 import { formatAddress } from '../utils/formatAddress';
 import { formatAmount } from '../utils/formatAmount';
-
-import type { MemberProfile, MemberDirectoryFilters, MemberSortOption } from '../types/member';
-import type { SelectChangeEvent } from '@mui/material';
-import type { MouseEvent, ChangeEvent } from 'react';
 
 // ── Avatar ───────────────────────────────────────────────────────────────────
 

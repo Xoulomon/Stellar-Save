@@ -166,7 +166,7 @@ export function ContributionFlow({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [status, setStatus] = useState<TransactionStatus>('idle');
   const [txHash, setTxHash] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [, setErrorMessage] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
 
   const isProcessing = ['confirming', 'pending', 'submitting'].includes(status);

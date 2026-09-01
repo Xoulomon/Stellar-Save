@@ -83,7 +83,7 @@ describe('GroupsPage', () => {
   });
 
   it('updates URL when currency filter changes', async () => {
-    const { container } = renderWithRouter();
+    renderWithRouter();
     fireEvent.change(screen.getByLabelText('Filter by token type'), { target: { value: 'USDC' } });
     await waitFor(() => {
       // The input value should reflect the change

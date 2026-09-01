@@ -1,11 +1,6 @@
 import React, { useState } from "react"
-<<<<<<< HEAD
-
-import type { MemberCardData, MemberStatus } from "../types/contribution"
-=======
 import { copyToClipboard } from "../lib/clipboard"
 import { MemberCardData, MemberStatus } from "../types/contribution"
->>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 
 function formatAddress(address: string): string {
   return `${address.slice(0, 6)}...${address.slice(-4)}`

@@ -6,7 +6,6 @@ import {
   CardContent,
   Divider,
   Chip,
-  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -18,7 +17,7 @@ import { HardwareWalletSetup } from './HardwareWalletSetup';
 import { disconnectDevice, updatePersistedState } from '../wallet/hardware/hardwareService';
 import { HARDWARE_WALLET_I18N } from '../wallet/hardware/types';
 
-import type { HardwareAccount, HardwareDeviceInfo, HardwareWalletState } from '../wallet/hardware/types';
+import type { HardwareAccount, HardwareWalletState } from '../wallet/hardware/types';
 
 
 interface HardwareWalletManageProps {
@@ -114,7 +113,7 @@ export function HardwareWalletManage({ state, onStateChange }: HardwareWalletMan
 
       {/* Accounts */}
       <Typography variant="subtitle2" fontWeight={700}>Accounts</Typography>
-      {state.accounts.map((account, i) => (
+      {state.accounts.map((account) => (
         <Card
           key={account.index}
           variant="outlined"

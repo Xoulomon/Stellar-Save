@@ -17,7 +17,6 @@ import {
 import { useState, useCallback } from 'react';
 
 import { Button } from './Button';
-import { HARDWARE_WALLET_I18N } from '../wallet/hardware/types';
 
 import type { TxApprovalRequest, TxApprovalStatus, HardwareWalletState } from '../wallet/hardware/types';
 

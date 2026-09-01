@@ -27,10 +27,6 @@ function getSystemPreference(): "light" | "dark" {
     : "light";
 }
 
-function resolveMode(mode: ThemeMode): "light" | "dark" {
-  return mode === "system" ? getSystemPreference() : mode;
-}
-
 function readStoredMode(): ThemeMode {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);

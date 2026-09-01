@@ -1,15 +1,4 @@
 import { Box, Typography } from '@mui/material';
-<<<<<<< HEAD
-
-import { BalanceWarningBanner } from '../components/BalanceWarningBanner';
-import { DashboardGroupCard } from '../components/dashboard/DashboardGroupCard';
-import { DashboardOverview } from '../components/dashboard/DashboardOverview';
-import { PayoutSchedule } from '../components/dashboard/PayoutSchedule';
-import { QuickActionSidebar } from '../components/dashboard/QuickActionSidebar';
-import { TransactionTable } from '../components/dashboard/TransactionTable';
-import { ErrorBoundary } from '../components/ErrorBoundary/ErrorBoundary';
-import { ToastProvider } from '../components/Toast/ToastProvider';
-=======
 import { AppLayout } from '../ui';
 import { ToastProvider } from '../components/Toast/ToastProvider';
 import { ErrorBoundary } from '../components/ErrorBoundary/ErrorBoundary';
@@ -25,10 +14,7 @@ import {
 } from '../components/dashboard';
 import { BalanceWarningBanner } from '../components/BalanceWarningBanner';
 import { useDashboardData } from '../hooks/useDashboardData';
->>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import { useBalanceWarning } from '../hooks/useBalanceWarning';
-import { useDashboard } from '../hooks/useDashboard';
-import { AppLayout } from '../ui';
 
 function DashboardContent() {
   const { stats, groups, payouts, transactions, isLoading } = useDashboardData();

@@ -5,7 +5,6 @@ import type {
   HardwareWalletState,
   TxApprovalRequest,
   TxApprovalStatus,
-  ConnectionMethod,
 } from './types';
 
 const STORAGE_KEY = 'stellar-save:hardware-wallet';
@@ -68,7 +67,7 @@ export async function disconnectDevice(): Promise<void> {
 
 // ── Account Management ────────────────────────────────────────────────────
 
-export async function fetchAccounts(device: HardwareDeviceInfo): Promise<HardwareAccount[]> {
+export async function fetchAccounts(_device: HardwareDeviceInfo): Promise<HardwareAccount[]> {
   await new Promise(r => setTimeout(r, 2500));
   return MOCK_ACCOUNTS.map((acc, i) => ({
     ...acc,

@@ -511,7 +511,6 @@ describe('calculateYield — rounding determinism', () => {
 
   it('decimalPlaces=null returns raw float without rounding', () => {
     const raw = calculateYield({ ...deterministicParams, decimalPlaces: null });
-    const rounded = calculateYield({ ...deterministicParams, decimalPlaces: 7 });
     // raw MAY differ from rounded at higher precision
     // The key contract: raw is still a finite number
     expect(Number.isFinite(raw.accruedInterest)).toBe(true);

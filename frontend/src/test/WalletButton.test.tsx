@@ -14,7 +14,7 @@ describe('WalletButton', () => {
       activeAddress: null,
       connect: vi.fn(),
       disconnect: vi.fn(),
-    } as any);
+    } as never);
 
     render(<MemoryRouter><WalletButton /></MemoryRouter>);
     expect(screen.getByText('Connect Wallet')).toBeInTheDocument();
@@ -26,7 +26,7 @@ describe('WalletButton', () => {
       activeAddress: 'GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890',
       connect: vi.fn(),
       disconnect: vi.fn(),
-    } as any);
+    } as never);
 
     render(<MemoryRouter><WalletButton /></MemoryRouter>);
     expect(screen.getByText(/GABCDE...7890/)).toBeInTheDocument();

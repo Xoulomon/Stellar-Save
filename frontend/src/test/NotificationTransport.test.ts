@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { NotificationTransport } from '../notifications/NotificationTransport';
 import * as notificationPermission from '../notifications/notificationPermission';
 import * as swRegistration from '../notifications/serviceWorkerRegistration';
-import type { TransportNotification, DeliveryCallback } from '../notifications/types';
+import type { TransportNotification, DeliveryCallback, DeliveryChannel } from '../notifications/types';
 
 // Mock the browser API modules
 vi.mock('../notifications/notificationPermission');
@@ -291,7 +291,7 @@ describe('NotificationTransport', () => {
 
   describe('Error handling', () => {
     it('should handle unknown delivery channel', async () => {
-      const results = await transport.send(mockNotification, ['unknown' as any]);
+      const results = await transport.send(mockNotification, ['unknown' as DeliveryChannel]);
 
       expect(results[0].success).toBe(false);
       expect(results[0].error).toContain('Unknown delivery channel');

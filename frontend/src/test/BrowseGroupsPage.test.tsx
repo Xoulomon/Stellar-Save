@@ -12,14 +12,14 @@ import { fetchGroups } from '../utils/groupApi';
 import type { PublicGroup } from '../utils/groupApi';
 
 vi.mock('../ui', () => ({
-  AppLayout: ({ children, title, subtitle }: any) => (
+  AppLayout: ({ children, title, subtitle }: { children: React.ReactNode; title?: React.ReactNode; subtitle?: React.ReactNode }) => (
     <div>
       {title && <h1>{title}</h1>}
       {subtitle && <p>{subtitle}</p>}
       {children}
     </div>
   ),
-  AppCard: ({ children }: any) => <div>{children}</div>,
+  AppCard: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock('../utils/groupApi', () => ({

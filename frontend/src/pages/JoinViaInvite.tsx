@@ -4,7 +4,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 
 import { Button } from '../components/Button';
 import { useWallet } from '../hooks/useWallet';
-import { buildRoute } from '../routing/constants';
 
 /**
  * JoinViaInvite — handles /join/:inviteCode invite links.

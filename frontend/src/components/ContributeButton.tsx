@@ -1,20 +1,9 @@
-<<<<<<< HEAD
-import { useState, useCallback, useEffect, useRef } from "react";
-
-import { ContributionSuccessModal } from "./ContributionSuccessModal";
-import { useContract } from "../hooks/useContract";
-import { useFocusTrap } from "../hooks/useFocusTrap";
-import { useTransaction, explorerUrl } from "../hooks/useTransaction";
-
-import type { ContributeButtonProps } from "../types/contribution";
-=======
 import { useState } from "react";
 import type { ContributeButtonProps } from "../types/contribution";
 import { ContributionSuccessModal } from "./ContributionSuccessModal";
 import { Dialog } from "./Dialog";
 import { useTransaction, explorerUrl } from "../hooks/useTransaction";
 import { useContract } from "../hooks/useContract";
->>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 
 // ── Confirmation Modal ──────────────────────────────────────────────────────
 

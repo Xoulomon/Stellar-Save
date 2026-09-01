@@ -1,13 +1,3 @@
-<<<<<<< HEAD
-import { StellarWalletsKit, Networks } from '@creit.tech/stellar-wallets-kit';
-import { AlbedoModule } from '@creit.tech/stellar-wallets-kit/modules/albedo';
-import { FreighterModule, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit/modules/freighter';
-import { LobstrModule } from '@creit.tech/stellar-wallets-kit/modules/lobstr';
-import React, { createContext, useState, useEffect, useCallback } from 'react';
-
-import type { WalletContextValue, WalletDescriptor, WalletConnectionStatus } from './types';
-import type { ReactNode } from 'react';
-=======
 /**
  * WalletProvider — Issue #1462
  *
@@ -22,14 +12,12 @@ import type { ReactNode } from 'react';
  */
 import React, {
   createContext,
-  useContext,
   type ReactNode,
 } from 'react';
 import { WalletConnectionProvider, useWalletConnection } from './WalletConnectionProvider';
 import { WalletBalanceProvider, useWalletBalance } from './WalletBalanceProvider';
 import { WalletSigningProvider, useWalletSigning } from './WalletSigningProvider';
 import type { WalletContextValue } from './types';
->>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 
 // ── Legacy combined context (backward-compat shim) ────────────────────────────
 
@@ -48,7 +36,7 @@ export const WalletContext = createContext<WalletContextValue | undefined>(undef
  */
 function WalletContextBridge({ children }: { children: ReactNode }) {
   const connection = useWalletConnection();
-  const balance = useWalletBalance();
+  useWalletBalance();
   const signing = useWalletSigning();
 
   const value: WalletContextValue = {

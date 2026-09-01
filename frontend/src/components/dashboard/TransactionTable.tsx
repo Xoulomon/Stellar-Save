@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip } from '@mui/material';
-import React from 'react';
-
-import { Skeleton } from '../Skeleton/Skeleton';
-
-=======
 /**
  * dashboard/TransactionTable — migrated to DataTable
  *
@@ -16,7 +9,6 @@ import { Box, Chip, Typography } from '@mui/material';
 
 import { DataTable } from '../DataTable/DataTable';
 import type { DataTableColumn } from '../DataTable/DataTable';
->>>>>>> fdf2a8f283604cda2c06a98035b0edb0abbe6fb9
 import type { Transaction } from '../../types/dashboard';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
