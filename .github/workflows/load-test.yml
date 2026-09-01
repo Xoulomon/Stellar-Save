@@ -1,0 +1,112 @@
+name: Load Test — Concurrent Deposits
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Staging API base URL'
+        required: false
+        default: 'https://staging.stellar-save.example.com'
+      group_id:
+        description: 'Staging group ID to deposit into'
+        required: false
+        default: 'test-group-load-001'
+      vu_count:
+        description: 'Number of concurrent virtual users'
+        required: false
+        default: '20'
+  # Also run automatically after a staging deploy (triggered by deploy workflow)
+  workflow_run:
+    workflows: ['Contract Deployment Pipeline']
+    types: [completed]
+    branches: [develop]
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  load-test:
+    name: Concurrent Deposit Load Test
+    runs-on: ubuntu-latest
+    # Only run on successful staging deploys or manual trigger
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring \
+            --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 \
+            --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69 2>/dev/null
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] \
+            https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update -qq && sudo apt-get install -y k6
+          k6 version
+
+      - name: Run concurrent deposit load test
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || 'https://staging.stellar-save.example.com' }}
+          GROUP_ID: ${{ github.event.inputs.group_id || 'test-group-load-001' }}
+          VU_COUNT: ${{ github.event.inputs.vu_count || '20' }}
+        run: |
+          k6 run \
+            --out json=load-test-results.json \
+            --env BASE_URL="${BASE_URL}" \
+            --env GROUP_ID="${GROUP_ID}" \
+            --env VU_COUNT="${VU_COUNT}" \
+            backend/tests/load/concurrent-deposits.js
+
+      - name: Upload load test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-test-results-${{ github.run_id }}
+          path: load-test-results.json
+          retention-days: 30
+
+      - name: Post load test summary
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let summary = '## 🔥 Concurrent Deposit Load Test\n\n';
+
+            // Parse k6 JSON output for key metrics
+            if (fs.existsSync('load-test-results.json')) {
+              const lines = fs.readFileSync('load-test-results.json', 'utf8')
+                .split('\n').filter(Boolean);
+              const metrics = {};
+              for (const line of lines) {
+                try {
+                  const entry = JSON.parse(line);
+                  if (entry.type === 'Point' && entry.metric) {
+                    if (!metrics[entry.metric]) metrics[entry.metric] = [];
+                    metrics[entry.metric].push(entry.data?.value || 0);
+                  }
+                } catch (_) {}
+              }
+
+              const drift = metrics['balance_drift_stroops']
+                ? Math.max(...metrics['balance_drift_stroops'])
+                : 'N/A';
+              const driftIcon = drift === 0 ? '✅' : drift === 'N/A' ? '⚠️' : '❌';
+
+              summary += `| Metric | Value |\n|--------|-------|\n`;
+              summary += `| Balance drift | ${driftIcon} ${drift} stroops |\n`;
+              summary += `| Run ID | ${{ github.run_id }} |\n`;
+              summary += `| Target | ${{ github.event.inputs.base_url || 'staging' }} |\n`;
+              summary += `\n> Full results attached as workflow artifact.`;
+            } else {
+              summary += '⚠️ No results file found — k6 may have failed to start.';
+            }
+
+            core.summary.addRaw(summary);
+            await core.summary.write();
