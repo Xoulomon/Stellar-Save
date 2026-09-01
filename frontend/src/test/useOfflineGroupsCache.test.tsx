@@ -145,9 +145,9 @@ describe('useOfflineGroupsCache', () => {
     });
     const { result } = renderHook(() => useOfflineGroupsCache());
 
-    await expect(
-      result.current.fetchGroupsWithFallback(DEFAULT_GROUP_FILTERS),
-    ).rejects.toThrow(/no data available offline/i);
+    await expect(result.current.fetchGroupsWithFallback(DEFAULT_GROUP_FILTERS)).rejects.toThrow(
+      /no data available offline/i
+    );
   });
 
   it('clears the cache flags once a later online fetch succeeds', async () => {

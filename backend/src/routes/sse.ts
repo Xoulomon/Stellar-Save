@@ -37,13 +37,21 @@ export function broadcastEvent(groupId: string | null, event: object): void {
   // Broadcast to group-specific listeners
   if (groupId) {
     clients.get(groupId)?.forEach((res) => {
-      try { res.write(payload); } catch { /* client gone */ }
+      try {
+        res.write(payload);
+      } catch {
+        /* client gone */
+      }
     });
   }
 
   // Broadcast to global listeners
   clients.get('*')?.forEach((res) => {
-    try { res.write(payload); } catch { /* client gone */ }
+    try {
+      res.write(payload);
+    } catch {
+      /* client gone */
+    }
   });
 }
 
@@ -72,7 +80,11 @@ export function createSseRouter(_eventIndexer: ContractEventIndexer): Router {
 
     // Keep-alive ping every 25 s (prevents proxies from closing idle connections)
     const keepAlive = setInterval(() => {
-      try { res.write(': keepalive\n\n'); } catch { /* closed */ }
+      try {
+        res.write(': keepalive\n\n');
+      } catch {
+        /* closed */
+      }
     }, 25_000);
 
     const cleanup = addClient(key, res);

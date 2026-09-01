@@ -8,9 +8,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock the SDK before any imports
 vi.mock('@stellar/stellar-sdk', async () => {
-  const actual = await vi.importActual<typeof import('@stellar/stellar-sdk')>(
-    '@stellar/stellar-sdk',
-  );
+  const actual =
+    await vi.importActual<typeof import('@stellar/stellar-sdk')>('@stellar/stellar-sdk');
   return {
     ...actual,
     Horizon: {
@@ -67,9 +66,7 @@ beforeEach(() => {
 describe('StellarService.loadAccount()', () => {
   it('calls Horizon.Server with the correct URL for TESTNET', async () => {
     await stellarService.loadAccount(FAKE_ADDRESS, 'TESTNET');
-    expect(Horizon.Server).toHaveBeenCalledWith(
-      'https://horizon-testnet.stellar.org',
-    );
+    expect(Horizon.Server).toHaveBeenCalledWith('https://horizon-testnet.stellar.org');
   });
 
   it('calls Horizon.Server with the correct URL for MAINNET', async () => {
@@ -84,16 +81,12 @@ describe('StellarService.loadAccount()', () => {
 
   it('calls Horizon.Server with the correct URL for FUTURENET', async () => {
     await stellarService.loadAccount(FAKE_ADDRESS, 'FUTURENET');
-    expect(Horizon.Server).toHaveBeenCalledWith(
-      'https://horizon-futurenet.stellar.org',
-    );
+    expect(Horizon.Server).toHaveBeenCalledWith('https://horizon-futurenet.stellar.org');
   });
 
   it('defaults to TESTNET URL for unknown network names', async () => {
     await stellarService.loadAccount(FAKE_ADDRESS, 'UNKNOWN_NET');
-    expect(Horizon.Server).toHaveBeenCalledWith(
-      'https://horizon-testnet.stellar.org',
-    );
+    expect(Horizon.Server).toHaveBeenCalledWith('https://horizon-testnet.stellar.org');
   });
 
   it('calls server.loadAccount with the address', async () => {
@@ -110,9 +103,7 @@ describe('StellarService.loadAccount()', () => {
 
   it('propagates errors from Horizon', async () => {
     serverMock.loadAccount.mockRejectedValueOnce(new Error('Not found'));
-    await expect(
-      stellarService.loadAccount(FAKE_ADDRESS, 'TESTNET'),
-    ).rejects.toThrow('Not found');
+    await expect(stellarService.loadAccount(FAKE_ADDRESS, 'TESTNET')).rejects.toThrow('Not found');
   });
 });
 
@@ -126,7 +117,7 @@ describe('StellarService.getXlmBalance()', () => {
 
   it('returns null when no native balance entry exists', async () => {
     serverMock.loadAccount.mockResolvedValueOnce(
-      makeAccount([{ asset_type: 'credit_alphanum4', balance: '50', asset_code: 'USDC' }]),
+      makeAccount([{ asset_type: 'credit_alphanum4', balance: '50', asset_code: 'USDC' }])
     );
     const result = await stellarService.getXlmBalance(FAKE_ADDRESS, 'TESTNET');
     expect(result).toBeNull();
@@ -231,9 +222,9 @@ describe('StellarService.fetchPayments()', () => {
 
   it('propagates errors from Horizon', async () => {
     serverMock.payments().call.mockRejectedValueOnce(new Error('Rate limited'));
-    await expect(
-      stellarService.fetchPayments(FAKE_ADDRESS, 'TESTNET'),
-    ).rejects.toThrow('Rate limited');
+    await expect(stellarService.fetchPayments(FAKE_ADDRESS, 'TESTNET')).rejects.toThrow(
+      'Rate limited'
+    );
   });
 });
 

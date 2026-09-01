@@ -6,11 +6,7 @@
  * All errors are normalised to ContractError instances.
  */
 
-import {
-  stellarSaveClient,
-  ContractError,
-  parseContractError,
-} from '../lib/client';
+import { stellarSaveClient, ContractError, parseContractError } from '../lib/client';
 
 import type { PayoutScheduleEntry } from '../lib/client';
 import type { PayoutEntry, PayoutQueueData, PayoutStatus } from '../types/contribution';
@@ -93,7 +89,7 @@ export async function getPayoutHistory(groupId: string): Promise<PayoutEntry[]> 
 
 export async function getPayoutQueue(
   groupId: string,
-  currentUserAddress?: string,
+  currentUserAddress?: string
 ): Promise<PayoutQueueData> {
   try {
     const gid = BigInt(groupId);
@@ -107,7 +103,7 @@ export async function getPayoutQueue(
     }
 
     const paidFlags = await Promise.all(
-      schedule.map((entry) => stellarSaveClient.hasReceivedPayout(gid, entry.recipient)),
+      schedule.map((entry) => stellarSaveClient.hasReceivedPayout(gid, entry.recipient))
     );
 
     const balance = await stellarSaveClient.getGroupBalance(gid);

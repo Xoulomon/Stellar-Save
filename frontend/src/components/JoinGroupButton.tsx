@@ -33,10 +33,30 @@ export function JoinGroupButton({
   const isFull = currentMembers >= maxMembers;
   const isPending = state === 'pending';
 
-  if (isMember) return <Button disabled size="sm">Already Joined</Button>;
-  if (isFull) return <Button disabled size="sm">Group Full</Button>;
-  if (isActive) return <Button disabled size="sm">Group Active</Button>;
-  if (walletStatus !== 'connected') return <Button disabled size="sm">Connect Wallet</Button>;
+  if (isMember)
+    return (
+      <Button disabled size="sm">
+        Already Joined
+      </Button>
+    );
+  if (isFull)
+    return (
+      <Button disabled size="sm">
+        Group Full
+      </Button>
+    );
+  if (isActive)
+    return (
+      <Button disabled size="sm">
+        Group Active
+      </Button>
+    );
+  if (walletStatus !== 'connected')
+    return (
+      <Button disabled size="sm">
+        Connect Wallet
+      </Button>
+    );
 
   const handleJoin = async () => {
     setShowConfirm(false);
@@ -60,7 +80,9 @@ export function JoinGroupButton({
   if (state === 'confirmed') {
     return (
       <div>
-        <Button disabled size="sm" variant="ghost">Joined ✓</Button>
+        <Button disabled size="sm" variant="ghost">
+          Joined ✓
+        </Button>
         {txHash && (
           <a
             href={explorerUrl(txHash)}
@@ -78,16 +100,28 @@ export function JoinGroupButton({
   if (showConfirm) {
     return (
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <Button size="sm" onClick={handleJoin} loading={isPending} disabled={isPending || !activeAddress}>
+        <Button
+          size="sm"
+          onClick={handleJoin}
+          loading={isPending}
+          disabled={isPending || !activeAddress}
+        >
           Confirm
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => setShowConfirm(false)} disabled={isPending}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setShowConfirm(false)}
+          disabled={isPending}
+        >
           Cancel
         </Button>
         {state === 'failed' && error && (
           <span style={{ color: 'var(--color-error)', fontSize: 12 }}>
             {error}{' '}
-            <button onClick={reset} style={{ fontSize: 11 }} aria-label="Dismiss error">Dismiss</button>
+            <button onClick={reset} style={{ fontSize: 11 }} aria-label="Dismiss error">
+              Dismiss
+            </button>
           </span>
         )}
       </div>

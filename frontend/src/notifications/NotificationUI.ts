@@ -39,7 +39,7 @@ export class NotificationUI {
    */
   static messageToToast(
     notification: NotificationMessage | UINotification,
-    renderOptions?: UIRenderOptions,
+    renderOptions?: UIRenderOptions
   ): Toast {
     const opts = (notification as UINotification).uiOptions || renderOptions;
 
@@ -66,10 +66,7 @@ export class NotificationUI {
   /**
    * Helper to create a success toast from a message.
    */
-  static createSuccessToast(
-    message: string,
-    options?: UIRenderOptions,
-  ): Toast {
+  static createSuccessToast(message: string, options?: UIRenderOptions): Toast {
     const id = `success-${Date.now()}-${Math.random()}`;
     return {
       id,
@@ -84,10 +81,7 @@ export class NotificationUI {
   /**
    * Helper to create an error toast from a message.
    */
-  static createErrorToast(
-    message: string,
-    options?: UIRenderOptions,
-  ): Toast {
+  static createErrorToast(message: string, options?: UIRenderOptions): Toast {
     const id = `error-${Date.now()}-${Math.random()}`;
     return {
       id,
@@ -102,10 +96,7 @@ export class NotificationUI {
   /**
    * Helper to create an info toast from a message.
    */
-  static createInfoToast(
-    message: string,
-    options?: UIRenderOptions,
-  ): Toast {
+  static createInfoToast(message: string, options?: UIRenderOptions): Toast {
     const id = `info-${Date.now()}-${Math.random()}`;
     return {
       id,
@@ -120,10 +111,7 @@ export class NotificationUI {
   /**
    * Helper to create a warning toast from a message.
    */
-  static createWarningToast(
-    message: string,
-    options?: UIRenderOptions,
-  ): Toast {
+  static createWarningToast(message: string, options?: UIRenderOptions): Toast {
     const id = `warning-${Date.now()}-${Math.random()}`;
     return {
       id,

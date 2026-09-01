@@ -26,7 +26,7 @@ export interface RecoveryRequest {
   owner: string;
   newOwnerAddress: string;
   status: RecoveryRequestStatus;
-  approvals: string[];   // guardian addresses that have approved
+  approvals: string[]; // guardian addresses that have approved
   threshold: number;
   guardians: string[];
   createdAt: number;
@@ -45,7 +45,7 @@ export async function fetchGuardianConfig(ownerAddress: string): Promise<Guardia
 export async function setGuardians(
   ownerAddress: string,
   guardians: string[],
-  threshold: number,
+  threshold: number
 ): Promise<GuardianConfig> {
   const res = await fetch(`${API_BASE}/recovery/guardians/${encodeURIComponent(ownerAddress)}`, {
     method: 'PUT',
@@ -53,7 +53,9 @@ export async function setGuardians(
     body: JSON.stringify({ guardians, threshold }),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Failed to save guardians' })) as { error: string };
+    const err = (await res.json().catch(() => ({ error: 'Failed to save guardians' }))) as {
+      error: string;
+    };
     throw new Error(err.error ?? 'Failed to save guardians');
   }
   return res.json() as Promise<GuardianConfig>;
@@ -64,10 +66,10 @@ export async function setGuardians(
 /** Fetch pending recovery requests where the caller is a guardian. */
 export async function fetchIncomingRequests(guardianAddress: string): Promise<RecoveryRequest[]> {
   const res = await fetch(
-    `${API_BASE}/recovery/requests?guardian=${encodeURIComponent(guardianAddress)}`,
+    `${API_BASE}/recovery/requests?guardian=${encodeURIComponent(guardianAddress)}`
   );
   if (!res.ok) throw new Error('Failed to fetch recovery requests');
-  const data = await res.json() as { requests: RecoveryRequest[] };
+  const data = (await res.json()) as { requests: RecoveryRequest[] };
   return data.requests;
 }
 
@@ -81,7 +83,7 @@ export async function fetchRecoveryRequest(requestId: string): Promise<RecoveryR
 /** Initiate a new recovery request for an account. */
 export async function initiateRecovery(
   ownerAddress: string,
-  newOwnerAddress: string,
+  newOwnerAddress: string
 ): Promise<RecoveryRequest> {
   const res = await fetch(`${API_BASE}/recovery/requests`, {
     method: 'POST',
@@ -89,7 +91,9 @@ export async function initiateRecovery(
     body: JSON.stringify({ ownerAddress, newOwnerAddress }),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Failed to initiate recovery' })) as { error: string };
+    const err = (await res.json().catch(() => ({ error: 'Failed to initiate recovery' }))) as {
+      error: string;
+    };
     throw new Error(err.error ?? 'Failed to initiate recovery');
   }
   return res.json() as Promise<RecoveryRequest>;
@@ -98,15 +102,18 @@ export async function initiateRecovery(
 /** Guardian approves a recovery request. */
 export async function approveRecovery(
   requestId: string,
-  guardianAddress: string,
+  guardianAddress: string
 ): Promise<RecoveryRequest> {
-  const res = await fetch(`${API_BASE}/recovery/requests/${encodeURIComponent(requestId)}/approve`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ guardianAddress }),
-  });
+  const res = await fetch(
+    `${API_BASE}/recovery/requests/${encodeURIComponent(requestId)}/approve`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guardianAddress }),
+    }
+  );
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Approval failed' })) as { error: string };
+    const err = (await res.json().catch(() => ({ error: 'Approval failed' }))) as { error: string };
     throw new Error(err.error ?? 'Approval failed');
   }
   return res.json() as Promise<RecoveryRequest>;

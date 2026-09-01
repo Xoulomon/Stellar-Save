@@ -29,7 +29,9 @@ describe('Tooltip', () => {
     fireEvent.mouseEnter(screen.getByText('Hover me'));
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
 
-    act(() => { vi.advanceTimersByTime(200); });
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
     expect(screen.getByRole('tooltip')).toBeInTheDocument();
   });
 
@@ -43,7 +45,9 @@ describe('Tooltip', () => {
 
     const button = screen.getByText('Hover me');
     fireEvent.mouseEnter(button);
-    act(() => { vi.advanceTimersByTime(0); });
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
     expect(screen.getByRole('tooltip')).toBeInTheDocument();
 
     fireEvent.mouseLeave(button);
@@ -59,7 +63,9 @@ describe('Tooltip', () => {
     );
 
     fireEvent.focus(screen.getByText('Focus me'));
-    act(() => { vi.advanceTimersByTime(0); });
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
     expect(screen.getByRole('tooltip')).toBeInTheDocument();
   });
 
@@ -73,7 +79,9 @@ describe('Tooltip', () => {
 
     const button = screen.getByText('Focus me');
     fireEvent.focus(button);
-    act(() => { vi.advanceTimersByTime(0); });
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
     expect(screen.getByRole('tooltip')).toBeInTheDocument();
 
     fireEvent.blur(button);
@@ -89,7 +97,9 @@ describe('Tooltip', () => {
     );
 
     fireEvent.mouseEnter(screen.getByText('Hover me'));
-    act(() => { vi.advanceTimersByTime(0); });
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 
@@ -102,7 +112,9 @@ describe('Tooltip', () => {
     );
 
     fireEvent.mouseEnter(screen.getByText('Button'));
-    act(() => { vi.advanceTimersByTime(0); });
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
     expect(screen.getByRole('tooltip')).toHaveClass('tooltip-top');
 
     fireEvent.mouseLeave(screen.getByText('Button'));
@@ -114,7 +126,9 @@ describe('Tooltip', () => {
     );
 
     fireEvent.mouseEnter(screen.getByText('Button'));
-    act(() => { vi.advanceTimersByTime(0); });
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
     expect(screen.getByRole('tooltip')).toHaveClass('tooltip-bottom');
   });
 
@@ -130,7 +144,9 @@ describe('Tooltip', () => {
     expect(button).not.toHaveAttribute('aria-describedby');
 
     fireEvent.mouseEnter(button);
-    act(() => { vi.advanceTimersByTime(0); });
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
     expect(button).toHaveAttribute('aria-describedby');
   });
 
@@ -143,7 +159,9 @@ describe('Tooltip', () => {
     );
 
     fireEvent.mouseEnter(screen.getByText('Button'));
-    act(() => { vi.advanceTimersByTime(0); });
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
     expect(screen.getByRole('tooltip')).toHaveClass('custom-tooltip');
   });
 });

@@ -18,9 +18,7 @@ describe('Pagination', () => {
   });
 
   it('returns null when totalPages is 0', () => {
-    const { container } = render(
-      <Pagination {...defaultProps} totalPages={0} totalItems={0} />,
-    );
+    const { container } = render(<Pagination {...defaultProps} totalPages={0} totalItems={0} />);
     expect(container.firstChild).toBeNull();
   });
 
@@ -40,9 +38,7 @@ describe('Pagination', () => {
 
   it('calls onPageChange when prev button is clicked', () => {
     const onPageChange = vi.fn();
-    render(
-      <Pagination {...defaultProps} currentPage={3} onPageChange={onPageChange} />,
-    );
+    render(<Pagination {...defaultProps} currentPage={3} onPageChange={onPageChange} />);
     fireEvent.click(screen.getByLabelText('Previous page'));
     expect(onPageChange).toHaveBeenCalledWith(2);
   });
@@ -69,7 +65,7 @@ describe('Pagination', () => {
         {...defaultProps}
         onPageSizeChange={onPageSizeChange}
         showPageSizeSelector={true}
-      />,
+      />
     );
     fireEvent.change(screen.getByLabelText('Per page:'), { target: { value: '25' } });
     expect(onPageSizeChange).toHaveBeenCalledWith(25);
@@ -81,31 +77,20 @@ describe('Pagination', () => {
   });
 
   it('renders ellipsis for large page counts', () => {
-    render(
-      <Pagination {...defaultProps} currentPage={10} totalPages={20} totalItems={200} />,
-    );
+    render(<Pagination {...defaultProps} currentPage={10} totalPages={20} totalItems={200} />);
     const ellipses = screen.getAllByText('...');
     expect(ellipses.length).toBeGreaterThan(0);
   });
 
   it('does not call onPageChange when disabled', () => {
     const onPageChange = vi.fn();
-    render(
-      <Pagination {...defaultProps} onPageChange={onPageChange} disabled={true} />,
-    );
+    render(<Pagination {...defaultProps} onPageChange={onPageChange} disabled={true} />);
     fireEvent.click(screen.getByLabelText('Next page'));
     expect(onPageChange).not.toHaveBeenCalled();
   });
 
   it('shows 0-0 of 0 when totalItems is 0', () => {
-    render(
-      <Pagination
-        {...defaultProps}
-        totalItems={0}
-        totalPages={1}
-        currentPage={1}
-      />,
-    );
+    render(<Pagination {...defaultProps} totalItems={0} totalPages={1} currentPage={1} />);
     expect(screen.getByText('Showing 0-0 of 0')).toBeInTheDocument();
   });
 });

@@ -72,9 +72,9 @@ export interface HorizonPaymentRecord {
 // ── Horizon URL map ───────────────────────────────────────────────────────────
 
 const HORIZON_URLS: Record<string, string> = {
-  PUBLIC:    'https://horizon.stellar.org',
-  MAINNET:   'https://horizon.stellar.org',
-  TESTNET:   'https://horizon-testnet.stellar.org',
+  PUBLIC: 'https://horizon.stellar.org',
+  MAINNET: 'https://horizon.stellar.org',
+  TESTNET: 'https://horizon-testnet.stellar.org',
   FUTURENET: 'https://horizon-futurenet.stellar.org',
 };
 
@@ -118,14 +118,9 @@ export class StellarService {
    * Fetch the XLM (native) balance for an account.
    * Returns `null` when the account is not found.
    */
-  async getXlmBalance(
-    address: string,
-    network: NetworkName,
-  ): Promise<string | null> {
+  async getXlmBalance(address: string, network: NetworkName): Promise<string | null> {
     const account = await this.loadAccount(address, network);
-    const xlmEntry = account.balances.find(
-      (b) => b.asset_type === 'native',
-    );
+    const xlmEntry = account.balances.find((b) => b.asset_type === 'native');
     return xlmEntry?.balance ?? null;
   }
 
@@ -133,10 +128,7 @@ export class StellarService {
    * Fetch the complete list of balances (all assets) for an account.
    * Returns an empty array when the account is not found.
    */
-  async getAllBalances(
-    address: string,
-    network: NetworkName,
-  ): Promise<AccountBalance[]> {
+  async getAllBalances(address: string, network: NetworkName): Promise<AccountBalance[]> {
     const account = await this.loadAccount(address, network);
     return account.balances;
   }
@@ -150,7 +142,7 @@ export class StellarService {
   async fetchPayments(
     address: string,
     network: NetworkName,
-    options: FetchPaymentsOptions = {},
+    options: FetchPaymentsOptions = {}
   ): Promise<HorizonPaymentRecord[]> {
     const { limit = 50, order = 'desc', cursor } = options;
 

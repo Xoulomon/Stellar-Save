@@ -1,12 +1,4 @@
-import {
-  Box,
-  Stack,
-  Typography,
-  Menu,
-  MenuItem,
-  Alert,
-  Snackbar,
-} from '@mui/material';
+import { Box, Stack, Typography, Menu, MenuItem, Alert, Snackbar } from '@mui/material';
 import { useState, useCallback } from 'react';
 
 import { Button } from '../Button';
@@ -39,21 +31,24 @@ export function TransactionBuilder({ initialSteps, walletAddress }: TransactionB
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [loadMenuAnchor, setLoadMenuAnchor] = useState<null | HTMLElement>(null);
   const [templates, setTemplates] = useState<TransactionTemplate[]>([]);
-  const [snackbar, setSnackbar] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
+  const [snackbar, setSnackbar] = useState<{
+    message: string;
+    severity: 'success' | 'error';
+  } | null>(null);
 
   const handleStepChange = useCallback((index: number, updated: TransactionBuilderStep) => {
-    setSteps(prev => prev.map((s, i) => (i === index ? updated : s)));
+    setSteps((prev) => prev.map((s, i) => (i === index ? updated : s)));
     setSimResult(null);
   }, []);
 
   const handleDeleteStep = useCallback((index: number) => {
-    setSteps(prev => prev.filter((_, i) => i !== index));
+    setSteps((prev) => prev.filter((_, i) => i !== index));
     setSimResult(null);
   }, []);
 
   const handleMoveUp = useCallback((index: number) => {
     if (index === 0) return;
-    setSteps(prev => {
+    setSteps((prev) => {
       const next = [...prev];
       [next[index - 1], next[index]] = [next[index], next[index - 1]];
       return next;
@@ -62,7 +57,7 @@ export function TransactionBuilder({ initialSteps, walletAddress }: TransactionB
   }, []);
 
   const handleMoveDown = useCallback((index: number) => {
-    setSteps(prev => {
+    setSteps((prev) => {
       if (index >= prev.length - 1) return prev;
       const next = [...prev];
       [next[index], next[index + 1]] = [next[index + 1], next[index]];
@@ -72,13 +67,13 @@ export function TransactionBuilder({ initialSteps, walletAddress }: TransactionB
   }, []);
 
   const handleAddStep = useCallback((type: StepOperationType) => {
-    setSteps(prev => [...prev, createStep(type, prev.length)]);
+    setSteps((prev) => [...prev, createStep(type, prev.length)]);
     setAddMenuAnchor(null);
     setSimResult(null);
   }, []);
 
   const handleSimulate = useCallback(async () => {
-    const enabled = steps.filter(s => s.enabled);
+    const enabled = steps.filter((s) => s.enabled);
     if (enabled.length === 0) {
       setSnackbar({ message: 'Add at least one enabled operation to simulate', severity: 'error' });
       return;
@@ -90,7 +85,10 @@ export function TransactionBuilder({ initialSteps, walletAddress }: TransactionB
       const result = await simulateTransaction(steps, walletAddress);
       setSimResult(result);
     } catch (err) {
-      setSnackbar({ message: err instanceof Error ? err.message : 'Simulation failed', severity: 'error' });
+      setSnackbar({
+        message: err instanceof Error ? err.message : 'Simulation failed',
+        severity: 'error',
+      });
     } finally {
       setSimLoading(false);
     }
@@ -103,12 +101,12 @@ export function TransactionBuilder({ initialSteps, walletAddress }: TransactionB
   }, []);
 
   const handleApplyTemplate = useCallback((template: TransactionTemplate) => {
-    setSteps(template.steps.map(s => ({ ...s })));
+    setSteps(template.steps.map((s) => ({ ...s })));
     setSimResult(null);
     setSnackbar({ message: `Loaded template: ${template.name}`, severity: 'success' });
   }, []);
 
-  const hasEnabled = steps.some(s => s.enabled);
+  const hasEnabled = steps.some((s) => s.enabled);
 
   return (
     <Box>
@@ -119,10 +117,14 @@ export function TransactionBuilder({ initialSteps, walletAddress }: TransactionB
             + Add Operation
           </Button>
 
-          <Button variant="secondary" size="sm" onClick={(e) => {
-            handleLoadTemplates();
-            setLoadMenuAnchor(e.currentTarget);
-          }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={(e) => {
+              handleLoadTemplates();
+              setLoadMenuAnchor(e.currentTarget);
+            }}
+          >
             Load Template
           </Button>
 
@@ -144,19 +146,38 @@ export function TransactionBuilder({ initialSteps, walletAddress }: TransactionB
           )}
 
           {steps.length > 0 && (
-            <Button variant="danger" size="sm" onClick={() => { setSteps([]); setSimResult(null); }}>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => {
+                setSteps([]);
+                setSimResult(null);
+              }}
+            >
               Clear All
             </Button>
           )}
         </Box>
 
         {/* Add Step Menu */}
-        <Menu anchorEl={addMenuAnchor} open={Boolean(addMenuAnchor)} onClose={() => setAddMenuAnchor(null)}>
-          <MenuItem disabled><Typography variant="caption" color="text.secondary">Standard Operations</Typography></MenuItem>
+        <Menu
+          anchorEl={addMenuAnchor}
+          open={Boolean(addMenuAnchor)}
+          onClose={() => setAddMenuAnchor(null)}
+        >
+          <MenuItem disabled>
+            <Typography variant="caption" color="text.secondary">
+              Standard Operations
+            </Typography>
+          </MenuItem>
           <MenuItem onClick={() => handleAddStep('payment')}>Payment</MenuItem>
           <MenuItem onClick={() => handleAddStep('manage_data')}>Manage Data</MenuItem>
           <MenuItem onClick={() => handleAddStep('manage_sell_offer')}>Sell Offer</MenuItem>
-          <MenuItem disabled><Typography variant="caption" color="text.secondary">Contract Operations</Typography></MenuItem>
+          <MenuItem disabled>
+            <Typography variant="caption" color="text.secondary">
+              Contract Operations
+            </Typography>
+          </MenuItem>
           <MenuItem onClick={() => handleAddStep('contract_call')}>Contract Call</MenuItem>
           <MenuItem onClick={() => handleAddStep('create_group')}>Create Group</MenuItem>
           <MenuItem onClick={() => handleAddStep('join_group')}>Join Group</MenuItem>
@@ -165,18 +186,27 @@ export function TransactionBuilder({ initialSteps, walletAddress }: TransactionB
         </Menu>
 
         {/* Load Template Menu */}
-        <Menu anchorEl={loadMenuAnchor} open={Boolean(loadMenuAnchor)} onClose={() => setLoadMenuAnchor(null)}>
+        <Menu
+          anchorEl={loadMenuAnchor}
+          open={Boolean(loadMenuAnchor)}
+          onClose={() => setLoadMenuAnchor(null)}
+        >
           {templates.length === 0 && (
             <MenuItem disabled>
-              <Typography variant="body2" color="text.secondary">No saved templates</Typography>
+              <Typography variant="body2" color="text.secondary">
+                No saved templates
+              </Typography>
             </MenuItem>
           )}
-          {templates.map(tpl => (
+          {templates.map((tpl) => (
             <MenuItem key={tpl.id} onClick={() => handleApplyTemplate(tpl)}>
               <Stack>
-                <Typography variant="body2" fontWeight={600}>{tpl.name}</Typography>
+                <Typography variant="body2" fontWeight={600}>
+                  {tpl.name}
+                </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {tpl.steps.filter(s => s.enabled).length} ops · {new Date(tpl.updatedAt).toLocaleDateString()}
+                  {tpl.steps.filter((s) => s.enabled).length} ops ·{' '}
+                  {new Date(tpl.updatedAt).toLocaleDateString()}
                 </Typography>
               </Stack>
             </MenuItem>
@@ -212,11 +242,7 @@ export function TransactionBuilder({ initialSteps, walletAddress }: TransactionB
 
         {/* Simulation Results */}
         {steps.length > 0 && (
-          <SimulationPanel
-            result={simResult}
-            loading={simLoading}
-            onRetry={handleSimulate}
-          />
+          <SimulationPanel result={simResult} loading={simLoading} onRetry={handleSimulate} />
         )}
       </Stack>
 
@@ -235,7 +261,11 @@ export function TransactionBuilder({ initialSteps, walletAddress }: TransactionB
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         {snackbar ? (
-          <Alert severity={snackbar.severity} onClose={() => setSnackbar(null)} sx={{ fontSize: '0.85rem' }}>
+          <Alert
+            severity={snackbar.severity}
+            onClose={() => setSnackbar(null)}
+            sx={{ fontSize: '0.85rem' }}
+          >
             {snackbar.message}
           </Alert>
         ) : undefined}

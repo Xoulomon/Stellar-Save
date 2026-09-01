@@ -51,7 +51,7 @@ export class HorizonIndexer {
     this.isRunning = true;
     logger.info('[HorizonIndexer] Starting — contract:', this.contractId);
     // Run poll loop detached so callers are not blocked
-    this.runPollLoop().catch(err => {
+    this.runPollLoop().catch((err) => {
       logger.error('[HorizonIndexer] Fatal error in poll loop:', err);
       this.isRunning = false;
     });
@@ -73,13 +73,15 @@ export class HorizonIndexer {
   }
 
   /** Query stored transactions with optional filters. */
-  async getTransactions(options: {
-    limit?: number;
-    offset?: number;
-    sourceAccount?: string;
-    minLedger?: number;
-    maxLedger?: number;
-  } = {}): Promise<TransactionPage> {
+  async getTransactions(
+    options: {
+      limit?: number;
+      offset?: number;
+      sourceAccount?: string;
+      minLedger?: number;
+      maxLedger?: number;
+    } = {}
+  ): Promise<TransactionPage> {
     const where: Record<string, unknown> = {};
 
     if (options.sourceAccount) where.sourceAccount = options.sourceAccount;
@@ -138,9 +140,7 @@ export class HorizonIndexer {
 
         // Advance cursor to the paging_token of the last record processed
         cursor = records[records.length - 1].paging_token;
-        logger.info(
-          `[HorizonIndexer] Indexed ${records.length} tx(s), cursor now ${cursor}`
-        );
+        logger.info(`[HorizonIndexer] Indexed ${records.length} tx(s), cursor now ${cursor}`);
       } catch (err) {
         logger.error('[HorizonIndexer] Poll error:', err);
         await this.delay(this.pollIntervalMs * 2);
@@ -193,6 +193,6 @@ export class HorizonIndexer {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

@@ -40,7 +40,9 @@ describe('useInstallPrompt', () => {
     const { result } = renderHook(() => useInstallPrompt());
     const event = makePromptEvent('accepted');
 
-    act(() => { window.dispatchEvent(event); });
+    act(() => {
+      window.dispatchEvent(event);
+    });
 
     let outcome: string | null = null;
     await act(async () => {
@@ -62,16 +64,23 @@ describe('useInstallPrompt', () => {
     const { result } = renderHook(() => useInstallPrompt());
     const event = makePromptEvent('dismissed');
 
-    act(() => { window.dispatchEvent(event); });
+    act(() => {
+      window.dispatchEvent(event);
+    });
     expect(result.current.canInstall).toBe(true);
 
-    act(() => { result.current.dismiss(); });
+    act(() => {
+      result.current.dismiss();
+    });
     expect(result.current.canInstall).toBe(false);
   });
 
   it('removes event listener on unmount', () => {
     const { unmount } = renderHook(() => useInstallPrompt());
     unmount();
-    expect(window.removeEventListener).toHaveBeenCalledWith('beforeinstallprompt', expect.any(Function));
+    expect(window.removeEventListener).toHaveBeenCalledWith(
+      'beforeinstallprompt',
+      expect.any(Function)
+    );
   });
 });

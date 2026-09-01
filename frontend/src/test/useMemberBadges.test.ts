@@ -83,10 +83,9 @@ describe('useMemberBadges', () => {
   });
 
   it('clears badges when address changes to undefined', async () => {
-    const { result, rerender } = renderHook(
-      ({ address }) => useMemberBadges(address),
-      { initialProps: { address: 'GABCDEFG...' as string | undefined } }
-    );
+    const { result, rerender } = renderHook(({ address }) => useMemberBadges(address), {
+      initialProps: { address: 'GABCDEFG...' as string | undefined },
+    });
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);

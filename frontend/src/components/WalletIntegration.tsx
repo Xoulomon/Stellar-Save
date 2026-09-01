@@ -72,7 +72,13 @@ interface ConnectedPanelProps {
   connectedAccounts: string[];
 }
 
-function ConnectedPanel({ address, network, onDisconnect, onSwitchAccount, connectedAccounts }: ConnectedPanelProps) {
+function ConnectedPanel({
+  address,
+  network,
+  onDisconnect,
+  onSwitchAccount,
+  connectedAccounts,
+}: ConnectedPanelProps) {
   const { xlmBalance, isLoading: balanceLoading } = useBalance();
   const { copy, copied } = useClipboard();
 
@@ -100,7 +106,11 @@ function ConnectedPanel({ address, network, onDisconnect, onSwitchAccount, conne
           </Typography>
           <Tooltip title={copied ? 'Copied!' : 'Copy address'}>
             <IconButton size="small" onClick={() => copy(address)} aria-label="Copy wallet address">
-              {copied ? <span style={{ color: 'green', fontSize: 14 }}>✓</span> : <span style={{ fontSize: 14 }}>⎘</span>}
+              {copied ? (
+                <span style={{ color: 'green', fontSize: 14 }}>✓</span>
+              ) : (
+                <span style={{ fontSize: 14 }}>⎘</span>
+              )}
             </IconButton>
           </Tooltip>
         </Box>
@@ -108,11 +118,15 @@ function ConnectedPanel({ address, network, onDisconnect, onSwitchAccount, conne
 
       {/* Balance */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="body2" color="text.secondary">Balance</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Balance
+        </Typography>
         {balanceLoading ? (
           <CircularProgress size={14} />
         ) : (
-          <Typography variant="body2" fontWeight={700}>{xlmBalance ?? '—'} XLM</Typography>
+          <Typography variant="body2" fontWeight={700}>
+            {xlmBalance ?? '—'} XLM
+          </Typography>
         )}
       </Box>
 
@@ -120,7 +134,9 @@ function ConnectedPanel({ address, network, onDisconnect, onSwitchAccount, conne
       {connectedAccounts.length > 1 && (
         <>
           <Divider />
-          <Typography variant="caption" color="text.secondary">Switch Account</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Switch Account
+          </Typography>
           <Stack spacing={0.5}>
             {connectedAccounts.map((acc) => (
               <Box
@@ -137,7 +153,9 @@ function ConnectedPanel({ address, network, onDisconnect, onSwitchAccount, conne
                   gap: 1,
                 }}
               >
-                {acc === address && <span style={{ color: 'var(--color-primary)', fontSize: 14 }}>✓</span>}
+                {acc === address && (
+                  <span style={{ color: 'var(--color-primary)', fontSize: 14 }}>✓</span>
+                )}
                 <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
                   {acc.slice(0, 8)}…{acc.slice(-6)}
                 </Typography>
@@ -148,7 +166,9 @@ function ConnectedPanel({ address, network, onDisconnect, onSwitchAccount, conne
       )}
 
       <Divider />
-      <Button variant="secondary" onClick={onDisconnect}>Disconnect Wallet</Button>
+      <Button variant="secondary" onClick={onDisconnect}>
+        Disconnect Wallet
+      </Button>
     </Stack>
   );
 }
@@ -167,15 +187,8 @@ function ConnectedPanel({ address, network, onDisconnect, onSwitchAccount, conne
  * - Stores wallet address in context (WalletProvider)
  */
 export function WalletIntegration() {
-  const {
-    status,
-    activeAddress,
-    network,
-    error,
-    connectedAccounts,
-    disconnect,
-    switchAccount,
-  } = useWallet();
+  const { status, activeAddress, network, error, connectedAccounts, disconnect, switchAccount } =
+    useWallet();
 
   const [selectionOpen, setSelectionOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -198,7 +211,12 @@ export function WalletIntegration() {
           <StatusDot status={status} />
           {error && (
             <Tooltip title={error}>
-              <span style={{ color: 'var(--color-danger)', fontSize: 16 }} aria-label="Wallet error">⚠</span>
+              <span
+                style={{ color: 'var(--color-danger)', fontSize: 16 }}
+                aria-label="Wallet error"
+              >
+                ⚠
+              </span>
             </Tooltip>
           )}
           <Button
@@ -211,10 +229,7 @@ export function WalletIntegration() {
           </Button>
         </Box>
 
-        <WalletSelectModal
-          open={selectionOpen}
-          onClose={() => setSelectionOpen(false)}
-        />
+        <WalletSelectModal open={selectionOpen} onClose={() => setSelectionOpen(false)} />
       </>
     );
   }
@@ -224,11 +239,7 @@ export function WalletIntegration() {
     <>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <StatusDot status="connected" />
-        <Button
-          variant="secondary"
-          onClick={() => setPanelOpen(true)}
-          aria-label="Wallet options"
-        >
+        <Button variant="secondary" onClick={() => setPanelOpen(true)} aria-label="Wallet options">
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <span style={{ fontSize: 16 }}>👛</span>
             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
@@ -251,7 +262,10 @@ export function WalletIntegration() {
             address={activeAddress}
             network={network}
             onDisconnect={handleDisconnect}
-            onSwitchAccount={(addr) => { switchAccount(addr); setPanelOpen(false); }}
+            onSwitchAccount={(addr) => {
+              switchAccount(addr);
+              setPanelOpen(false);
+            }}
             connectedAccounts={connectedAccounts}
           />
         </DialogContent>

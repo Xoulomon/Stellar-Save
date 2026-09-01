@@ -10,9 +10,7 @@ const AboutPage: React.FC = () => {
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-purple-900 via-indigo-900 to-gray-950 py-20">
         <div className="max-w-5xl mx-auto px-6 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6">
-            About Stellar-Save
-          </h1>
+          <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6">About Stellar-Save</h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
             The modern, transparent, and secure way to do ROSCA on the Stellar network.
           </p>

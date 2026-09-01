@@ -21,7 +21,15 @@ const JoinViaInvite: React.FC = () => {
 
   if (!inviteCode) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', p: 3 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '60vh',
+          p: 3,
+        }}
+      >
         <Alert severity="error">Invalid invite link — no invite code found.</Alert>
       </Box>
     );
@@ -89,7 +97,11 @@ const JoinViaInvite: React.FC = () => {
         </Typography>
       </Stack>
 
-      {error && <Alert severity="error" sx={{ width: '100%', maxWidth: 400 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ width: '100%', maxWidth: 400 }}>
+          {error}
+        </Alert>
+      )}
 
       {joined ? (
         <Alert severity="success" sx={{ width: '100%', maxWidth: 400 }}>
@@ -97,12 +109,7 @@ const JoinViaInvite: React.FC = () => {
         </Alert>
       ) : (
         <Stack direction="row" spacing={2}>
-          <Button
-            variant="primary"
-            onClick={handleJoin}
-            disabled={loading}
-            aria-label="Join group"
-          >
+          <Button variant="primary" onClick={handleJoin} disabled={loading} aria-label="Join group">
             {loading ? <CircularProgress size={18} color="inherit" /> : 'Join Group'}
           </Button>
           <Button variant="secondary" onClick={() => navigate('/')}>

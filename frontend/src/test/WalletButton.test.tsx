@@ -16,7 +16,11 @@ describe('WalletButton', () => {
       disconnect: vi.fn(),
     } as never);
 
-    render(<MemoryRouter><WalletButton /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <WalletButton />
+      </MemoryRouter>
+    );
     expect(screen.getByText('Connect Wallet')).toBeInTheDocument();
   });
 
@@ -28,7 +32,11 @@ describe('WalletButton', () => {
       disconnect: vi.fn(),
     } as never);
 
-    render(<MemoryRouter><WalletButton /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <WalletButton />
+      </MemoryRouter>
+    );
     expect(screen.getByText(/GABCDE...7890/)).toBeInTheDocument();
   });
 });

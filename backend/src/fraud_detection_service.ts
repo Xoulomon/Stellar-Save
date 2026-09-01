@@ -52,12 +52,16 @@ export class FraudDetectionService {
       orderBy: { timestamp: 'asc' },
     });
     const completed = await (prisma as any).contractEvent.findFirst({
-      where: { eventType: { in: ['GroupCompleted', 'GroupDissolved'] }, data: { path: ['group_id'], equals: groupId } },
+      where: {
+        eventType: { in: ['GroupCompleted', 'GroupDissolved'] },
+        data: { path: ['group_id'], equals: groupId },
+      },
       orderBy: { timestamp: 'asc' },
     });
 
     if (created && completed) {
-      const diffHours = (new Date(completed.timestamp).getTime() - new Date(created.timestamp).getTime()) / 3600000;
+      const diffHours =
+        (new Date(completed.timestamp).getTime() - new Date(created.timestamp).getTime()) / 3600000;
       evidence.lifespanHours = diffHours;
       if (diffHours < this.rapidCycleHours) {
         reasons.push(`Rapid cycle: group completed in ${diffHours.toFixed(1)}h`);
@@ -123,42 +127,48 @@ export class FraudDetectionService {
       }
     }
 
-    logger.info('Fraud scan complete', { flagged: scores.length, accounts: accounts.size, groups: groups.size });
+    logger.info('Fraud scan complete', {
+      flagged: scores.length,
+      accounts: accounts.size,
+      groups: groups.size,
+    });
     return scores;
   }
 
   private async persistFlag(score: FraudScore): Promise<void> {
-    await (prisma as any).fraudFlag.upsert({
-      where: {
-        // use a composite-like lookup — store as single entityType+entityId lookup via findFirst
-        id: `${score.entityType}:${score.entityId}:pending`,
-      },
-      update: {
-        riskScore: score.riskScore,
-        reasons: score.reasons,
-        evidence: score.evidence,
-        updatedAt: new Date(),
-      },
-      create: {
-        id: `${score.entityType}:${score.entityId}:pending`,
-        entityType: score.entityType,
-        entityId: score.entityId,
-        riskScore: score.riskScore,
-        reasons: score.reasons,
-        evidence: score.evidence,
-      },
-    }).catch(async () => {
-      // If id collision, just create a new flag
-      await (prisma as any).fraudFlag.create({
-        data: {
+    await (prisma as any).fraudFlag
+      .upsert({
+        where: {
+          // use a composite-like lookup — store as single entityType+entityId lookup via findFirst
+          id: `${score.entityType}:${score.entityId}:pending`,
+        },
+        update: {
+          riskScore: score.riskScore,
+          reasons: score.reasons,
+          evidence: score.evidence,
+          updatedAt: new Date(),
+        },
+        create: {
+          id: `${score.entityType}:${score.entityId}:pending`,
           entityType: score.entityType,
           entityId: score.entityId,
           riskScore: score.riskScore,
           reasons: score.reasons,
           evidence: score.evidence,
         },
+      })
+      .catch(async () => {
+        // If id collision, just create a new flag
+        await (prisma as any).fraudFlag.create({
+          data: {
+            entityType: score.entityType,
+            entityId: score.entityId,
+            riskScore: score.riskScore,
+            reasons: score.reasons,
+            evidence: score.evidence,
+          },
+        });
       });
-    });
   }
 
   async getFlags(status?: string): Promise<unknown[]> {

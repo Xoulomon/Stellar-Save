@@ -31,7 +31,9 @@ export class KeeperJob {
   start(schedule: string): void {
     this.handler = new KeeperHandler(this.contractId, this.stellarClient, this.db);
     this.task = new CronJob(schedule, () => {
-      this.runOnce().catch(err => logger.error('[keeper] runOnce uncaught error', { error: String(err) }));
+      this.runOnce().catch((err) =>
+        logger.error('[keeper] runOnce uncaught error', { error: String(err) })
+      );
     });
     this.task.start();
     logger.info('[keeper] started', { schedule, contractId: this.contractId });

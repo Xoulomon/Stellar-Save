@@ -35,7 +35,7 @@ function buildOperations(steps: TransactionBuilderStep[]) {
           Operation.payment({
             destination: p.destination || DUMMY_ADDRESS,
             amount: p.amount || '0',
-          }),
+          })
         );
         break;
 
@@ -44,7 +44,7 @@ function buildOperations(steps: TransactionBuilderStep[]) {
           Operation.manageData({
             name: p.key || '',
             value: p.value || null,
-          }),
+          })
         );
         break;
 
@@ -55,7 +55,7 @@ function buildOperations(steps: TransactionBuilderStep[]) {
             buying: new Asset(p.buying || 'XLM', p.buyingIssuer || ''),
             amount: p.amount || '0',
             price: p.price || '1.0',
-          }),
+          })
         );
         break;
 
@@ -76,7 +76,7 @@ function buildOperations(steps: TransactionBuilderStep[]) {
 
 export async function simulateTransaction(
   steps: TransactionBuilderStep[],
-  sourceAddress?: string,
+  sourceAddress?: string
 ): Promise<SimulationResult> {
   try {
     const ops = buildOperations(steps);
@@ -99,10 +99,10 @@ export async function simulateTransaction(
       incrementSequenceNumber: () => undefined,
     }));
 
-    const builder = new TransactionBuilder(
-      account as Parameters<typeof TransactionBuilder>[0],
-      { fee: BASE_FEE, networkPassphrase: NETWORK_PASSPHRASE },
-    );
+    const builder = new TransactionBuilder(account as Parameters<typeof TransactionBuilder>[0], {
+      fee: BASE_FEE,
+      networkPassphrase: NETWORK_PASSPHRASE,
+    });
 
     for (const op of ops) {
       builder.addOperation(op);
@@ -112,9 +112,10 @@ export async function simulateTransaction(
     const simResult = await server.simulateTransaction(built);
 
     if (SorobanRpc.Api.isSimulationError(simResult)) {
-      const errStr = simResult.error instanceof Error
-        ? simResult.error.message
-        : String(simResult.error || 'Simulation failed');
+      const errStr =
+        simResult.error instanceof Error
+          ? simResult.error.message
+          : String(simResult.error || 'Simulation failed');
       return {
         success: false,
         feeEstimate: '0',
@@ -131,9 +132,7 @@ export async function simulateTransaction(
     const warnings: string[] = [];
 
     if (SorobanRpc.Api.isSimulationSuccess(simResult)) {
-      const minFee = simResult.minResourceFee
-        ? Number(simResult.minResourceFee) / 1e7
-        : 0;
+      const minFee = simResult.minResourceFee ? Number(simResult.minResourceFee) / 1e7 : 0;
       feeInXlm = Math.max(feeInXlm, minFee);
 
       if (simResult.footprint) {
@@ -172,7 +171,10 @@ export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function createStep(type: TransactionBuilderStep['type'], index: number): TransactionBuilderStep {
+export function createStep(
+  type: TransactionBuilderStep['type'],
+  index: number
+): TransactionBuilderStep {
   const labels: Record<string, string> = {
     payment: 'Payment',
     contract_call: 'Contract Call',
@@ -197,11 +199,16 @@ export function saveTemplate(template: TransactionTemplate): void {
   try {
     const raw = localStorage.getItem(TEMPLATES_STORAGE_KEY);
     const templates: TransactionTemplate[] = raw ? JSON.parse(raw) : [];
-    const idx = templates.findIndex(t => t.id === template.id);
+    const idx = templates.findIndex((t) => t.id === template.id);
     if (idx >= 0) {
       templates[idx] = { ...template, updatedAt: Date.now() };
     } else {
-      templates.push({ ...template, id: generateId(), createdAt: Date.now(), updatedAt: Date.now() });
+      templates.push({
+        ...template,
+        id: generateId(),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
     }
     localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
   } catch {
@@ -224,7 +231,7 @@ export function deleteTemplate(id: string): void {
     const templates: TransactionTemplate[] = raw ? JSON.parse(raw) : [];
     localStorage.setItem(
       TEMPLATES_STORAGE_KEY,
-      JSON.stringify(templates.filter(t => t.id !== id)),
+      JSON.stringify(templates.filter((t) => t.id !== id))
     );
   } catch {
     console.warn('Failed to delete template');
@@ -237,12 +244,14 @@ export function generateShareCode(template: TransactionTemplate): string {
       n: template.name,
       d: template.description,
       s: template.steps.map(({ id: _id, ...rest }) => rest),
-    }),
+    })
   );
   return data;
 }
 
-export function decodeShareCode(code: string): Omit<TransactionTemplate, 'id' | 'createdAt' | 'updatedAt'> | null {
+export function decodeShareCode(
+  code: string
+): Omit<TransactionTemplate, 'id' | 'createdAt' | 'updatedAt'> | null {
   try {
     const data = JSON.parse(atob(code));
     return {

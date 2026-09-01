@@ -210,7 +210,9 @@ export class ReconciliationService {
     if (!this.running) return;
     try {
       await this.run();
-    } catch { /* already logged */ }
+    } catch {
+      /* already logged */
+    }
     this.timer = setTimeout(() => void this.tick(), this.cfg.intervalMs);
   }
 
@@ -326,9 +328,10 @@ export class ReconciliationService {
       return state;
     } catch (err) {
       const reason = isCircuitOpenError(err) ? 'circuit_open' : 'call_failed';
-      const cached = await GroupStateCache
-        .get<Record<string, unknown>>(this.cfg.contractId, groupId)
-        .catch(() => null);
+      const cached = await GroupStateCache.get<Record<string, unknown>>(
+        this.cfg.contractId,
+        groupId
+      ).catch(() => null);
 
       circuitBreakerFallbacksTotal.inc({
         breaker: 'soroban_rpc',
@@ -394,7 +397,9 @@ export function getReconciliationService(): ReconciliationService | null {
   return _reconciliation;
 }
 
-export function initReconciliationService(cfg?: Partial<ReconciliationConfig>): ReconciliationService {
+export function initReconciliationService(
+  cfg?: Partial<ReconciliationConfig>
+): ReconciliationService {
   if (!_reconciliation) {
     _reconciliation = new ReconciliationService(cfg);
   }

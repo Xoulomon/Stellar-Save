@@ -129,7 +129,7 @@ let scriptSha: string | null = null;
 async function evalScript(
   redis: Redis,
   key: string,
-  args: string[],
+  args: string[]
 ): Promise<[number, number, number]> {
   if (scriptSha) {
     try {
@@ -151,7 +151,7 @@ async function checkWindow(
   windowMs: number,
   max: number,
   cost: number,
-  memberId: string,
+  memberId: string
 ): Promise<WindowResult> {
   const [allowed, remaining, resetAt] = await evalScript(redis, key, [
     String(now),
@@ -204,7 +204,10 @@ function matchEndpointCost(path: string): EndpointCost {
     let match = true;
     for (let i = 0; i < patParts.length; i++) {
       if (patParts[i].startsWith(':')) continue;
-      if (patParts[i] !== pathParts[i]) { match = false; break; }
+      if (patParts[i] !== pathParts[i]) {
+        match = false;
+        break;
+      }
     }
     if (match) return cost;
   }
@@ -238,7 +241,15 @@ export function createTieredRateLimiter(opts: { redis?: Redis } = {}) {
 
     for (const window of config.windows) {
       const key = `ratelimit:${scope}:${identifier}:${tier}:${window.windowMs}`;
-      const result = await checkWindow(redis, key, now, window.windowMs, window.max, endpointCost.cost, memberId);
+      const result = await checkWindow(
+        redis,
+        key,
+        now,
+        window.windowMs,
+        window.max,
+        endpointCost.cost,
+        memberId
+      );
       results.push({ result, window });
     }
 
@@ -264,17 +275,17 @@ export function createTieredRateLimiter(opts: { redis?: Redis } = {}) {
     res.setHeader('X-RateLimit-Tier', tier);
     res.setHeader('X-RateLimit-Cost', String(endpointCost.cost));
 
-    const usagePct = results.map(r => 1 - r.result.remaining / r.result.limit);
+    const usagePct = results.map((r) => 1 - r.result.remaining / r.result.limit);
     const maxUsage = Math.max(...usagePct);
 
     if (maxUsage >= 0.95) {
       res.setHeader('X-RateLimit-Warning', 'critical');
       rateLimitWarnings.inc({ tier, scope, level: 'critical' });
       logger.warn('Rate limit critical', { tier, scope, identifier, usage: maxUsage, path });
-    } else if (maxUsage >= 0.90) {
+    } else if (maxUsage >= 0.9) {
       res.setHeader('X-RateLimit-Warning', 'severe');
       rateLimitWarnings.inc({ tier, scope, level: 'severe' });
-    } else if (maxUsage >= 0.80) {
+    } else if (maxUsage >= 0.8) {
       res.setHeader('X-RateLimit-Warning', 'warning');
       rateLimitWarnings.inc({ tier, scope, level: 'warning' });
     }
@@ -287,11 +298,13 @@ export function createTieredRateLimiter(opts: { redis?: Redis } = {}) {
         message: `Rate limit exceeded. Retry after ${strictest.retryAfter} seconds.`,
         retryAfter: strictest.retryAfter,
         tier,
-        limits: config.windows.map(w => ({
+        limits: config.windows.map((w) => ({
           window: w.label,
           limit: w.max,
-          remaining: results.find(r => r.window.label === w.label)!.result.remaining,
-          resetAt: Math.ceil(results.find(r => r.window.label === w.label)!.result.resetAt / 1000),
+          remaining: results.find((r) => r.window.label === w.label)!.result.remaining,
+          resetAt: Math.ceil(
+            results.find((r) => r.window.label === w.label)!.result.resetAt / 1000
+          ),
         })),
       });
       return;
@@ -304,7 +317,7 @@ export function createTieredRateLimiter(opts: { redis?: Redis } = {}) {
 export async function getQuotaUsage(
   userId: string,
   tier: string,
-  redis?: Redis,
+  redis?: Redis
 ): Promise<QuotaUsage[]> {
   const r = redis || (redisClient as any as Redis);
   const config = TIERS[tier];

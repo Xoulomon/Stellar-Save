@@ -20,7 +20,8 @@ const resources = {
 };
 
 const stored = typeof window !== 'undefined' ? localStorage.getItem('stellar_save_language') : null;
-const defaultLng: LanguageCode = (stored as LanguageCode) || (navigator?.language?.startsWith('fr') ? 'fr' : 'en');
+const defaultLng: LanguageCode =
+  (stored as LanguageCode) || (navigator?.language?.startsWith('fr') ? 'fr' : 'en');
 
 void i18n.use(initReactI18next).init({
   resources,

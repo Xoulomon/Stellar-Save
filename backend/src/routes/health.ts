@@ -82,7 +82,10 @@ export function createDatabaseCheck(client: {
  * `getHealth` is the cheapest call the RPC server exposes and requires no
  * ledger state, which keeps the readiness probe safe to poll frequently.
  */
-export function createRpcCheck(rpcUrl: string, timeoutMs: number = 3000): () => Promise<DependencyStatus> {
+export function createRpcCheck(
+  rpcUrl: string,
+  timeoutMs: number = 3000
+): () => Promise<DependencyStatus> {
   return async (): Promise<DependencyStatus> => {
     const start = Date.now();
     try {

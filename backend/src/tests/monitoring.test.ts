@@ -6,10 +6,16 @@ import { Registry, Counter, Histogram, Gauge, collectDefaultMetrics } from 'prom
 import { logger, requestLogger } from '../logger';
 import { metricsMiddleware, metricsHandler, registry } from '../metrics';
 
-let passed = 0, failed = 0;
+let passed = 0,
+  failed = 0;
 function assert(cond: boolean, label: string) {
-  if (cond) { console.log(`  ✅ ${label}`); passed++; }
-  else       { console.error(`  ❌ ${label}`); failed++; }
+  if (cond) {
+    console.log(`  ✅ ${label}`);
+    passed++;
+  } else {
+    console.error(`  ❌ ${label}`);
+    failed++;
+  }
 }
 
 function makeReqRes(method = 'GET', path = '/test') {
@@ -33,17 +39,33 @@ async function run() {
     collectDefaultMetrics({ register: reg });
 
     const counter = new Counter({ name: 'test_counter', help: 'test', registers: [reg] });
-    counter.inc(); counter.inc(3);
-    const val = (await reg.getSingleMetricAsString('test_counter')).match(/test_counter (\d+)/)?.[1];
+    counter.inc();
+    counter.inc(3);
+    const val = (await reg.getSingleMetricAsString('test_counter')).match(
+      /test_counter (\d+)/
+    )?.[1];
     assert(val === '4', 'Counter increments correctly');
 
-    const hist = new Histogram({ name: 'test_hist', help: 'test', buckets: [0.1, 1], registers: [reg] });
-    hist.observe(0.05); hist.observe(0.5);
-    assert((await reg.getSingleMetricAsString('test_hist')).includes('test_hist_count 2'), 'Histogram records observations');
+    const hist = new Histogram({
+      name: 'test_hist',
+      help: 'test',
+      buckets: [0.1, 1],
+      registers: [reg],
+    });
+    hist.observe(0.05);
+    hist.observe(0.5);
+    assert(
+      (await reg.getSingleMetricAsString('test_hist')).includes('test_hist_count 2'),
+      'Histogram records observations'
+    );
 
     const gauge = new Gauge({ name: 'test_gauge', help: 'test', registers: [reg] });
-    gauge.inc(); gauge.dec();
-    assert((await reg.getSingleMetricAsString('test_gauge')).includes('test_gauge 0'), 'Gauge inc/dec works');
+    gauge.inc();
+    gauge.dec();
+    assert(
+      (await reg.getSingleMetricAsString('test_gauge')).includes('test_gauge 0'),
+      'Gauge inc/dec works'
+    );
 
     assert((await reg.metrics()).includes('nodejs_'), 'Default Node.js metrics collected');
   }
@@ -54,14 +76,19 @@ async function run() {
     registry.resetMetrics();
     const { req, res } = makeReqRes('GET', '/api/v1/health');
     let nextCalled = false;
-    metricsMiddleware(req as any, res as any, () => { nextCalled = true; });
+    metricsMiddleware(req as any, res as any, () => {
+      nextCalled = true;
+    });
 
     assert(nextCalled, 'metricsMiddleware calls next()');
     const counterStr = await registry.getSingleMetricAsString('http_requests_total');
     assert(counterStr.includes('method="GET"'), 'records method label');
     assert(counterStr.includes('status_code="200"'), 'records status_code label');
     const histStr = await registry.getSingleMetricAsString('http_request_duration_seconds');
-    assert(/http_request_duration_seconds_count\{[^}]+\} 1/.test(histStr), 'records duration observation');
+    assert(
+      /http_request_duration_seconds_count\{[^}]+\} 1/.test(histStr),
+      'records duration observation'
+    );
   }
 
   // ── metricsHandler ──────────────────────────────────────────────────────────
@@ -70,8 +97,14 @@ async function run() {
     let body = '';
     const res = {
       headers: {} as Record<string, string>,
-      set(k: string, v: string) { this.headers[k] = v; return this; },
-      end(b: string) { body = b; return this; },
+      set(k: string, v: string) {
+        this.headers[k] = v;
+        return this;
+      },
+      end(b: string) {
+        body = b;
+        return this;
+      },
     };
     await metricsHandler({} as any, res as any);
     assert(res.headers['Content-Type']?.includes('text/plain'), 'sets Prometheus content-type');
@@ -84,8 +117,14 @@ async function run() {
     const lines: string[] = [];
     const origOut = process.stdout.write.bind(process.stdout);
     const origErr = process.stderr.write.bind(process.stderr);
-    (process.stdout as any).write = (c: string) => { lines.push(c); return true; };
-    (process.stderr as any).write = (c: string) => { lines.push(c); return true; };
+    (process.stdout as any).write = (c: string) => {
+      lines.push(c);
+      return true;
+    };
+    (process.stderr as any).write = (c: string) => {
+      lines.push(c);
+      return true;
+    };
 
     logger.info('test message', { foo: 'bar' });
     logger.error('err msg', { code: 42 });
@@ -113,9 +152,14 @@ async function run() {
     let nextCalled = false;
     const lines: string[] = [];
     const orig = process.stdout.write.bind(process.stdout);
-    (process.stdout as any).write = (c: string) => { lines.push(c); return true; };
+    (process.stdout as any).write = (c: string) => {
+      lines.push(c);
+      return true;
+    };
 
-    requestLogger(req as any, res as any, () => { nextCalled = true; });
+    requestLogger(req as any, res as any, () => {
+      nextCalled = true;
+    });
 
     (process.stdout as any).write = orig;
 
@@ -134,4 +178,7 @@ async function run() {
   else console.log('ALL MONITORING TESTS PASSED! 🎉\n');
 }
 
-run().catch(err => { console.error(err); process.exit(1); });
+run().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -71,7 +71,8 @@ export class CacheService<T = unknown> {
     }
   }
 
-  set(key: string, value: T, ttlMs: number = 5 * 60 * 1000): void { // default 5min
+  set(key: string, value: T, ttlMs: number = 5 * 60 * 1000): void {
+    // default 5min
     const fullKey = this.getKey(key);
     const entry: CacheEntry = {
       data: value,
@@ -143,4 +144,3 @@ export class CacheService<T = unknown> {
 
 // Default instance for convenience
 export const cache = new CacheService();
-

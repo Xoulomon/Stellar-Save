@@ -43,7 +43,7 @@ export const createGroupFormSchema = z.object({
     .trim()
     .refine(
       (val) => isValidStringLength(val, GROUP_NAME_MIN, GROUP_NAME_MAX),
-      `Group name must be between ${GROUP_NAME_MIN} and ${GROUP_NAME_MAX} characters`,
+      `Group name must be between ${GROUP_NAME_MIN} and ${GROUP_NAME_MAX} characters`
     ),
 
   description: commonValidators.nonEmptyString(GROUP_DESCRIPTION_MAX, 'Description'),
@@ -55,45 +55,37 @@ export const createGroupFormSchema = z.object({
     .refine(isValidPositiveNumber, 'Contribution amount must be a positive number')
     .refine(
       (val) => isValidNumberInRange(val, MIN_CONTRIBUTION_XLM, MAX_CONTRIBUTION_XLM),
-      `Contribution amount must be between ${MIN_CONTRIBUTION_XLM} and ${MAX_CONTRIBUTION_XLM} XLM`,
+      `Contribution amount must be between ${MIN_CONTRIBUTION_XLM} and ${MAX_CONTRIBUTION_XLM} XLM`
     ),
 
   cycleDuration: z
     .string()
     .refine(
       (val) => VALID_CYCLE_DURATIONS.includes(parseInt(val, 10)),
-      'Please select a valid cycle duration',
+      'Please select a valid cycle duration'
     ),
 
   maxMembers: z
     .string()
     .refine(
       (val) => isValidNumberInRange(val, MIN_MEMBERS, MAX_MEMBERS_LIMIT),
-      `Maximum members must be between ${MIN_MEMBERS} and ${MAX_MEMBERS_LIMIT}`,
+      `Maximum members must be between ${MIN_MEMBERS} and ${MAX_MEMBERS_LIMIT}`
     ),
 
-  minMembers: z
-    .string()
-    .refine(
-      (val) => {
-        const num = parseInt(val, 10);
-        return !isNaN(num) && num >= MIN_MEMBERS;
-      },
-      `Minimum members must be at least ${MIN_MEMBERS}`,
-    ),
+  minMembers: z.string().refine((val) => {
+    const num = parseInt(val, 10);
+    return !isNaN(num) && num >= MIN_MEMBERS;
+  }, `Minimum members must be at least ${MIN_MEMBERS}`),
 
   // Insurance pool (Issue #1012)
   insuranceEnabled: z.boolean().default(false),
   insurancePremiumRate: z
     .string()
     .optional()
-    .refine(
-      (val) => {
-        if (!val) return true;
-        return isValidNumberInRange(val, 0, 100);
-      },
-      'Premium must be between 0 and 100 %',
-    ),
+    .refine((val) => {
+      if (!val) return true;
+      return isValidNumberInRange(val, 0, 100);
+    }, 'Premium must be between 0 and 100 %'),
 });
 
 /**
@@ -110,14 +102,11 @@ export const groupDataSchema = z.object({
     .positive('Contribution amount must be positive')
     .refine(
       (val) => val <= MAX_CONTRIBUTION_XLM * STROOPS_PER_XLM,
-      'Contribution amount too large',
+      'Contribution amount too large'
     ),
   cycle_duration: z
     .number()
-    .refine(
-      (val) => VALID_CYCLE_DURATIONS.includes(val),
-      'Invalid cycle duration',
-    ),
+    .refine((val) => VALID_CYCLE_DURATIONS.includes(val), 'Invalid cycle duration'),
   max_members: z
     .number()
     .int()
@@ -217,7 +206,7 @@ export const fieldValidators = {
  */
 export function validateFormStep(
   step: number,
-  data: Record<string, string> | Partial<Record<string, string>>,
+  data: Record<string, string> | Partial<Record<string, string>>
 ): Record<string, string> {
   const errors: Record<string, string> = {};
 
@@ -264,11 +253,11 @@ export function validateFormStep(
  * Validate and convert form data to contract-ready format
  */
 export function validateAndTransformFormData(
-  formData: Record<string, string | boolean>,
+  formData: Record<string, string | boolean>
 ): { success: false; errors: Record<string, string> } | { success: true; data: GroupData } {
   try {
     const stringData = Object.fromEntries(
-      Object.entries(formData).filter(([, v]) => typeof v === 'string'),
+      Object.entries(formData).filter(([, v]) => typeof v === 'string')
     ) as Record<string, string>;
 
     // First validate raw form data

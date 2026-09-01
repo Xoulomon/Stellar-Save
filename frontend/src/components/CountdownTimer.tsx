@@ -47,8 +47,8 @@ function calcTimeLeft(deadlineMs: number): TimeLeft {
 }
 
 function getUrgency(totalSeconds: number): Urgency {
-  if (totalSeconds <= 3600) return 'critical';   // < 1 h
-  if (totalSeconds <= 86400) return 'warning';   // < 24 h
+  if (totalSeconds <= 3600) return 'critical'; // < 1 h
+  if (totalSeconds <= 86400) return 'warning'; // < 24 h
   return 'normal';
 }
 
@@ -95,9 +95,7 @@ export function CountdownTimer({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setLoadError(
-          err instanceof Error ? err.message : 'Failed to load deadline.',
-        );
+        setLoadError(err instanceof Error ? err.message : 'Failed to load deadline.');
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -152,11 +150,7 @@ export function CountdownTimer({
 
   return (
     <div
-      className={[
-        'countdown-timer',
-        `countdown-timer--${urgency}`,
-        className,
-      ]
+      className={['countdown-timer', `countdown-timer--${urgency}`, className]
         .filter(Boolean)
         .join(' ')}
       role="timer"

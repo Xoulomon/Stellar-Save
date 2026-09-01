@@ -10,7 +10,7 @@ import { memberReputationRepository } from './modules/reputation/reputation.repo
 
 export interface ReputationRecord {
   address: string;
-  score: number;           // 0.0 – 1.0
+  score: number; // 0.0 – 1.0
   totalContributions: number;
   onTimeContributions: number;
   updatedAt: string;

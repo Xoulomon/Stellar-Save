@@ -41,11 +41,7 @@ export function ErrorState({
     .join(' ');
 
   return (
-    <div
-      className={rootClass}
-      role="alert"
-      aria-live="assertive"
-    >
+    <div className={rootClass} role="alert" aria-live="assertive">
       {/* Error icon */}
       <span className="error-state__icon" aria-hidden="true">
         <svg

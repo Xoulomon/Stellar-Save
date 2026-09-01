@@ -94,8 +94,11 @@ describe('Soroban RPC circuit breaker under simulated outage', () => {
     jest.advanceTimersByTime(PAST_RESET_MS);
     expect(sorobanCircuitBreaker.getState()).toBe(CircuitState.HALF_OPEN);
 
-    await expect(withSorobanCircuit(async () => { throw new Error('still down'); }))
-      .rejects.toThrow('still down');
+    await expect(
+      withSorobanCircuit(async () => {
+        throw new Error('still down');
+      })
+    ).rejects.toThrow('still down');
     expect(sorobanCircuitBreaker.getState()).toBe(CircuitState.OPEN);
   });
 });
@@ -130,8 +133,9 @@ describe('SorobanClientPool.withClient during an RPC outage', () => {
     const pool = makePool(2);
     await simulateOutage((fn) => pool.withClient(fn, 'get_group'));
 
-    await expect(pool.withClient(async () => 'unused', 'get_group'))
-      .rejects.toThrow(CircuitBreakerOpenError);
+    await expect(pool.withClient(async () => 'unused', 'get_group')).rejects.toThrow(
+      CircuitBreakerOpenError
+    );
 
     // A fast-failed call must not leak a pooled client.
     expect(pool.metrics().available).toBe(2);
@@ -154,11 +158,10 @@ describe('withRpcFallback cached-read behaviour', () => {
   it('returns the live result and never consults the cache when healthy', async () => {
     const loadFromCache = jest.fn().mockResolvedValue({ stale: true });
 
-    const result = await withRpcFallback(
-      'soroban_rpc',
-      async () => ({ stale: false }),
-      { loadFromCache, operation: 'get_group' }
-    );
+    const result = await withRpcFallback('soroban_rpc', async () => ({ stale: false }), {
+      loadFromCache,
+      operation: 'get_group',
+    });
 
     expect(result).toEqual({ stale: false });
     expect(loadFromCache).not.toHaveBeenCalled();
@@ -183,7 +186,9 @@ describe('withRpcFallback cached-read behaviour', () => {
 
     const result = await withRpcFallback(
       'soroban_rpc',
-      async () => { throw new Error('ECONNRESET'); },
+      async () => {
+        throw new Error('ECONNRESET');
+      },
       { loadFromCache, operation: 'get_group' }
     );
 
@@ -206,7 +211,9 @@ describe('withRpcFallback cached-read behaviour', () => {
     await simulateOutage(withSorobanCircuit);
 
     const result = await withRpcFallback('soroban_rpc', async () => 'live', {
-      loadFromCache: async () => { throw new Error('redis down'); },
+      loadFromCache: async () => {
+        throw new Error('redis down');
+      },
       operation: 'get_group',
     });
 

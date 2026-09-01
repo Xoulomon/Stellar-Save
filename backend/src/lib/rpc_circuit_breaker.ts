@@ -61,17 +61,14 @@ function onStateChange(name: string, from: CircuitState, to: CircuitState): void
  */
 function makeRpcBreaker(name: RpcBreakerName): CircuitBreaker<[() => Promise<any>], any> {
   circuitBreakerState.set({ breaker: name }, STATE_VALUE[CircuitState.CLOSED]);
-  return new CircuitBreaker(
-    async <T>(fn: () => Promise<T>): Promise<T> => fn(),
-    {
-      name,
-      timeout: config.rpcCircuitBreaker.timeoutMs,
-      errorThresholdPercentage: config.rpcCircuitBreaker.errorThresholdPercentage,
-      resetTimeout: config.rpcCircuitBreaker.resetTimeoutMs,
-      volumeThreshold: config.rpcCircuitBreaker.volumeThreshold,
-      onStateChange,
-    }
-  );
+  return new CircuitBreaker(async <T>(fn: () => Promise<T>): Promise<T> => fn(), {
+    name,
+    timeout: config.rpcCircuitBreaker.timeoutMs,
+    errorThresholdPercentage: config.rpcCircuitBreaker.errorThresholdPercentage,
+    resetTimeout: config.rpcCircuitBreaker.resetTimeoutMs,
+    volumeThreshold: config.rpcCircuitBreaker.volumeThreshold,
+    onStateChange,
+  });
 }
 
 export const sorobanCircuitBreaker = makeRpcBreaker('soroban_rpc');

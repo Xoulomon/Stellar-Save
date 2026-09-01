@@ -85,7 +85,13 @@ const DEFAULT_CONFIG: MonitorConfig = {
 
 // ── Event-type helpers ────────────────────────────────────────────────────────
 
-const ADMIN_EVENTS = new Set(['pause_group', 'unpause_group', 'admin', 'admin_action', 'set_admin']);
+const ADMIN_EVENTS = new Set([
+  'pause_group',
+  'unpause_group',
+  'admin',
+  'admin_action',
+  'set_admin',
+]);
 const PAYOUT_EVENTS = new Set(['payout', 'payout_received', 'payoutreceived', 'payout_processed']);
 const ERROR_EVENTS = new Set(['error', 'contract_error', 'failed', 'revert']);
 const REVERT_EVENTS = new Set(['revert', 'tx_failed', 'invocation_failed']);
@@ -93,10 +99,18 @@ const REVERT_EVENTS = new Set(['revert', 'tx_failed', 'invocation_failed']);
 function normalise(t: string): string {
   return t.toLowerCase().replace(/-/g, '_');
 }
-function isAdmin(t: string): boolean { return ADMIN_EVENTS.has(normalise(t)); }
-function isPayout(t: string): boolean { return PAYOUT_EVENTS.has(normalise(t)); }
-function isError(t: string): boolean { return ERROR_EVENTS.has(normalise(t)); }
-function isRevert(t: string): boolean { return REVERT_EVENTS.has(normalise(t)); }
+function isAdmin(t: string): boolean {
+  return ADMIN_EVENTS.has(normalise(t));
+}
+function isPayout(t: string): boolean {
+  return PAYOUT_EVENTS.has(normalise(t));
+}
+function isError(t: string): boolean {
+  return ERROR_EVENTS.has(normalise(t));
+}
+function isRevert(t: string): boolean {
+  return REVERT_EVENTS.has(normalise(t));
+}
 
 // ── Monitor class ─────────────────────────────────────────────────────────────
 
@@ -155,9 +169,11 @@ export class OnChainMonitor {
           type: 'LARGE_PAYOUT',
           severity: 'critical',
           message: `Large payout detected: ${xlm.toFixed(2)} XLM (tx: ${p.txHash})`,
-          circuitBreakerAction: 'Consider calling pause_group on the affected contract until the payout is manually verified.',
+          circuitBreakerAction:
+            'Consider calling pause_group on the affected contract until the payout is manually verified.',
           metadata: { txHash: p.txHash, amountXlm: xlm, ledgerSeq: p.ledgerSeq },
-          runbook: 'https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-large-payout.md',
+          runbook:
+            'https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-large-payout.md',
         });
       }
     }
@@ -169,22 +185,28 @@ export class OnChainMonitor {
         severity: 'warning',
         message: `${payouts.length} payouts in the last ${this.cfg.rollingWindowMs / 60000} minutes`,
         metadata: { count: payouts.length, windowMinutes: this.cfg.rollingWindowMs / 60000 },
-        runbook: 'https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-payout-spike.md',
+        runbook:
+          'https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-payout-spike.md',
       });
     }
 
     // 3. Error spike
     if (errors.length >= this.cfg.errorSpikeThreshold) {
-      const severity: AlertSeverity = errors.length >= this.cfg.errorSpikeThreshold * 3 ? 'critical' : 'warning';
+      const severity: AlertSeverity =
+        errors.length >= this.cfg.errorSpikeThreshold * 3 ? 'critical' : 'warning';
       alerts.push({
         type: 'ERROR_SPIKE',
         severity,
         message: `${errors.length} contract error events in the last ${this.cfg.rollingWindowMs / 60000} minutes`,
-        ...(severity === 'critical' ? {
-          circuitBreakerAction: 'Halt new group creation and contributions via feature flag until root cause is identified.',
-        } : {}),
+        ...(severity === 'critical'
+          ? {
+              circuitBreakerAction:
+                'Halt new group creation and contributions via feature flag until root cause is identified.',
+            }
+          : {}),
         metadata: { count: errors.length },
-        runbook: 'https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-error-spike.md',
+        runbook:
+          'https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-error-spike.md',
       });
     }
 
@@ -195,7 +217,8 @@ export class OnChainMonitor {
         severity: 'warning',
         message: `${reverts.length} transaction reverts in the last ${this.cfg.rollingWindowMs / 60000} minutes`,
         metadata: { count: reverts.length },
-        runbook: 'https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-reverts.md',
+        runbook:
+          'https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-reverts.md',
       });
     }
 
@@ -206,7 +229,8 @@ export class OnChainMonitor {
         severity: 'warning',
         message: `Admin action detected: ${a.eventType} (tx: ${a.txHash})`,
         metadata: { eventType: a.eventType, txHash: a.txHash, ledgerSeq: a.ledgerSeq },
-        runbook: 'https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-admin-action.md',
+        runbook:
+          'https://github.com/ComputerOracle/Stellar-Save/blob/main/docs/runbooks/on-chain-admin-action.md',
       });
     }
 

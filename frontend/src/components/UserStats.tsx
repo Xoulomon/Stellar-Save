@@ -13,11 +13,7 @@ interface UserStatsProps {
   className?: string;
 }
 
-export function UserStats({
-  stats,
-  currency = 'XLM',
-  className = '',
-}: UserStatsProps) {
+export function UserStats({ stats, currency = 'XLM', className = '' }: UserStatsProps) {
   return (
     <div className={`user-stats ${className}`}>
       <div className="user-stats-grid">

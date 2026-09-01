@@ -40,7 +40,11 @@ describe('submitKyc', () => {
   it('creates a pending KYC record', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ id: 'prov-1' }) } as any);
     prisma.kycRecord.upsert.mockResolvedValue(baseRecord);
-    const result = await submitKyc({ userId: 'user1', walletAddress: 'GABC', fields: { first_name: 'Alice' } });
+    const result = await submitKyc({
+      userId: 'user1',
+      walletAddress: 'GABC',
+      fields: { first_name: 'Alice' },
+    });
     expect(result.status).toBe('pending');
     expect(result.kycId).toBe('prov-1');
     expect(prisma.kycRecord.upsert).toHaveBeenCalledTimes(1);
@@ -62,7 +66,11 @@ describe('getKycStatus', () => {
   });
 
   it('returns existing record status', async () => {
-    prisma.kycRecord.findUnique.mockResolvedValue({ ...baseRecord, status: 'approved', reviewedAt: new Date() });
+    prisma.kycRecord.findUnique.mockResolvedValue({
+      ...baseRecord,
+      status: 'approved',
+      reviewedAt: new Date(),
+    });
     const result = await getKycStatus('user1');
     expect(result.status).toBe('approved');
   });
@@ -71,14 +79,19 @@ describe('getKycStatus', () => {
 describe('pollAndUpdateStatus', () => {
   it('transitions pending to approved and emits event', async () => {
     prisma.kycRecord.findUnique
-      .mockResolvedValueOnce(baseRecord)         // first call in pollAndUpdateStatus
+      .mockResolvedValueOnce(baseRecord) // first call in pollAndUpdateStatus
       .mockResolvedValueOnce({ ...baseRecord, status: 'approved', reviewedAt: new Date() }); // getKycStatus at end
     prisma.kycRecord.update.mockResolvedValue({ ...baseRecord, status: 'approved' });
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'approved' }) } as any);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ status: 'approved' }),
+    } as any);
     const result = await pollAndUpdateStatus('user1');
     expect(result.status).toBe('approved');
     expect(prisma.kycStatusEvent.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ oldStatus: 'pending', newStatus: 'approved' }) })
+      expect.objectContaining({
+        data: expect.objectContaining({ oldStatus: 'pending', newStatus: 'approved' }),
+      })
     );
   });
 

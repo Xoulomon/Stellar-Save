@@ -6,10 +6,42 @@ import { GroupComparison } from '../components/GroupComparison';
 import type { PublicGroup } from '../types/group';
 
 const mockGroups: PublicGroup[] = [
-  { id: '1', name: 'Alpha Savers', memberCount: 8, contributionAmount: 100, currency: 'XLM', status: 'active', createdAt: new Date('2024-01-01') },
-  { id: '2', name: 'Beta Circle', memberCount: 5, contributionAmount: 50, currency: 'XLM', status: 'pending', createdAt: new Date('2024-02-01') },
-  { id: '3', name: 'Gamma Fund', memberCount: 10, contributionAmount: 200, currency: 'XLM', status: 'active', createdAt: new Date('2024-03-01') },
-  { id: '4', name: 'Delta Pool', memberCount: 3, contributionAmount: 75, currency: 'XLM', status: 'completed', createdAt: new Date('2024-04-01') },
+  {
+    id: '1',
+    name: 'Alpha Savers',
+    memberCount: 8,
+    contributionAmount: 100,
+    currency: 'XLM',
+    status: 'active',
+    createdAt: new Date('2024-01-01'),
+  },
+  {
+    id: '2',
+    name: 'Beta Circle',
+    memberCount: 5,
+    contributionAmount: 50,
+    currency: 'XLM',
+    status: 'pending',
+    createdAt: new Date('2024-02-01'),
+  },
+  {
+    id: '3',
+    name: 'Gamma Fund',
+    memberCount: 10,
+    contributionAmount: 200,
+    currency: 'XLM',
+    status: 'active',
+    createdAt: new Date('2024-03-01'),
+  },
+  {
+    id: '4',
+    name: 'Delta Pool',
+    memberCount: 3,
+    contributionAmount: 75,
+    currency: 'XLM',
+    status: 'completed',
+    createdAt: new Date('2024-04-01'),
+  },
 ];
 
 function renderComp(groups = mockGroups) {
@@ -86,7 +118,7 @@ describe('GroupComparison', () => {
   it('highlights lowest contribution amount as best', () => {
     renderComp();
     fireEvent.click(screen.getByRole('button', { name: /Select Alpha Savers/i })); // 100 XLM
-    fireEvent.click(screen.getByRole('button', { name: /Select Beta Circle/i }));  // 50 XLM (best)
+    fireEvent.click(screen.getByRole('button', { name: /Select Beta Circle/i })); // 50 XLM (best)
     const bestCells = document.querySelectorAll('.gc-cell--best');
     // At least one best cell for contribution
     expect(bestCells.length).toBeGreaterThan(0);

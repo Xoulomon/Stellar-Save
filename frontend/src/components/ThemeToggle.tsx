@@ -1,9 +1,9 @@
-import { useTheme } from "../hooks/useTheme";
-import "./ThemeToggle.css";
+import { useTheme } from '../hooks/useTheme';
+import './ThemeToggle.css';
 
 interface ThemeToggleProps {
   /** Render as a compact icon button (default) or a labelled button */
-  variant?: "icon" | "labelled";
+  variant?: 'icon' | 'labelled';
   className?: string;
 }
 
@@ -18,11 +18,11 @@ interface ThemeToggleProps {
  * // In settings with label
  * <ThemeToggle variant="labelled" />
  */
-export function ThemeToggle({ variant = "icon", className = "" }: ThemeToggleProps) {
+export function ThemeToggle({ variant = 'icon', className = '' }: ThemeToggleProps) {
   const { isDark, toggleTheme, resolvedMode } = useTheme();
 
-  const label = isDark ? "Switch to light mode" : "Switch to dark mode";
-  const icon = isDark ? "☀️" : "🌙";
+  const label = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+  const icon = isDark ? '☀️' : '🌙';
 
   return (
     <button
@@ -35,9 +35,9 @@ export function ThemeToggle({ variant = "icon", className = "" }: ThemeTogglePro
       <span className="theme-toggle__icon" aria-hidden="true">
         {icon}
       </span>
-      {variant === "labelled" && (
+      {variant === 'labelled' && (
         <span className="theme-toggle__label">
-          {resolvedMode === "dark" ? "Dark mode" : "Light mode"}
+          {resolvedMode === 'dark' ? 'Dark mode' : 'Light mode'}
         </span>
       )}
     </button>

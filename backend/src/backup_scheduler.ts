@@ -5,8 +5,8 @@ import type { BackupJob } from './models';
 
 
 export interface SchedulerConfig {
-  fullBackupIntervalMs: number;    // default: 24h
-  incrementalIntervalMs: number;   // default: 6h
+  fullBackupIntervalMs: number; // default: 24h
+  incrementalIntervalMs: number; // default: 6h
 }
 
 const DEFAULT_CONFIG: SchedulerConfig = {
@@ -33,9 +33,18 @@ export class BackupScheduler {
     // Run immediately on start, then on interval
     this.runFull();
     this.fullTimer = setInterval(() => this.runFull(), this.config.fullBackupIntervalMs);
-    this.incrementalTimer = setInterval(() => this.runIncremental(), this.config.incrementalIntervalMs);
+    this.incrementalTimer = setInterval(
+      () => this.runIncremental(),
+      this.config.incrementalIntervalMs
+    );
 
-    logger.info('[BackupScheduler] Started — full every', this.config.fullBackupIntervalMs / 3600000, 'h, incremental every', this.config.incrementalIntervalMs / 3600000, 'h');
+    logger.info(
+      '[BackupScheduler] Started — full every',
+      this.config.fullBackupIntervalMs / 3600000,
+      'h, incremental every',
+      this.config.incrementalIntervalMs / 3600000,
+      'h'
+    );
   }
 
   stop(): void {

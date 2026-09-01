@@ -45,7 +45,9 @@ export function useKycStatus(): {
     }
   }, [isAuthenticated, authenticate]);
 
-  useEffect(() => { void fetchStatus(); }, [fetchStatus]);
+  useEffect(() => {
+    void fetchStatus();
+  }, [fetchStatus]);
 
   return { status, isLoading, error, refresh: fetchStatus };
 }

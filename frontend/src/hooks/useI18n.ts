@@ -13,7 +13,7 @@ export function useI18n() {
       void i18n.changeLanguage(code);
       localStorage.setItem(STORAGE_KEY, code);
     },
-    [i18n],
+    [i18n]
   );
 
   return {

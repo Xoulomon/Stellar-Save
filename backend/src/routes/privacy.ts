@@ -100,7 +100,9 @@ export function createPrivacyRouter(): Router {
       return res.status(200).json({ requests });
     } catch (error) {
       logger.error('Error fetching privacy requests', { error: String(error) });
-      return next(new AppError('PRIVACY_REQUESTS_FETCH_FAILED', 'Failed to fetch privacy requests', 500));
+      return next(
+        new AppError('PRIVACY_REQUESTS_FETCH_FAILED', 'Failed to fetch privacy requests', 500)
+      );
     }
   });
 

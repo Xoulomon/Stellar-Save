@@ -20,11 +20,12 @@ export interface CalendarEvent {
 
 function buildEvents(
   contributions: GroupContribution[],
-  currentCycle: GroupCycle | null,
+  currentCycle: GroupCycle | null
 ): CalendarEvent[] {
   const events: CalendarEvent[] = contributions.map((c) => ({
     id: c.id,
-    title: c.status === 'completed' ? `✓ ${c.memberName ?? c.memberId}` : c.memberName ?? c.memberId,
+    title:
+      c.status === 'completed' ? `✓ ${c.memberName ?? c.memberId}` : (c.memberName ?? c.memberId),
     start: c.timestamp,
     end: c.timestamp,
     status: c.status,
@@ -65,7 +66,7 @@ export function ContributionCalendar({
 
   const events = useMemo(
     () => buildEvents(contributions, currentCycle),
-    [contributions, currentCycle],
+    [contributions, currentCycle]
   );
 
   return (

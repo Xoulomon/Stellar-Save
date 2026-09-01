@@ -33,7 +33,8 @@ function getBest(groups: PublicGroup[], key: MetricKey): string | null {
 }
 
 function formatValue(group: PublicGroup, key: MetricKey): string {
-  if (key === 'contributionAmount') return `${group.contributionAmount.toLocaleString()} ${group.currency}`;
+  if (key === 'contributionAmount')
+    return `${group.contributionAmount.toLocaleString()} ${group.currency}`;
   if (key === 'memberCount') return String(group.memberCount);
   return group.status;
 }
@@ -106,20 +107,31 @@ export function GroupComparison({ availableGroups }: GroupComparisonProps) {
                     <tr key={key}>
                       <th scope="row">{label}</th>
                       {selected.map((g) => {
-                        const raw = key === 'memberCount' ? String(g.memberCount) : key === 'contributionAmount' ? String(g.contributionAmount) : null;
+                        const raw =
+                          key === 'memberCount'
+                            ? String(g.memberCount)
+                            : key === 'contributionAmount'
+                              ? String(g.contributionAmount)
+                              : null;
                         const isBest = best !== null && raw === best;
                         return (
                           <td
                             key={g.id}
                             className={isBest ? 'gc-cell--best' : undefined}
-                            aria-label={isBest ? `${label}: ${formatValue(g, key)} (best)` : undefined}
+                            aria-label={
+                              isBest ? `${label}: ${formatValue(g, key)} (best)` : undefined
+                            }
                           >
                             {key === 'status' ? (
                               <GroupBadge status={g.status} />
                             ) : (
                               formatValue(g, key)
                             )}
-                            {isBest && <span className="gc-best-badge" aria-hidden="true">★</span>}
+                            {isBest && (
+                              <span className="gc-best-badge" aria-hidden="true">
+                                ★
+                              </span>
+                            )}
                           </td>
                         );
                       })}
@@ -131,7 +143,12 @@ export function GroupComparison({ availableGroups }: GroupComparisonProps) {
           </div>
 
           <div className="gc-actions">
-            <Button variant="secondary" size="sm" onClick={handleExport} aria-label="Export comparison">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleExport}
+              aria-label="Export comparison"
+            >
               Export / Print
             </Button>
           </div>
@@ -139,7 +156,9 @@ export function GroupComparison({ availableGroups }: GroupComparisonProps) {
       )}
 
       {selected.length === 0 && (
-        <p className="gc-empty" role="status">Select at least one group above to start comparing.</p>
+        <p className="gc-empty" role="status">
+          Select at least one group above to start comparing.
+        </p>
       )}
     </div>
   );

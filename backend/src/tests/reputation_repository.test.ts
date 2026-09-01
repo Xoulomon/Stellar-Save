@@ -26,7 +26,13 @@ describe('MemberReputationRepository', () => {
   });
 
   it('findByAddress delegates to prisma.findUnique with the address filter', async () => {
-    const row = { address: 'GABC', score: 0.5, totalContributions: 2, onTimeContributions: 1, updatedAt: new Date() };
+    const row = {
+      address: 'GABC',
+      score: 0.5,
+      totalContributions: 2,
+      onTimeContributions: 1,
+      updatedAt: new Date(),
+    };
     db.memberReputation.findUnique.mockResolvedValue(row);
 
     await expect(repo.findByAddress('GABC')).resolves.toBe(row);
@@ -55,12 +61,18 @@ describe('MemberReputationRepository', () => {
   it('topByScore orders by score desc with a bounded take', async () => {
     db.memberReputation.findMany.mockResolvedValue([]);
     await repo.topByScore(5);
-    expect(db.memberReputation.findMany).toHaveBeenCalledWith({ orderBy: { score: 'desc' }, take: 5 });
+    expect(db.memberReputation.findMany).toHaveBeenCalledWith({
+      orderBy: { score: 'desc' },
+      take: 5,
+    });
   });
 
   it('topByScore defaults the limit to 20', async () => {
     db.memberReputation.findMany.mockResolvedValue([]);
     await repo.topByScore();
-    expect(db.memberReputation.findMany).toHaveBeenCalledWith({ orderBy: { score: 'desc' }, take: 20 });
+    expect(db.memberReputation.findMany).toHaveBeenCalledWith({
+      orderBy: { score: 'desc' },
+      take: 20,
+    });
   });
 });

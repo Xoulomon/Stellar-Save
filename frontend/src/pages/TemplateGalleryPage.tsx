@@ -10,7 +10,6 @@ import { AppLayout } from '../ui';
 
 import type { GroupTemplate } from '../types/template';
 
-
 type CategoryFilter = 'all' | GroupTemplate['category'];
 
 export default function TemplateGalleryPage() {
@@ -18,19 +17,15 @@ export default function TemplateGalleryPage() {
   const [preview, setPreview] = useState<GroupTemplate | null>(null);
   const [filter, setFilter] = useState<CategoryFilter>('all');
 
-  const filtered = filter === 'all'
-    ? GROUP_TEMPLATES
-    : GROUP_TEMPLATES.filter((t) => t.category === filter);
+  const filtered =
+    filter === 'all' ? GROUP_TEMPLATES : GROUP_TEMPLATES.filter((t) => t.category === filter);
 
   const handleUse = (template: GroupTemplate) => {
     navigate(ROUTES.GROUP_CREATE, { state: { templateId: template.id } });
   };
 
   return (
-    <AppLayout
-      title="Group Templates"
-      subtitle="Pick a template to quickly start a savings group"
-    >
+    <AppLayout title="Group Templates" subtitle="Pick a template to quickly start a savings group">
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         <ToggleButtonGroup
           value={filter}
@@ -57,22 +52,13 @@ export default function TemplateGalleryPage() {
             }}
           >
             {filtered.map((t) => (
-              <TemplateCard
-                key={t.id}
-                template={t}
-                onUse={handleUse}
-                onPreview={setPreview}
-              />
+              <TemplateCard key={t.id} template={t} onUse={handleUse} onPreview={setPreview} />
             ))}
           </Box>
         )}
       </Box>
 
-      <TemplatePreviewModal
-        template={preview}
-        onClose={() => setPreview(null)}
-        onUse={handleUse}
-      />
+      <TemplatePreviewModal template={preview} onClose={() => setPreview(null)} onUse={handleUse} />
     </AppLayout>
   );
 }

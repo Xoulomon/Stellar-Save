@@ -34,7 +34,7 @@ export function buildGroupContributionsCSV(group: DetailedGroup): string {
       escapeCSV(c.amount),
       escapeCSV(c.transactionHash),
       escapeCSV(c.status),
-    ].join(','),
+    ].join(',')
   );
   return [headers.join(','), ...rows].join('\n');
 }
@@ -43,9 +43,7 @@ export function buildGroupContributionsCSV(group: DetailedGroup): string {
 export function buildGroupReportPDFHtml(group: DetailedGroup): string {
   const poolTotal = group.contributionAmount * group.totalMembers;
   const progress =
-    group.targetAmount > 0
-      ? ((group.currentAmount / group.targetAmount) * 100).toFixed(1)
-      : '0.0';
+    group.targetAmount > 0 ? ((group.currentAmount / group.targetAmount) * 100).toFixed(1) : '0.0';
 
   const cycleRows = group.cycles
     .map(
@@ -56,7 +54,7 @@ export function buildGroupReportPDFHtml(group: DetailedGroup): string {
       <td>${c.currentAmount} XLM</td>
       <td>${c.targetAmount} XLM</td>
       <td>${c.status}</td>
-    </tr>`,
+    </tr>`
     )
     .join('');
 
@@ -68,7 +66,7 @@ export function buildGroupReportPDFHtml(group: DetailedGroup): string {
       <td style="font-family:monospace;font-size:10px">${m.address}</td>
       <td>${m.totalContributions} XLM</td>
       <td>${m.isActive ? 'Active' : 'Inactive'}</td>
-    </tr>`,
+    </tr>`
     )
     .join('');
 
@@ -81,7 +79,7 @@ export function buildGroupReportPDFHtml(group: DetailedGroup): string {
       <td>${c.amount} XLM</td>
       <td>${c.transactionHash}</td>
       <td>${c.status}</td>
-    </tr>`,
+    </tr>`
     )
     .join('');
 
@@ -182,7 +180,7 @@ export function useGroupReportExport(group: DetailedGroup) {
       // Derive a dated filename reusing the shared helper.
       const filename = buildFilename(format).replace(
         'stellar-save-transactions',
-        `stellar-save-group-${group.id}-report`,
+        `stellar-save-group-${group.id}-report`
       );
 
       if (format === 'csv') {
@@ -198,7 +196,7 @@ export function useGroupReportExport(group: DetailedGroup) {
       win.focus();
       win.print();
     },
-    [group],
+    [group]
   );
 
   return { exportReport };

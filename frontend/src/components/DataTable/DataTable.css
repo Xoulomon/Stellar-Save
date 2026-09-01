@@ -135,8 +135,12 @@
 }
 
 @keyframes data-table-shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 /* ── Pagination ────────────────────────────────────────────────────────────── */
@@ -174,7 +178,9 @@
   color: var(--color-text-primary, rgba(0, 0, 0, 0.87));
   cursor: pointer;
   font-size: 1rem;
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 }
 
 .data-table__page-btn:hover:not(:disabled) {

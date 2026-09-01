@@ -50,13 +50,21 @@ export const QuickActionSidebar: React.FC = () => {
     setValue('');
   };
 
-  const handleClose = () => { setActiveAction(null); setValue(''); };
+  const handleClose = () => {
+    setActiveAction(null);
+    setValue('');
+  };
   const currentAction = ACTIONS.find((a) => a.id === activeAction);
 
   return (
     <>
-      <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-        <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 }}>Quick Actions</Typography>
+      <Paper
+        elevation={0}
+        sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}
+      >
+        <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 }}>
+          Quick Actions
+        </Typography>
         <Stack spacing={2}>
           {ACTIONS.map((action) => (
             <Button key={action.id} variant="contained" color={action.color} startIcon={action.icon} onClick={() => setActiveAction(action.id)} fullWidth
@@ -70,11 +78,28 @@ export const QuickActionSidebar: React.FC = () => {
       <Dialog open={Boolean(activeAction)} onClose={handleClose} maxWidth="xs" fullWidth>
         <DialogTitle fontWeight="bold">{currentAction?.dialogTitle}</DialogTitle>
         <DialogContent>
-          <TextField autoFocus fullWidth variant="outlined" placeholder={currentAction?.placeholder} value={value} onChange={(e) => setValue(e.target.value)} sx={{ mt: 1 }} />
+          <TextField
+            autoFocus
+            fullWidth
+            variant="outlined"
+            placeholder={currentAction?.placeholder}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            sx={{ mt: 1 }}
+          />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={handleClose} variant="outlined" sx={{ textTransform: 'none' }}>Cancel</Button>
-          <Button onClick={handleConfirm} variant="contained" disabled={!value.trim()} sx={{ textTransform: 'none', fontWeight: 'bold' }}>Confirm</Button>
+          <Button onClick={handleClose} variant="outlined" sx={{ textTransform: 'none' }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            variant="contained"
+            disabled={!value.trim()}
+            sx={{ textTransform: 'none', fontWeight: 'bold' }}
+          >
+            Confirm
+          </Button>
         </DialogActions>
       </Dialog>
     </>

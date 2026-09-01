@@ -2,7 +2,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-
 import { useGroupMutations } from '../hooks/useGroupMutations';
 import * as groupApi from '../utils/groupApi';
 

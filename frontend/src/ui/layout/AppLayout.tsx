@@ -11,10 +11,10 @@ import {
   Stack,
   Toolbar,
   Typography,
-} from "@mui/material";
-import { useMemo, useState, type ReactNode } from "react";
+} from '@mui/material';
+import { useMemo, useState, type ReactNode } from 'react';
 
-import { WalletStatusIndicator } from "../../components/WalletStatusIndicator";
+import { WalletStatusIndicator } from '../../components/WalletStatusIndicator';
 
 export interface LayoutNavItem {
   key: string;
@@ -39,7 +39,7 @@ export function AppLayout({
   navItems = [],
   sidebar,
   children,
-  footerText = "Stellar Save",
+  footerText = 'Stellar Save',
 }: AppLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const hasSidebar = Boolean(sidebar);
@@ -57,44 +57,48 @@ export function AppLayout({
           <ListItemText primary={item.label} />
         </ListItemButton>
       )),
-    [navItems],
+    [navItems]
   );
 
   return (
-    <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Skip-to-content link — visible only when focused, for keyboard/AT users */}
       <a
         href="#main-content"
         style={{
-          position: "absolute",
+          position: 'absolute',
           top: -9999,
           left: 8,
           zIndex: 9999,
-          padding: "8px 16px",
-          background: "#1976d2",
-          color: "#fff",
+          padding: '8px 16px',
+          background: '#1976d2',
+          color: '#fff',
           fontWeight: 600,
           borderRadius: 4,
-          textDecoration: "none",
+          textDecoration: 'none',
         }}
-        onFocus={(e) => { e.currentTarget.style.top = "8px"; }}
-        onBlur={(e) => { e.currentTarget.style.top = "-9999px"; }}
+        onFocus={(e) => {
+          e.currentTarget.style.top = '8px';
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.top = '-9999px';
+        }}
       >
         Skip to main content
       </a>
       <AppBar position="sticky" color="transparent" elevation={0}>
         <Toolbar
           sx={{
-            borderBottom: "1px solid",
-            borderColor: "divider",
-            bgcolor: "rgba(255, 255, 255, 0.92)",
-            backdropFilter: "blur(8px)",
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'rgba(255, 255, 255, 0.92)',
+            backdropFilter: 'blur(8px)',
             gap: 1,
           }}
         >
           <IconButton
             edge="start"
-            sx={{ display: { md: "none" } }}
+            sx={{ display: { md: 'none' } }}
             onClick={() => setIsMobileMenuOpen(true)}
             aria-label="Open menu"
           >
@@ -110,7 +114,7 @@ export function AppLayout({
             ) : null}
           </Box>
 
-          <Stack direction="row" spacing={1} sx={{ display: { xs: "none", md: "flex" } }}>
+          <Stack direction="row" spacing={1} sx={{ display: { xs: 'none', md: 'flex' } }}>
             {navItems.map((item) => (
               <ListItemButton
                 key={item.key}
@@ -118,8 +122,8 @@ export function AppLayout({
                 sx={{
                   borderRadius: 1.5,
                   px: 1.5,
-                  minHeight: "auto",
-                  width: "auto",
+                  minHeight: 'auto',
+                  width: 'auto',
                 }}
               >
                 <ListItemText primary={item.label} />
@@ -136,24 +140,20 @@ export function AppLayout({
         id="main-content"
         maxWidth="lg"
         sx={{
-          width: "100%",
+          width: '100%',
           flexGrow: 1,
           py: { xs: 2, md: 3 },
         }}
       >
         <Box
           sx={{
-            display: "grid",
-            gridTemplateColumns: hasSidebar
-              ? { xs: "1fr", md: "280px 1fr" }
-              : "1fr",
+            display: 'grid',
+            gridTemplateColumns: hasSidebar ? { xs: '1fr', md: '280px 1fr' } : '1fr',
             gap: 2,
-            alignItems: "start",
+            alignItems: 'start',
           }}
         >
-          {hasSidebar ? (
-            <Box sx={{ display: { xs: "none", md: "block" } }}>{sidebar}</Box>
-          ) : null}
+          {hasSidebar ? <Box sx={{ display: { xs: 'none', md: 'block' } }}>{sidebar}</Box> : null}
           <Box>{children}</Box>
         </Box>
       </Container>
@@ -161,11 +161,11 @@ export function AppLayout({
       <Box
         component="footer"
         sx={{
-          borderTop: "1px solid",
-          borderColor: "divider",
+          borderTop: '1px solid',
+          borderColor: 'divider',
           py: 1.5,
           px: 2,
-          bgcolor: "background.paper",
+          bgcolor: 'background.paper',
         }}
       >
         <Container maxWidth="lg">
@@ -180,7 +180,7 @@ export function AppLayout({
         open={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
         ModalProps={{ keepMounted: true }}
-        sx={{ display: { xs: "block", md: "none" } }}
+        sx={{ display: { xs: 'block', md: 'none' } }}
       >
         <Box sx={{ width: drawerWidth }} role="presentation">
           <Box sx={{ px: 2, py: 1.5 }}>
@@ -199,4 +199,3 @@ export function AppLayout({
     </Box>
   );
 }
-

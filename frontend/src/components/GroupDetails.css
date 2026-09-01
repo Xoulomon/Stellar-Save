@@ -236,7 +236,9 @@
   background-color: var(--color-bg-secondary);
   border-radius: 8px;
   border: 1px solid var(--color-border);
-  transition: border-color 0.25s, transform 0.25s;
+  transition:
+    border-color 0.25s,
+    transform 0.25s;
 }
 
 .group-details-member-clickable {
@@ -305,7 +307,9 @@
   background-color: var(--color-bg-secondary);
   border-radius: 8px;
   border: 1px solid var(--color-border);
-  transition: border-color 0.25s, transform 0.25s;
+  transition:
+    border-color 0.25s,
+    transform 0.25s;
 }
 
 .group-details-contribution-clickable {
@@ -397,4 +401,3 @@
     align-items: flex-start;
   }
 }
-

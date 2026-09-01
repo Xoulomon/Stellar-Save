@@ -23,7 +23,9 @@
   line-height: 1.4;
   max-width: 250px;
   word-wrap: break-word;
-  box-shadow: var(--color-shadow) 0 4px 6px, var(--color-shadow) 0 2px 4px;
+  box-shadow:
+    var(--color-shadow) 0 4px 6px,
+    var(--color-shadow) 0 2px 4px;
 }
 
 .tooltip-arrow {

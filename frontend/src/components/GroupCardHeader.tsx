@@ -7,7 +7,12 @@ interface GroupCardHeaderProps {
   imageUrl?: string;
 }
 
-export function GroupCardHeader({ groupName, status, description, imageUrl }: GroupCardHeaderProps) {
+export function GroupCardHeader({
+  groupName,
+  status,
+  description,
+  imageUrl,
+}: GroupCardHeaderProps) {
   return (
     <>
       {imageUrl && (

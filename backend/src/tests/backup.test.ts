@@ -25,27 +25,54 @@ function describe(name: string, fn: () => void) {
   fn();
   _currentBeforeEach = saved;
 }
-function beforeEach(fn: () => void) { _currentBeforeEach = fn; }
+function beforeEach(fn: () => void) {
+  _currentBeforeEach = fn;
+}
 function test(name: string, fn: () => Promise<void> | void) {
   const setup = _currentBeforeEach; // captured at registration time
   console.log(`  Test: ${name}`);
   _testQueue.push(async () => {
-    try { if (setup) setup(); await fn(); }
-    catch (e: any) { console.error(`  ✗ FAILED: ${name}\n   `, e.message); process.exitCode = 1; }
+    try {
+      if (setup) setup();
+      await fn();
+    } catch (e: any) {
+      console.error(`  ✗ FAILED: ${name}\n   `, e.message);
+      process.exitCode = 1;
+    }
   });
   // Kick off the drain after all synchronous registration is done
   Promise.resolve().then(() => _drainQueue());
 }
 const expect = (val: any) => ({
-  toBe: (exp: any) => { if (val !== exp) throw new Error(`Expected ${JSON.stringify(exp)}, got ${JSON.stringify(val)}`); },
-  toEqual: (exp: any) => { if (JSON.stringify(val) !== JSON.stringify(exp)) throw new Error(`Expected ${JSON.stringify(exp)}, got ${JSON.stringify(val)}`); },
-  toBeDefined: () => { if (val === undefined || val === null) throw new Error(`Expected defined, got ${val}`); },
-  toBeUndefined: () => { if (val !== undefined) throw new Error(`Expected undefined, got ${val}`); },
-  toContain: (exp: any) => { if (!String(val).includes(String(exp))) throw new Error(`Expected "${val}" to contain "${exp}"`); },
-  toBeGreaterThan: (exp: number) => { if (val <= exp) throw new Error(`Expected ${val} > ${exp}`); },
-  toHaveLength: (exp: number) => { if (val.length !== exp) throw new Error(`Expected length ${exp}, got ${val.length}`); },
-  toBeTruthy: () => { if (!val) throw new Error(`Expected truthy, got ${val}`); },
-  toBeFalsy: () => { if (val) throw new Error(`Expected falsy, got ${val}`); },
+  toBe: (exp: any) => {
+    if (val !== exp) throw new Error(`Expected ${JSON.stringify(exp)}, got ${JSON.stringify(val)}`);
+  },
+  toEqual: (exp: any) => {
+    if (JSON.stringify(val) !== JSON.stringify(exp))
+      throw new Error(`Expected ${JSON.stringify(exp)}, got ${JSON.stringify(val)}`);
+  },
+  toBeDefined: () => {
+    if (val === undefined || val === null) throw new Error(`Expected defined, got ${val}`);
+  },
+  toBeUndefined: () => {
+    if (val !== undefined) throw new Error(`Expected undefined, got ${val}`);
+  },
+  toContain: (exp: any) => {
+    if (!String(val).includes(String(exp)))
+      throw new Error(`Expected "${val}" to contain "${exp}"`);
+  },
+  toBeGreaterThan: (exp: number) => {
+    if (val <= exp) throw new Error(`Expected ${val} > ${exp}`);
+  },
+  toHaveLength: (exp: number) => {
+    if (val.length !== exp) throw new Error(`Expected length ${exp}, got ${val.length}`);
+  },
+  toBeTruthy: () => {
+    if (!val) throw new Error(`Expected truthy, got ${val}`);
+  },
+  toBeFalsy: () => {
+    if (val) throw new Error(`Expected falsy, got ${val}`);
+  },
 });
 
 // ── Mock S3 client ────────────────────────────────────────────────────────────
@@ -53,7 +80,15 @@ function makeMockS3(): S3Client & { store: Map<string, Buffer> } {
   const store = new Map<string, Buffer>();
   return {
     store,
-    async putObject({ Key, Body }: { Bucket: string; Key: string; Body: Buffer; ContentType: string }) {
+    async putObject({
+      Key,
+      Body,
+    }: {
+      Bucket: string;
+      Key: string;
+      Body: Buffer;
+      ContentType: string;
+    }) {
       store.set(Key, Body);
     },
     async getObject({ Key }: { Bucket: string; Key: string }) {
@@ -62,7 +97,7 @@ function makeMockS3(): S3Client & { store: Map<string, Buffer> } {
       return data;
     },
     async listObjects({ Prefix }: { Bucket: string; Prefix: string }) {
-      return Array.from(store.keys()).filter(k => k.startsWith(Prefix));
+      return Array.from(store.keys()).filter((k) => k.startsWith(Prefix));
     },
     async deleteObject({ Key }: { Bucket: string; Key: string }) {
       store.delete(Key);
@@ -91,7 +126,7 @@ describe('BackupService', () => {
   test('full backup completes and uploads to S3', async () => {
     const job = await service.createBackup('full');
     // Wait for async runBackup
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
     const updated = service.getJob(job.id)!;
     expect(updated.status).toBe('completed');
     expect(updated.s3Key).toBeDefined();
@@ -101,9 +136,9 @@ describe('BackupService', () => {
 
   test('incremental backup references base backup', async () => {
     const full = await service.createBackup('full');
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
     const inc = await service.createBackup('incremental', full.id);
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
     expect(inc.type).toBe('incremental');
     expect(inc.baseBackupId).toBe(full.id);
     expect(service.getJob(inc.id)!.status).toBe('completed');
@@ -111,7 +146,7 @@ describe('BackupService', () => {
 
   test('listJobs returns jobs sorted newest first', async () => {
     await service.createBackup('full');
-    await new Promise(r => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 10));
     await service.createBackup('full');
     const jobs = service.listJobs();
     expect(jobs[0].createdAt).toBeGreaterThan(jobs[1].createdAt);
@@ -119,7 +154,7 @@ describe('BackupService', () => {
 
   test('getLatestCompleted returns most recent completed full backup', async () => {
     await service.createBackup('full');
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
     const latest = service.getLatestCompleted('full');
     expect(latest).toBeDefined();
     expect(latest!.status).toBe('completed');
@@ -132,7 +167,7 @@ describe('BackupService', () => {
 
   test('pruneOldBackups removes expired backups', async () => {
     const job = await service.createBackup('full');
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
     // Manually age the job
     const j = service.getJob(job.id)!;
     (j as any).createdAt = Date.now() - 31 * 86_400_000;
@@ -189,7 +224,7 @@ describe('RecoveryService', () => {
 
   test('restore succeeds for a completed backup', async () => {
     const job = await service.createBackup('full');
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
     const result = await recovery.restore(job.id);
     expect(result.jobId).toBe(job.id);
     expect(result.restoredAt).toBeDefined();
@@ -198,36 +233,48 @@ describe('RecoveryService', () => {
 
   test('restore throws for unknown jobId', async () => {
     let threw = false;
-    try { await recovery.restore('bad-id'); } catch { threw = true; }
+    try {
+      await recovery.restore('bad-id');
+    } catch {
+      threw = true;
+    }
     expect(threw).toBeTruthy();
   });
 
   test('restore throws for non-completed job', async () => {
     const job = await service.createBackup('full');
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
     // Force the job into a non-completed state
     (service.getJob(job.id) as any).status = 'failed';
     let threw = false;
-    try { await recovery.restore(job.id); } catch { threw = true; }
+    try {
+      await recovery.restore(job.id);
+    } catch {
+      threw = true;
+    }
     expect(threw).toBeTruthy();
   });
 
   test('restoreLatest restores the most recent completed backup', async () => {
     await service.createBackup('full');
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
     const result = await recovery.restoreLatest('full');
     expect(result.jobId).toBeDefined();
   });
 
   test('restoreLatest throws when no completed backup exists', async () => {
     let threw = false;
-    try { await recovery.restoreLatest('full'); } catch { threw = true; }
+    try {
+      await recovery.restoreLatest('full');
+    } catch {
+      threw = true;
+    }
     expect(threw).toBeTruthy();
   });
 
   test('listRestorePoints returns only completed jobs', async () => {
     await service.createBackup('full');
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
     const points = recovery.listRestorePoints();
     expect(points.length).toBeGreaterThan(0);
     points.forEach((p: any) => expect(p.status).toBe('completed'));
@@ -235,12 +282,16 @@ describe('RecoveryService', () => {
 
   test('restore detects checksum mismatch', async () => {
     const job = await service.createBackup('full');
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
     const j = service.getJob(job.id)!;
     // Tamper with stored checksum
     (j as any).checksum = 'deadbeef';
     let threw = false;
-    try { await recovery.restore(job.id); } catch { threw = true; }
+    try {
+      await recovery.restore(job.id);
+    } catch {
+      threw = true;
+    }
     expect(threw).toBeTruthy();
   });
 });
@@ -263,7 +314,7 @@ describe('BackupMonitor', () => {
 
   test('runChecks emits error for failed backup jobs', async () => {
     const job = await service.createBackup('full');
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
     // Force failure
     const j = service.getJob(job.id)!;
     (j as any).status = 'failed';
@@ -276,7 +327,7 @@ describe('BackupMonitor', () => {
 
   test('runChecks emits warning when backup is stale', async () => {
     await service.createBackup('full');
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
     const latest = service.getLatestCompleted('full')!;
     // Age the backup beyond threshold
     (latest as any).createdAt = Date.now() - 2000;
@@ -324,7 +375,7 @@ describe('BackupRestoreDrill', () => {
 
   test('runDrill passes when the latest backup restores cleanly', async () => {
     const job = await service.createBackup('full');
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
     const run = await drill.runDrill();
     expect(run.status).toBe('passed');
     expect(run.backupJobId).toBe(job.id);

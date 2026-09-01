@@ -213,7 +213,7 @@ describe('Notification System Integration', () => {
 
       // Deliver all via transport
       const deliveryResults = await Promise.all(
-        notifications.map((n) => transport.send(n, ['browser'])),
+        notifications.map((n) => transport.send(n, ['browser']))
       );
 
       expect(deliveryResults).toHaveLength(3);

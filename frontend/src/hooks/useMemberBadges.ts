@@ -38,10 +38,7 @@ export interface UseMemberBadgesReturn {
 
 // ── Badge metadata catalogue ─────────────────────────────────────────────────
 
-const BADGE_META: Record<
-  BadgeType,
-  { name: string; description: string; artwork: string }
-> = {
+const BADGE_META: Record<BadgeType, { name: string; description: string; artwork: string }> = {
   founder: {
     name: 'Founder',
     description: 'Created one of the first savings groups on Stellar Save.',
@@ -123,7 +120,7 @@ export function useMemberBadges(address: string | undefined): UseMemberBadgesRet
         throw new Error('Failed to load badges. Please try again.');
       }),
     [address],
-    { enabled: !!address },
+    { enabled: !!address }
   );
 
   return { badges: data ?? [], isLoading, error, refetch };

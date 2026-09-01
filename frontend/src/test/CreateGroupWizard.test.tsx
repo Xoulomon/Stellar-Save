@@ -150,7 +150,7 @@ describe('Draft save and discard', () => {
         minMembers: '2',
         insuranceEnabled: false,
         insurancePremiumRate: '5',
-      }),
+      })
     );
     render(<CreateGroupForm onSubmit={vi.fn()} />);
     expect(screen.getByLabelText(/group name/i)).toHaveValue('Resumed Group');

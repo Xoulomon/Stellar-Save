@@ -111,9 +111,7 @@ function matchesFilter(event: AppEvent, filter: ActivityFeedFilter): boolean {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useActivityFeed(
-  options: UseActivityFeedOptions = {},
-): UseActivityFeedReturn {
+export function useActivityFeed(options: UseActivityFeedOptions = {}): UseActivityFeedReturn {
   const { pageSize = 20, liveUpdates = true } = options;
 
   const [items, setItems] = useState<ActivityItem[]>([]);
@@ -121,9 +119,7 @@ export function useActivityFeed(
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeFilter, setActiveFilterState] = useState<ActivityFeedFilter>(
-    options.filter ?? {},
-  );
+  const [activeFilter, setActiveFilterState] = useState<ActivityFeedFilter>(options.filter ?? {});
 
   // Cursor for the next "load more" page
   const nextCursorRef = useRef<string | null>(null);
@@ -172,14 +168,12 @@ export function useActivityFeed(
         setHasMore(result.hasMore);
       } catch (err) {
         if (fetchId !== fetchIdRef.current) return;
-        setError(
-          err instanceof Error ? err.message : 'Failed to load activity feed.',
-        );
+        setError(err instanceof Error ? err.message : 'Failed to load activity feed.');
       } finally {
         if (fetchId === fetchIdRef.current) setIsLoading(false);
       }
     },
-    [service, pageSize],
+    [service, pageSize]
   );
 
   // ── Load more (infinite scroll) ────────────────────────────────────────────
@@ -209,14 +203,10 @@ export function useActivityFeed(
         .sort((a, b) => b.timestampMs - a.timestampMs);
 
       nextCursorRef.current = result.nextCursor;
-      setItems((prev) =>
-        [...prev, ...newItems].sort((a, b) => b.timestampMs - a.timestampMs),
-      );
+      setItems((prev) => [...prev, ...newItems].sort((a, b) => b.timestampMs - a.timestampMs));
       setHasMore(result.hasMore);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to load more activity.',
-      );
+      setError(err instanceof Error ? err.message : 'Failed to load more activity.');
     } finally {
       setIsLoadingMore(false);
     }

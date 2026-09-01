@@ -47,11 +47,7 @@ describe('GroupList', () => {
 
   it('shows empty state when no groups', () => {
     render(
-      <GroupList
-        groups={[]}
-        emptyTitle="No groups"
-        emptyDescription="Create your first group"
-      />
+      <GroupList groups={[]} emptyTitle="No groups" emptyDescription="Create your first group" />
     );
 
     expect(screen.getByText('No groups')).toBeInTheDocument();
@@ -62,11 +58,7 @@ describe('GroupList', () => {
     const handleEmptyAction = vi.fn();
 
     render(
-      <GroupList
-        groups={[]}
-        emptyActionLabel="Create Group"
-        onEmptyAction={handleEmptyAction}
-      />
+      <GroupList groups={[]} emptyActionLabel="Create Group" onEmptyAction={handleEmptyAction} />
     );
 
     const actionButton = screen.getByText('Create Group');

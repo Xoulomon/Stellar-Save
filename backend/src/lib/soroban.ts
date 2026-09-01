@@ -38,7 +38,9 @@ export class SorobanClientPool {
     );
 
     for (let i = 0; i < this.total; i++) {
-      this.pool.push(new SorobanRpc.Server(config.rpcUrl, { allowHttp: config.rpcUrl.startsWith('http://') }));
+      this.pool.push(
+        new SorobanRpc.Server(config.rpcUrl, { allowHttp: config.rpcUrl.startsWith('http://') })
+      );
     }
   }
 
@@ -51,7 +53,7 @@ export class SorobanClientPool {
 
     return new Promise<SorobanRpc.Server>((resolve, reject) => {
       const timer = setTimeout(() => {
-        const idx = this.waiters.findIndex(w => w.timer === timer);
+        const idx = this.waiters.findIndex((w) => w.timer === timer);
         if (idx !== -1) this.waiters.splice(idx, 1);
         this.acquireTimeouts++;
         reject(new Error(`SorobanClientPool: acquire timed out after ${this.acquireTimeoutMs}ms`));
@@ -89,10 +91,7 @@ export class SorobanClientPool {
    * @param fn  Work to perform with the client
    * @param op  Optional contract function / RPC operation name for the span
    */
-  async withClient<T>(
-    fn: (client: SorobanRpc.Server) => Promise<T>,
-    op?: string,
-  ): Promise<T> {
+  async withClient<T>(fn: (client: SorobanRpc.Server) => Promise<T>, op?: string): Promise<T> {
     return withSpan(
       op ? `soroban.invoke ${op}` : 'soroban.rpc',
       { 'rpc.system': 'soroban', ...(op ? { 'soroban.function': op } : {}) },
@@ -117,7 +116,7 @@ export class SorobanClientPool {
         } finally {
           this.release(client);
         }
-      },
+      }
     );
   }
 

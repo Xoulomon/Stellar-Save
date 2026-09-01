@@ -30,21 +30,18 @@ const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
   backoffMultiplier: 2,
 };
 
-async function exponentialBackoff(
-  attempt: number,
-  config: Required<RetryConfig>,
-): Promise<void> {
+async function exponentialBackoff(attempt: number, config: Required<RetryConfig>): Promise<void> {
   const delayMs = Math.min(
     config.initialDelayMs * Math.pow(config.backoffMultiplier, attempt),
-    config.maxDelayMs,
+    config.maxDelayMs
   );
-  await new Promise(resolve => setTimeout(resolve, delayMs));
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
 async function ipfsFetch(
   baseUrl: string,
   path: string,
-  options: { method?: string; body?: FormData; timeout?: number; retryConfig?: RetryConfig } = {},
+  options: { method?: string; body?: FormData; timeout?: number; retryConfig?: RetryConfig } = {}
 ): Promise<Response> {
   const url = new URL(`${baseUrl}${path}`);
   const { method = 'POST', body, timeout = 30000, retryConfig } = options;
@@ -87,7 +84,7 @@ async function ipfsFetch(
 async function ipfsJson<T>(
   baseUrl: string,
   path: string,
-  options: { method?: string; body?: FormData; timeout?: number; retryConfig?: RetryConfig } = {},
+  options: { method?: string; body?: FormData; timeout?: number; retryConfig?: RetryConfig } = {}
 ): Promise<T> {
   const res = await ipfsFetch(baseUrl, path, options);
   if (!res.ok) {
@@ -126,7 +123,7 @@ export class IpfsClient {
     const result = await ipfsJson<{ Pins: string[] }>(
       this.baseUrl,
       `/api/v0/pin/add?${params.toString()}`,
-      { timeout: this.timeout, retryConfig: this.retryConfig },
+      { timeout: this.timeout, retryConfig: this.retryConfig }
     );
     return { cid, pinned: result.Pins.includes(cid) };
   }
@@ -136,7 +133,7 @@ export class IpfsClient {
     const result = await ipfsJson<{ Pins: string[] }>(
       this.baseUrl,
       `/api/v0/pin/rm?${params.toString()}`,
-      { timeout: this.timeout, retryConfig: this.retryConfig },
+      { timeout: this.timeout, retryConfig: this.retryConfig }
     );
     return { cid, pinned: !result.Pins.includes(cid) };
   }
@@ -149,7 +146,7 @@ export class IpfsClient {
     const result = await ipfsJson<{ Keys: Record<string, { Type: string }> }>(
       this.baseUrl,
       `/api/v0/pin/ls?${params.toString()}`,
-      { timeout: this.timeout, retryConfig: this.retryConfig },
+      { timeout: this.timeout, retryConfig: this.retryConfig }
     );
     return Object.entries(result.Keys ?? {}).map(([key, val]) => ({
       cid: key,
@@ -170,11 +167,10 @@ export class IpfsClient {
   }
 
   async id(): Promise<{ id: string; addresses: string[] }> {
-    const result = await ipfsJson<{ ID: string; Addresses: string[] }>(
-      this.baseUrl,
-      '/api/v0/id',
-      { timeout: this.timeout, retryConfig: this.retryConfig },
-    );
+    const result = await ipfsJson<{ ID: string; Addresses: string[] }>(this.baseUrl, '/api/v0/id', {
+      timeout: this.timeout,
+      retryConfig: this.retryConfig,
+    });
     return { id: result.ID, addresses: result.Addresses };
   }
 

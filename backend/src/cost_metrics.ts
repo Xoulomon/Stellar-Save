@@ -65,7 +65,7 @@ export function recordStellarFee(
   stroops: number,
   xlmUsdPrice: number,
   network: string,
-  operation: string,
+  operation: string
 ): void {
   const xlm = stroops / 10_000_000;
   stellarFeesXlm.inc({ network, operation }, xlm);

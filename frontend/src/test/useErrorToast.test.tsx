@@ -45,8 +45,7 @@ describe('extractErrorMessage', () => {
 describe('inferErrorKind', () => {
   it('classifies network failures', () => {
     expect(inferErrorKind(new Error('Failed to fetch'))).toBe('network');
-    expect(inferErrorKind('Request timeout'))
-      .toBe('network');
+    expect(inferErrorKind('Request timeout')).toBe('network');
   });
 
   it('classifies validation failures', () => {
@@ -69,13 +68,13 @@ describe('formatErrorMessage', () => {
   it('prefixes the message with the error kind', () => {
     expect(formatErrorMessage('Failed to fetch', 'network')).toBe('Network error: Failed to fetch');
     expect(formatErrorMessage('name is required', 'validation')).toBe(
-      'Invalid input: name is required',
+      'Invalid input: name is required'
     );
   });
 
   it('prepends the caller context when given', () => {
     expect(formatErrorMessage('reverted', 'contract', 'Payout')).toBe(
-      'Payout - Transaction failed: reverted',
+      'Payout - Transaction failed: reverted'
     );
   });
 
@@ -98,10 +97,9 @@ describe('useErrorToast', () => {
   });
 
   it('adds an error toast with the formatted message', () => {
-    const { result } = renderHook(
-      () => ({ errorToast: useErrorToast(), toast: useToast() }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => ({ errorToast: useErrorToast(), toast: useToast() }), {
+      wrapper,
+    });
 
     act(() => {
       result.current.errorToast.showError(new Error('Failed to fetch'), { context: 'Groups' });
@@ -116,10 +114,9 @@ describe('useErrorToast', () => {
   });
 
   it('applies the kind-specific default duration', () => {
-    const { result } = renderHook(
-      () => ({ errorToast: useErrorToast(), toast: useToast() }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => ({ errorToast: useErrorToast(), toast: useToast() }), {
+      wrapper,
+    });
 
     act(() => {
       result.current.errorToast.showValidationError('name is required');
@@ -152,10 +149,9 @@ describe('useErrorToast', () => {
   });
 
   it('honours an explicit duration of 0 rather than the kind default', () => {
-    const { result } = renderHook(
-      () => ({ errorToast: useErrorToast(), toast: useToast() }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => ({ errorToast: useErrorToast(), toast: useToast() }), {
+      wrapper,
+    });
 
     act(() => {
       result.current.errorToast.showError('offline', { duration: 0 });

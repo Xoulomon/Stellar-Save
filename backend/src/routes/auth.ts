@@ -106,20 +106,16 @@ export function createAuthRouter(): Router {
    * Body: { refreshToken }
    * Revokes the session family containing this token (no JWT required — token is proof).
    */
-  router.post(
-    '/logout',
-    validateBody(schemas.authRefresh),
-    async (req: Request, res: Response) => {
-      const { refreshToken } = req.body;
-      try {
-        await revokeSession(refreshToken);
-        return res.status(200).json({ message: 'Logged out' });
-      } catch (error) {
-        logger.warn('Logout error', { error: String(error) });
-        return res.status(200).json({ message: 'Logged out' }); // idempotent
-      }
+  router.post('/logout', validateBody(schemas.authRefresh), async (req: Request, res: Response) => {
+    const { refreshToken } = req.body;
+    try {
+      await revokeSession(refreshToken);
+      return res.status(200).json({ message: 'Logged out' });
+    } catch (error) {
+      logger.warn('Logout error', { error: String(error) });
+      return res.status(200).json({ message: 'Logged out' }); // idempotent
     }
-  );
+  });
 
   /**
    * POST /api/auth/logout-everywhere

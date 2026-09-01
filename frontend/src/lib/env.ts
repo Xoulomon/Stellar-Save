@@ -120,7 +120,7 @@ export class EnvValidationError extends Error {
         ...lines,
         '',
         'Check your .env file against the repo root .env.example and try again.',
-      ].join('\n'),
+      ].join('\n')
     );
     this.name = 'EnvValidationError';
   }

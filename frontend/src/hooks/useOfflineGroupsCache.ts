@@ -6,7 +6,6 @@ import { fetchGroups } from '../utils/groupApi';
 
 import type { GroupFilters, PublicGroup } from '../types/group';
 
-
 /**
  * Offline-cache fallback for the group list, kept out of the query hook so the
  * network/cache decision can be tested without React Query or a provider tree.
@@ -49,7 +48,7 @@ export function useOfflineGroupsCache(): UseOfflineGroupsCacheReturn {
 
       throw new Error('No data available offline');
     },
-    [isOnline],
+    [isOnline]
   );
 
   return { fromCache, isStale, fetchGroupsWithFallback };

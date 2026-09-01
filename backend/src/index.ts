@@ -72,7 +72,7 @@ const CSP_POLICY = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  "report-uri /api/csp-report",
+  'report-uri /api/csp-report',
 ].join('; ');
 
 // ── Global middleware chain (order matters) ──────────────────────────────────
@@ -134,7 +134,7 @@ app.use(
   createHealthRouter({
     checkDatabase: createDatabaseCheck(prisma),
     checkRpc: createRpcCheck(config.stellar.rpcUrl),
-  }),
+  })
 );
 
 app.use(createTieredRateLimiter());
@@ -147,11 +147,15 @@ app.use('/graphql', authRateLimiter);
 app.use('/api/auth', authRateLimiter);
 
 // ── CSP violation reporting ───────────────────────────────────────────────────
-app.post('/api/csp-report', express.json({ type: ['application/json', 'application/csp-report'] }), (req, res) => {
-  const report = req.body?.['csp-report'] ?? req.body;
-  logger.warn('[CSP Violation]', { report: JSON.stringify(report) });
-  res.status(204).end();
-});
+app.post(
+  '/api/csp-report',
+  express.json({ type: ['application/json', 'application/csp-report'] }),
+  (req, res) => {
+    const report = req.body?.['csp-report'] ?? req.body;
+    logger.warn('[CSP Violation]', { report: JSON.stringify(report) });
+    res.status(204).end();
+  }
+);
 
 // ========== CACHE ROUTES (Issue #563) ==========
 
@@ -180,9 +184,12 @@ apolloServer.start().then(() => {
     `);
   });
 
-  app.use('/graphql', expressMiddleware(apolloServer, {
-    context: async () => ({}),
-  }));
+  app.use(
+    '/graphql',
+    expressMiddleware(apolloServer, {
+      context: async () => ({}),
+    })
+  );
 });
 
 const PORT = config.port;
@@ -208,7 +215,11 @@ if (config.ipfs.enabled) {
 // ── Services ─────────────────────────────────────────────────────────────────
 const engine = new RecommendationEngine(mockGroups, mockInteractions);
 const emailService = new EmailService();
-const exportService = new ExportService(emailService, engine.getInteractions(), engine.getPreferences());
+const exportService = new ExportService(
+  emailService,
+  engine.getInteractions(),
+  engine.getPreferences()
+);
 const s3Client = new S3HttpClient();
 const backupService = new BackupService(s3Client);
 const backupScheduler = new BackupScheduler(backupService);
@@ -245,7 +256,9 @@ if (config.backup.drillEnabled) {
 
 // Start the contract event indexer
 if (config.indexer.enabled) {
-  eventIndexer.start().catch((error) => logger.error('event indexer failed to start', errFields(error)));
+  eventIndexer
+    .start()
+    .catch((error) => logger.error('event indexer failed to start', errFields(error)));
 }
 
 // Start on-chain anomaly monitor
@@ -307,10 +320,7 @@ app.use('/api/v1/rate-limits', createQuotaReporterRouter());
 
 // ── IPFS routes ──────────────────────────────────────────────────────────────
 if (ipfsClient && pinningService && metadataCache && ipfsMonitor) {
-  app.use(
-    '/api/v1/ipfs',
-    createIpfsRouter(ipfsClient, pinningService, metadataCache, ipfsMonitor),
-  );
+  app.use('/api/v1/ipfs', createIpfsRouter(ipfsClient, pinningService, metadataCache, ipfsMonitor));
   logger.info('IPFS API mounted', { path: `/api/v1/ipfs`, port: PORT });
 }
 
@@ -331,8 +341,15 @@ app.get('/api/members/:address/reputation', async (req, res, next) => {
 
 // ── Legacy unversioned routes (redirect to v1 for backward compatibility) ────
 app.use((req, res, next) => {
-  const legacyPaths = ['/health', '/recommendations', '/preferences', '/export', '/backup', '/search'];
-  if (legacyPaths.some(p => req.path.startsWith(p))) {
+  const legacyPaths = [
+    '/health',
+    '/recommendations',
+    '/preferences',
+    '/export',
+    '/backup',
+    '/search',
+  ];
+  if (legacyPaths.some((p) => req.path.startsWith(p))) {
     res.setHeader('X-API-Deprecation-Notice', 'Unversioned paths are deprecated. Use /api/v1/...');
     res.setHeader('Deprecation', 'true');
     res.setHeader('Sunset', '2027-01-01');
@@ -394,15 +411,21 @@ server.listen(PORT, async () => {
           ledgerSeq: event.ledger || event.ledgerSeq || 0,
           timestamp: event.createdAt ? new Date(event.createdAt) : new Date(),
         });
-      } catch { /* non-blocking */ }
+      } catch {
+        /* non-blocking */
+      }
     };
   }
 
   // ── Issue #1: Start audit chain integrity verification job ────────────────
   if (process.env.AUDIT_VERIFY_ENABLED !== 'false') {
-    const auditIntervalMs = parseInt(process.env.AUDIT_VERIFY_INTERVAL_MS ?? String(60 * 60 * 1000));
+    const auditIntervalMs = parseInt(
+      process.env.AUDIT_VERIFY_INTERVAL_MS ?? String(60 * 60 * 1000)
+    );
     AuditEventLog.startVerificationJob(auditIntervalMs);
-    logger.info('audit integrity verification job started', { interval_min: auditIntervalMs / 60000 });
+    logger.info('audit integrity verification job started', {
+      interval_min: auditIntervalMs / 60000,
+    });
   }
 
   // ── Issue #3: Start reconciliation service ────────────────────────────────
@@ -415,17 +438,22 @@ server.listen(PORT, async () => {
     });
     reconciliation.start();
     logger.info('reconciliation service started', {
-      interval_min: parseInt(process.env.RECONCILIATION_INTERVAL_MS ?? String(15 * 60 * 1000)) / 60000,
+      interval_min:
+        parseInt(process.env.RECONCILIATION_INTERVAL_MS ?? String(15 * 60 * 1000)) / 60000,
     });
   }
 });
 
 // Graceful shutdown: stop accepting new connections, let in-flight requests
 // finish within a timeout, then close DB connections before exiting.
-const gracefulShutdown = createGracefulShutdown(server, async () => {
-  fraudDetectionWorker.stop();
-  await disconnectPrisma();
-}, { timeoutMs: parseInt(process.env.SHUTDOWN_TIMEOUT_MS ?? '10000', 10) });
+const gracefulShutdown = createGracefulShutdown(
+  server,
+  async () => {
+    fraudDetectionWorker.stop();
+    await disconnectPrisma();
+  },
+  { timeoutMs: parseInt(process.env.SHUTDOWN_TIMEOUT_MS ?? '10000', 10) }
+);
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));

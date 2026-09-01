@@ -20,12 +20,23 @@ let prevClientWidth: PropertyDescriptor | undefined;
 function mockContainerDimensions() {
   prevClientHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight');
   prevClientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
-  Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, get() { return 480; } });
-  Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get() { return 900; } });
+  Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+    configurable: true,
+    get() {
+      return 480;
+    },
+  });
+  Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+    configurable: true,
+    get() {
+      return 900;
+    },
+  });
 }
 
 function restoreContainerDimensions() {
-  if (prevClientHeight) Object.defineProperty(HTMLElement.prototype, 'clientHeight', prevClientHeight);
+  if (prevClientHeight)
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', prevClientHeight);
   if (prevClientWidth) Object.defineProperty(HTMLElement.prototype, 'clientWidth', prevClientWidth);
 }
 
@@ -37,8 +48,22 @@ beforeEach(() => {
     }
     observe(target: Element) {
       this.cb(
-        [{ contentRect: { height: 480, width: 900, x: 0, y: 0, top: 0, right: 900, bottom: 480, left: 0 } as DOMRectReadOnly, target } as ResizeObserverEntry],
-        this as unknown as ResizeObserver,
+        [
+          {
+            contentRect: {
+              height: 480,
+              width: 900,
+              x: 0,
+              y: 0,
+              top: 0,
+              right: 900,
+              bottom: 480,
+              left: 0,
+            } as DOMRectReadOnly,
+            target,
+          } as ResizeObserverEntry,
+        ],
+        this as unknown as ResizeObserver
       );
     }
     unobserve() {}

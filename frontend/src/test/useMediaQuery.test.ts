@@ -116,12 +116,8 @@ describe('useMediaQuery', () => {
     expect(breakpoints.md).toBe(768);
     expect(up('sm')).toBe('(min-width: 640px)');
     expect(down('md')).toBe('(max-width: 1023.98px)');
-    expect(between('sm', 'lg')).toBe(
-      '(min-width: 640px) and (max-width: 1279.98px)'
-    );
-    expect(only('md')).toBe(
-      '(min-width: 768px) and (max-width: 1023.98px)'
-    );
+    expect(between('sm', 'lg')).toBe('(min-width: 640px) and (max-width: 1279.98px)');
+    expect(only('md')).toBe('(min-width: 768px) and (max-width: 1023.98px)');
     expect(mediaQueries.mobile).toBe('(max-width: 767.98px)');
     expect(mediaQueries.desktop).toBe('(min-width: 1024px)');
   });

@@ -6,17 +6,35 @@ import { AppLayout } from '../ui';
 import type { ContributionDataPoint, MemberComparisonItem } from '../types/analytics';
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
-function StatCard({ label, value, sub, isLoading }: { label: string; value: string; sub?: string; isLoading: boolean }) {
+function StatCard({
+  label,
+  value,
+  sub,
+  isLoading,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  isLoading: boolean;
+}) {
   return (
     <Card variant="outlined">
       <CardContent>
-        <Typography variant="caption" color="text.secondary">{label}</Typography>
+        <Typography variant="caption" color="text.secondary">
+          {label}
+        </Typography>
         {isLoading ? (
           <Skeleton width="60%" height={32} />
         ) : (
-          <Typography variant="h5" fontWeight="bold">{value}</Typography>
+          <Typography variant="h5" fontWeight="bold">
+            {value}
+          </Typography>
         )}
-        {sub && <Typography variant="caption" color="text.secondary">{sub}</Typography>}
+        {sub && (
+          <Typography variant="caption" color="text.secondary">
+            {sub}
+          </Typography>
+        )}
       </CardContent>
     </Card>
   );
@@ -33,7 +51,11 @@ function BarChart({ data }: { data: ContributionDataPoint[] }) {
 
   return (
     <Box sx={{ overflowX: 'auto' }}>
-      <svg viewBox={`0 0 ${W} ${H + 24}`} style={{ width: '100%', minWidth: 320 }} aria-label="Contribution history bar chart">
+      <svg
+        viewBox={`0 0 ${W} ${H + 24}`}
+        style={{ width: '100%', minWidth: 320 }}
+        aria-label="Contribution history bar chart"
+      >
         {data.map((d, i) => {
           const x = i * slotW + gap;
           const hC = (d.contributed / maxVal) * H;
@@ -68,7 +90,9 @@ function LegendDot({ color, label }: { color: string; label: string }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
       <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: color }} />
-      <Typography variant="caption" color="text.secondary">{label}</Typography>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
     </Box>
   );
 }
@@ -80,7 +104,12 @@ function MemberComparisonRow({ item }: { item: MemberComparisonItem }) {
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
       <Typography
         variant="body2"
-        sx={{ width: 80, flexShrink: 0, fontWeight: isYou ? 'bold' : 'normal', color: isYou ? 'primary.main' : 'text.primary' }}
+        sx={{
+          width: 80,
+          flexShrink: 0,
+          fontWeight: isYou ? 'bold' : 'normal',
+          color: isYou ? 'primary.main' : 'text.primary',
+        }}
       >
         {item.label}
       </Typography>
@@ -88,7 +117,12 @@ function MemberComparisonRow({ item }: { item: MemberComparisonItem }) {
         <LinearProgress
           variant="determinate"
           value={item.onTimePercent}
-          sx={{ height: 8, borderRadius: 4, bgcolor: 'action.hover', '& .MuiLinearProgress-bar': { bgcolor: isYou ? 'primary.main' : 'text.disabled' } }}
+          sx={{
+            height: 8,
+            borderRadius: 4,
+            bgcolor: 'action.hover',
+            '& .MuiLinearProgress-bar': { bgcolor: isYou ? 'primary.main' : 'text.disabled' },
+          }}
         />
       </Box>
       <Typography variant="body2" sx={{ width: 44, textAlign: 'right', flexShrink: 0 }}>
@@ -107,18 +141,36 @@ export default function AnalyticsDashboardPage() {
   return (
     <AppLayout title="Analytics" subtitle="Your contribution patterns and statistics">
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-
         {/* Stats row */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 2 }}>
-          <StatCard label="Total Contributed" value={`${stats.totalContributed.toLocaleString()} XLM`} isLoading={isLoading} />
-          <StatCard label="Total Received" value={`${stats.totalReceived.toLocaleString()} XLM`} isLoading={isLoading} />
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' },
+            gap: 2,
+          }}
+        >
+          <StatCard
+            label="Total Contributed"
+            value={`${stats.totalContributed.toLocaleString()} XLM`}
+            isLoading={isLoading}
+          />
+          <StatCard
+            label="Total Received"
+            value={`${stats.totalReceived.toLocaleString()} XLM`}
+            isLoading={isLoading}
+          />
           <StatCard
             label="ROI"
             value={`${stats.roi >= 0 ? '+' : ''}${stats.roi.toFixed(1)}%`}
             sub="vs. contributed"
             isLoading={isLoading}
           />
-          <StatCard label="On-Time Rate" value={`${stats.onTimePercent.toFixed(1)}%`} sub={`${stats.activeGroups} active groups`} isLoading={isLoading} />
+          <StatCard
+            label="On-Time Rate"
+            value={`${stats.onTimePercent.toFixed(1)}%`}
+            sub={`${stats.activeGroups} active groups`}
+            isLoading={isLoading}
+          />
         </Box>
 
         {/* ROI colour hint */}
@@ -136,7 +188,11 @@ export default function AnalyticsDashboardPage() {
             <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 2 }}>
               Contribution History
             </Typography>
-            {isLoading ? <Skeleton variant="rectangular" height={160} /> : <BarChart data={history} />}
+            {isLoading ? (
+              <Skeleton variant="rectangular" height={160} />
+            ) : (
+              <BarChart data={history} />
+            )}
           </CardContent>
         </Card>
 
@@ -157,7 +213,6 @@ export default function AnalyticsDashboardPage() {
             )}
           </CardContent>
         </Card>
-
       </Box>
     </AppLayout>
   );

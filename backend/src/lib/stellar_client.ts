@@ -20,7 +20,11 @@ export class StellarClient implements IStellarClient {
       id: 1,
       method: 'simulateTransaction',
       params: {
-        transaction: JSON.stringify({ contract: contractId, function: 'execute_payouts_batch', args: { group_ids: groupIds } }),
+        transaction: JSON.stringify({
+          contract: contractId,
+          function: 'execute_payouts_batch',
+          args: { group_ids: groupIds },
+        }),
       },
     };
 

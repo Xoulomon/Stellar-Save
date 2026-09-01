@@ -64,9 +64,9 @@ test.describe('Contribution flow', () => {
     }
 
     await contributeBtn.click();
-    await expect(
-      page.getByText(/confirm|contribution|amount/i).first()
-    ).toBeVisible({ timeout: 3000 });
+    await expect(page.getByText(/confirm|contribution|amount/i).first()).toBeVisible({
+      timeout: 3000,
+    });
   });
 
   test('contribution modal shows cancel button', async ({ page }) => {
@@ -98,8 +98,6 @@ test.describe('Contribution flow', () => {
     const cancelBtn = page.getByRole('button', { name: /cancel/i });
     await cancelBtn.click();
 
-    await expect(
-      page.getByText(/confirm.*contribution/i)
-    ).not.toBeVisible({ timeout: 3000 });
+    await expect(page.getByText(/confirm.*contribution/i)).not.toBeVisible({ timeout: 3000 });
   });
 });

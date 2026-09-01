@@ -36,10 +36,9 @@ describe('useDebounce', () => {
   });
 
   it('respects a custom delay', () => {
-    const { result, rerender } = renderHook(
-      ({ value }) => useDebounce(value, { delay: 200 }),
-      { initialProps: { value: 'a' } },
-    );
+    const { result, rerender } = renderHook(({ value }) => useDebounce(value, { delay: 200 }), {
+      initialProps: { value: 'a' },
+    });
 
     rerender({ value: 'b' });
     act(() => {
@@ -74,7 +73,7 @@ describe('useDebounce', () => {
   it('updates immediately when leading is true', () => {
     const { result, rerender } = renderHook(
       ({ value }) => useDebounce(value, { leading: true, delay: 500 }),
-      { initialProps: { value: 'a' } },
+      { initialProps: { value: 'a' } }
     );
 
     rerender({ value: 'b' });
@@ -87,7 +86,7 @@ describe('useDebounce', () => {
   it('forces an update once maxWait is exceeded despite continuous changes', () => {
     const { result, rerender } = renderHook(
       ({ value }) => useDebounce(value, { delay: 500, maxWait: 800 }),
-      { initialProps: { value: 'a' } },
+      { initialProps: { value: 'a' } }
     );
 
     rerender({ value: 'b' });
@@ -115,7 +114,7 @@ describe('useDebounceWithCancel', () => {
   it('debounces the value like useDebounce', () => {
     const { result, rerender } = renderHook(
       ({ value }) => useDebounceWithCancel(value, { delay: 300 }),
-      { initialProps: { value: 'a' } },
+      { initialProps: { value: 'a' } }
     );
 
     rerender({ value: 'b' });
@@ -130,7 +129,7 @@ describe('useDebounceWithCancel', () => {
   it('cancel() prevents the pending update from applying', () => {
     const { result, rerender } = renderHook(
       ({ value }) => useDebounceWithCancel(value, { delay: 300 }),
-      { initialProps: { value: 'a' } },
+      { initialProps: { value: 'a' } }
     );
 
     rerender({ value: 'b' });

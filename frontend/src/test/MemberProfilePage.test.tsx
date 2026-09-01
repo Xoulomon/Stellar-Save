@@ -30,7 +30,7 @@ function renderWithAddress(address: string) {
       <Routes>
         <Route path="/members/:address" element={<MemberProfilePage />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 
@@ -59,7 +59,12 @@ describe('computeReputationScore', () => {
   });
 
   it('caps participation at 5 active groups', () => {
-    const stats: UserStats = { ...baseStats, completedCycles: 5, groupsJoined: 5, activeGroups: 10 };
+    const stats: UserStats = {
+      ...baseStats,
+      completedCycles: 5,
+      groupsJoined: 5,
+      activeGroups: 10,
+    };
     const score = computeReputationScore(stats, 50);
     expect(score).toBe(100); // capped, not > 100
   });
@@ -87,7 +92,10 @@ describe('MemberProfilePage', () => {
   it('shows loading spinner initially', () => {
     renderWithAddress(TEST_ADDRESS);
     // Spinner renders while profile is loading
-    expect(document.querySelector('.spinner, [class*="spinner"], svg, [aria-busy]') ?? screen.queryByText(/loading/i)).toBeTruthy();
+    expect(
+      document.querySelector('.spinner, [class*="spinner"], svg, [aria-busy]') ??
+        screen.queryByText(/loading/i)
+    ).toBeTruthy();
   });
 
   it('renders member display name after loading', async () => {
@@ -147,7 +155,7 @@ describe('MemberProfilePage', () => {
         <Routes>
           <Route path="/members/" element={<MemberProfilePage />} />
         </Routes>
-      </MemoryRouter>,
+      </MemoryRouter>
     );
     await waitFor(() => {
       expect(screen.getByText(/member not found/i)).toBeInTheDocument();

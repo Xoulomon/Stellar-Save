@@ -68,7 +68,13 @@ export class ApnsProvider implements PushNotificationProvider {
   private bundleId: string;
   private production: boolean;
 
-  constructor(keyId: string, teamId: string, privateKey: string, bundleId: string, production = false) {
+  constructor(
+    keyId: string,
+    teamId: string,
+    privateKey: string,
+    bundleId: string,
+    production = false
+  ) {
     this.keyId = keyId;
     this.teamId = teamId;
     this.privateKey = privateKey;
@@ -117,7 +123,7 @@ export class ApnsProvider implements PushNotificationProvider {
         res.on('data', (chunk) => (responseBody += chunk));
         res.on('end', () => {
           if (res.statusCode === 200) {
-            resolve(res.headers['apns-id'] as string || 'apns-ok');
+            resolve((res.headers['apns-id'] as string) || 'apns-ok');
           } else {
             const err: any = new Error(`APNs error: ${responseBody}`);
             err.statusCode = res.statusCode;

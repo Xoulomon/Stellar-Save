@@ -11,7 +11,7 @@ export function createIpfsRouter(
   ipfs: IpfsClient,
   pinning: PinningService,
   metadataCache: GroupMetadataCache,
-  monitor: IpfsMonitor,
+  monitor: IpfsMonitor
 ): Router {
   const router = Router();
 
@@ -65,7 +65,9 @@ export function createIpfsRouter(
     try {
       const { cid, groupId, contractId, priority } = req.body;
       if (!cid || !groupId || !contractId) {
-        return next(new AppError('MISSING_FIELDS', 'cid, groupId, and contractId are required', 400));
+        return next(
+          new AppError('MISSING_FIELDS', 'cid, groupId, and contractId are required', 400)
+        );
       }
       const job = await pinning.pinContent(cid, groupId, contractId, priority ?? 0);
       res.status(201).json(job);
@@ -92,7 +94,8 @@ export function createIpfsRouter(
     try {
       const { cid } = req.params;
       const job = await PinningQueue.retryFailed(cid);
-      if (!job) return next(new AppError('FAILED_JOB_NOT_FOUND', 'No failed job found for this CID', 404));
+      if (!job)
+        return next(new AppError('FAILED_JOB_NOT_FOUND', 'No failed job found for this CID', 404));
       res.json(job);
     } catch (err) {
       next(new AppError('RETRY_PIN_FAILED', 'Failed to retry pin', 500, String(err)));
@@ -123,28 +126,44 @@ export function createIpfsRouter(
     }
   });
 
-  router.get('/groups/:groupId/metadata', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { groupId } = req.params;
-      const { contractId } = req.query;
-      if (!contractId) return next(new AppError('MISSING_CONTRACT_ID', 'contractId query parameter is required', 400));
-      const status = await metadataCache.getPinStatus(groupId, contractId as string);
-      res.json(status);
-    } catch (err) {
-      next(new AppError('METADATA_PIN_STATUS_FETCH_FAILED', 'Failed to fetch metadata pin status', 500, String(err)));
+  router.get(
+    '/groups/:groupId/metadata',
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const { groupId } = req.params;
+        const { contractId } = req.query;
+        if (!contractId)
+          return next(
+            new AppError('MISSING_CONTRACT_ID', 'contractId query parameter is required', 400)
+          );
+        const status = await metadataCache.getPinStatus(groupId, contractId as string);
+        res.json(status);
+      } catch (err) {
+        next(
+          new AppError(
+            'METADATA_PIN_STATUS_FETCH_FAILED',
+            'Failed to fetch metadata pin status',
+            500,
+            String(err)
+          )
+        );
+      }
     }
-  });
+  );
 
   router.get('/alerts', async (req: Request, res: Response) => {
     const unacknowledgedOnly = req.query.unacknowledgedOnly === 'true';
     res.json(monitor.getAlerts(unacknowledgedOnly));
   });
 
-  router.post('/alerts/:alertId/acknowledge', async (req: Request, res: Response, next: NextFunction) => {
-    const ok = monitor.acknowledge(req.params.alertId);
-    if (!ok) return next(new AppError('ALERT_NOT_FOUND', 'Alert not found', 404));
-    res.json({ acknowledged: true });
-  });
+  router.post(
+    '/alerts/:alertId/acknowledge',
+    async (req: Request, res: Response, next: NextFunction) => {
+      const ok = monitor.acknowledge(req.params.alertId);
+      if (!ok) return next(new AppError('ALERT_NOT_FOUND', 'Alert not found', 404));
+      res.json({ acknowledged: true });
+    }
+  );
 
   return router;
 }

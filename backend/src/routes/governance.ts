@@ -21,8 +21,8 @@ export type ProposalStatus = 'active' | 'passed' | 'rejected' | 'executed' | 'ex
 
 export interface Vote {
   voter: string;
-  support: boolean;   // true = for, false = against
-  votedAt: string;    // ISO-8601
+  support: boolean; // true = for, false = against
+  votedAt: string; // ISO-8601
 }
 
 export interface Proposal {
@@ -119,7 +119,7 @@ export function createGovernanceRouter(): Router {
   // GET /api/v1/governance/proposals
   router.get('/proposals', (_req, res) => {
     const list = Array.from(proposals.values()).sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
     res.json({ proposals: list, total: list.length });
   });
@@ -145,7 +145,9 @@ export function createGovernanceRouter(): Router {
     };
 
     if (!title || !description || !proposer) {
-      return next(new AppError('MISSING_FIELDS', 'title, description, and proposer are required.', 400));
+      return next(
+        new AppError('MISSING_FIELDS', 'title, description, and proposer are required.', 400)
+      );
     }
     if (!isGovernor(proposer)) {
       return next(new AppError('NOT_A_GOVERNOR', 'Only governors may create proposals.', 403));
@@ -183,7 +185,9 @@ export function createGovernanceRouter(): Router {
       return next(new AppError('NOT_A_GOVERNOR', 'Only governors may vote.', 403));
     }
     if (proposal.status !== 'active') {
-      return next(new AppError('VOTING_CLOSED', `Voting is closed (status: ${proposal.status}).`, 400));
+      return next(
+        new AppError('VOTING_CLOSED', `Voting is closed (status: ${proposal.status}).`, 400)
+      );
     }
     if (Date.now() > proposal.votingEndsAt) {
       // Auto-expire

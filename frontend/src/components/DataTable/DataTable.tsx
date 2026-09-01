@@ -84,7 +84,10 @@ export interface DataTableProps<T> {
 
 function SortIcon({ direction, active }: { direction: SortDirection | null; active: boolean }) {
   return (
-    <span className={`data-table__sort-icon ${active ? 'data-table__sort-icon--active' : ''}`} aria-hidden="true">
+    <span
+      className={`data-table__sort-icon ${active ? 'data-table__sort-icon--active' : ''}`}
+      aria-hidden="true"
+    >
       {active && direction === 'asc' ? '▲' : active && direction === 'desc' ? '▼' : '⇅'}
     </span>
   );
@@ -124,7 +127,7 @@ export function DataTable<T>({
         setSortDir('asc');
       }
     },
-    [sortKey],
+    [sortKey]
   );
 
   const sortedRows = useMemo(() => {
@@ -188,11 +191,7 @@ export function DataTable<T>({
   return (
     <div className={`data-table-wrapper ${className}`} data-testid="data-table">
       <div className="data-table-scroll" role="region" aria-label={caption ?? 'Data table'}>
-        <table
-          className="data-table"
-          aria-busy={loading}
-          aria-label={caption}
-        >
+        <table className="data-table" aria-busy={loading} aria-label={caption}>
           {caption && <caption className="data-table__caption">{caption}</caption>}
 
           <colgroup>
@@ -258,17 +257,18 @@ export function DataTable<T>({
                 <tr key={`skeleton-${i}`} className="data-table__row data-table__row--skeleton">
                   {columns.map((col) => (
                     <td key={String(col.key)} className="data-table__td">
-                      <span className="data-table__skeleton-cell" role="presentation" aria-hidden="true" />
+                      <span
+                        className="data-table__skeleton-cell"
+                        role="presentation"
+                        aria-hidden="true"
+                      />
                     </td>
                   ))}
                 </tr>
               ))
             ) : pagedRows.length === 0 ? (
               <tr>
-                <td
-                  colSpan={columns.length}
-                  className="data-table__td data-table__td--empty"
-                >
+                <td colSpan={columns.length} className="data-table__td data-table__td--empty">
                   {emptyMessage}
                 </td>
               </tr>
@@ -276,10 +276,7 @@ export function DataTable<T>({
               pagedRows.map((row) => (
                 <tr
                   key={getKey(row)}
-                  className={[
-                    'data-table__row',
-                    onRowClick ? 'data-table__row--clickable' : '',
-                  ]
+                  className={['data-table__row', onRowClick ? 'data-table__row--clickable' : '']
                     .filter(Boolean)
                     .join(' ')}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
@@ -299,7 +296,9 @@ export function DataTable<T>({
                   {columns.map((col) => (
                     <td
                       key={String(col.key)}
-                      className={['data-table__td', col.cellClassName ?? ''].filter(Boolean).join(' ')}
+                      className={['data-table__td', col.cellClassName ?? '']
+                        .filter(Boolean)
+                        .join(' ')}
                     >
                       {col.render
                         ? col.render(row)

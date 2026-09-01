@@ -7,7 +7,8 @@ export enum RiskLevel {
   CRITICAL = 'CRITICAL',
 }
 
-export type FlagReason = 'sanctioned_address' | 'high_value' | 'rapid_succession' | 'blacklist_match';
+export type FlagReason =
+  'sanctioned_address' | 'high_value' | 'rapid_succession' | 'blacklist_match';
 
 export interface ComplianceFlag {
   id: string;
@@ -57,7 +58,7 @@ export function screenTransaction(address: string, txHash: string, amount: numbe
   // Rapid succession check
   const now = Date.now();
   const timestamps = (recentTxTimestamps.get(address) ?? []).filter(
-    (t) => now - t < RAPID_SUCCESSION_WINDOW_MS,
+    (t) => now - t < RAPID_SUCCESSION_WINDOW_MS
   );
   timestamps.push(now);
   recentTxTimestamps.set(address, timestamps);
@@ -78,7 +79,11 @@ export function screenTransaction(address: string, txHash: string, amount: numbe
   return { flagged, riskLevel, reasons };
 }
 
-export function flagTransaction(address: string, txHash: string, result: AmlCheckResult): ComplianceFlag {
+export function flagTransaction(
+  address: string,
+  txHash: string,
+  result: AmlCheckResult
+): ComplianceFlag {
   const flag: ComplianceFlag = {
     id: randomUUID(),
     address,
@@ -96,7 +101,12 @@ export function getFlaggedTransactions(): ComplianceFlag[] {
   return flagStore.filter((f) => !f.reviewed);
 }
 
-export function reviewFlag(id: string, reviewedBy: string, decision: 'approved' | 'rejected', notes?: string): void {
+export function reviewFlag(
+  id: string,
+  reviewedBy: string,
+  decision: 'approved' | 'rejected',
+  notes?: string
+): void {
   const flag = flagStore.find((f) => f.id === id);
   if (!flag) throw new Error(`Flag ${id} not found`);
   flag.reviewed = true;

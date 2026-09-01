@@ -48,14 +48,16 @@ export class GroupStateCache {
     const existing = inFlight.get(key);
     if (existing) return existing as Promise<T>;
 
-    const promise = loader().then(async (result) => {
-      await set(key, result, TTL_SECONDS);
-      inFlight.delete(key);
-      return result;
-    }).catch((err) => {
-      inFlight.delete(key);
-      throw err;
-    });
+    const promise = loader()
+      .then(async (result) => {
+        await set(key, result, TTL_SECONDS);
+        inFlight.delete(key);
+        return result;
+      })
+      .catch((err) => {
+        inFlight.delete(key);
+        throw err;
+      });
 
     inFlight.set(key, promise);
     return promise as Promise<T>;
@@ -67,7 +69,11 @@ export class GroupStateCache {
   }
 
   /** Invalidate a single group's cached state (called on relevant contract events). */
-  static async invalidate(contractId: string, groupId: string, eventType = 'unknown'): Promise<void> {
+  static async invalidate(
+    contractId: string,
+    groupId: string,
+    eventType = 'unknown'
+  ): Promise<void> {
     await del(cacheKey(contractId, groupId));
     cacheInvalidationsTotal.inc({ event_type: eventType });
   }

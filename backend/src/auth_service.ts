@@ -8,13 +8,13 @@ import { prisma } from './prisma_client';
 import * as redisClient from './redis';
 
 const JWT_SECRET = config.auth.jwtSecret;
-const ACCESS_TOKEN_TTL = config.auth.accessTokenTtl;   // e.g. '15m'
+const ACCESS_TOKEN_TTL = config.auth.accessTokenTtl; // e.g. '15m'
 const REFRESH_TOKEN_TTL_DAYS = config.auth.refreshTokenTtlDays; // e.g. 30
 const CHALLENGE_TTL_SECONDS = 300;
 const USED_NONCE_TTL_SECONDS = CHALLENGE_TTL_SECONDS + 60;
 
 export interface JwtPayload {
-  sub: string;   // wallet address
+  sub: string; // wallet address
   iat: number;
   exp: number;
 }
@@ -35,8 +35,7 @@ export async function generateChallenge(walletAddress: string): Promise<string> 
   const nonce = crypto.randomBytes(32).toString('hex');
   const challengeKey = `auth:challenge:${walletAddress}`;
   const timestamp = Date.now();
-  const message =
-    `Sign this message to authenticate with Stellar Save.\n\nWallet: ${walletAddress}\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
+  const message = `Sign this message to authenticate with Stellar Save.\n\nWallet: ${walletAddress}\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
 
   await redisClient.set(challengeKey, { nonce, message, timestamp }, CHALLENGE_TTL_SECONDS);
   return message;
@@ -60,13 +59,14 @@ export async function verifySignature(
   if (ageMs > CHALLENGE_TTL_SECONDS * 1000) throw new Error('Challenge has expired.');
 
   const usedNonceKey = `auth:used_nonce:${stored.nonce}`;
-  if (await redisClient.get(usedNonceKey)) throw new Error('Challenge nonce has already been used.');
+  if (await redisClient.get(usedNonceKey))
+    throw new Error('Challenge nonce has already been used.');
 
   try {
     const keypair = Keypair.fromPublicKey(walletAddress);
     const isValid = keypair.verify(
       Buffer.from(signedMessage, 'utf8'),
-      Buffer.from(signature, 'base64'),
+      Buffer.from(signature, 'base64')
     );
 
     if (isValid) {
@@ -81,11 +81,9 @@ export async function verifySignature(
 // ── Access token ──────────────────────────────────────────────────────────────
 
 export function issueJwt(walletAddress: string): string {
-  return jwt.sign(
-    { sub: walletAddress },
-    JWT_SECRET,
-    { expiresIn: ACCESS_TOKEN_TTL } as jwt.SignOptions,
-  );
+  return jwt.sign({ sub: walletAddress }, JWT_SECRET, {
+    expiresIn: ACCESS_TOKEN_TTL,
+  } as jwt.SignOptions);
 }
 
 export function verifyJwt(token: string): JwtPayload {
@@ -108,10 +106,7 @@ function tokenExpiresAt(): Date {
  * Issue a new refresh token (DB row) and return the raw secret value.
  * Caller must deliver the raw value to the client; only the hash is stored.
  */
-export async function issueRefreshToken(
-  walletAddress: string,
-  familyId?: string,
-): Promise<string> {
+export async function issueRefreshToken(walletAddress: string, familyId?: string): Promise<string> {
   const raw = crypto.randomBytes(40).toString('hex');
   const family = familyId ?? crypto.randomUUID();
 
@@ -137,7 +132,7 @@ export async function issueRefreshToken(
  * Throws on any failure (expired, revoked, reuse).
  */
 export async function rotateRefreshToken(
-  rawToken: string,
+  rawToken: string
 ): Promise<{ accessToken: string; refreshToken: string }> {
   const hash = hashToken(rawToken);
   const record = await prisma.refreshToken.findUnique({ where: { tokenHash: hash } });

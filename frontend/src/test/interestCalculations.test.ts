@@ -148,7 +148,7 @@ describe('calculateYield — zero balance', () => {
   it('endBalance equals principal when principal = 0', () => {
     const result = calculateYield({
       principal: 0,
-      annualRate: 0.10,
+      annualRate: 0.1,
       startDate: utc(2023, 6, 1),
       endDate: utc(2023, 12, 31),
     });
@@ -188,8 +188,8 @@ describe('calculateYield — zero rate', () => {
 
 describe('calculateYield — single day', () => {
   it('accrues exactly one day of interest (actual/365)', () => {
-    const principal = 36_500;   // chosen so 1-day interest = principal × rate / 365
-    const annualRate = 0.10;    // 10 %
+    const principal = 36_500; // chosen so 1-day interest = principal × rate / 365
+    const annualRate = 0.1; // 10 %
     const result = calculateYield({
       principal,
       annualRate,
@@ -420,7 +420,7 @@ describe('calculateYield — day-count conventions', () => {
     principal: 10_000,
     annualRate: 0.05,
     startDate: utc(2024, 1, 1),
-    endDate: utc(2024, 7, 1),    // 182 days (leap year, includes Feb 29)
+    endDate: utc(2024, 7, 1), // 182 days (leap year, includes Feb 29)
     decimalPlaces: null as null,
   };
 
@@ -541,7 +541,7 @@ describe('calculateYield — input validation', () => {
 
   it('throws RangeError when endDate is before startDate', () => {
     expect(() =>
-      calculateYield({ ...validBase, startDate: utc(2024, 6, 1), endDate: utc(2024, 1, 1) }),
+      calculateYield({ ...validBase, startDate: utc(2024, 6, 1), endDate: utc(2024, 1, 1) })
     ).toThrow(RangeError);
   });
 
@@ -555,7 +555,7 @@ describe('calculateYield — input validation', () => {
 
   it('accepts equal startDate and endDate (0-day period, no throw)', () => {
     expect(() =>
-      calculateYield({ ...validBase, startDate: utc(2024, 1, 1), endDate: utc(2024, 1, 1) }),
+      calculateYield({ ...validBase, startDate: utc(2024, 1, 1), endDate: utc(2024, 1, 1) })
     ).not.toThrow();
   });
 });

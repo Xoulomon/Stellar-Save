@@ -37,12 +37,12 @@ export function useEventService(): UseEventServiceReturn {
     service.stopWatching();
   }, [service]);
 
-  const on = useCallback((
-    eventType: EventType | 'all',
-    callback: (event: AppEvent) => void,
-  ) => {
-    return service.on(eventType, callback);
-  }, [service]);
+  const on = useCallback(
+    (eventType: EventType | 'all', callback: (event: AppEvent) => void) => {
+      return service.on(eventType, callback);
+    },
+    [service]
+  );
 
   // Auto-start on mount
   useEffect(() => {

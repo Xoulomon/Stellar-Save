@@ -16,16 +16,16 @@ interface Row {
 
 const sampleRows: Row[] = [
   { id: '1', name: 'Alice', amount: 300, date: '2026-01-10', status: 'success' },
-  { id: '2', name: 'Bob',   amount: 150, date: '2026-01-15', status: 'pending' },
+  { id: '2', name: 'Bob', amount: 150, date: '2026-01-15', status: 'pending' },
   { id: '3', name: 'Carol', amount: 450, date: '2026-01-05', status: 'success' },
-  { id: '4', name: 'Dave',  amount:  75, date: '2026-01-20', status: 'failed'  },
-  { id: '5', name: 'Eve',   amount: 200, date: '2026-01-12', status: 'success' },
+  { id: '4', name: 'Dave', amount: 75, date: '2026-01-20', status: 'failed' },
+  { id: '5', name: 'Eve', amount: 200, date: '2026-01-12', status: 'success' },
 ];
 
 const columns: DataTableColumn<Row>[] = [
-  { key: 'name',   header: 'Name',   sortable: true },
+  { key: 'name', header: 'Name', sortable: true },
   { key: 'amount', header: 'Amount', sortable: true },
-  { key: 'date',   header: 'Date',   sortable: true },
+  { key: 'date', header: 'Date', sortable: true },
   { key: 'status', header: 'Status', sortable: false },
 ];
 
@@ -33,7 +33,7 @@ const columns: DataTableColumn<Row>[] = [
 
 function renderTable(
   rows = sampleRows,
-  overrides: Partial<Parameters<typeof DataTable<Row>>[0]> = {},
+  overrides: Partial<Parameters<typeof DataTable<Row>>[0]> = {}
 ) {
   return render(<DataTable columns={columns} rows={rows} {...overrides} />);
 }
@@ -90,7 +90,11 @@ describe('DataTable — rendering', () => {
 
   it('applies custom render function for a column', () => {
     const cols: DataTableColumn<Row>[] = [
-      { key: 'name', header: 'Name', render: (row) => <strong data-testid="custom">{row.name}!</strong> },
+      {
+        key: 'name',
+        header: 'Name',
+        render: (row) => <strong data-testid="custom">{row.name}!</strong>,
+      },
     ];
     render(<DataTable columns={cols} rows={sampleRows} />);
     const customCells = screen.getAllByTestId('custom');

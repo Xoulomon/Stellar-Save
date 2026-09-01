@@ -35,9 +35,7 @@ export function PayoutSchedulePanel({ cycles, currentCycle }: PayoutSchedulePane
             </Badge>
           </div>
           <div className="group-details-cycle-dates">
-            <span>
-              {formatDateRange(currentCycle.startDate, currentCycle.endDate)}
-            </span>
+            <span>{formatDateRange(currentCycle.startDate, currentCycle.endDate)}</span>
           </div>
           <div className="group-details-cycle-progress">
             <div className="group-details-progress-bar">

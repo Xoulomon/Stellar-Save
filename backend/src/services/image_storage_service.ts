@@ -47,23 +47,34 @@ const DEFAULT_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
  */
 export abstract class BaseImageStorageService implements ImageStorageService {
   public validateImage(options: ImageUploadOptions): void {
-    const { buffer, mimeType, maxSizeBytes = DEFAULT_MAX_SIZE_BYTES, allowedMimeTypes = DEFAULT_ALLOWED_MIME_TYPES } = options;
+    const {
+      buffer,
+      mimeType,
+      maxSizeBytes = DEFAULT_MAX_SIZE_BYTES,
+      allowedMimeTypes = DEFAULT_ALLOWED_MIME_TYPES,
+    } = options;
 
     if (!buffer || buffer.length === 0) {
       throw new ImageValidationError('Image file buffer cannot be empty');
     }
 
     if (buffer.length > maxSizeBytes) {
-      throw new ImageValidationError(`Image size (${(buffer.length / 1024 / 1024).toFixed(2)} MB) exceeds maximum allowed limit of ${(maxSizeBytes / 1024 / 1024).toFixed(2)} MB`);
+      throw new ImageValidationError(
+        `Image size (${(buffer.length / 1024 / 1024).toFixed(2)} MB) exceeds maximum allowed limit of ${(maxSizeBytes / 1024 / 1024).toFixed(2)} MB`
+      );
     }
 
     if (!allowedMimeTypes.includes(mimeType.toLowerCase())) {
-      throw new ImageValidationError(`MIME type '${mimeType}' is not supported. Allowed: ${allowedMimeTypes.join(', ')}`);
+      throw new ImageValidationError(
+        `MIME type '${mimeType}' is not supported. Allowed: ${allowedMimeTypes.join(', ')}`
+      );
     }
 
     // Magic Bytes Verification
     if (!this.verifyMagicBytes(buffer, mimeType)) {
-      throw new ImageValidationError(`Image file header does not match declared MIME type '${mimeType}'`);
+      throw new ImageValidationError(
+        `Image file header does not match declared MIME type '${mimeType}'`
+      );
     }
   }
 
@@ -92,7 +103,10 @@ export abstract class BaseImageStorageService implements ImageStorageService {
     }
   }
 
-  abstract uploadGroupImage(groupId: string, options: ImageUploadOptions): Promise<ImageUploadResult>;
+  abstract uploadGroupImage(
+    groupId: string,
+    options: ImageUploadOptions
+  ): Promise<ImageUploadResult>;
   abstract deleteGroupImage(key: string): Promise<void>;
 }
 
@@ -119,7 +133,11 @@ export class LocalImageStorageService extends BaseImageStorageService {
     const baseUrl = config.urls.app || 'http://localhost:3001';
     const url = `${baseUrl}/uploads/${path.basename(filePath)}`;
 
-    logger.info('[ImageStorage] Uploaded group image locally', { groupId, key, size: options.buffer.length });
+    logger.info('[ImageStorage] Uploaded group image locally', {
+      groupId,
+      key,
+      size: options.buffer.length,
+    });
     return { url, key, sizeBytes: options.buffer.length, mimeType: options.mimeType };
   }
 
@@ -129,10 +147,14 @@ export class LocalImageStorageService extends BaseImageStorageService {
 
   private getExtensionFromMime(mimeType: string): string {
     switch (mimeType.toLowerCase()) {
-      case 'image/jpeg': return '.jpg';
-      case 'image/png': return '.png';
-      case 'image/webp': return '.webp';
-      default: return '.img';
+      case 'image/jpeg':
+        return '.jpg';
+      case 'image/png':
+        return '.png';
+      case 'image/webp':
+        return '.webp';
+      default:
+        return '.img';
     }
   }
 }

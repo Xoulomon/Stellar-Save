@@ -17,7 +17,7 @@ export function withCorrelationHeaders(initHeaders?: HeadersInitLike): Headers {
 
 export async function fetchWithCorrelationId(
   input: RequestInfo | URL,
-  init: RequestInit = {},
+  init: RequestInit = {}
 ): Promise<Response> {
   return fetch(input, {
     ...init,

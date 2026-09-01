@@ -22,7 +22,7 @@ describe('logger — production mode (IS_DEV = false)', () => {
     logger.warn('test warning');
     expect(consoleWarn).toHaveBeenCalledWith(
       expect.stringContaining('[StellarSave]'),
-      expect.stringContaining('test warning'),
+      expect.stringContaining('test warning')
     );
   });
 
@@ -31,17 +31,14 @@ describe('logger — production mode (IS_DEV = false)', () => {
     logger.error('test error');
     expect(consoleError).toHaveBeenCalledWith(
       expect.stringContaining('[StellarSave]'),
-      expect.stringContaining('test error'),
+      expect.stringContaining('test error')
     );
   });
 
   it('warn() includes [WARN] in prefix', async () => {
     const { logger } = await import('../utils/logger');
     logger.warn('something');
-    expect(consoleWarn).toHaveBeenCalledWith(
-      expect.stringContaining('[WARN]'),
-      expect.anything(),
-    );
+    expect(consoleWarn).toHaveBeenCalledWith(expect.stringContaining('[WARN]'), expect.anything());
   });
 
   it('error() includes [ERROR] in prefix', async () => {
@@ -49,7 +46,7 @@ describe('logger — production mode (IS_DEV = false)', () => {
     logger.error('oops');
     expect(consoleError).toHaveBeenCalledWith(
       expect.stringContaining('[ERROR]'),
-      expect.anything(),
+      expect.anything()
     );
   });
 
@@ -60,7 +57,7 @@ describe('logger — production mode (IS_DEV = false)', () => {
     expect(consoleWarn).toHaveBeenCalledWith(
       expect.stringContaining('[StellarSave]'),
       expect.stringContaining('message'),
-      obj,
+      obj
     );
   });
 });

@@ -18,9 +18,7 @@ describe('useTabsController', () => {
   });
 
   it('respects defaultTab', () => {
-    const { result } = renderHook(() =>
-      useTabsController({ tabs: mockTabs, defaultTab: 'tab2' })
-    );
+    const { result } = renderHook(() => useTabsController({ tabs: mockTabs, defaultTab: 'tab2' }));
     expect(result.current.activeTab).toBe('tab2');
   });
 

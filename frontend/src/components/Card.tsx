@@ -1,6 +1,6 @@
-import "./Card.css";
+import './Card.css';
 
-type CardVariant = "default" | "outlined" | "elevated";
+type CardVariant = 'default' | 'outlined' | 'elevated';
 
 interface CardProps {
   variant?: CardVariant;
@@ -14,26 +14,21 @@ interface CardProps {
 }
 
 export function Card({
-  variant = "default",
+  variant = 'default',
   hoverable = false,
   header,
   footer,
   children,
-  className = "",
+  className = '',
   onClick,
   ariaLabel,
 }: CardProps) {
-  const classes = [
-    "card",
-    `card-${variant}`,
-    hoverable ? "card-hoverable" : "",
-    className,
-  ]
+  const classes = ['card', `card-${variant}`, hoverable ? 'card-hoverable' : '', className]
     .filter(Boolean)
-    .join(" ");
+    .join(' ');
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (onClick && (e.key === "Enter" || e.key === " ")) {
+    if (onClick && (e.key === 'Enter' || e.key === ' ')) {
       e.preventDefault();
       onClick();
     }
@@ -43,7 +38,7 @@ export function Card({
     <div
       className={classes}
       onClick={onClick}
-      role={onClick ? "button" : undefined}
+      role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={handleKeyDown}
       aria-label={onClick ? ariaLabel : undefined}

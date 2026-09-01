@@ -43,7 +43,7 @@ function snapshotSdl(): string {
   if (!existsSync(SNAPSHOT_PATH)) {
     throw new Error(
       `Schema snapshot not found at ${SNAPSHOT_PATH}.\n` +
-        'Run  npm run schema:update  to generate it.',
+        'Run  npm run schema:update  to generate it.'
     );
   }
   return readFileSync(SNAPSHOT_PATH, 'utf8');
@@ -81,13 +81,11 @@ describe('GraphQL schema snapshot', () => {
     const changes: Change[] = await diff(oldSchema, newSchema);
 
     const breakingChanges = changes.filter(
-      (c) => c.criticality.level === CriticalityLevel.Breaking,
+      (c) => c.criticality.level === CriticalityLevel.Breaking
     );
 
     if (breakingChanges.length > 0) {
-      const descriptions = breakingChanges
-        .map((c) => `  • [${c.type}] ${c.message}`)
-        .join('\n');
+      const descriptions = breakingChanges.map((c) => `  • [${c.type}] ${c.message}`).join('\n');
 
       const hint =
         'To approve this intentional breaking change:\n' +
@@ -98,11 +96,11 @@ describe('GraphQL schema snapshot', () => {
       if (allowBreaking) {
         // Developer explicitly opted in – warn but do not fail.
         console.warn(
-          `⚠️  ALLOW_BREAKING_SCHEMA=1 is set. Breaking changes are present:\n${descriptions}\n\n${hint}`,
+          `⚠️  ALLOW_BREAKING_SCHEMA=1 is set. Breaking changes are present:\n${descriptions}\n\n${hint}`
         );
       } else {
         throw new Error(
-          `${breakingChanges.length} breaking schema change(s) detected.\n${descriptions}\n\n${hint}`,
+          `${breakingChanges.length} breaking schema change(s) detected.\n${descriptions}\n\n${hint}`
         );
       }
     }
@@ -115,23 +113,21 @@ describe('GraphQL schema snapshot', () => {
     const changes: Change[] = await diff(oldSchema, newSchema);
 
     const dangerousChanges = changes.filter(
-      (c) => c.criticality.level === CriticalityLevel.Dangerous,
+      (c) => c.criticality.level === CriticalityLevel.Dangerous
     );
-    const safeChanges = changes.filter(
-      (c) => c.criticality.level === CriticalityLevel.NonBreaking,
-    );
+    const safeChanges = changes.filter((c) => c.criticality.level === CriticalityLevel.NonBreaking);
 
     // These do not fail the test, but are logged so reviewers can see them.
     if (dangerousChanges.length > 0) {
       console.warn(
         `⚠️  ${dangerousChanges.length} dangerous (non-breaking but risky) change(s):\n` +
-          dangerousChanges.map((c) => `  • ${c.message}`).join('\n'),
+          dangerousChanges.map((c) => `  • ${c.message}`).join('\n')
       );
     }
     if (safeChanges.length > 0) {
       console.info(
         `ℹ️  ${safeChanges.length} safe change(s) detected:\n` +
-          safeChanges.map((c) => `  • ${c.message}`).join('\n'),
+          safeChanges.map((c) => `  • ${c.message}`).join('\n')
       );
     }
 

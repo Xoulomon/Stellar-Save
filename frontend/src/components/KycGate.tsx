@@ -31,7 +31,8 @@ export function KycGate({ children, fallback }: KycGateProps) {
         Identity verification required
       </Alert>
       <Typography variant="body1" sx={{ mb: 2 }}>
-        The fiat ramp is available only after your KYC verification is approved. This helps us comply with regulations and keep the platform secure.
+        The fiat ramp is available only after your KYC verification is approved. This helps us
+        comply with regulations and keep the platform secure.
       </Typography>
       <Stack direction="row" alignItems="center" gap={1}>
         <Typography variant="caption" color="text.secondary">

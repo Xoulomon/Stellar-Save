@@ -13,8 +13,24 @@ vi.mock('../components/WalletStatusIndicator', () => ({
 
 const mockSetFilters = vi.fn();
 const mockGroups = [
-  { id: '1', name: 'Alpha Circle', currency: 'XLM', contributionAmount: 100, memberCount: 5, status: 'active', createdAt: new Date() },
-  { id: '2', name: 'Beta Pool', currency: 'USDC', contributionAmount: 250, memberCount: 8, status: 'active', createdAt: new Date() },
+  {
+    id: '1',
+    name: 'Alpha Circle',
+    currency: 'XLM',
+    contributionAmount: 100,
+    memberCount: 5,
+    status: 'active',
+    createdAt: new Date(),
+  },
+  {
+    id: '2',
+    name: 'Beta Pool',
+    currency: 'USDC',
+    contributionAmount: 250,
+    memberCount: 8,
+    status: 'active',
+    createdAt: new Date(),
+  },
 ];
 
 vi.mock('../hooks/useGroups', () => ({
@@ -24,8 +40,25 @@ vi.mock('../hooks/useGroups', () => ({
     error: null,
     refresh: vi.fn(),
     filteredCount: mockGroups.length,
-    pagination: { page: 1, pageSize: 12, totalItems: 2, totalPages: 1, hasNextPage: false, hasPrevPage: false },
-    filters: { search: '', status: 'all', minAmount: '', maxAmount: '', minMembers: '', maxMembers: '', minCycleDuration: '', maxCycleDuration: '', sort: 'date-desc' },
+    pagination: {
+      page: 1,
+      pageSize: 12,
+      totalItems: 2,
+      totalPages: 1,
+      hasNextPage: false,
+      hasPrevPage: false,
+    },
+    filters: {
+      search: '',
+      status: 'all',
+      minAmount: '',
+      maxAmount: '',
+      minMembers: '',
+      maxMembers: '',
+      minCycleDuration: '',
+      maxCycleDuration: '',
+      sort: 'date-desc',
+    },
     hasActiveFilters: false,
     setFilters: mockSetFilters,
     clearFilters: vi.fn(),
@@ -43,7 +76,7 @@ function renderWithRouter(initialUrl = '/groups') {
         <Route path="/groups" element={<GroupsPage />} />
         <Route path="/groups/:id" element={<div>Group Detail</div>} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 
@@ -93,7 +126,9 @@ describe('GroupsPage', () => {
 
   it('updates URL when minAmount changes', async () => {
     renderWithRouter();
-    fireEvent.change(screen.getByLabelText('Minimum contribution amount'), { target: { value: '50' } });
+    fireEvent.change(screen.getByLabelText('Minimum contribution amount'), {
+      target: { value: '50' },
+    });
     await waitFor(() => {
       expect(screen.getByLabelText('Minimum contribution amount')).toHaveValue(50);
     });
@@ -101,7 +136,9 @@ describe('GroupsPage', () => {
 
   it('navigates to group detail on group click', async () => {
     renderWithRouter();
-    fireEvent.click(screen.getByText('Alpha Circle').closest('.card') ?? screen.getByText('Alpha Circle'));
+    fireEvent.click(
+      screen.getByText('Alpha Circle').closest('.card') ?? screen.getByText('Alpha Circle')
+    );
     await waitFor(() => {
       expect(screen.getByText('Group Detail')).toBeInTheDocument();
     });

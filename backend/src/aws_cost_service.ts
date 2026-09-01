@@ -121,7 +121,7 @@ export async function fetchCostByService(days = 30): Promise<ServiceCost[]> {
       Granularity: Granularity.MONTHLY,
       Metrics: ['UnblendedCost'],
       GroupBy: [{ Type: 'DIMENSION', Key: 'SERVICE' }],
-    }),
+    })
   );
 
   const costs: ServiceCost[] = [];
@@ -149,11 +149,11 @@ export async function fetchDailyTrend(days = 14): Promise<CostTrend[]> {
       Granularity: Granularity.DAILY,
       Metrics: ['UnblendedCost'],
       GroupBy: [{ Type: 'DIMENSION', Key: 'SERVICE' }],
-    }),
+    })
   );
 
   return (res.ResultsByTime ?? []).map((period: ResultByTime) => {
-    const byService: ServiceCost[] = (period.Groups ?? []).map(g => ({
+    const byService: ServiceCost[] = (period.Groups ?? []).map((g) => ({
       service: g.Keys?.[0] ?? 'Unknown',
       amount: parseFloat(g.Metrics?.['UnblendedCost']?.Amount ?? '0'),
       unit: g.Metrics?.['UnblendedCost']?.Unit ?? 'USD',
@@ -177,7 +177,7 @@ export async function fetchCostForecast(): Promise<number> {
       TimePeriod: { Start: isoDate(today), End: isoDate(endOfMonth) },
       Metric: 'UNBLENDED_COST',
       Granularity: Granularity.MONTHLY,
-    }),
+    })
   );
   return parseFloat(res.Total?.Amount ?? '0');
 }
@@ -251,10 +251,7 @@ export function detectCostSpikes(costs: ServiceCost[], thresholdPct = 20): void 
     if (prev !== undefined && prev > 0) {
       const changePct = ((amount - prev) / prev) * 100;
       if (changePct > thresholdPct) {
-        logger.warn(
-          { service, prev, amount, changePct },
-          'AWS cost spike detected',
-        );
+        logger.warn({ service, prev, amount, changePct }, 'AWS cost spike detected');
         awsCostSpikeDetected.inc({ service });
       }
     }
@@ -284,7 +281,7 @@ export async function buildCostReport(): Promise<CostReport> {
     if (rec.estimatedMonthlySavings > 0) {
       awsOptimizationSavings.set(
         { finding: rec.finding, resource_type: rec.resourceType },
-        rec.estimatedMonthlySavings,
+        rec.estimatedMonthlySavings
       );
     }
     awsRecommendationCount.inc({ finding: rec.finding });
@@ -292,10 +289,7 @@ export async function buildCostReport(): Promise<CostReport> {
 
   detectCostSpikes(last30DaysByService);
 
-  const totalEstimatedSavings = recommendations.reduce(
-    (s, r) => s + r.estimatedMonthlySavings,
-    0,
-  );
+  const totalEstimatedSavings = recommendations.reduce((s, r) => s + r.estimatedMonthlySavings, 0);
 
   return {
     generatedAt: new Date(),

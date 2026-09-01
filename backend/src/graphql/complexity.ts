@@ -16,15 +16,15 @@ export const depthLimitRule = depthLimit(MAX_DEPTH);
 // Field costs: list fields cost more than scalar fields.
 
 const FIELD_COSTS: Record<string, number> = {
-  groups:          10,
-  members:         10,
-  transactions:    10,
+  groups: 10,
+  members: 10,
+  transactions: 10,
   recommendations: 15,
-  search:          20,
+  search: 20,
   // nested list fields
-  'Group.members':      5,
+  'Group.members': 5,
   'Group.transactions': 5,
-  'Member.groups':      5,
+  'Member.groups': 5,
   'Recommendation.group': 3,
 };
 
@@ -61,7 +61,4 @@ export function complexityLimitRule(maxComplexity: number) {
   };
 }
 
-export const validationRules = [
-  depthLimitRule,
-  complexityLimitRule(MAX_COMPLEXITY),
-];
+export const validationRules = [depthLimitRule, complexityLimitRule(MAX_COMPLEXITY)];

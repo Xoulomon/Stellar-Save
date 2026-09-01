@@ -22,7 +22,7 @@ export function SettingsSection({ className = '' }: SettingsSectionProps) {
   };
 
   const updateSetting = (key: string, value: string | boolean) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+    setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
   return (

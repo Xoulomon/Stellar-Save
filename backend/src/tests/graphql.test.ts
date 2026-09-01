@@ -25,8 +25,13 @@ async function runTests() {
   let failed = 0;
 
   function assert(condition: boolean, label: string) {
-    if (condition) { console.log(`  ✅ ${label}`); passed++; }
-    else           { console.error(`  ❌ ${label}`); failed++; }
+    if (condition) {
+      console.log(`  ✅ ${label}`);
+      passed++;
+    } else {
+      console.error(`  ❌ ${label}`);
+      failed++;
+    }
   }
 
   // ── health ──────────────────────────────────────────────────────────────────
@@ -102,7 +107,10 @@ async function runTests() {
   // ── search ───────────────────────────────────────────────────────────────────
   console.log('── search query');
   {
-    const result = await query(server, '{ search(query: "weekly") { groups { id name } members { id } transactions { id } } }');
+    const result = await query(
+      server,
+      '{ search(query: "weekly") { groups { id name } members { id } transactions { id } } }'
+    );
     assert(!result.errors, 'no errors');
     const groups = (result.data as any)?.search?.groups;
     assert(Array.isArray(groups) && groups.length >= 1, 'search returns matching groups');
@@ -111,7 +119,10 @@ async function runTests() {
   // ── recommendations ──────────────────────────────────────────────────────────
   console.log('── recommendations query');
   {
-    const result = await query(server, '{ recommendations(userId: "user1") { userId bucket algorithm recommendations { groupId score } } }');
+    const result = await query(
+      server,
+      '{ recommendations(userId: "user1") { userId bucket algorithm recommendations { groupId score } } }'
+    );
     assert(!result.errors, 'no errors');
     const rec = (result.data as any)?.recommendations;
     assert(typeof rec?.userId === 'string', 'has userId');
@@ -121,11 +132,14 @@ async function runTests() {
   // ── setPreferences mutation ───────────────────────────────────────────────────
   console.log('── setPreferences mutation');
   {
-    const result = await query(server, `
+    const result = await query(
+      server,
+      `
       mutation {
         setPreferences(userId: "user1", minContribution: 50, maxContribution: 500, tags: ["weekly"])
       }
-    `);
+    `
+    );
     assert(!result.errors, 'no errors');
     assert((result.data as any)?.setPreferences === true, 'returns true');
   }
@@ -136,7 +150,10 @@ async function runTests() {
     // Build a query that exceeds MAX_DEPTH (5)
     const deepQuery = '{ groups { members { groups { members { groups { members { id } } } } } } }';
     const result = await query(server, deepQuery);
-    assert(Array.isArray(result.errors) && result.errors.length > 0, `query exceeding depth ${MAX_DEPTH} is rejected`);
+    assert(
+      Array.isArray(result.errors) && result.errors.length > 0,
+      `query exceeding depth ${MAX_DEPTH} is rejected`
+    );
   }
 
   // ── complexity limit ──────────────────────────────────────────────────────────
@@ -151,7 +168,10 @@ async function runTests() {
       recommendations(userId: "u") { userId bucket algorithm recommendations { groupId score algorithm } }
     }`;
     const result = await query(server, heavyQuery);
-    assert(Array.isArray(result.errors) && result.errors.length > 0, `query exceeding complexity ${MAX_COMPLEXITY} is rejected`);
+    assert(
+      Array.isArray(result.errors) && result.errors.length > 0,
+      `query exceeding complexity ${MAX_COMPLEXITY} is rejected`
+    );
   }
 
   // ── Summary ───────────────────────────────────────────────────────────────────
@@ -162,4 +182,7 @@ async function runTests() {
   console.log('ALL TESTS PASSED! 🎉');
 }
 
-runTests().catch(err => { console.error(err); process.exit(1); });
+runTests().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

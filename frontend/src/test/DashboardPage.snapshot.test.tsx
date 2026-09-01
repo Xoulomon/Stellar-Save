@@ -12,14 +12,24 @@ import DashboardPage from '../pages/DashboardPage';
 // ── Mock dependencies ─────────────────────────────────────────────────────────
 
 vi.mock('../ui', () => ({
-  AppLayout: ({ children, title, subtitle }: { children: React.ReactNode; title?: string; subtitle?: string }) => (
+  AppLayout: ({
+    children,
+    title,
+    subtitle,
+  }: {
+    children: React.ReactNode;
+    title?: string;
+    subtitle?: string;
+  }) => (
     <div data-testid="app-layout">
       {title && <h1>{title}</h1>}
       {subtitle && <p>{subtitle}</p>}
       {children}
     </div>
   ),
-  AppCard: ({ children }: { children: React.ReactNode }) => <div data-testid="app-card">{children}</div>,
+  AppCard: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="app-card">{children}</div>
+  ),
 }));
 
 vi.mock('../components/ErrorBoundary/ErrorBoundary', () => ({
@@ -39,18 +49,62 @@ const mockStats = {
 };
 
 const mockGroups = [
-  { id: '1', name: 'Alpha Circle', status: 'active', memberCount: 5, contributionAmount: 100, currency: 'XLM', cycleNumber: 2, createdAt: new Date('2024-01-15') },
-  { id: '2', name: 'Beta Pool', status: 'active', memberCount: 8, contributionAmount: 250, currency: 'USDC', cycleNumber: 1, createdAt: new Date('2024-02-01') },
+  {
+    id: '1',
+    name: 'Alpha Circle',
+    status: 'active',
+    memberCount: 5,
+    contributionAmount: 100,
+    currency: 'XLM',
+    cycleNumber: 2,
+    createdAt: new Date('2024-01-15'),
+  },
+  {
+    id: '2',
+    name: 'Beta Pool',
+    status: 'active',
+    memberCount: 8,
+    contributionAmount: 250,
+    currency: 'USDC',
+    cycleNumber: 1,
+    createdAt: new Date('2024-02-01'),
+  },
 ];
 
 const mockPayouts = [
-  { groupId: '1', groupName: 'Alpha Circle', recipientAddress: 'GABC...XYZ', amount: 500, dueDate: new Date('2024-06-15') },
-  { groupId: '2', groupName: 'Beta Pool', recipientAddress: 'GDEF...ABC', amount: 2000, dueDate: new Date('2024-06-20') },
+  {
+    groupId: '1',
+    groupName: 'Alpha Circle',
+    recipientAddress: 'GABC...XYZ',
+    amount: 500,
+    dueDate: new Date('2024-06-15'),
+  },
+  {
+    groupId: '2',
+    groupName: 'Beta Pool',
+    recipientAddress: 'GDEF...ABC',
+    amount: 2000,
+    dueDate: new Date('2024-06-20'),
+  },
 ];
 
 const mockTransactions = [
-  { id: 'tx1', type: 'contribution', groupName: 'Alpha Circle', amount: 100, timestamp: new Date('2024-06-01'), status: 'confirmed' },
-  { id: 'tx2', type: 'payout', groupName: 'Beta Pool', amount: 2000, timestamp: new Date('2024-05-28'), status: 'confirmed' },
+  {
+    id: 'tx1',
+    type: 'contribution',
+    groupName: 'Alpha Circle',
+    amount: 100,
+    timestamp: new Date('2024-06-01'),
+    status: 'confirmed',
+  },
+  {
+    id: 'tx2',
+    type: 'payout',
+    groupName: 'Beta Pool',
+    amount: 2000,
+    timestamp: new Date('2024-05-28'),
+    status: 'confirmed',
+  },
 ];
 
 vi.mock('../hooks/useDashboard', () => ({

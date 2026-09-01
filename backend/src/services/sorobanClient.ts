@@ -31,19 +31,14 @@ export class SorobanClient {
    */
   async getTransaction(txHash: string): Promise<SorobanRpc.GetTransactionResponse | null> {
     return this.withRetry(() =>
-      getSorobanPool().withClient(
-        (client) => client.getTransaction(txHash),
-        'getTransaction'
-      )
+      getSorobanPool().withClient((client) => client.getTransaction(txHash), 'getTransaction')
     );
   }
 
   /**
    * Simulate a contract invocation
    */
-  async simulateTransaction(
-    transaction: string
-  ): Promise<SorobanRpc.SimulateTransactionResponse> {
+  async simulateTransaction(transaction: string): Promise<SorobanRpc.SimulateTransactionResponse> {
     return this.withRetry(() =>
       getSorobanPool().withClient(
         (client) => client.simulateTransaction(transaction),
@@ -69,10 +64,7 @@ export class SorobanClient {
    */
   async getLatestLedger(): Promise<SorobanRpc.GetLatestLedgerResponse> {
     return this.withRetry(() =>
-      getSorobanPool().withClient(
-        (client) => client.getLatestLedger(),
-        'getLatestLedger'
-      )
+      getSorobanPool().withClient((client) => client.getLatestLedger(), 'getLatestLedger')
     );
   }
 
@@ -81,10 +73,7 @@ export class SorobanClient {
    */
   async getNetwork(): Promise<SorobanRpc.GetNetworkResponse> {
     return this.withRetry(() =>
-      getSorobanPool().withClient(
-        (client) => client.getNetwork(),
-        'getNetwork'
-      )
+      getSorobanPool().withClient((client) => client.getNetwork(), 'getNetwork')
     );
   }
 
@@ -93,10 +82,7 @@ export class SorobanClient {
    */
   async getHealth(): Promise<SorobanRpc.GetHealthResponse> {
     return this.withRetry(() =>
-      getSorobanPool().withClient(
-        (client) => client.getHealth(),
-        'getHealth'
-      )
+      getSorobanPool().withClient((client) => client.getHealth(), 'getHealth')
     );
   }
 
@@ -105,33 +91,23 @@ export class SorobanClient {
    */
   async getEvents(options: SorobanRpc.GetEventsRequest): Promise<SorobanRpc.GetEventsResponse> {
     return this.withRetry(() =>
-      getSorobanPool().withClient(
-        (client) => client.getEvents(options),
-        'getEvents'
-      )
+      getSorobanPool().withClient((client) => client.getEvents(options), 'getEvents')
     );
   }
 
   /**
    * Get ledger entries
    */
-  async getLedgerEntries(
-    ...keys: string[]
-  ): Promise<SorobanRpc.GetLedgerEntriesResponse> {
+  async getLedgerEntries(...keys: string[]): Promise<SorobanRpc.GetLedgerEntriesResponse> {
     return this.withRetry(() =>
-      getSorobanPool().withClient(
-        (client) => client.getLedgerEntries(...keys),
-        'getLedgerEntries'
-      )
+      getSorobanPool().withClient((client) => client.getLedgerEntries(...keys), 'getLedgerEntries')
     );
   }
 
   /**
    * Request a cost estimate for simulation
    */
-  async requestCostEstimate(
-    transaction: string
-  ): Promise<SorobanRpc.CostEstimate> {
+  async requestCostEstimate(transaction: string): Promise<SorobanRpc.CostEstimate> {
     return this.withRetry(async () => {
       const response = await getSorobanPool().withClient(
         (client) => client.simulateTransaction(transaction),
@@ -147,10 +123,7 @@ export class SorobanClient {
   /**
    * Retry logic for RPC calls
    */
-  private async withRetry<T>(
-    fn: () => Promise<T>,
-    attempt: number = 1
-  ): Promise<T> {
+  private async withRetry<T>(fn: () => Promise<T>, attempt: number = 1): Promise<T> {
     try {
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(
@@ -162,11 +135,14 @@ export class SorobanClient {
       return await Promise.race([fn(), timeoutPromise]);
     } catch (error) {
       if (attempt < this.config.retryAttempts) {
-        logger.warn(`Soroban RPC call failed, retrying (attempt ${attempt}/${this.config.retryAttempts})`, {
-          error: error instanceof Error ? error.message : String(error),
-        });
+        logger.warn(
+          `Soroban RPC call failed, retrying (attempt ${attempt}/${this.config.retryAttempts})`,
+          {
+            error: error instanceof Error ? error.message : String(error),
+          }
+        );
         const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
-        await new Promise(resolve => setTimeout(resolve, backoffMs));
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
         return this.withRetry(fn, attempt + 1);
       }
       logger.error('Soroban RPC call failed after retries', {

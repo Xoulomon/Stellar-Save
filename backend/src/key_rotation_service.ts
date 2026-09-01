@@ -89,7 +89,7 @@ const DEFAULT_POLICIES: Record<KeyType, RotationPolicy> = {
   api: {
     keyType: 'api',
     rotationIntervalMs: 90 * 24 * 60 * 60 * 1_000, // 90 days
-    transitionWindowMs: 7 * 24 * 60 * 60 * 1_000,  // 7-day transition for API keys
+    transitionWindowMs: 7 * 24 * 60 * 60 * 1_000, // 7-day transition for API keys
     keyLengthBytes: 32,
   },
 };
@@ -105,7 +105,7 @@ class KeyRegistry {
   /** keyType → ordered list (newest first) */
   private readonly keys = new Map<KeyType, KeyRecord[]>();
   private readonly policies = new Map<KeyType, RotationPolicy>(
-    Object.entries(DEFAULT_POLICIES).map(([k, v]) => [k as KeyType, v]),
+    Object.entries(DEFAULT_POLICIES).map(([k, v]) => [k as KeyType, v])
   );
 
   /**
@@ -119,13 +119,13 @@ class KeyRegistry {
   }
 
   getActive(keyType: KeyType): KeyRecord | undefined {
-    return this.keys.get(keyType)?.find(k => k.status === 'active');
+    return this.keys.get(keyType)?.find((k) => k.status === 'active');
   }
 
   /** Return all keys that can be used for verification (active + retiring). */
   getValidating(keyType: KeyType): KeyRecord[] {
     return (this.keys.get(keyType) ?? []).filter(
-      k => k.status === 'active' || k.status === 'retiring',
+      (k) => k.status === 'active' || k.status === 'retiring'
     );
   }
 
@@ -135,7 +135,7 @@ class KeyRegistry {
 
   getById(keyId: string): KeyRecord | undefined {
     for (const list of this.keys.values()) {
-      const found = list.find(k => k.keyId === keyId);
+      const found = list.find((k) => k.keyId === keyId);
       if (found) return found;
     }
     return undefined;
@@ -227,9 +227,7 @@ export function bootstrapKeys(): void {
  * Emits an audit log entry for every rotation.
  */
 export async function rotateKeys(keyType?: KeyType): Promise<RotationResult[]> {
-  const types: KeyType[] = keyType
-    ? [keyType]
-    : (Object.keys(DEFAULT_POLICIES) as KeyType[]);
+  const types: KeyType[] = keyType ? [keyType] : (Object.keys(DEFAULT_POLICIES) as KeyType[]);
 
   const results: RotationResult[] = [];
 
@@ -283,16 +281,13 @@ export async function rotateKeys(keyType?: KeyType): Promise<RotationResult[]> {
  */
 export function signWithActiveKey(
   keyType: KeyType,
-  data: string | Buffer,
+  data: string | Buffer
 ): { keyId: string; signature: string } {
   const activeKey = keyRegistry.getActive(keyType);
   if (!activeKey) throw new Error(`No active key for type "${keyType}"`);
 
   const keyBuffer = Buffer.from(activeKey.material, 'hex');
-  const signature = crypto
-    .createHmac('sha256', keyBuffer)
-    .update(data)
-    .digest('hex');
+  const signature = crypto.createHmac('sha256', keyBuffer).update(data).digest('hex');
 
   return { keyId: activeKey.keyId, signature };
 }
@@ -306,24 +301,18 @@ export function signWithActiveKey(
 export function verifyWithDualValidation(
   keyType: KeyType,
   data: string | Buffer,
-  signature: string,
+  signature: string
 ): { valid: boolean; keyId?: string; status?: KeyStatus } {
   const validatingKeys = keyRegistry.getValidating(keyType);
 
   for (const key of validatingKeys) {
     const keyBuffer = Buffer.from(key.material, 'hex');
-    const expected = crypto
-      .createHmac('sha256', keyBuffer)
-      .update(data)
-      .digest('hex');
+    const expected = crypto.createHmac('sha256', keyBuffer).update(data).digest('hex');
 
     const expectedBuf = Buffer.from(expected, 'hex');
     const actualBuf = Buffer.from(signature, 'hex');
 
-    if (
-      expectedBuf.length === actualBuf.length &&
-      crypto.timingSafeEqual(expectedBuf, actualBuf)
-    ) {
+    if (expectedBuf.length === actualBuf.length && crypto.timingSafeEqual(expectedBuf, actualBuf)) {
       return { valid: true, keyId: key.keyId, status: key.status };
     }
   }
@@ -353,8 +342,8 @@ export function startRotationScheduler(checkIntervalMs = 60 * 60 * 1_000): void 
 
       if (ageMs >= policy.rotationIntervalMs) {
         logger.info('Scheduled key rotation triggered', { keyType, ageMs });
-        await rotateKeys(keyType).catch(err =>
-          logger.error('Scheduled key rotation failed', { keyType, err }),
+        await rotateKeys(keyType).catch((err) =>
+          logger.error('Scheduled key rotation failed', { keyType, err })
         );
       }
     }
@@ -391,8 +380,7 @@ export function getKeyStatusSummary(): KeyStatusSummary[] {
   for (const keyType of Object.keys(DEFAULT_POLICIES) as KeyType[]) {
     for (const key of keyRegistry.getAll(keyType)) {
       const ageMs = now - key.createdAt.getTime();
-      const daysUntilExpiry =
-        (key.expiresAt.getTime() - now) / (24 * 60 * 60 * 1_000);
+      const daysUntilExpiry = (key.expiresAt.getTime() - now) / (24 * 60 * 60 * 1_000);
 
       summary.push({
         keyType: key.keyType,

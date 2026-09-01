@@ -26,7 +26,7 @@ export function requestId(req: Request, res: Response, next: NextFunction): void
       method: req.method,
       path: req.path,
     },
-    () => next(),
+    () => next()
   );
 }
 

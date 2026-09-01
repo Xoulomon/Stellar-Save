@@ -30,7 +30,11 @@ export class RecoveryService {
   private bucket: string;
   private target: RestoreTarget;
 
-  constructor(service: BackupService, s3Client: S3Client, target: RestoreTarget = new NoopRestoreTarget()) {
+  constructor(
+    service: BackupService,
+    s3Client: S3Client,
+    target: RestoreTarget = new NoopRestoreTarget()
+  ) {
     this.service = service;
     this.s3 = s3Client;
     this.bucket = config.backup.bucket;
@@ -42,7 +46,8 @@ export class RecoveryService {
     const startedAt = Date.now();
     const job = this.service.getJob(jobId);
     if (!job) throw new Error(`Backup job not found: ${jobId}`);
-    if (job.status !== 'completed') throw new Error(`Backup job ${jobId} is not completed (status: ${job.status})`);
+    if (job.status !== 'completed')
+      throw new Error(`Backup job ${jobId} is not completed (status: ${job.status})`);
     if (!job.s3Key) throw new Error(`Backup job ${jobId} has no S3 key`);
 
     const body = await this.s3.getObject({ Bucket: this.bucket, Key: job.s3Key });
@@ -50,7 +55,9 @@ export class RecoveryService {
     // Verify checksum
     const actualChecksum = crypto.createHash('sha256').update(body).digest('hex');
     if (job.checksum && actualChecksum !== job.checksum) {
-      throw new Error(`Checksum mismatch for backup ${jobId}: expected ${job.checksum}, got ${actualChecksum}`);
+      throw new Error(
+        `Checksum mismatch for backup ${jobId}: expected ${job.checksum}, got ${actualChecksum}`
+      );
     }
 
     const payload = JSON.parse(body.toString('utf-8'));
@@ -81,7 +88,7 @@ export class RecoveryService {
 
   /** List available restore points */
   listRestorePoints(): BackupJob[] {
-    return this.service.listJobs().filter(j => j.status === 'completed');
+    return this.service.listJobs().filter((j) => j.status === 'completed');
   }
 
   private countRecords(payload: Record<string, unknown>): number {

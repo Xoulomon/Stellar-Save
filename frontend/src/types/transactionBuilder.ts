@@ -63,12 +63,15 @@ export interface TransactionTemplate {
   shareCode?: string;
 }
 
-export const STEP_TYPE_META: Record<StepOperationType, {
-  label: string;
-  description: string;
-  color: string;
-  icon: string;
-}> = {
+export const STEP_TYPE_META: Record<
+  StepOperationType,
+  {
+    label: string;
+    description: string;
+    color: string;
+    icon: string;
+  }
+> = {
   payment: {
     label: 'Payment',
     description: 'Send XLM or tokens to an address',

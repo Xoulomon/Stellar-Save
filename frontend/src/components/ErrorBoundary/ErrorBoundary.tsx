@@ -1,9 +1,9 @@
-import { Box, Typography, Alert, AlertTitle, Collapse } from "@mui/material";
-import React from "react";
+import { Box, Typography, Alert, AlertTitle, Collapse } from '@mui/material';
+import React from 'react';
 
-import { AppButton } from "../../ui/components/AppButton";
-import { AppCard } from "../../ui/components/AppCard";
-import "./ErrorBoundary.css";
+import { AppButton } from '../../ui/components/AppButton';
+import { AppCard } from '../../ui/components/AppCard';
+import './ErrorBoundary.css';
 
 export interface ErrorBoundaryProps {
   fallback?: React.ReactNode;
@@ -43,7 +43,7 @@ export class ErrorBoundary extends React.Component<
     this.setState({ errorInfo: info });
 
     // Log to console and call optional onError handler
-    console.error("ErrorBoundary caught an error:", error, info);
+    console.error('ErrorBoundary caught an error:', error, info);
     if (this.props.onError) this.props.onError(error, info);
 
     // Optional error reporting
@@ -55,7 +55,7 @@ export class ErrorBoundary extends React.Component<
   private reportError = (error: Error, info: React.ErrorInfo) => {
     // In a real app, integrate with Sentry, LogRocket, etc.
     // For now, just log to console with more details
-    console.error("Reporting error:", {
+    console.error('Reporting error:', {
       message: error.message,
       stack: error.stack,
       componentStack: info.componentStack,
@@ -68,24 +68,26 @@ export class ErrorBoundary extends React.Component<
     // If Sentry DSN is provided, initialize and capture
     if (this.props.sentryDsn && typeof window !== 'undefined') {
       // Dynamic import to avoid bundling Sentry if not used
-      import('@sentry/react').then((Sentry) => {
-        if (!Sentry.isInitialized) {
-          Sentry.init({
-            dsn: this.props.sentryDsn,
-            environment: process.env.NODE_ENV || 'development',
-          });
-        }
-        Sentry.captureException(error, {
-          contexts: {
-            react: {
-              componentStack: info.componentStack,
+      import('@sentry/react')
+        .then((Sentry) => {
+          if (!Sentry.isInitialized) {
+            Sentry.init({
+              dsn: this.props.sentryDsn,
+              environment: process.env.NODE_ENV || 'development',
+            });
+          }
+          Sentry.captureException(error, {
+            contexts: {
+              react: {
+                componentStack: info.componentStack,
+              },
             },
-          },
+          });
+        })
+        .catch(() => {
+          // Fallback if Sentry not available
+          console.warn('Sentry not available for error reporting');
         });
-      }).catch(() => {
-        // Fallback if Sentry not available
-        console.warn('Sentry not available for error reporting');
-      });
     }
   };
 
@@ -120,7 +122,7 @@ export class ErrorBoundary extends React.Component<
         hasError: false,
         error: null,
         errorInfo: null,
-        retryCount: retryCount + 1
+        retryCount: retryCount + 1,
       });
     } else {
       // Max retries reached, redirect to home
@@ -150,7 +152,7 @@ export class ErrorBoundary extends React.Component<
 
     return (
       <Box
-        className={["error-boundary", className].filter(Boolean).join(" ")}
+        className={['error-boundary', className].filter(Boolean).join(' ')}
         sx={{
           display: 'flex',
           alignItems: 'center',
@@ -180,10 +182,7 @@ export class ErrorBoundary extends React.Component<
             >
               {canRetry ? 'Try Again' : 'Max Retries Reached'}
             </AppButton>
-            <AppButton
-              variant="outlined"
-              onClick={this.handleGoHome}
-            >
+            <AppButton variant="outlined" onClick={this.handleGoHome}>
               Go Home
             </AppButton>
           </Box>
@@ -199,10 +198,15 @@ export class ErrorBoundary extends React.Component<
             <Collapse in={true}>
               <Alert severity="info" sx={{ mt: 2, textAlign: 'left' }}>
                 <AlertTitle>Development Details</AlertTitle>
-                <Typography variant="body2" component="pre" sx={{ whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}>
+                <Typography
+                  variant="body2"
+                  component="pre"
+                  sx={{ whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}
+                >
                   {error.message}
                   {error.stack && `\n\nStack Trace:\n${error.stack}`}
-                  {this.state.errorInfo?.componentStack && `\n\nComponent Stack:\n${this.state.errorInfo.componentStack}`}
+                  {this.state.errorInfo?.componentStack &&
+                    `\n\nComponent Stack:\n${this.state.errorInfo.componentStack}`}
                 </Typography>
               </Alert>
             </Collapse>

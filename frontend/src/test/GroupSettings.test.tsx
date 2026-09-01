@@ -120,7 +120,7 @@ describe('GroupSettings', () => {
           groupId: 1n,
           name: 'Updated Group Name',
           description: 'Original description',
-        }),
+        })
       );
       expect(onSaved).toHaveBeenCalled();
     });

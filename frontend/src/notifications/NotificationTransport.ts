@@ -39,7 +39,7 @@ export class NotificationTransport {
   async send(
     notification: TransportNotification,
     channels: DeliveryChannel[] = ['browser'],
-    onDelivery?: DeliveryCallback,
+    onDelivery?: DeliveryCallback
   ): Promise<DeliveryResult[]> {
     const results: DeliveryResult[] = [];
 
@@ -107,7 +107,7 @@ export class NotificationTransport {
    */
   private async deliverToChannel(
     notification: TransportNotification,
-    channel: DeliveryChannel,
+    channel: DeliveryChannel
   ): Promise<DeliveryResult> {
     const timestamp = Date.now();
 
@@ -129,7 +129,7 @@ export class NotificationTransport {
    */
   private async deliverBrowserPush(
     notification: TransportNotification,
-    timestamp: number,
+    timestamp: number
   ): Promise<DeliveryResult> {
     if (!canShowNotifications()) {
       return {
@@ -155,7 +155,9 @@ export class NotificationTransport {
         timestamp,
       };
     } catch (error) {
-      throw new Error(`Failed to send browser push: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to send browser push: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -165,7 +167,7 @@ export class NotificationTransport {
    */
   private async deliverEmail(
     notification: TransportNotification,
-    timestamp: number,
+    timestamp: number
   ): Promise<DeliveryResult> {
     // Email delivery is typically handled by a backend service.
     // This method would queue the notification for backend processing.
@@ -194,7 +196,9 @@ export class NotificationTransport {
         timestamp,
       };
     } catch (error) {
-      throw new Error(`Failed to send email: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to send email: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -204,7 +208,7 @@ export class NotificationTransport {
    */
   private async deliverWebhook(
     notification: TransportNotification,
-    timestamp: number,
+    timestamp: number
   ): Promise<DeliveryResult> {
     const options = notification.transportOptions || {};
     const endpoint = options.endpoint;
@@ -245,7 +249,7 @@ export class NotificationTransport {
       };
     } catch (error) {
       throw new Error(
-        `Failed to deliver webhook: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to deliver webhook: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }

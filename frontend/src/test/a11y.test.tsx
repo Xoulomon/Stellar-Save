@@ -43,10 +43,19 @@ expect.extend(toHaveNoViolations);
 // ── Shared wallet context fixtures ────────────────────────────────────────────
 
 const idleWallet: WalletContextValue = {
-  wallets: [], selectedWalletId: 'freighter', status: 'idle',
-  activeAddress: null, network: null, connectedAccounts: [], error: null,
-  refreshWallets: vi.fn(), connect: vi.fn(), disconnect: vi.fn(),
-  switchWallet: vi.fn(), switchAccount: vi.fn(), signTransaction: vi.fn(),
+  wallets: [],
+  selectedWalletId: 'freighter',
+  status: 'idle',
+  activeAddress: null,
+  network: null,
+  connectedAccounts: [],
+  error: null,
+  refreshWallets: vi.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
+  switchWallet: vi.fn(),
+  switchAccount: vi.fn(),
+  signTransaction: vi.fn(),
 };
 
 const connectedWallet: WalletContextValue = {
@@ -71,9 +80,7 @@ function withRouter(ui: React.ReactElement) {
 
 describe('Input – accessibility', () => {
   it('has no axe violations (basic)', async () => {
-    const { container } = render(
-      <Input label="Group Name" value="" onChange={vi.fn()} />
-    );
+    const { container } = render(<Input label="Group Name" value="" onChange={vi.fn()} />);
     expect(await axe(container)).toHaveNoViolations();
   });
 
@@ -108,9 +115,7 @@ describe('Input – accessibility', () => {
   });
 
   it('has no axe violations when disabled', async () => {
-    const { container } = render(
-      <Input label="Amount" value="100" onChange={vi.fn()} disabled />
-    );
+    const { container } = render(<Input label="Amount" value="100" onChange={vi.fn()} disabled />);
     expect(await axe(container)).toHaveNoViolations();
   });
 
@@ -248,7 +253,10 @@ describe('CreateGroupForm – accessibility', () => {
 
 describe('JoinGroupButton – accessibility', () => {
   const defaultProps = {
-    groupId: 1, maxMembers: 10, currentMembers: 5, isActive: false,
+    groupId: 1,
+    maxMembers: 10,
+    currentMembers: 5,
+    isActive: false,
   };
 
   it('has no axe violations (eligible state)', async () => {
@@ -298,24 +306,18 @@ describe('JoinGroupButton – accessibility', () => {
 
 describe('ContributeButton – accessibility', () => {
   it('has no axe violations (idle state)', async () => {
-    const { container } = render(
-      <ContributeButton amount={10} cycleId={1} walletAddress="GABC" />
-    );
+    const { container } = render(<ContributeButton amount={10} cycleId={1} walletAddress="GABC" />);
     expect(await axe(container)).toHaveNoViolations();
   });
 
   it('has no axe violations (no wallet — warning shown)', async () => {
-    const { container } = render(
-      <ContributeButton amount={10} cycleId={1} />
-    );
+    const { container } = render(<ContributeButton amount={10} cycleId={1} />);
     expect(await axe(container)).toHaveNoViolations();
   });
 
   it('has no axe violations (confirmation modal open)', async () => {
     const user = userEvent.setup();
-    const { container } = render(
-      <ContributeButton amount={10} cycleId={1} walletAddress="GABC" />
-    );
+    const { container } = render(<ContributeButton amount={10} cycleId={1} walletAddress="GABC" />);
     await user.click(screen.getByRole('button', { name: /contribute/i }));
     expect(await axe(container)).toHaveNoViolations();
   });
@@ -342,7 +344,9 @@ describe('ContributeButton – accessibility', () => {
     await user.click(screen.getByRole('button', { name: /contribute/i }));
     expect(screen.getByRole('heading', { name: /confirm contribution/i })).toBeInTheDocument();
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('heading', { name: /confirm contribution/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /confirm contribution/i })
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -374,7 +378,11 @@ describe('Button – accessibility', () => {
   it('disabled button is not activatable via keyboard', async () => {
     const onClick = vi.fn();
     const user = userEvent.setup();
-    render(<Button disabled onClick={onClick}>Disabled</Button>);
+    render(
+      <Button disabled onClick={onClick}>
+        Disabled
+      </Button>
+    );
     const btn = screen.getByRole('button', { name: /disabled/i });
     btn.focus();
     await user.keyboard('{Enter}');

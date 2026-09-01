@@ -64,16 +64,16 @@ describe('verifySignature', () => {
   });
 
   it('throws when no challenge exists (expired or never issued)', async () => {
-    await expect(
-      verifySignature(walletAddress, 'some message', 'c2lnbg==')
-    ).rejects.toThrow('Challenge not found or expired');
+    await expect(verifySignature(walletAddress, 'some message', 'c2lnbg==')).rejects.toThrow(
+      'Challenge not found or expired'
+    );
   });
 
   it('throws on challenge message mismatch', async () => {
     await generateChallenge(walletAddress);
-    await expect(
-      verifySignature(walletAddress, 'tampered message', 'c2lnbg==')
-    ).rejects.toThrow('Challenge message mismatch');
+    await expect(verifySignature(walletAddress, 'tampered message', 'c2lnbg==')).rejects.toThrow(
+      'Challenge message mismatch'
+    );
   });
 
   it('returns false for a signature from a different keypair', async () => {
@@ -92,9 +92,9 @@ describe('verifySignature', () => {
 
     // Second attempt with the correct signature must fail — challenge is gone
     const correctSignature = signMessage(challenge);
-    await expect(
-      verifySignature(walletAddress, challenge, correctSignature)
-    ).rejects.toThrow('Challenge not found or expired');
+    await expect(verifySignature(walletAddress, challenge, correctSignature)).rejects.toThrow(
+      'Challenge not found or expired'
+    );
   });
 
   it('throws on replay of a used nonce', async () => {
@@ -110,14 +110,11 @@ describe('verifySignature', () => {
     const nonce = challenge.match(/Nonce: ([a-f0-9]+)/)![1];
     const timestamp = parseInt(challenge.match(/Timestamp: (\d+)/)![1]);
     const challengeKey = `auth:challenge:${walletAddress}`;
-    mockRedis.__store.set(
-      challengeKey,
-      JSON.stringify({ nonce, message: challenge, timestamp })
-    );
+    mockRedis.__store.set(challengeKey, JSON.stringify({ nonce, message: challenge, timestamp }));
 
-    await expect(
-      verifySignature(walletAddress, challenge, signature)
-    ).rejects.toThrow('Challenge nonce has already been used');
+    await expect(verifySignature(walletAddress, challenge, signature)).rejects.toThrow(
+      'Challenge nonce has already been used'
+    );
   });
 
   it('throws when the embedded timestamp is too old', async () => {
@@ -133,9 +130,9 @@ describe('verifySignature', () => {
       JSON.stringify({ nonce, message: challenge, timestamp: staleTimestamp })
     );
 
-    await expect(
-      verifySignature(walletAddress, challenge, signature)
-    ).rejects.toThrow('Challenge has expired');
+    await expect(verifySignature(walletAddress, challenge, signature)).rejects.toThrow(
+      'Challenge has expired'
+    );
   });
 });
 

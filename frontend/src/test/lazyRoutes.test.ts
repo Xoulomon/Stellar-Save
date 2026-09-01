@@ -64,7 +64,7 @@ describe('Lazy-loaded routes', () => {
 
   it('all defined route paths start with /', () => {
     const routesWithPath = routeConfig.filter(
-      (r) => r.path !== undefined && typeof r.path === 'string',
+      (r) => r.path !== undefined && typeof r.path === 'string'
     );
     for (const route of routesWithPath) {
       expect(route.path, `Route path "${route.path}" must start with /`).toMatch(/^\//);
@@ -95,11 +95,7 @@ describe('AppRouter Suspense fallback — static shape', () => {
     const REACT_LAZY_TYPE = Symbol.for('react.lazy');
     const allLazy = routeConfig.every((route) => {
       const c = route.component as unknown as Record<string, unknown>;
-      return (
-        c['$$typeof'] === REACT_LAZY_TYPE ||
-        '_payload' in c ||
-        '_init' in c
-      );
+      return c['$$typeof'] === REACT_LAZY_TYPE || '_payload' in c || '_init' in c;
     });
     expect(allLazy).toBe(true);
   });

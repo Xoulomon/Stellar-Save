@@ -94,8 +94,12 @@ export function parseOffsetParams(
   const rawLimit = parseInt(String(query['limit'] ?? ''), 10);
   const rawOffset = parseInt(String(query['offset'] ?? ''), 10);
 
-  const limit = clampLimit(Number.isFinite(rawLimit) ? rawLimit : (defaults.limit ?? DEFAULT_PAGE_SIZE));
-  const offset = clampOffset(Number.isFinite(rawOffset) ? rawOffset : (defaults.offset ?? MIN_OFFSET));
+  const limit = clampLimit(
+    Number.isFinite(rawLimit) ? rawLimit : (defaults.limit ?? DEFAULT_PAGE_SIZE)
+  );
+  const offset = clampOffset(
+    Number.isFinite(rawOffset) ? rawOffset : (defaults.offset ?? MIN_OFFSET)
+  );
 
   return { limit, offset };
 }
@@ -119,7 +123,9 @@ export function parseCursorParams(
       ? query['cursor']
       : (defaults.cursor ?? '0');
 
-  const limit = clampLimit(Number.isFinite(rawLimit) ? rawLimit : (defaults.limit ?? DEFAULT_PAGE_SIZE));
+  const limit = clampLimit(
+    Number.isFinite(rawLimit) ? rawLimit : (defaults.limit ?? DEFAULT_PAGE_SIZE)
+  );
 
   return { cursor, limit };
 }
@@ -143,11 +149,7 @@ export function parseCursorParams(
  * ]);
  * res.json(paginate(data, total, params));
  */
-export function paginate<T>(
-  data: T[],
-  total: number,
-  params: OffsetParams
-): PaginatedResult<T> {
+export function paginate<T>(data: T[], total: number, params: OffsetParams): PaginatedResult<T> {
   const { limit, offset } = params;
   const safeTotal = Math.max(0, total);
   return {
@@ -198,9 +200,7 @@ export function paginateCursor<T>(
   } else if (hasMore) {
     // Numeric-cursor default: advance by limit
     const currentIndex = parseInt(cursor, 10);
-    resolvedNextCursor = Number.isFinite(currentIndex)
-      ? String(currentIndex + limit)
-      : null;
+    resolvedNextCursor = Number.isFinite(currentIndex) ? String(currentIndex + limit) : null;
   } else {
     resolvedNextCursor = null;
   }

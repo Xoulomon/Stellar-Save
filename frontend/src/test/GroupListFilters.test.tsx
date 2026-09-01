@@ -30,7 +30,9 @@ describe('GroupList — search and filter', () => {
   it('filters by search query (uncontrolled)', async () => {
     render(<GroupList groups={groups} showPagination={false} />);
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Alpha' } });
-    await act(async () => { vi.runAllTimers(); });
+    await act(async () => {
+      vi.runAllTimers();
+    });
     expect(screen.getByText('Alpha Circle')).toBeInTheDocument();
     expect(screen.queryByText('Beta Pool')).not.toBeInTheDocument();
   });
@@ -43,7 +45,7 @@ describe('GroupList — search and filter', () => {
         showPagination={false}
         searchQuery=""
         onSearchChange={onSearchChange}
-      />,
+      />
     );
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Beta' } });
     // SearchBar debounces — but the underlying input change fires onSearch immediately in tests
@@ -59,7 +61,7 @@ describe('GroupList — search and filter', () => {
         showPagination={false}
         currencyFilter="XLM"
         onCurrencyChange={onCurrencyChange}
-      />,
+      />
     );
     expect(screen.getByText('Alpha Circle')).toBeInTheDocument();
     expect(screen.getByText('Gamma Fund')).toBeInTheDocument();
@@ -75,7 +77,7 @@ describe('GroupList — search and filter', () => {
         minAmount="200"
         onMinAmountChange={noop}
         onMaxAmountChange={noop}
-      />,
+      />
     );
     expect(screen.queryByText('Alpha Circle')).not.toBeInTheDocument();
     expect(screen.getByText('Beta Pool')).toBeInTheDocument();
@@ -91,7 +93,7 @@ describe('GroupList — search and filter', () => {
         maxAmount="200"
         onMinAmountChange={noop}
         onMaxAmountChange={noop}
-      />,
+      />
     );
     expect(screen.getByText('Alpha Circle')).toBeInTheDocument();
     expect(screen.queryByText('Beta Pool')).not.toBeInTheDocument();
@@ -109,7 +111,7 @@ describe('GroupList — search and filter', () => {
         minAmount="300"
         onMinAmountChange={noop}
         onMaxAmountChange={noop}
-      />,
+      />
     );
     expect(screen.queryByText('Alpha Circle')).not.toBeInTheDocument();
     expect(screen.queryByText('Beta Pool')).not.toBeInTheDocument();
@@ -125,7 +127,7 @@ describe('GroupList — search and filter', () => {
         onCurrencyChange={noop}
         onMinAmountChange={noop}
         onMaxAmountChange={noop}
-      />,
+      />
     );
     expect(screen.getByLabelText('Filter by token type')).toBeInTheDocument();
     expect(screen.getByLabelText('Minimum contribution amount')).toBeInTheDocument();
@@ -145,7 +147,7 @@ describe('GroupList — search and filter', () => {
         showPagination={false}
         currencyFilter=""
         onCurrencyChange={onCurrencyChange}
-      />,
+      />
     );
     fireEvent.change(screen.getByLabelText('Filter by token type'), { target: { value: 'USDC' } });
     expect(onCurrencyChange).toHaveBeenCalledWith('USDC');
@@ -161,9 +163,11 @@ describe('GroupList — search and filter', () => {
         minAmount=""
         onMinAmountChange={onMinAmountChange}
         onMaxAmountChange={noop}
-      />,
+      />
     );
-    fireEvent.change(screen.getByLabelText('Minimum contribution amount'), { target: { value: '100' } });
+    fireEvent.change(screen.getByLabelText('Minimum contribution amount'), {
+      target: { value: '100' },
+    });
     expect(onMinAmountChange).toHaveBeenCalledWith('100');
   });
 });

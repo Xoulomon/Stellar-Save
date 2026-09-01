@@ -35,7 +35,11 @@ describe('Badge', () => {
   });
 
   it('renders with icon on right', () => {
-    render(<Badge icon={<span>→</span>} iconPosition="right">Next</Badge>);
+    render(
+      <Badge icon={<span>→</span>} iconPosition="right">
+        Next
+      </Badge>
+    );
     const badge = screen.getByText('Next').parentElement;
     expect(badge?.querySelector('.badge-icon')).toBeInTheDocument();
   });

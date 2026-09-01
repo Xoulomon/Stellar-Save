@@ -42,9 +42,11 @@ const translations: Record<SupportedLocale, TranslationMap> = {
     'payout_notification.body':
       'Congratulations {{userName}}! Your payout of {{amount}} XLM from {{groupName}} is on its way.',
     'group_update.subject': 'Update: {{groupName}}',
-    'group_update.body': 'Hi {{userName}}, there is a new update in {{groupName}}: {{updateMessage}}',
+    'group_update.body':
+      'Hi {{userName}}, there is a new update in {{groupName}}: {{updateMessage}}',
     'member_joined.subject': 'New Member Joined {{groupName}}',
-    'member_joined.body': '{{memberName}} has joined {{groupName}} ({{totalMembers}}/{{maxMembers}} members).',
+    'member_joined.body':
+      '{{memberName}} has joined {{groupName}} ({{totalMembers}}/{{maxMembers}} members).',
   },
 
   fr: {
@@ -94,9 +96,7 @@ function assertAllLocalesCoverage(): void {
   for (const locale of SUPPORTED_LOCALES) {
     for (const key of referenceKeys) {
       if (!translations[locale][key]) {
-        throw new Error(
-          `[i18n] Missing translation: locale="${locale}" key="${key}"`
-        );
+        throw new Error(`[i18n] Missing translation: locale="${locale}" key="${key}"`);
       }
     }
   }
@@ -117,10 +117,7 @@ export function t(
   locale: string = 'en'
 ): string {
   const resolvedLocale = isSupported(locale) ? (locale as SupportedLocale) : 'en';
-  const template =
-    translations[resolvedLocale]?.[key] ??
-    translations.en[key] ??
-    key; // last-resort: return the key itself (never an untranslated `{{...}}`)
+  const template = translations[resolvedLocale]?.[key] ?? translations.en[key] ?? key; // last-resort: return the key itself (never an untranslated `{{...}}`)
 
   return interpolate(template, vars);
 }

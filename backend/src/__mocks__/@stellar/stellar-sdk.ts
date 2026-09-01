@@ -32,11 +32,9 @@
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 /** A deterministic fake Stellar account ID for use in assertions. */
-export const FAKE_ACCOUNT_ID =
-  'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN';
+export const FAKE_ACCOUNT_ID = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN';
 
-export const FAKE_TX_HASH =
-  'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
+export const FAKE_TX_HASH = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
 
 // ─── Helper factory ───────────────────────────────────────────────────────────
 
@@ -109,7 +107,10 @@ export function makeMockHorizonServer() {
  * Suitable for pool tests that only need the constructor signature.
  */
 class FakeRpcServer {
-  constructor(public readonly url: string, _opts?: unknown) {}
+  constructor(
+    public readonly url: string,
+    _opts?: unknown
+  ) {}
 }
 
 // ─── Keypair stub ─────────────────────────────────────────────────────────────
@@ -165,7 +166,7 @@ const Networks = {
 class FakeAsset {
   constructor(
     public readonly code: string = 'XLM',
-    public readonly issuer?: string,
+    public readonly issuer?: string
   ) {}
 
   static native(): FakeAsset {
@@ -262,11 +263,7 @@ const SorobanRpcApi = {
     );
   }),
   isSimulationSuccess: jest.fn((result: unknown) => {
-    return (
-      !!result &&
-      typeof result === 'object' &&
-      !('error' in (result as object))
-    );
+    return !!result && typeof result === 'object' && !('error' in (result as object));
   }),
   assembleTransaction: jest.fn((_tx: unknown, _sim: unknown) => ({
     build: jest.fn().mockReturnValue({

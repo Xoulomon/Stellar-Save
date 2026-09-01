@@ -120,7 +120,6 @@
   box-shadow: 0 10px 40px var(--color-shadow);
 }
 
-
 /* Overlay fade-in animation */
 @keyframes fadeInOverlay {
   from {

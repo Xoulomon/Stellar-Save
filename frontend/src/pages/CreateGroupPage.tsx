@@ -60,9 +60,7 @@ const CreateGroupPage: React.FC = () => {
     <div className="create-group-page">
       <div className="page-header">
         <h1>Create New ROSCA Group</h1>
-        <p className="page-subtitle">
-          Set up a new Rotating Savings and Credit Association group
-        </p>
+        <p className="page-subtitle">Set up a new Rotating Savings and Credit Association group</p>
       </div>
 
       <CreateGroupForm
@@ -74,11 +72,7 @@ const CreateGroupPage: React.FC = () => {
       {isSubmitting && <LoadingState message="Submitting transaction to Stellar…" />}
 
       {txError && !isSubmitting && (
-        <ErrorState
-          message={txError}
-          onRetry={() => setTxError(null)}
-          retryLabel="Dismiss"
-        />
+        <ErrorState message={txError} onRetry={() => setTxError(null)} retryLabel="Dismiss" />
       )}
     </div>
   );

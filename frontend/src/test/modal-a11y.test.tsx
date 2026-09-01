@@ -175,9 +175,7 @@ describe('SaveTemplateModal – accessibility', () => {
 
   it('has an accessible name from the visible title', () => {
     render(<SaveTemplateModal open onClose={vi.fn()} steps={steps} />);
-    expect(
-      screen.getByRole('dialog', { name: /save transaction template/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: /save transaction template/i })).toBeInTheDocument();
   });
 
   it('closes on Escape', () => {
@@ -276,9 +274,7 @@ describe('ContributeButton confirmation dialog – accessibility', () => {
 
   it('has no axe violations when open', async () => {
     const user = userEvent.setup();
-    const { container } = render(
-      <ContributeButton amount={25} cycleId={2} walletAddress="GABC" />
-    );
+    const { container } = render(<ContributeButton amount={25} cycleId={2} walletAddress="GABC" />);
     await user.click(screen.getByRole('button', { name: /contribute/i }));
     expect(await axe(container)).toHaveNoViolations();
   });

@@ -57,12 +57,14 @@ export class RouteErrorBoundary extends Component<Props, State> {
               {this.state.error && (
                 <details style={{ marginTop: '1rem', textAlign: 'left' }}>
                   <summary>Error details</summary>
-                  <pre style={{
-                    backgroundColor: '#f5f5f5',
-                    padding: '1rem',
-                    borderRadius: '4px',
-                    overflow: 'auto',
-                  }}>
+                  <pre
+                    style={{
+                      backgroundColor: '#f5f5f5',
+                      padding: '1rem',
+                      borderRadius: '4px',
+                      overflow: 'auto',
+                    }}
+                  >
                     {this.state.error.toString()}
                     {this.state.errorInfo?.componentStack &&
                       `\n\nComponent Stack:\n${this.state.errorInfo.componentStack}`}
@@ -70,7 +72,14 @@ export class RouteErrorBoundary extends Component<Props, State> {
                 </details>
               )}
 
-              <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <div
+                style={{
+                  marginTop: '2rem',
+                  display: 'flex',
+                  gap: '1rem',
+                  justifyContent: 'center',
+                }}
+              >
                 <Button variant="primary" onClick={this.handleRetry}>
                   Try Again
                 </Button>

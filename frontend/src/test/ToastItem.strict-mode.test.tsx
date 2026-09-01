@@ -27,7 +27,7 @@ describe('ToastItem Strict Mode', () => {
     render(
       <StrictMode>
         <ToastItem toast={toast} onClose={onClose} />
-      </StrictMode>,
+      </StrictMode>
     );
 
     act(() => {

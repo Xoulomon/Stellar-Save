@@ -14,7 +14,7 @@ jest.mock('../generated/prisma/client', () => ({
 
 import { HorizonIndexer } from '../services/indexer';
 
-const flush = (ms = 50) => new Promise(resolve => setTimeout(resolve, ms));
+const flush = (ms = 50) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function txRecord(overrides: Record<string, unknown> = {}) {
   return {
@@ -83,10 +83,7 @@ describe('HorizonIndexer resiliency', () => {
     await flush(60);
     await indexer.stop();
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '[HorizonIndexer] Poll error:',
-      expect.any(Error)
-    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith('[HorizonIndexer] Poll error:', expect.any(Error));
     // The loop retried after the connection error instead of stopping.
     expect(fetchMock.mock.calls.length).toBeGreaterThan(1);
   });

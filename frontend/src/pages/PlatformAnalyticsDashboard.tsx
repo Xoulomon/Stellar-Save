@@ -1,6 +1,15 @@
 import {
-  Box, Card, CardContent, Typography, Skeleton, ToggleButton, ToggleButtonGroup,
-  MenuItem, Select, FormControl, InputLabel,
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Skeleton,
+  ToggleButton,
+  ToggleButtonGroup,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import { useState, useEffect, useCallback } from 'react';
 
@@ -53,17 +62,28 @@ function KpiCard({ label, value, loading }: { label: string; value: string; load
   return (
     <Card variant="outlined">
       <CardContent>
-        <Typography variant="caption" color="text.secondary">{label}</Typography>
-        {loading
-          ? <Skeleton width="60%" height={36} />
-          : <Typography variant="h5" fontWeight="bold">{value}</Typography>}
+        <Typography variant="caption" color="text.secondary">
+          {label}
+        </Typography>
+        {loading ? (
+          <Skeleton width="60%" height={36} />
+        ) : (
+          <Typography variant="h5" fontWeight="bold">
+            {value}
+          </Typography>
+        )}
       </CardContent>
     </Card>
   );
 }
 
 // ─── Trend line chart (SVG) ────────────────────────────────────────────────────
-function TrendChart({ data, field, label, color }: {
+function TrendChart({
+  data,
+  field,
+  label,
+  color,
+}: {
   data: TrendPoint[];
   field: keyof TrendPoint;
   label: string;
@@ -76,9 +96,7 @@ function TrendChart({ data, field, label, color }: {
   const H = 120;
   const step = W / Math.max(data.length - 1, 1);
 
-  const pts = values
-    .map((v, i) => `${i * step},${H - (v / max) * H}`)
-    .join(' ');
+  const pts = values.map((v, i) => `${i * step},${H - (v / max) * H}`).join(' ');
 
   return (
     <Box>
@@ -86,7 +104,11 @@ function TrendChart({ data, field, label, color }: {
         {label}
       </Typography>
       <Box sx={{ overflowX: 'auto' }}>
-        <svg viewBox={`0 0 ${W} ${H + 20}`} style={{ width: '100%', minWidth: 280 }} aria-label={`${label} trend`}>
+        <svg
+          viewBox={`0 0 ${W} ${H + 20}`}
+          style={{ width: '100%', minWidth: 280 }}
+          aria-label={`${label} trend`}
+        >
           <polyline points={pts} fill="none" stroke={color} strokeWidth={2} />
           {values.map((v, i) => (
             <circle key={i} cx={i * step} cy={H - (v / max) * H} r={3} fill={color}>
@@ -131,7 +153,9 @@ export default function PlatformAnalyticsDashboard() {
     }
   }, [range]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const fmt = (n?: number) => (n ?? 0).toLocaleString();
   const pct = (n?: number) => `${((n ?? 0) * 100).toFixed(1)}%`;
@@ -146,7 +170,6 @@ export default function PlatformAnalyticsDashboard() {
   return (
     <AppLayout title="Platform Analytics" subtitle="Stakeholder insights — refreshed daily">
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-
         {/* Time-range selector */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
           <ToggleButtonGroup
@@ -157,35 +180,74 @@ export default function PlatformAnalyticsDashboard() {
             aria-label="time range"
           >
             {['7d', '30d', '90d'].map((r) => (
-              <ToggleButton key={r} value={r}>{r}</ToggleButton>
+              <ToggleButton key={r} value={r}>
+                {r}
+              </ToggleButton>
             ))}
           </ToggleButtonGroup>
         </Box>
 
         {error && (
-          <Typography color="warning.main" variant="body2">{error}</Typography>
+          <Typography color="warning.main" variant="body2">
+            {error}
+          </Typography>
         )}
 
         {/* KPI grid */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 2 }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' },
+            gap: 2,
+          }}
+        >
           <KpiCard label="Total Users" value={fmt(snapshot?.totalUsers)} loading={loading} />
           <KpiCard label="Active Users" value={fmt(snapshot?.activeUsers)} loading={loading} />
           <KpiCard label="Active Groups" value={fmt(snapshot?.activeGroups)} loading={loading} />
           <KpiCard label="Success Rate" value={pct(snapshot?.successRate)} loading={loading} />
         </Box>
 
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 2 }}>
-          <KpiCard label="Total Contributions" value={fmt(snapshot?.totalContributions)} loading={loading} />
-          <KpiCard label="Contribution Volume" value={`${fmt(snapshot?.totalContributionAmount)} XLM`} loading={loading} />
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' },
+            gap: 2,
+          }}
+        >
+          <KpiCard
+            label="Total Contributions"
+            value={fmt(snapshot?.totalContributions)}
+            loading={loading}
+          />
+          <KpiCard
+            label="Contribution Volume"
+            value={`${fmt(snapshot?.totalContributionAmount)} XLM`}
+            loading={loading}
+          />
           <KpiCard label="Total Payouts" value={fmt(snapshot?.totalPayouts)} loading={loading} />
-          <KpiCard label="Payout Volume" value={`${fmt(snapshot?.totalPayoutAmount)} XLM`} loading={loading} />
+          <KpiCard
+            label="Payout Volume"
+            value={`${fmt(snapshot?.totalPayoutAmount)} XLM`}
+            loading={loading}
+          />
         </Box>
 
         {/* Trend chart with drill-down selector */}
         <Card variant="outlined">
           <CardContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
-              <Typography variant="subtitle1" fontWeight="bold">Trend</Typography>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 2,
+                flexWrap: 'wrap',
+                gap: 1,
+              }}
+            >
+              <Typography variant="subtitle1" fontWeight="bold">
+                Trend
+              </Typography>
               <FormControl size="small" sx={{ minWidth: 200 }}>
                 <InputLabel>Metric</InputLabel>
                 <Select
@@ -194,7 +256,9 @@ export default function PlatformAnalyticsDashboard() {
                   onChange={(e) => setMetric(e.target.value as keyof TrendPoint)}
                 >
                   {metricOptions.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+                    <MenuItem key={o.value} value={o.value}>
+                      {o.label}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -216,7 +280,6 @@ export default function PlatformAnalyticsDashboard() {
             )}
           </CardContent>
         </Card>
-
       </Box>
     </AppLayout>
   );

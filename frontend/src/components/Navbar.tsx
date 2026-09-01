@@ -23,18 +23,28 @@ export const Navbar: React.FC = () => {
     <nav className="navbar">
       <div className="navbar-container">
         <div className="navbar-brand">
-          <Link to="/" aria-label="Stellar Save home">StellarSave</Link>
+          <Link to="/" aria-label="Stellar Save home">
+            StellarSave
+          </Link>
         </div>
         <div className="navbar-links">
-          <Link to="/dashboard" className="nav-link">Dashboard</Link>
-          <Link to="/create-group" className="nav-link">Create Group</Link>
-          <Link to="/my-groups" className="nav-link">My Groups</Link>
+          <Link to="/dashboard" className="nav-link">
+            Dashboard
+          </Link>
+          <Link to="/create-group" className="nav-link">
+            Create Group
+          </Link>
+          <Link to="/my-groups" className="nav-link">
+            My Groups
+          </Link>
         </div>
         <div className="navbar-wallet">
           {isConnected && activeAddress ? (
             <div className="wallet-connected">
               <span className="wallet-address">{formatAddress(activeAddress)}</span>
-              <Button variant="secondary" size="sm" onClick={disconnect}>Disconnect</Button>
+              <Button variant="secondary" size="sm" onClick={disconnect}>
+                Disconnect
+              </Button>
             </div>
           ) : (
             <Button onClick={handleConnect} loading={loading} disabled={loading}>

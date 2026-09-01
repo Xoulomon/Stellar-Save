@@ -1,13 +1,13 @@
 /* ─── Light theme (default) ─────────────────────────────────────────────── */
 :root,
-[data-theme="light"] {
+[data-theme='light'] {
   /* Surface */
   --color-bg: #edf4ff;
   --color-bg-paper: #ffffff;
   --color-bg-input: #ffffff;
 
   /* Text — both meet WCAG AA (≥4.5:1) against their backgrounds */
-  --color-text-primary: #152247;   /* 10.4:1 on #edf4ff */
+  --color-text-primary: #152247; /* 10.4:1 on #edf4ff */
   --color-text-secondary: #4e5b82; /* 4.6:1 on #edf4ff  */
 
   /* Border / divider */
@@ -73,14 +73,14 @@
 }
 
 /* ─── Dark theme ─────────────────────────────────────────────────────────── */
-[data-theme="dark"] {
+[data-theme='dark'] {
   /* Surface */
   --color-bg: #0f1623;
   --color-bg-paper: #1a2236;
   --color-bg-input: #1e2a40;
 
   /* Text — both meet WCAG AA (≥4.5:1) against their backgrounds */
-  --color-text-primary: #e8edf8;   /* 13.2:1 on #0f1623 */
+  --color-text-primary: #e8edf8; /* 13.2:1 on #0f1623 */
   --color-text-secondary: #9aaac8; /* 5.1:1 on #0f1623  */
 
   /* Border / divider */
@@ -121,7 +121,7 @@
 
 /* ─── Base ───────────────────────────────────────────────────────────────── */
 :root {
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
@@ -140,7 +140,9 @@ body {
   min-height: 100vh;
   background-color: var(--color-bg);
   color: var(--color-text-primary);
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
 }
 
 #root {

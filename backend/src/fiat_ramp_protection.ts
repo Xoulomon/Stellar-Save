@@ -49,7 +49,7 @@ class InMemoryVelocityStore {
   record(key: string, windowMs: number, nowMs: number): number {
     const cutoff = nowMs - windowMs;
     const entry = this.buckets.get(key) ?? { timestamps: [] };
-    entry.timestamps = entry.timestamps.filter(ts => ts > cutoff);
+    entry.timestamps = entry.timestamps.filter((ts) => ts > cutoff);
     entry.timestamps.push(nowMs);
     this.buckets.set(key, entry);
     return entry.timestamps.length;
@@ -60,7 +60,7 @@ class InMemoryVelocityStore {
     const cutoff = nowMs - windowMs;
     const entry = this.buckets.get(key);
     if (!entry) return 0;
-    return entry.timestamps.filter(ts => ts > cutoff).length;
+    return entry.timestamps.filter((ts) => ts > cutoff).length;
   }
 }
 
@@ -81,20 +81,12 @@ function extractUserId(req: Request): string | undefined {
   return r.userId ?? r.user?.id ?? (req.headers['x-user-id'] as string | undefined);
 }
 
-function sendRateLimitResponse(
-  res: Response,
-  retryAfterSeconds: number,
-  reason: string,
-): void {
+function sendRateLimitResponse(res: Response, retryAfterSeconds: number, reason: string): void {
   res.setHeader('Retry-After', String(retryAfterSeconds));
   res.status(429).json({ error: 'Too many requests', reason, retryAfterSeconds });
 }
 
-function logAndAlert(
-  req: Request,
-  limitType: string,
-  detail: Record<string, unknown>,
-): void {
+function logAndAlert(req: Request, limitType: string, detail: Record<string, unknown>): void {
   const endpoint = req.path;
   logger.warn('[fiat-ramp] rate limit breach', {
     limitType,
@@ -107,11 +99,7 @@ function logAndAlert(
   rampRateLimitBreaches.inc({ limit_type: limitType, endpoint });
 }
 
-function flagAnomaly(
-  req: Request,
-  reason: string,
-  detail: Record<string, unknown>,
-): void {
+function flagAnomaly(req: Request, reason: string, detail: Record<string, unknown>): void {
   const endpoint = req.path;
   logger.error('[fiat-ramp] anomaly detected', {
     reason,
@@ -221,7 +209,7 @@ export function rampCaptchaGate() {
 
     const token =
       (req.headers['x-captcha-token'] as string | undefined) ??
-      (req.body as Record<string, unknown>)?.captchaToken as string | undefined;
+      ((req.body as Record<string, unknown>)?.captchaToken as string | undefined);
 
     if (!token) {
       flagAnomaly(req, 'missing_captcha_token', { path: req.path });

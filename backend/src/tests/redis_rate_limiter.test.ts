@@ -32,7 +32,7 @@ class MockRedis {
 
     const entries = this.store.get(key) || [];
     const cutoff = now - windowMs;
-    const valid = entries.filter(e => e.score > cutoff);
+    const valid = entries.filter((e) => e.score > cutoff);
     const count = valid.length;
 
     if (count + cost <= max) {
@@ -74,9 +74,17 @@ function makeReqRes(overrides: Record<string, any> = {}) {
     statusCode: 200,
     body: null as unknown,
     headers: {} as Record<string, string>,
-    setHeader(k: string, v: string) { this.headers[k] = String(v); },
-    status(code: number) { this.statusCode = code; return this; },
-    json(payload: unknown) { this.body = payload; return this; },
+    setHeader(k: string, v: string) {
+      this.headers[k] = String(v);
+    },
+    status(code: number) {
+      this.statusCode = code;
+      return this;
+    },
+    json(payload: unknown) {
+      this.body = payload;
+      return this;
+    },
   };
 
   return { req, res };
@@ -85,10 +93,12 @@ function makeReqRes(overrides: Record<string, any> = {}) {
 async function runMiddleware(
   middleware: ReturnType<typeof createTieredRateLimiter>,
   req: any,
-  res: any,
+  res: any
 ): Promise<boolean> {
   let nextCalled = false;
-  await middleware(req, res, () => { nextCalled = true; });
+  await middleware(req, res, () => {
+    nextCalled = true;
+  });
   return nextCalled;
 }
 
@@ -145,7 +155,10 @@ async function runTests() {
     assert(firstNext, 'free tier first request is allowed');
     assert(first.res.headers['X-RateLimit-Tier'] === 'free', 'tier header is free');
     assert(first.res.headers['X-RateLimit-Limit'] !== undefined, 'X-RateLimit-Limit header set');
-    assert(first.res.headers['X-RateLimit-Remaining'] !== undefined, 'X-RateLimit-Remaining header set');
+    assert(
+      first.res.headers['X-RateLimit-Remaining'] !== undefined,
+      'X-RateLimit-Remaining header set'
+    );
     assert(first.res.headers['X-RateLimit-Reset'] !== undefined, 'X-RateLimit-Reset header set');
 
     // Second request (should still be within limit)
@@ -230,7 +243,7 @@ async function runTests() {
   console.log('ALL REDIS RATE LIMITER TESTS PASSED! 🎉\n');
 }
 
-runTests().catch(err => {
+runTests().catch((err) => {
   console.error(err);
   process.exit(1);
 });

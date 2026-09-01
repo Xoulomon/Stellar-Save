@@ -81,7 +81,7 @@ const mockTransactions: Transaction[] = [
 export const useTransactions = () => {
   const { data, isLoading } = useAsyncData<Transaction[]>(
     () => mockDelay(() => mockTransactions, 800),
-    [],
+    []
   );
 
   return { transactions: data ?? [], isLoading };

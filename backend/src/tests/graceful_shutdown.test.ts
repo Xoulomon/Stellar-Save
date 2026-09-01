@@ -14,13 +14,17 @@ describe('createGracefulShutdown', () => {
     const cleanup = jest.fn().mockResolvedValue(undefined);
     const exit = jest.fn();
 
-    const shutdown = createGracefulShutdown(server, cleanup, { timeoutMs: 1000, exit, log: () => {} });
+    const shutdown = createGracefulShutdown(server, cleanup, {
+      timeoutMs: 1000,
+      exit,
+      log: () => {},
+    });
     shutdown('SIGTERM');
 
     expect(server.close).toHaveBeenCalledTimes(1);
     expect(cleanup).not.toHaveBeenCalled();
 
-    await new Promise(resolve => setTimeout(resolve, 60));
+    await new Promise((resolve) => setTimeout(resolve, 60));
 
     expect(cleanup).toHaveBeenCalledTimes(1);
     expect(exit).toHaveBeenCalledWith(0);
@@ -39,7 +43,7 @@ describe('createGracefulShutdown', () => {
     });
     shutdown('SIGTERM');
 
-    await new Promise(resolve => setTimeout(resolve, 40));
+    await new Promise((resolve) => setTimeout(resolve, 40));
 
     expect(exit).toHaveBeenCalledWith(1);
   });
@@ -49,7 +53,11 @@ describe('createGracefulShutdown', () => {
     const cleanup = jest.fn().mockResolvedValue(undefined);
     const exit = jest.fn();
 
-    const shutdown = createGracefulShutdown(server, cleanup, { timeoutMs: 1000, exit, log: () => {} });
+    const shutdown = createGracefulShutdown(server, cleanup, {
+      timeoutMs: 1000,
+      exit,
+      log: () => {},
+    });
     shutdown('SIGTERM');
     shutdown('SIGINT');
 

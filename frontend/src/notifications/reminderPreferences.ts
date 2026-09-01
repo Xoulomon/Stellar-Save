@@ -12,7 +12,7 @@ export type NotificationChannel = 'browser' | 'email';
 export interface QuietHours {
   enabled: boolean;
   startTime: string; // HH:mm format
-  endTime: string;   // HH:mm format
+  endTime: string; // HH:mm format
 }
 
 export interface ReminderPreferences {
@@ -68,9 +68,7 @@ export function setReminderPreferences(preferences: ReminderPreferences): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
     // Dispatch custom event for other parts of app to react to changes
-    window.dispatchEvent(
-      new CustomEvent('reminder-preferences-changed', { detail: preferences })
-    );
+    window.dispatchEvent(new CustomEvent('reminder-preferences-changed', { detail: preferences }));
   } catch (error) {
     console.error('Failed to save reminder preferences:', error);
   }

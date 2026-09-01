@@ -76,10 +76,7 @@ export function GroupSettings({ group, onSaved }: GroupSettingsProps) {
   if (!activeAddress || activeAddress !== group.creator) return null;
 
   const onValid = (values: FormValues) => {
-    const diff = computeDiff(
-      { name: group.name, description: group.description ?? '' },
-      values,
-    );
+    const diff = computeDiff({ name: group.name, description: group.description ?? '' }, values);
     if (diff.length === 0) return; // nothing changed
     setPendingDiff(diff);
     setPendingValues(values);
@@ -106,7 +103,9 @@ export function GroupSettings({ group, onSaved }: GroupSettingsProps) {
 
   return (
     <div>
-      <Typography variant="h6" gutterBottom>Group Settings</Typography>
+      <Typography variant="h6" gutterBottom>
+        Group Settings
+      </Typography>
 
       <form onSubmit={handleSubmit(onValid)} noValidate>
         <TextField
@@ -144,13 +143,15 @@ export function GroupSettings({ group, onSaved }: GroupSettingsProps) {
           inputProps={{ maxLength: DESC_MAX }}
         />
 
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={isPending}
-          style={{ marginTop: 16 }}
-        >
-          {isPending ? <><CircularProgress size={14} color="inherit" sx={{ mr: 1 }} />Saving…</> : 'Save Changes'}
+        <Button type="submit" variant="primary" disabled={isPending} style={{ marginTop: 16 }}>
+          {isPending ? (
+            <>
+              <CircularProgress size={14} color="inherit" sx={{ mr: 1 }} />
+              Saving…
+            </>
+          ) : (
+            'Save Changes'
+          )}
         </Button>
       </form>
 
@@ -164,7 +165,9 @@ export function GroupSettings({ group, onSaved }: GroupSettingsProps) {
       )}
 
       {state === 'failed' && error && (
-        <Typography variant="body2" color="error" sx={{ mt: 2 }}>{error}</Typography>
+        <Typography variant="body2" color="error" sx={{ mt: 2 }}>
+          {error}
+        </Typography>
       )}
 
       {/* Diff confirmation modal */}
@@ -174,15 +177,23 @@ export function GroupSettings({ group, onSaved }: GroupSettingsProps) {
           {pendingDiff.map((d) => (
             <Typography key={d.field} variant="body2" sx={{ mb: 1 }}>
               <strong>{d.field}:</strong>{' '}
-              <span style={{ textDecoration: 'line-through', color: 'var(--color-text-secondary)' }}>{d.from || '(empty)'}</span>
+              <span
+                style={{ textDecoration: 'line-through', color: 'var(--color-text-secondary)' }}
+              >
+                {d.from || '(empty)'}
+              </span>
               {' → '}
               <span>{d.to || '(empty)'}</span>
             </Typography>
           ))}
         </DialogContent>
         <DialogActions>
-          <Button variant="secondary" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-          <Button variant="primary" onClick={handleConfirm}>Confirm</Button>
+          <Button variant="secondary" onClick={() => setConfirmOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleConfirm}>
+            Confirm
+          </Button>
         </DialogActions>
       </Dialog>
     </div>

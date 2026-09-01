@@ -14,15 +14,13 @@ import type { GroupCycle, GroupContribution } from '../utils/groupApi';
 function computeCycleRates(
   cycles: GroupCycle[],
   contributions: GroupContribution[],
-  maxMembers: number,
+  maxMembers: number
 ): CycleRate[] {
   const completedCycles = cycles.filter((c) => c.status === 'completed');
   return completedCycles.map((cycle) => {
     const contributorsInCycle = contributions.filter(
       (c) =>
-        c.status === 'completed' &&
-        c.timestamp >= cycle.startDate &&
-        c.timestamp <= cycle.endDate,
+        c.status === 'completed' && c.timestamp >= cycle.startDate && c.timestamp <= cycle.endDate
     ).length;
     const totalMembersInCycle = maxMembers;
     const rate =
@@ -40,7 +38,7 @@ function computeCycleRates(
 function computeOnTimePercent(
   cycles: GroupCycle[],
   contributions: GroupContribution[],
-  maxMembers: number,
+  maxMembers: number
 ): number {
   const completedCycles = cycles.filter((c) => c.status === 'completed');
   const totalExpected = completedCycles.length * maxMembers;
@@ -49,7 +47,7 @@ function computeOnTimePercent(
   const onTime = contributions.filter((c) => {
     if (c.status !== 'completed') return false;
     const cycle = completedCycles.find(
-      (cy) => c.timestamp >= cy.startDate && c.timestamp <= cy.endDate,
+      (cy) => c.timestamp >= cy.startDate && c.timestamp <= cy.endDate
     );
     return cycle !== undefined && c.timestamp < cycle.endDate;
   }).length;
@@ -64,9 +62,7 @@ function computeOnTimePercent(
  *
  * @param groupId - Pass null/undefined to skip fetching.
  */
-export function useGroupAnalytics(
-  groupId: string | null | undefined,
-): GroupAnalyticsResult {
+export function useGroupAnalytics(groupId: string | null | undefined): GroupAnalyticsResult {
   const { group, isLoading: groupLoading, error: groupError } = useGroup(groupId);
   const {
     contributions,

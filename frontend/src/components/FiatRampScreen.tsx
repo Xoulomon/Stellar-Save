@@ -29,7 +29,12 @@ export interface FiatRampScreenProps {
   defaultAsset?: string;
 }
 
-export function FiatRampScreen({ type, title, description, defaultAsset = 'USDC' }: FiatRampScreenProps) {
+export function FiatRampScreen({
+  type,
+  title,
+  description,
+  defaultAsset = 'USDC',
+}: FiatRampScreenProps) {
   const { activeAddress } = useWallet();
   const { isAuthenticated, isAuthenticating, error: authError, authenticate } = useBackendAuth();
   const { initiateDeposit, initiateWithdraw, getTransaction } = useRamp();
@@ -104,7 +109,11 @@ export function FiatRampScreen({ type, title, description, defaultAsset = 'USDC'
         {description}
       </Typography>
 
-      {authError && <Alert severity="error" sx={{ mb: 2 }}>{authError}</Alert>}
+      {authError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {authError}
+        </Alert>
+      )}
 
       {!current && (
         <Stack spacing={2}>
@@ -119,7 +128,11 @@ export function FiatRampScreen({ type, title, description, defaultAsset = 'USDC'
           <Box sx={{ display: 'flex', gap: 2 }}>
             <FormControl size="small" sx={{ minWidth: 160 }}>
               <InputLabel>Asset</InputLabel>
-              <Select value={assetCode} label="Asset" onChange={(e) => setAssetCode(e.target.value)}>
+              <Select
+                value={assetCode}
+                label="Asset"
+                onChange={(e) => setAssetCode(e.target.value)}
+              >
                 <MenuItem value="USDC">USDC</MenuItem>
                 <MenuItem value="XLM">XLM</MenuItem>
                 <MenuItem value="EURC">EURC</MenuItem>
@@ -147,9 +160,17 @@ export function FiatRampScreen({ type, title, description, defaultAsset = 'USDC'
             size="large"
             onClick={handleAuthAndStart}
             disabled={loading || isAuthenticating || !anchorDomain.trim() || !assetCode.trim()}
-            startIcon={isAuthenticating || loading ? <CircularProgress size={16} color="inherit" /> : undefined}
+            startIcon={
+              isAuthenticating || loading ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : undefined
+            }
           >
-            {!isAuthenticated ? 'Connect & Authenticate' : type === 'deposit' ? 'Start Deposit' : 'Start Withdrawal'}
+            {!isAuthenticated
+              ? 'Connect & Authenticate'
+              : type === 'deposit'
+                ? 'Start Deposit'
+                : 'Start Withdrawal'}
           </Button>
         </Stack>
       )}
@@ -180,7 +201,12 @@ export function FiatRampScreen({ type, title, description, defaultAsset = 'USDC'
           )}
 
           {current.moreInfoUrl && (
-            <Link href={current.moreInfoUrl} target="_blank" rel="noopener noreferrer" variant="body2">
+            <Link
+              href={current.moreInfoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="body2"
+            >
               More info
             </Link>
           )}
@@ -191,12 +217,23 @@ export function FiatRampScreen({ type, title, description, defaultAsset = 'USDC'
             <Typography variant="caption" color="text.secondary">
               Started {new Date(current.startedAt).toLocaleString()}
             </Typography>
-            <Button size="small" onClick={() => { setSubmitted(null); }}>New {type}</Button>
+            <Button
+              size="small"
+              onClick={() => {
+                setSubmitted(null);
+              }}
+            >
+              New {type}
+            </Button>
           </Stack>
         </Stack>
       )}
 
-      {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {error}
+        </Alert>
+      )}
     </Box>
   );
 }

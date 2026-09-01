@@ -31,7 +31,9 @@ export class WebPushService {
     const subject = config.vapid.subject;
 
     if (!publicKey || !privateKey) {
-      logger.warn('VAPID keys not configured — web push disabled. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY.');
+      logger.warn(
+        'VAPID keys not configured — web push disabled. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY.'
+      );
       this.enabled = false;
       return;
     }
@@ -77,7 +79,7 @@ export class WebPushService {
     if (!this.enabled) return;
 
     const subs = await this.prisma.pushSubscription.findMany({ where: { userId } });
-    await Promise.allSettled(subs.map(sub => this.sendToSubscription(sub, payload)));
+    await Promise.allSettled(subs.map((sub) => this.sendToSubscription(sub, payload)));
   }
 
   // Send to all stored subscriptions (broadcast)
@@ -85,7 +87,7 @@ export class WebPushService {
     if (!this.enabled) return;
 
     const subs = await this.prisma.pushSubscription.findMany();
-    await Promise.allSettled(subs.map(sub => this.sendToSubscription(sub, payload)));
+    await Promise.allSettled(subs.map((sub) => this.sendToSubscription(sub, payload)));
   }
 
   // Send to users whose userId matches any of the given wallet addresses
@@ -98,12 +100,14 @@ export class WebPushService {
 
     if (subs.length === 0) {
       // No direct address match — fall back to broadcast so no event is silently dropped
-      logger.info('No subscriptions matched member addresses, broadcasting push', { memberAddresses });
+      logger.info('No subscriptions matched member addresses, broadcasting push', {
+        memberAddresses,
+      });
       await this.sendToAll(payload);
       return;
     }
 
-    await Promise.allSettled(subs.map(sub => this.sendToSubscription(sub, payload)));
+    await Promise.allSettled(subs.map((sub) => this.sendToSubscription(sub, payload)));
   }
 
   private async sendToSubscription(
@@ -118,10 +122,15 @@ export class WebPushService {
     } catch (err: any) {
       if (err.statusCode === 410 || err.statusCode === 404) {
         // Subscription has expired or been revoked — clean it up
-        await this.prisma.pushSubscription.deleteMany({ where: { endpoint: sub.endpoint } }).catch(() => {});
+        await this.prisma.pushSubscription
+          .deleteMany({ where: { endpoint: sub.endpoint } })
+          .catch(() => {});
         logger.info('Removed expired push subscription', { endpoint: sub.endpoint });
       } else {
-        logger.error('Failed to send push notification', { endpoint: sub.endpoint, error: String(err) });
+        logger.error('Failed to send push notification', {
+          endpoint: sub.endpoint,
+          error: String(err),
+        });
       }
     }
   }

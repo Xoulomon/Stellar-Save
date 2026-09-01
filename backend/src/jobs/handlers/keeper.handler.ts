@@ -87,14 +87,16 @@ export class KeeperHandler {
       return;
     }
 
-    const actionable = due.filter(g => (this.retryMap.get(`${g.groupId}:${g.cycleNumber}`) ?? 0) < MAX_RETRIES);
+    const actionable = due.filter(
+      (g) => (this.retryMap.get(`${g.groupId}:${g.cycleNumber}`) ?? 0) < MAX_RETRIES
+    );
 
     if (actionable.length === 0) {
       logger.warn('[keeper] all due groups are dead-lettered');
       return;
     }
 
-    const groupIds = actionable.map(g => g.groupId);
+    const groupIds = actionable.map((g) => g.groupId);
     logger.info('[keeper] executing payouts batch', { groupIds });
 
     try {

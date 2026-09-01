@@ -125,10 +125,7 @@ async function createSecret(event: RotationEvent): Promise<void> {
   }
 
   // Generate new secret value based on secret type
-  const newSecretValue = generateNewSecretValue(
-    event.SecretId,
-    currentSecret.SecretString
-  );
+  const newSecretValue = generateNewSecretValue(event.SecretId, currentSecret.SecretString);
 
   // Store the new secret with the AWSPENDING label
   const putCommand = new PutSecretValueCommand({

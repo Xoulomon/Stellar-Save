@@ -45,28 +45,32 @@ export class SearchService {
                   autocomplete_analyzer: {
                     type: 'custom',
                     tokenizer: 'ngram_tokenizer',
-                    filter: ['lowercase']
-                  }
+                    filter: ['lowercase'],
+                  },
                 },
                 tokenizer: {
                   ngram_tokenizer: {
                     type: 'edge_ngram',
                     min_gram: 2,
                     max_gram: 10,
-                    token_chars: ['letter', 'digit']
-                  }
-                }
-              }
+                    token_chars: ['letter', 'digit'],
+                  },
+                },
+              },
             },
             mappings: {
               properties: {
-                name: { type: 'text', analyzer: 'autocomplete_analyzer', search_analyzer: 'standard' },
+                name: {
+                  type: 'text',
+                  analyzer: 'autocomplete_analyzer',
+                  search_analyzer: 'standard',
+                },
                 tags: { type: 'keyword' },
                 description: { type: 'text' },
-                status: { type: 'keyword' }
-              }
-            }
-          }
+                status: { type: 'keyword' },
+              },
+            },
+          },
         });
       }
     }
@@ -77,7 +81,7 @@ export class SearchService {
     await this.client.index({
       index: 'groups',
       id: group.id,
-      body: group
+      body: group,
     });
   }
 
@@ -86,7 +90,7 @@ export class SearchService {
     await this.client.index({
       index: 'members',
       id: member.id,
-      body: member
+      body: member,
     });
   }
 
@@ -95,7 +99,7 @@ export class SearchService {
     await this.client.index({
       index: 'transactions',
       id: tx.id,
-      body: tx
+      body: tx,
     });
   }
 
@@ -107,12 +111,12 @@ export class SearchService {
         query: {
           multi_match: {
             query,
-            fields: ['name^3', 'tags^2', 'status']
-          }
-        }
-      }
+            fields: ['name^3', 'tags^2', 'status'],
+          },
+        },
+      },
     });
-    return result.hits.hits.map(hit => hit._source);
+    return result.hits.hits.map((hit) => hit._source);
   }
 
   async autocomplete(query: string) {
@@ -124,16 +128,16 @@ export class SearchService {
           match: {
             name: {
               query,
-              analyzer: 'standard'
-            }
-          }
-        }
-      }
+              analyzer: 'standard',
+            },
+          },
+        },
+      },
     });
-    return result.hits.hits.map(hit => ({
+    return result.hits.hits.map((hit) => ({
       id: hit._id,
       index: hit._index,
-      source: hit._source
+      source: hit._source,
     }));
   }
 
@@ -143,7 +147,7 @@ export class SearchService {
     const [groups, members, transactions] = await Promise.all([
       this.searchGroups(query),
       this.searchMembers(query),
-      this.searchTransactions(query)
+      this.searchTransactions(query),
     ]);
 
     return { groups, members, transactions };
@@ -156,12 +160,12 @@ export class SearchService {
         query: {
           multi_match: {
             query,
-            fields: ['name^2', 'address']
-          }
-        }
-      }
+            fields: ['name^2', 'address'],
+          },
+        },
+      },
     });
-    return result.hits.hits.map(hit => hit._source);
+    return result.hits.hits.map((hit) => hit._source);
   }
 
   private async searchTransactions(query: string) {
@@ -171,11 +175,11 @@ export class SearchService {
         query: {
           multi_match: {
             query,
-            fields: ['stellarTxHash', 'memberAddress', 'type']
-          }
-        }
-      }
+            fields: ['stellarTxHash', 'memberAddress', 'type'],
+          },
+        },
+      },
     });
-    return result.hits.hits.map(hit => hit._source);
+    return result.hits.hits.map((hit) => hit._source);
   }
 }

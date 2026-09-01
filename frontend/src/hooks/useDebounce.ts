@@ -61,10 +61,7 @@ export interface UseDebounceOptions {
  * });
  * ```
  */
-export function useDebounce<T>(
-  value: T,
-  options: UseDebounceOptions = {}
-): T {
+export function useDebounce<T>(value: T, options: UseDebounceOptions = {}): T {
   const { delay = 500, leading = false, maxWait } = options;
 
   // State to store the debounced value

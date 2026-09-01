@@ -48,8 +48,7 @@ vi.mock('@creit.tech/stellar-wallets-kit', () => ({
     init: vi.fn(),
     ...mockKit,
     // Static methods used by WalletProvider
-    refreshSupportedWallets: (...args: unknown[]) =>
-      mockKit.refreshSupportedWallets(...args),
+    refreshSupportedWallets: (...args: unknown[]) => mockKit.refreshSupportedWallets(...args),
     getAddress: (...args: unknown[]) => mockKit.getAddress(...args),
     getNetwork: (...args: unknown[]) => mockKit.getNetwork(...args),
     signTransaction: (...args: unknown[]) => mockKit.signTransaction(...args),
@@ -81,7 +80,7 @@ function renderWalletButton() {
       <WalletProvider>
         <WalletButton />
       </WalletProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 
@@ -91,9 +90,7 @@ function applyHarness(harness: MockWalletKit) {
   mockKit.signTransaction.mockImplementation(harness.signTransaction);
   mockKit.disconnect.mockImplementation(harness.disconnect);
   mockKit.setWallet.mockImplementation(harness.setWallet);
-  mockKit.refreshSupportedWallets.mockImplementation(
-    harness.refreshSupportedWallets,
-  );
+  mockKit.refreshSupportedWallets.mockImplementation(harness.refreshSupportedWallets);
 }
 
 // === Test suites
@@ -115,9 +112,7 @@ describe('Cross-wallet: connect', () => {
 
       await waitFor(() => {
         // WalletButton shows first 6 chars of the address when connected.
-        expect(
-          screen.getByText(new RegExp('GABCDE')),
-        ).toBeInTheDocument();
+        expect(screen.getByText(new RegExp('GABCDE'))).toBeInTheDocument();
       });
     });
   }
@@ -134,9 +129,7 @@ describe('Cross-wallet: connect', () => {
 
       await user.click(await screen.findByRole('button', { name: /connect wallet/i }));
 
-      expect(
-        await screen.findByRole('button', { name: /connecting/i }),
-      ).toBeDisabled();
+      expect(await screen.findByRole('button', { name: /connecting/i })).toBeDisabled();
     });
   }
 });
@@ -153,10 +146,9 @@ describe('Cross-wallet: sign transaction', () => {
 
       // Call the mock directly — UI-level signing is wallet-specific; the
       // contract here is that the kit method resolves to a signed XDR string.
-      const result = await harness.signTransaction(
-        'AAAAAQAAA...raw-xdr...',
-        { networkPassphrase: 'Test SDF Network ; September 2015' },
-      );
+      const result = await harness.signTransaction('AAAAAQAAA...raw-xdr...', {
+        networkPassphrase: 'Test SDF Network ; September 2015',
+      });
 
       expect(result.signedTxXdr).toBeDefined();
       expect(typeof result.signedTxXdr).toBe('string');
@@ -191,9 +183,9 @@ describe('Cross-wallet: reject', () => {
     it(`[${harness.name}] signTransaction rejects with user-rejection error`, async () => {
       applyHarness(harness);
 
-      await expect(
-        harness.signTransaction('AAAAAQ...xdr...', {}),
-      ).rejects.toThrow(/user rejected/i);
+      await expect(harness.signTransaction('AAAAAQ...xdr...', {})).rejects.toThrow(
+        /user rejected/i
+      );
     });
   }
 });
@@ -224,9 +216,7 @@ describe('Cross-wallet: disconnect', () => {
       }
 
       await waitFor(() => {
-        expect(
-          screen.getByRole('button', { name: /connect wallet/i }),
-        ).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /connect wallet/i })).toBeInTheDocument();
       });
 
       // Confirm kit.disconnect was called

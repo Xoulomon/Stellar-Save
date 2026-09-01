@@ -22,35 +22,35 @@ const { mockFetchEvents, mockServiceInstance } =
   vi.hoisted(() => {
     const listeners: Array<{ type: string; cb: (e: AppEvent) => void }> = [];
 
-    const mockFetchEvents = vi.fn();
-    const mockStartWatching = vi.fn(() => Promise.resolve(undefined));
-    const mockOn = vi.fn();
+  const mockFetchEvents = vi.fn();
+  const mockStartWatching = vi.fn(() => Promise.resolve(undefined));
+  const mockOn = vi.fn();
 
-    const mockServiceInstance = {
-      fetchEvents: mockFetchEvents,
-      startWatching: mockStartWatching,
-      stopWatching: vi.fn(),
-      isWatching: false,
-      on: (type: string, cb: (e: AppEvent) => void) => {
-        listeners.push({ type, cb });
-        mockOn(type, cb);
-        return () => {
-          const idx = listeners.findIndex((l) => l.cb === cb);
-          if (idx !== -1) listeners.splice(idx, 1);
-        };
-      },
-      _emit: (event: AppEvent) => {
-        for (const l of listeners) {
-          if (l.type === 'all' || l.type === event.type) l.cb(event);
-        }
-      },
-      _clearListeners: () => {
-        listeners.length = 0;
-      },
-    };
+  const mockServiceInstance = {
+    fetchEvents: mockFetchEvents,
+    startWatching: mockStartWatching,
+    stopWatching: vi.fn(),
+    isWatching: false,
+    on: (type: string, cb: (e: AppEvent) => void) => {
+      listeners.push({ type, cb });
+      mockOn(type, cb);
+      return () => {
+        const idx = listeners.findIndex((l) => l.cb === cb);
+        if (idx !== -1) listeners.splice(idx, 1);
+      };
+    },
+    _emit: (event: AppEvent) => {
+      for (const l of listeners) {
+        if (l.type === 'all' || l.type === event.type) l.cb(event);
+      }
+    },
+    _clearListeners: () => {
+      listeners.length = 0;
+    },
+  };
 
-    return { mockFetchEvents, mockStartWatching, mockOn, mockServiceInstance };
-  });
+  return { mockFetchEvents, mockStartWatching, mockOn, mockServiceInstance };
+});
 
 vi.mock('../../lib/EventService', () => ({
   EventService: {
@@ -62,46 +62,50 @@ vi.mock('../../lib/EventService', () => ({
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
-const makeContribution = (overrides: Partial<AppEvent> = {}): AppEvent => ({
-  type: 'ContributionMade',
-  groupId: 1n,
-  contributor: 'GABC1234567890ABCDEF',
-  amount: 10_000_000n, // 1 XLM
-  cycle: 1,
-  cycleTotal: 10_000_000n,
-  contributedAt: BigInt(Math.floor(Date.now() / 1000) - 60),
-  ...overrides,
-} as AppEvent);
+const makeContribution = (overrides: Partial<AppEvent> = {}): AppEvent =>
+  ({
+    type: 'ContributionMade',
+    groupId: 1n,
+    contributor: 'GABC1234567890ABCDEF',
+    amount: 10_000_000n, // 1 XLM
+    cycle: 1,
+    cycleTotal: 10_000_000n,
+    contributedAt: BigInt(Math.floor(Date.now() / 1000) - 60),
+    ...overrides,
+  }) as AppEvent;
 
-const makePayout = (overrides: Partial<AppEvent> = {}): AppEvent => ({
-  type: 'PayoutExecuted',
-  groupId: 1n,
-  recipient: 'GXYZ9876543210FEDCBA',
-  amount: 100_000_000n, // 10 XLM
-  cycle: 1,
-  executedAt: BigInt(Math.floor(Date.now() / 1000) - 120),
-  ...overrides,
-} as AppEvent);
+const makePayout = (overrides: Partial<AppEvent> = {}): AppEvent =>
+  ({
+    type: 'PayoutExecuted',
+    groupId: 1n,
+    recipient: 'GXYZ9876543210FEDCBA',
+    amount: 100_000_000n, // 10 XLM
+    cycle: 1,
+    executedAt: BigInt(Math.floor(Date.now() / 1000) - 120),
+    ...overrides,
+  }) as AppEvent;
 
-const makeMemberJoin = (overrides: Partial<AppEvent> = {}): AppEvent => ({
-  type: 'MemberJoined',
-  groupId: 1n,
-  member: 'GJOIN123456789ABCDEF',
-  memberCount: 3,
-  joinedAt: BigInt(Math.floor(Date.now() / 1000) - 180),
-  ...overrides,
-} as AppEvent);
+const makeMemberJoin = (overrides: Partial<AppEvent> = {}): AppEvent =>
+  ({
+    type: 'MemberJoined',
+    groupId: 1n,
+    member: 'GJOIN123456789ABCDEF',
+    memberCount: 3,
+    joinedAt: BigInt(Math.floor(Date.now() / 1000) - 180),
+    ...overrides,
+  }) as AppEvent;
 
-const makeGroupCreated = (overrides: Partial<AppEvent> = {}): AppEvent => ({
-  type: 'GroupCreated',
-  groupId: 2n,
-  creator: 'GCREATOR123456789AB',
-  contributionAmount: 10_000_000n,
-  cycleDuration: 604800n,
-  maxMembers: 10,
-  createdAt: BigInt(Math.floor(Date.now() / 1000) - 300),
-  ...overrides,
-} as AppEvent);
+const makeGroupCreated = (overrides: Partial<AppEvent> = {}): AppEvent =>
+  ({
+    type: 'GroupCreated',
+    groupId: 2n,
+    creator: 'GCREATOR123456789AB',
+    contributionAmount: 10_000_000n,
+    cycleDuration: 604800n,
+    maxMembers: 10,
+    createdAt: BigInt(Math.floor(Date.now() / 1000) - 300),
+    ...overrides,
+  }) as AppEvent;
 
 const emptyResult = { events: [], nextCursor: null, hasMore: false };
 
@@ -113,11 +117,14 @@ describe('ActivityFeed', () => {
     mockFetchEvents.mockResolvedValue(emptyResult);
 
     // jsdom doesn't implement IntersectionObserver — stub it globally
-    vi.stubGlobal('IntersectionObserver', vi.fn(() => ({
-      observe: vi.fn(),
-      unobserve: vi.fn(),
-      disconnect: vi.fn(),
-    })));
+    vi.stubGlobal(
+      'IntersectionObserver',
+      vi.fn(() => ({
+        observe: vi.fn(),
+        unobserve: vi.fn(),
+        disconnect: vi.fn(),
+      }))
+    );
   });
 
   afterEach(() => {
@@ -252,7 +259,9 @@ describe('ActivityFeed', () => {
 
   it('hides filter toolbar when showFilters=false', () => {
     render(<ActivityFeed showFilters={false} />);
-    expect(screen.queryByRole('group', { name: /filter by activity type/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('group', { name: /filter by activity type/i })
+    ).not.toBeInTheDocument();
   });
 
   // ── Refresh ────────────────────────────────────────────────────────────────
@@ -378,14 +387,17 @@ describe('ActivityFeed', () => {
 
     // Capture the latest IO callback via an array
     const callbacks: IntersectionObserverCallback[] = [];
-    vi.stubGlobal('IntersectionObserver', vi.fn((cb: IntersectionObserverCallback) => {
-      callbacks.push(cb);
-      return {
-        observe: vi.fn(),
-        unobserve: vi.fn(),
-        disconnect: vi.fn(),
-      };
-    }));
+    vi.stubGlobal(
+      'IntersectionObserver',
+      vi.fn((cb: IntersectionObserverCallback) => {
+        callbacks.push(cb);
+        return {
+          observe: vi.fn(),
+          unobserve: vi.fn(),
+          disconnect: vi.fn(),
+        };
+      })
+    );
 
     render(<ActivityFeed />);
 
@@ -395,7 +407,10 @@ describe('ActivityFeed', () => {
     // Fire the most recent IO callback
     const latestCb = callbacks[callbacks.length - 1];
     await act(async () => {
-      latestCb?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+      latestCb?.(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver
+      );
     });
 
     await waitFor(() => {

@@ -103,8 +103,8 @@ function emit(level: LogLevel, msg: unknown, rest: unknown[]): void {
  */
 export const logger = {
   debug: (msg: unknown, ...rest: unknown[]) => emit('debug', msg, rest),
-  info:  (msg: unknown, ...rest: unknown[]) => emit('info', msg, rest),
-  warn:  (msg: unknown, ...rest: unknown[]) => emit('warn', msg, rest),
+  info: (msg: unknown, ...rest: unknown[]) => emit('info', msg, rest),
+  warn: (msg: unknown, ...rest: unknown[]) => emit('warn', msg, rest),
   error: (msg: unknown, ...rest: unknown[]) => emit('error', msg, rest),
 };
 
@@ -129,11 +129,13 @@ function installConsoleBridge(): void {
   if (consoleBridgeInstalled) return;
   consoleBridgeInstalled = true;
 
-  const bridge = (level: LogLevel) => (...args: unknown[]) => {
-    const [first, ...rest] = args;
-    const message = [first, ...rest].map(formatConsoleArg).join(' ');
-    winstonLogger.log(level, message);
-  };
+  const bridge =
+    (level: LogLevel) =>
+    (...args: unknown[]) => {
+      const [first, ...rest] = args;
+      const message = [first, ...rest].map(formatConsoleArg).join(' ');
+      winstonLogger.log(level, message);
+    };
 
   console.log = bridge('info');
   console.info = bridge('info');
@@ -203,21 +205,29 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
         });
 
         // Persist to audit_logs table (non-blocking)
-        getPrisma().then((prisma) => {
-          if (prisma) {
-            prisma.auditLog.create({
-              data: {
-                walletAddress,
-                method: req.method,
-                path: req.path,
-                statusCode: res.statusCode,
-                durationMs,
-                ipAddress: req.ip || null,
-                userAgent: req.headers['user-agent'] || null,
-              },
-            }).catch(() => {/* non-blocking */});
-          }
-        }).catch(() => {/* non-blocking */});
+        getPrisma()
+          .then((prisma) => {
+            if (prisma) {
+              prisma.auditLog
+                .create({
+                  data: {
+                    walletAddress,
+                    method: req.method,
+                    path: req.path,
+                    statusCode: res.statusCode,
+                    durationMs,
+                    ipAddress: req.ip || null,
+                    userAgent: req.headers['user-agent'] || null,
+                  },
+                })
+                .catch(() => {
+                  /* non-blocking */
+                });
+            }
+          })
+          .catch(() => {
+            /* non-blocking */
+          });
       });
 
       next();

@@ -46,7 +46,10 @@ describe('SorobanClientPool', () => {
 
       // Second acquire should queue
       let c2Resolved = false;
-      const p2 = pool.acquire().then(c => { c2Resolved = true; return c; });
+      const p2 = pool.acquire().then((c) => {
+        c2Resolved = true;
+        return c;
+      });
 
       expect(c2Resolved).toBe(false);
       pool.release(c1);
@@ -78,7 +81,11 @@ describe('SorobanClientPool', () => {
 
     it('releases the client even when the callback throws', async () => {
       const pool = makePool(1);
-      await expect(pool.withClient(async () => { throw new Error('boom'); })).rejects.toThrow('boom');
+      await expect(
+        pool.withClient(async () => {
+          throw new Error('boom');
+        })
+      ).rejects.toThrow('boom');
       expect(pool.metrics().available).toBe(1);
     });
   });

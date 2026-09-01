@@ -82,7 +82,11 @@ describe('Health and Readiness Endpoints', () => {
     });
 
     it('returns 503 not_ready when DB is down', async () => {
-      mockEventIndexer.readinessCheckDatabase.mockResolvedValue({ up: false, latencyMs: 2, error: 'DB connection timeout' });
+      mockEventIndexer.readinessCheckDatabase.mockResolvedValue({
+        up: false,
+        latencyMs: 2,
+        error: 'DB connection timeout',
+      });
       mockEventIndexer.readinessCheckHorizon.mockResolvedValue({ up: true, latencyMs: 10 });
       mockReadinessCheckCache.mockResolvedValue({ up: true, latencyMs: 1 });
 
@@ -96,7 +100,11 @@ describe('Health and Readiness Endpoints', () => {
     it('returns 503 not_ready when Cache/Redis is down', async () => {
       mockEventIndexer.readinessCheckDatabase.mockResolvedValue({ up: true, latencyMs: 5 });
       mockEventIndexer.readinessCheckHorizon.mockResolvedValue({ up: true, latencyMs: 10 });
-      mockReadinessCheckCache.mockResolvedValue({ up: false, latencyMs: 1, error: 'Redis connection lost' });
+      mockReadinessCheckCache.mockResolvedValue({
+        up: false,
+        latencyMs: 1,
+        error: 'Redis connection lost',
+      });
 
       const res = await request(app).get('/v1/ready');
       expect(res.status).toBe(503);
@@ -107,7 +115,11 @@ describe('Health and Readiness Endpoints', () => {
 
     it('returns 503 not_ready when Horizon is down (v2)', async () => {
       mockEventIndexer.readinessCheckDatabase.mockResolvedValue({ up: true, latencyMs: 5 });
-      mockEventIndexer.readinessCheckHorizon.mockResolvedValue({ up: false, latencyMs: 8, error: 'Horizon rate limited' });
+      mockEventIndexer.readinessCheckHorizon.mockResolvedValue({
+        up: false,
+        latencyMs: 8,
+        error: 'Horizon rate limited',
+      });
       mockReadinessCheckCache.mockResolvedValue({ up: true, latencyMs: 1 });
 
       const res = await request(app).get('/v2/ready');

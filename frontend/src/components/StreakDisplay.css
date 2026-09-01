@@ -41,23 +41,27 @@
 }
 
 @keyframes streak-burst {
-  0%   { transform: translate(0, 0) scale(0.5); opacity: 1; }
-  60%  { opacity: 1; }
+  0% {
+    transform: translate(0, 0) scale(0.5);
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+  }
   100% {
-    transform:
-      translate(
-        calc((var(--i) - 2) * 60px),
-        calc(-80px - var(--i) * 10px)
-      )
-      scale(1.1);
+    transform: translate(calc((var(--i) - 2) * 60px), calc(-80px - var(--i) * 10px)) scale(1.1);
     opacity: 0;
   }
 }
 
 /* Honour prefers-reduced-motion — kill all decorative animations */
 @media (prefers-reduced-motion: reduce) {
-  .streak-celebration { display: none; }
-  .streak-progress-fill { transition: none; }
+  .streak-celebration {
+    display: none;
+  }
+  .streak-progress-fill {
+    transition: none;
+  }
 }
 
 /* ── Warning ──────────────────────────────────────────────────────────────── */

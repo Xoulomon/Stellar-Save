@@ -25,7 +25,7 @@ export class ValidationMiddleware {
         next();
       } catch (err) {
         if (err instanceof z.ZodError) {
-          const errors: ValidationError[] = err.issues.map(issue => ({
+          const errors: ValidationError[] = err.issues.map((issue) => ({
             field: issue.path.join('.') || 'unknown',
             message: issue.message,
           }));
@@ -57,7 +57,7 @@ export class ValidationMiddleware {
         next();
       } catch (err) {
         if (err instanceof z.ZodError) {
-          const errors: ValidationError[] = err.issues.map(issue => ({
+          const errors: ValidationError[] = err.issues.map((issue) => ({
             field: issue.path.join('.') || 'body',
             message: issue.message,
           }));
@@ -89,7 +89,7 @@ export class ValidationMiddleware {
         next();
       } catch (err) {
         if (err instanceof z.ZodError) {
-          const errors: ValidationError[] = err.issues.map(issue => ({
+          const errors: ValidationError[] = err.issues.map((issue) => ({
             field: issue.path.join('.') || 'query',
             message: issue.message,
           }));
@@ -121,7 +121,7 @@ export class ValidationMiddleware {
         next();
       } catch (err) {
         if (err instanceof z.ZodError) {
-          const errors: ValidationError[] = err.issues.map(issue => ({
+          const errors: ValidationError[] = err.issues.map((issue) => ({
             field: issue.path.join('.') || 'params',
             message: issue.message,
           }));

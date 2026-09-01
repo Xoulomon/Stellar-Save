@@ -29,28 +29,26 @@ export function useScheduledContributions() {
       setItems((prev) => [...prev, entry]);
       return entry;
     },
-    [setItems],
+    [setItems]
   );
 
   const update = useCallback(
     (id: string, patch: Partial<ScheduledContributionInput>) => {
-      setItems((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-      );
+      setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));
     },
-    [setItems],
+    [setItems]
   );
 
   const remove = useCallback(
     (id: string) => {
       setItems((prev) => prev.filter((item) => item.id !== id));
     },
-    [setItems],
+    [setItems]
   );
 
   const getByGroup = useCallback(
     (groupId: string) => items.filter((item) => item.groupId === groupId),
-    [items],
+    [items]
   );
 
   return { items, add, update, remove, getByGroup };

@@ -3,7 +3,9 @@ import type { Request, Response, NextFunction } from 'express';
 export const SUPPORTED_VERSIONS = ['v1', 'v2'] as const;
 export type ApiVersion = (typeof SUPPORTED_VERSIONS)[number];
 
-export const DEPRECATED_VERSIONS: Partial<Record<ApiVersion, { sunsetDate: string; message: string }>> = {
+export const DEPRECATED_VERSIONS: Partial<
+  Record<ApiVersion, { sunsetDate: string; message: string }>
+> = {
   v1: {
     sunsetDate: '2027-01-01',
     message: 'API v1 is deprecated. Please migrate to v2. See /docs/api-versioning.md',

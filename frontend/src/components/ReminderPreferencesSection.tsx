@@ -31,14 +31,8 @@ const CHANNEL_OPTIONS: { value: NotificationChannel; label: string; description:
  * Allows users to configure timing, channels, and quiet hours.
  */
 export function ReminderPreferencesSection() {
-  const {
-    preferences,
-    toggleEnabled,
-    updateTiming,
-    toggleChannel,
-    updateQuietHours,
-    reset,
-  } = useReminderPreferences();
+  const { preferences, toggleEnabled, updateTiming, toggleChannel, updateQuietHours, reset } =
+    useReminderPreferences();
 
   const handleQuietHoursToggle = () => {
     updateQuietHours({
@@ -76,10 +70,7 @@ export function ReminderPreferencesSection() {
       {/* ── Enable/Disable Reminders ──────────────────────────── */}
       <FormControlLabel
         control={
-          <Switch
-            checked={preferences.enabled}
-            onChange={(e) => toggleEnabled(e.target.checked)}
-          />
+          <Switch checked={preferences.enabled} onChange={(e) => toggleEnabled(e.target.checked)} />
         }
         label="Enable contribution reminders"
       />

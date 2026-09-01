@@ -24,20 +24,13 @@ export function StaleDataBanner({
       sx={{ mb: 2 }}
       action={
         onRefresh ? (
-          <Button
-            color="inherit"
-            size="small"
-            startIcon={<Refresh />}
-            onClick={onRefresh}
-          >
+          <Button color="inherit" size="small" startIcon={<Refresh />} onClick={onRefresh}>
             Refresh
           </Button>
         ) : undefined
       }
     >
-      <AlertTitle>
-        {isStale ? 'Viewing Stale Data' : 'Viewing Cached Data'}
-      </AlertTitle>
+      <AlertTitle>{isStale ? 'Viewing Stale Data' : 'Viewing Cached Data'}</AlertTitle>
       {isStale
         ? 'This data may be outdated. Connect to the internet to get the latest updates.'
         : 'You are viewing cached data. Some information may not be up to date.'}

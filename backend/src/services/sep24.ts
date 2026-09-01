@@ -84,7 +84,9 @@ export async function sep10Auth(anchorDomain: string, stellarAccount: string): P
     const toml = await fetchToml(anchorDomain);
     const authServer = toml['AUTH_SERVER'] ?? `https://${anchorDomain}/auth`;
 
-    const challengeRes = await fetchWithCorrelationId(`${authServer}?account=${encodeURIComponent(stellarAccount)}`);
+    const challengeRes = await fetchWithCorrelationId(
+      `${authServer}?account=${encodeURIComponent(stellarAccount)}`
+    );
     if (!challengeRes.ok) throw new Error(`SEP-10 challenge failed: ${challengeRes.status}`);
     const { transaction: challengeXdr } = (await challengeRes.json()) as { transaction: string };
 
@@ -112,11 +114,14 @@ async function initiate(type: 'deposit' | 'withdraw', opts: Sep24InitOpts): Prom
     const { anchorDomain, stellarAccount, assetCode, assetIssuer, amount, userId } = opts;
 
     const toml = await fetchToml(anchorDomain);
-    const transferServer = toml['TRANSFER_SERVER_SEP0024'] ?? toml['TRANSFER_SERVER'] ?? `https://${anchorDomain}/sep24`;
+    const transferServer =
+      toml['TRANSFER_SERVER_SEP0024'] ?? toml['TRANSFER_SERVER'] ?? `https://${anchorDomain}/sep24`;
 
     // Internal call to sep10Auth without nested circuit breaker call overhead
     const authServer = toml['AUTH_SERVER'] ?? `https://${anchorDomain}/auth`;
-    const challengeRes = await fetchWithCorrelationId(`${authServer}?account=${encodeURIComponent(stellarAccount)}`);
+    const challengeRes = await fetchWithCorrelationId(
+      `${authServer}?account=${encodeURIComponent(stellarAccount)}`
+    );
     if (!challengeRes.ok) throw new Error(`SEP-10 challenge failed: ${challengeRes.status}`);
     const { transaction: jwt } = (await challengeRes.json()) as { transaction: string };
 
@@ -124,20 +129,35 @@ async function initiate(type: 'deposit' | 'withdraw', opts: Sep24InitOpts): Prom
     if (assetIssuer) form.append('asset_issuer', assetIssuer);
     if (amount) form.append('amount', amount);
 
-    const endpoint = type === 'deposit'
-      ? `${transferServer}/transactions/deposit/interactive`
-      : `${transferServer}/transactions/withdraw/interactive`;
+    const endpoint =
+      type === 'deposit'
+        ? `${transferServer}/transactions/deposit/interactive`
+        : `${transferServer}/transactions/withdraw/interactive`;
 
     const res = await fetchWithCorrelationId(endpoint, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: {
+        Authorization: `Bearer ${jwt}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
       body: form.toString(),
     });
     if (!res.ok) throw new Error(`SEP-24 ${type} failed: ${res.status}`);
     const { id: anchorId, url: interactiveUrl } = (await res.json()) as { id: string; url: string };
 
     const record = await (prisma as any).rampTransaction.create({
-      data: { userId, type, anchorDomain, stellarAccount, assetCode, assetIssuer: assetIssuer ?? null, amount: amount ?? null, anchorId, status: 'pending_user_transfer_start', interactiveUrl },
+      data: {
+        userId,
+        type,
+        anchorDomain,
+        stellarAccount,
+        assetCode,
+        assetIssuer: assetIssuer ?? null,
+        amount: amount ?? null,
+        anchorId,
+        status: 'pending_user_transfer_start',
+        interactiveUrl,
+      },
     });
 
     logger.info('[sep24] initiated', { type, anchorId, userId });
@@ -150,24 +170,36 @@ async function initiate(type: 'deposit' | 'withdraw', opts: Sep24InitOpts): Prom
  * Wrapped in circuit breaker.
  */
 export async function syncTransactionStatus(id: string): Promise<RampTransactionRecord> {
-  const record: RampTransactionRecord | null = await (prisma as any).rampTransaction.findUnique({ where: { id } });
+  const record: RampTransactionRecord | null = await (prisma as any).rampTransaction.findUnique({
+    where: { id },
+  });
   if (!record) throw new Error(`RampTransaction ${id} not found`);
   if (!record.anchorId) return record;
 
   return fiatRampCircuitBreaker.fire(async () => {
     const toml = await fetchToml(record.anchorDomain);
-    const transferServer = toml['TRANSFER_SERVER_SEP0024'] ?? toml['TRANSFER_SERVER'] ?? `https://${record.anchorDomain}/sep24`;
+    const transferServer =
+      toml['TRANSFER_SERVER_SEP0024'] ??
+      toml['TRANSFER_SERVER'] ??
+      `https://${record.anchorDomain}/sep24`;
 
     const authServer = toml['AUTH_SERVER'] ?? `https://${record.anchorDomain}/auth`;
-    const challengeRes = await fetchWithCorrelationId(`${authServer}?account=${encodeURIComponent(record.stellarAccount)}`);
+    const challengeRes = await fetchWithCorrelationId(
+      `${authServer}?account=${encodeURIComponent(record.stellarAccount)}`
+    );
     if (!challengeRes.ok) throw new Error(`SEP-10 challenge failed: ${challengeRes.status}`);
     const { transaction: jwt } = (await challengeRes.json()) as { transaction: string };
 
-    const res = await fetch(`${transferServer}/transaction?id=${encodeURIComponent(record.anchorId!)}`, {
-      headers: { Authorization: `Bearer ${jwt}` },
-    });
+    const res = await fetch(
+      `${transferServer}/transaction?id=${encodeURIComponent(record.anchorId!)}`,
+      {
+        headers: { Authorization: `Bearer ${jwt}` },
+      }
+    );
     if (!res.ok) throw new Error(`Anchor transaction poll failed: ${res.status}`);
-    const { transaction } = (await res.json()) as { transaction: { status: string; more_info_url?: string } };
+    const { transaction } = (await res.json()) as {
+      transaction: { status: string; more_info_url?: string };
+    };
 
     const updated: RampTransactionRecord = await (prisma as any).rampTransaction.update({
       where: { id },
@@ -180,7 +212,9 @@ export async function syncTransactionStatus(id: string): Promise<RampTransaction
 }
 
 export async function getTransaction(id: string): Promise<RampTransactionRecord> {
-  const record: RampTransactionRecord | null = await (prisma as any).rampTransaction.findUnique({ where: { id } });
+  const record: RampTransactionRecord | null = await (prisma as any).rampTransaction.findUnique({
+    where: { id },
+  });
   if (!record) throw new Error(`RampTransaction ${id} not found`);
   return record;
 }

@@ -136,7 +136,7 @@ describe('ValidationMiddleware', () => {
     });
 
     it('should validate rampDepositSchema correctly', () => {
-      const valid = { amount: 100.50, currency: 'USD', paymentMethod: 'card' };
+      const valid = { amount: 100.5, currency: 'USD', paymentMethod: 'card' };
       expect(() => schemas.rampDepositSchema.parse(valid)).not.toThrow();
 
       const invalid = { amount: -100, currency: 'USD', paymentMethod: 'card' };

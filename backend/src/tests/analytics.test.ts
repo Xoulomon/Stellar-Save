@@ -238,11 +238,7 @@ describe('AnalyticsService', () => {
     beforeAll(async () => {
       // Record multiple events
       for (let i = 0; i < 5; i++) {
-        await analyticsService.recordEvent(
-          'test_event',
-          'test_action_' + i,
-          'user-' + i
-        );
+        await analyticsService.recordEvent('test_event', 'test_action_' + i, 'user-' + i);
       }
     });
 
@@ -393,9 +389,7 @@ describe('AnalyticsAggregator', () => {
             eventName: 'test_event_' + i,
             userId: 'user-' + (i % 3),
             groupId: 'group-' + (i % 2),
-            createdAt: new Date(
-              yesterday.getTime() + Math.random() * 24 * 60 * 60 * 1000
-            ),
+            createdAt: new Date(yesterday.getTime() + Math.random() * 24 * 60 * 60 * 1000),
           },
         });
       }

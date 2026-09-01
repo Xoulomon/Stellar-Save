@@ -34,13 +34,7 @@ function renderJoinButton(
 ) {
   return render(
     <WalletContext.Provider value={{ ...connectedWallet, ...overrides }}>
-      <JoinGroupButton
-        groupId={1}
-        maxMembers={10}
-        currentMembers={5}
-        isActive={false}
-        {...props}
-      />
+      <JoinGroupButton groupId={1} maxMembers={10} currentMembers={5} isActive={false} {...props} />
     </WalletContext.Provider>
   );
 }

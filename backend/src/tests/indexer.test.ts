@@ -8,7 +8,7 @@ describe('ContractEventIndexer', () => {
 
   it('should have required methods', () => {
     const methods = ['start', 'stop', 'getEvents'];
-    methods.forEach(method => {
+    methods.forEach((method) => {
       expect(typeof (ContractEventIndexer.prototype as any)[method]).toBe('function');
     });
   });

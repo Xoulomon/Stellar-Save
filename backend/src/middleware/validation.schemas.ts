@@ -34,11 +34,13 @@ export const rampDepositSchema = z.object({
 export const rampWithdrawSchema = z.object({
   amount: z.number().positive('amount must be positive'),
   currency: z.string().min(1, 'currency is required'),
-  bankAccount: z.object({
-    accountNumber: z.string().min(1, 'accountNumber is required'),
-    routingNumber: z.string().min(1, 'routingNumber is required'),
-    bankName: z.string().min(1, 'bankName is required'),
-  }).optional(),
+  bankAccount: z
+    .object({
+      accountNumber: z.string().min(1, 'accountNumber is required'),
+      routingNumber: z.string().min(1, 'routingNumber is required'),
+      bankName: z.string().min(1, 'bankName is required'),
+    })
+    .optional(),
 });
 
 export const proposalSchema = z.object({
@@ -91,14 +93,16 @@ export const sepTransferSchema = z.object({
   assetCode: z.string().min(1, 'assetCode is required'),
 });
 
-export const passwordChangeSchema = z.object({
-  currentPassword: z.string().min(1, 'currentPassword is required'),
-  newPassword: z.string().min(8, 'newPassword must be at least 8 characters'),
-  confirmPassword: z.string().min(8, 'confirmPassword must be at least 8 characters'),
-}).refine(data => data.newPassword === data.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-});
+export const passwordChangeSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'currentPassword is required'),
+    newPassword: z.string().min(8, 'newPassword must be at least 8 characters'),
+    confirmPassword: z.string().min(8, 'confirmPassword must be at least 8 characters'),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
 
 export const dataExportSchema = z.object({
   format: z.enum(['json', 'csv']).optional(),
