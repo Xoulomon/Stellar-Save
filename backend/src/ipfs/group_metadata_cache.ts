@@ -1,8 +1,8 @@
 import { IpfsClient } from './client';
-import { PinningService } from './pinning_service';
 import { PinningQueue } from './pinning_queue';
-import redis from '../redis';
+import { PinningService } from './pinning_service';
 import { logger } from '../logger';
+import redis from '../redis';
 
 const METADATA_CID_PREFIX = 'ipfs:group:cid';
 const METADATA_CACHE_PREFIX = 'ipfs:group:cache';

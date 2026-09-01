@@ -1,3 +1,6 @@
+import crypto from 'crypto';
+
+import { prisma } from '../prisma_client';
 import { submitKyc, getKycStatus, pollAndUpdateStatus, verifyKycWebhookSignature } from '../services/kyc';
 
 const mockFetch = jest.fn();
@@ -15,8 +18,6 @@ jest.mock('../prisma_client', () => ({
     },
   },
 }));
-
-const { prisma } = require('../prisma_client');
 
 const baseRecord = {
   userId: 'user1',
@@ -94,7 +95,6 @@ describe('verifyKycWebhookSignature', () => {
   it('returns true for valid signature', () => {
     const secret = 'mysecret';
     const body = JSON.stringify({ userId: 'u1', status: 'approved' });
-    const crypto = require('crypto');
     const sig = crypto.createHmac('sha256', secret).update(body).digest('hex');
     expect(verifyKycWebhookSignature(secret, body, sig)).toBe(true);
   });

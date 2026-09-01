@@ -1,7 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
+
+
 import { AppError, toEnvelope } from './errors';
 import { attachCorrelationId } from './requestContext';
+
+import type { Request, Response, NextFunction } from 'express';
 
 export function errorMiddleware(
   err: unknown,

@@ -24,19 +24,21 @@
  * back gracefully and log a warning rather than crashing.
  */
 
-import { prisma } from './prisma_client';
-import { logger } from './logger';
-import { getSorobanPool } from './lib/soroban';
-import { GroupStateCache } from './lib/cache';
-import { isCircuitOpenError } from './lib/rpc_circuit_breaker';
-import { circuitBreakerFallbacksTotal, cacheStaleReadsTotal } from './metrics';
-import { Gauge, Counter } from 'prom-client';
-import { registry } from './metrics';
 import {
   Contract,
   xdr,
   scValToNative,
 } from '@stellar/stellar-sdk';
+import { Gauge, Counter } from 'prom-client';
+
+import { GroupStateCache } from './lib/cache';
+import { isCircuitOpenError } from './lib/rpc_circuit_breaker';
+import { getSorobanPool } from './lib/soroban';
+import { logger } from './logger';
+import { circuitBreakerFallbacksTotal, cacheStaleReadsTotal } from './metrics';
+import { registry } from './metrics';
+import { prisma } from './prisma_client';
+
 
 // ── Prometheus metrics ─────────────────────────────────────────────────────
 

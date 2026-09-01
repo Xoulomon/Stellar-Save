@@ -1,6 +1,6 @@
 import { IpfsClient } from './client';
-import { PinningService } from './pinning_service';
 import { PinningQueue } from './pinning_queue';
+import { PinningService } from './pinning_service';
 import { logger } from '../logger';
 
 export interface IpfsMonitorAlert {

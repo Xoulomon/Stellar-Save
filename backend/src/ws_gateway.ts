@@ -30,24 +30,27 @@
  *
  * Backpressure / reconnection
  * ───────────────────────────
- * - Heartbeats are sent every HEARTBEAT_INTERVAL_MS. A missed heartbeat from
- *   the client within PONG_TIMEOUT_MS triggers disconnection.
+ * - Heartbeats are sent every HEARTBEAT_INTERVAL_MS: each tick checks whether
+ *   the client's `isAlive` flag was set by a pong since the last tick and
+ *   disconnects it if not, then pings again and resets the flag.
  * - The server buffers at most MAX_QUEUE_PER_CLIENT events; if the client is
  *   slow the oldest entries are dropped and a "dropped" notice is sent.
  */
 
-import { IncomingMessage, Server as HttpServer } from 'http';
-import { WebSocketServer, WebSocket } from 'ws';
-import { verifyJwt } from './auth_service';
-import { logger } from './logger';
-import { config } from './config';
+
 import { Gauge, Counter } from 'prom-client';
+import { WebSocketServer, WebSocket } from 'ws';
+
+import { verifyJwt } from './auth_service';
+import { config } from './config';
+import { logger } from './logger';
 import { registry } from './metrics';
+
+import type { IncomingMessage, Server as HttpServer } from 'http';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
-const PONG_TIMEOUT_MS = 10_000;
 const MAX_QUEUE_PER_CLIENT = 100;
 
 // ── Prometheus metrics ────────────────────────────────────────────────────────

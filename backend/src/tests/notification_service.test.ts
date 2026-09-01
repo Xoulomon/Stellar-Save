@@ -1,8 +1,9 @@
+import { PrismaClient } from '@prisma/client';
+
 import { NotificationService } from '../src/notification_service';
+import { NotificationTemplateManager, NotificationEventType } from '../src/notification_template_manager';
 import { PushNotificationService, FirebaseProvider, OneSignalProvider } from '../src/push_notification_service';
 import { UserPreferenceManager } from '../src/user_preference_manager';
-import { NotificationTemplateManager, NotificationEventType } from '../src/notification_template_manager';
-import { PrismaClient } from '@prisma/client';
 
 // Mock Prisma
 jest.mock('@prisma/client', () => ({
@@ -39,12 +40,6 @@ describe('Notification Service', () => {
 
       jest.spyOn(prismaClient.notificationTemplate, 'findUnique').mockResolvedValue(mockTemplate);
 
-      const templateData = {
-        userId: 'user-123',
-        userName: 'John Doe',
-        groupName: 'Weekly Savings',
-      };
-
       // Test email sending logic
       expect(notificationService).toBeDefined();
     });
@@ -59,7 +54,6 @@ describe('Notification Service', () => {
 
     it('should render template with correct placeholders', () => {
       const template = 'Hello {{userName}}, your balance is {{balance}} XLM';
-      const data = { userName: 'John', balance: '100' };
 
       // Test template rendering
       expect(template).toContain('{{userName}}');

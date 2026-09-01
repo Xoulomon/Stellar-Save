@@ -18,13 +18,14 @@
  */
 
 import { createGroupsRouter } from '../../src/routes/groups';
-import { GroupsService } from '../../src/services/group/groups.service';
 import { InMemoryGroupsRepository } from '../../src/services/group/groups.repository';
-import { Group } from '../../src/models';
+import { GroupsService } from '../../src/services/group/groups.service';
+
+import type { Group } from '../../src/models';
 
 // Use require so this file does not need @types/express in tsconfig.
 // The full app helper (test/helpers/app.ts) already uses Express the same way.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const express = require('express');
 
 /**

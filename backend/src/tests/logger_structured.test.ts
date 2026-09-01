@@ -1,5 +1,7 @@
 import { Writable } from 'stream';
+
 import winston from 'winston';
+
 import { logger, errFields, winstonLogger } from '../lib/logger';
 
 /**

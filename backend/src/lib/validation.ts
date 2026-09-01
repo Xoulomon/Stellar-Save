@@ -11,9 +11,12 @@
  *   router.get('/groups', validateQuery(schemas.pagination), handler);
  */
 
-import { z, ZodTypeAny } from 'zod';
-import { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
+
 import { AppError } from './errors';
+
+import type { Request, Response, NextFunction } from 'express';
+import type { ZodTypeAny } from 'zod';
 
 // ── Primitive / reusable schemas ─────────────────────────────────────────────
 

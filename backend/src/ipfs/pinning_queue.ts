@@ -1,7 +1,8 @@
 import { v4 as uuid } from 'uuid';
-import redis from '../redis';
+
 import { config } from '../config';
 import { logger } from '../logger';
+import redis from '../redis';
 
 export type PinningJobStatus = 'queued' | 'pinning' | 'pinned' | 'failed' | 'unpinning' | 'unpinned';
 

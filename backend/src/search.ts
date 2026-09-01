@@ -1,7 +1,9 @@
 import { Client } from '@elastic/elasticsearch';
-import { Group, Member, Transaction } from './models';
+
 import { config } from './config';
 import { logger } from './logger';
+
+import type { Group, Member, Transaction } from './models';
 
 export class SearchService {
   private client: Client;

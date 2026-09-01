@@ -61,7 +61,6 @@ class MockRedis {
 }
 
 function makeReqRes(overrides: Record<string, any> = {}) {
-  const headers: Record<string, string> = {};
   const req = {
     method: 'GET',
     path: '/api/v1/health',
@@ -199,7 +198,6 @@ async function runTests() {
   // Graceful degradation warnings
   {
     console.log('\n── graceful degradation warnings');
-    const mockRedis = new MockRedis() as any;
     // Override mock to simulate near-limit state
     const nearLimitRedis = {
       evalsha: async () => [1, 0, Date.now() + 60000], // remaining = 0 but allowed

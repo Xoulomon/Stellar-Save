@@ -1,8 +1,11 @@
-import { Counter, Registry } from 'prom-client';
+import { Counter } from 'prom-client';
+
 import { logger } from '../../logger';
 import { registry } from '../../metrics';
 import { prisma } from '../../prisma_client';
-import { IStellarClient } from '../../lib/stellar_client';
+
+import type { IStellarClient } from '../../lib/stellar_client';
+import type { Registry } from 'prom-client';
 
 const MAX_RETRIES = 3;
 

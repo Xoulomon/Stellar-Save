@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
-import { BackupService } from '../../backup_service';
-import { BackupScheduler } from '../../backup_scheduler';
+
 import { BackupMonitor } from '../../backup_monitor';
+import { BackupScheduler } from '../../backup_scheduler';
+import { BackupService } from '../../backup_service';
 
 @Module({
   providers: [BackupService, BackupScheduler, BackupMonitor],

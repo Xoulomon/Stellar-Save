@@ -6,10 +6,11 @@
  */
 
 import * as crypto from 'crypto';
-import { logger } from '../logger';
-import { prisma } from '../prisma_client';
+
 import { config } from '../config';
 import { fetchWithCorrelationId } from '../lib/http';
+import { logger } from '../logger';
+import { prisma } from '../prisma_client';
 
 export type KycStatus = 'pending' | 'approved' | 'rejected' | 'expired';
 

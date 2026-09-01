@@ -1,11 +1,11 @@
 import { Keypair } from '@stellar/stellar-sdk';
+
 import {
   generateChallenge,
   verifySignature,
   issueJwt,
   verifyJwt,
   issueRefreshToken,
-  rotateRefreshToken,
   revokeSession,
   revokeAllSessions,
 } from '../../src/auth_service';

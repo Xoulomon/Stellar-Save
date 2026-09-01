@@ -6,6 +6,7 @@
  * calling a dead endpoint, and it recovers on its own once the endpoint returns.
  */
 
+import { config } from '../config';
 import {
   sorobanCircuitBreaker,
   horizonCircuitBreaker,
@@ -18,7 +19,6 @@ import {
   CircuitState,
 } from '../lib/rpc_circuit_breaker';
 import { SorobanClientPool } from '../lib/soroban';
-import { config } from '../config';
 
 jest.mock('@stellar/stellar-sdk');
 

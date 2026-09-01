@@ -4,9 +4,9 @@
  * Implements the sending-anchor flow: quote → validate compliance → send → reconcile.
  */
 
+import { fetchWithCorrelationId } from '../lib/http';
 import { logger } from '../logger';
 import { prisma } from '../prisma_client';
-import { fetchWithCorrelationId } from '../lib/http';
 
 export interface Sep31QuoteOpts {
   anchorDomain: string;

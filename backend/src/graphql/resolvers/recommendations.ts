@@ -1,5 +1,5 @@
-import { RecommendationEngine } from '../../recommendation';
 import { mockGroups, mockInteractions } from '../../mock_data';
+import { RecommendationEngine } from '../../recommendation';
 
 const engine = new RecommendationEngine(mockGroups, mockInteractions);
 

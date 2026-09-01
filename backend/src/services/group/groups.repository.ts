@@ -1,4 +1,4 @@
-import { Group } from '../../models';
+import type { Group } from '../../models';
 
 /**
  * Data access for groups. The service depends on this interface only, so the

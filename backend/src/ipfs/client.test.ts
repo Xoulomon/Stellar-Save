@@ -1,4 +1,6 @@
-import { IpfsClient, RetryConfig } from './client';
+import { IpfsClient } from './client';
+
+import type { RetryConfig } from './client';
 
 describe('IpfsClient', () => {
   let mockFetch: jest.Mock;

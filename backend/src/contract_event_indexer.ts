@@ -1,11 +1,13 @@
 import { Horizon } from '@stellar/stellar-sdk';
+
 import { PrismaClient } from './generated/prisma/client';
-import { WebPushService } from './web_push_service';
-import { eventsIndexedTotal, sorobanRpcCallsTotal } from './metrics';
 import { GroupStateCache, isStateMutatingEvent } from './lib/cache';
-import { CONTRACT_EVENT_TOPICS } from '../../packages/events-schema/generated/events';
 import { fetchWithCorrelationId } from './lib/http';
 import { logger } from './logger';
+import { eventsIndexedTotal, sorobanRpcCallsTotal } from './metrics';
+import { CONTRACT_EVENT_TOPICS } from '../../packages/events-schema/generated/events';
+
+import type { WebPushService } from './web_push_service';
 
 // Typed topic constants — must exist in the canonical schema
 const PAYOUT_EVENT_TYPES: string[] = ['payout_executed'];
@@ -344,7 +346,7 @@ export class ContractEventIndexer {
     const start = Date.now();
     try {
       // Lightweight connectivity test
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+       
       await this.prisma.$queryRaw`SELECT 1`;
       return { up: true, latencyMs: Date.now() - start };
     } catch (err) {

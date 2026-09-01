@@ -1,5 +1,5 @@
-import { prisma } from './prisma_client';
 import { config } from './config';
+import { prisma } from './prisma_client';
 
 /**
  * Notification Service

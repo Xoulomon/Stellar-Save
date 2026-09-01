@@ -6,9 +6,10 @@
  * Run:
  *   k6 run backend/tests/load/analytics.test.js
  */
-import http from 'k6/http';
 import { check, sleep, group } from 'k6';
+import http from 'k6/http';
 import { Trend, Rate } from 'k6/metrics';
+
 import { BASE_URL, loadOptions } from '../../tests/load/config.js';
 
 // ── Custom metrics ────────────────────────────────────────────────────────────
@@ -18,8 +19,6 @@ const errorRate = new Rate('analytics_errors');
 
 // ── Options ───────────────────────────────────────────────────────────────────
 export const options = loadOptions;
-
-const HEADERS = { 'Content-Type': 'application/json' };
 
 function randomUserId() {
   return `user_${Math.floor(Math.random() * 1000)}`;

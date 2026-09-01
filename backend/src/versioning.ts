@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 
 export const SUPPORTED_VERSIONS = ['v1', 'v2'] as const;
 export type ApiVersion = (typeof SUPPORTED_VERSIONS)[number];

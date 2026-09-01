@@ -17,9 +17,9 @@
  * Retention: all PII older than config.privacy.piiRetentionDays is purged
  * during the scheduled retention job.
  */
-import { prisma } from './prisma_client';
 import { config } from './config';
 import { logger } from './logger';
+import { prisma } from './prisma_client';
 
 // ── Export ────────────────────────────────────────────────────────────────────
 

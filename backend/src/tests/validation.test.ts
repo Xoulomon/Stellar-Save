@@ -1,6 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
-import { validateBody, validateQuery, validateParams, schemas } from '../lib/validation';
+
 import { AppError } from '../lib/errors';
+import { validateBody, validateQuery, schemas } from '../lib/validation';
+
+import type { Request, Response, NextFunction } from 'express';
 
 function makeReq(body: unknown = {}, query: unknown = {}, params: unknown = {}): Request {
   return { body, query, params } as unknown as Request;
@@ -72,6 +74,7 @@ describe('validateBody', () => {
     });
 
     it('rejects when signature is missing', () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- discarded via rest-spread
       const { signature: _, ...noSig } = base;
       const req = makeReq(noSig);
       const { next, calls } = captureNext();

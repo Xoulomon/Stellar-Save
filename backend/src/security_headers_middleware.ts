@@ -5,8 +5,10 @@
  * to prevent XSS, clickjacking, and other client-side attacks.
  */
 
-import { Request, Response, NextFunction } from 'express';
 import { config } from './config';
+
+import type { Request, Response, NextFunction } from 'express';
+
 
 export interface CSPDirectives {
   'default-src'?: string[];

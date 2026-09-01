@@ -11,11 +11,14 @@
  *                          unauthenticated ramp entry points
  */
 
-import { Request, Response, NextFunction } from 'express';
-import { logger } from './logger';
+
 import { Counter } from 'prom-client';
-import { registry } from './metrics';
+
 import { config } from './config';
+import { logger } from './logger';
+import { registry } from './metrics';
+
+import type { Request, Response, NextFunction } from 'express';
 
 // ── Metrics ───────────────────────────────────────────────────────────────────
 

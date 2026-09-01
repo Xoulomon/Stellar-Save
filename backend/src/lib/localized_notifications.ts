@@ -8,10 +8,12 @@
  * Fallback: when no locale is stored, or the locale is unsupported, 'en' is
  * used automatically by the i18n layer.
  */
-import { prisma } from '../prisma_client';
 import { NotificationService } from '../notification_service';
-import { t, NotificationKey } from './i18n';
+import { prisma } from '../prisma_client';
+import { t } from './i18n';
 import { logger } from '../logger';
+
+import type { NotificationKey } from './i18n';
 
 const notificationService = new NotificationService();
 

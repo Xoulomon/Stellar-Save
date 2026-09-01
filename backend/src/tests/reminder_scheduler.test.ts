@@ -2,9 +2,11 @@ import {
   calculateReminderSchedules,
   isTimeInQuietHours,
   formatLocalTime,
-  adjustTimeForTimezone,
-  ReminderPreferences,
+  adjustTimeForTimezone
 } from '../services/reminder_scheduler';
+
+import type {
+  ReminderPreferences} from '../services/reminder_scheduler';
 
 describe('Reminder Scheduler Module Unit Tests', () => {
   const referenceNow = new Date('2026-03-01T00:00:00.000Z');

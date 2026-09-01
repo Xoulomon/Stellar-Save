@@ -17,7 +17,7 @@
  * See backend/test/fixtures/README.md for full usage guide.
  */
 
-import { Group, Member, Transaction } from '../../src/models';
+import type { Group, Member, Transaction } from '../../src/models';
 
 // ─── Contribution state ───────────────────────────────────────────────────────
 

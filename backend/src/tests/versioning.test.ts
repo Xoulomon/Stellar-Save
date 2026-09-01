@@ -3,8 +3,8 @@
  *
  * Tests the versioning middleware and both routers without starting a real HTTP server.
  */
-import { versionMiddleware, SUPPORTED_VERSIONS, DEPRECATED_VERSIONS } from '../versioning';
 import { migrateV1ToV2 as v2Migrate } from '../routes/v2';
+import { versionMiddleware, SUPPORTED_VERSIONS, DEPRECATED_VERSIONS } from '../versioning';
 
 // ── Minimal mock helpers ──────────────────────────────────────────────────────
 function makeReqRes(path: string) {

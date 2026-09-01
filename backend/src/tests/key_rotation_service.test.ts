@@ -4,6 +4,7 @@
  * Unit tests for the cryptographic key rotation service (Issue #1171).
  */
 
+import { AuditEventLog } from '../audit_event_log';
 import {
   keyRegistry,
   bootstrapKeys,
@@ -13,7 +14,6 @@ import {
   getKeyStatusSummary,
   startRotationScheduler,
   stopRotationScheduler,
-  KeyType,
 } from '../key_rotation_service';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -96,7 +96,6 @@ describe('rotateKeys', () => {
   });
 
   it('emits an audit log entry for each rotation', async () => {
-    const { AuditEventLog } = require('../audit_event_log');
     (AuditEventLog.record as jest.Mock).mockClear();
 
     await rotateKeys('hmac');
@@ -153,9 +152,6 @@ describe('signWithActiveKey / verifyWithDualValidation', () => {
     const { signature: oldSignature } = signWithActiveKey('jwt', payload);
 
     // Rotate and immediately force-retire the old key by manipulating rotatedAt
-    const summary = getKeyStatusSummary();
-    const beforeRotation = summary.find(s => s.keyType === 'jwt' && s.status === 'active');
-
     await rotateKeys('jwt');
 
     // Fast-forward the retiring key's rotatedAt so pruning retires it

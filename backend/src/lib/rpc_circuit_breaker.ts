@@ -13,13 +13,13 @@
  */
 
 import { CircuitBreaker, CircuitBreakerOpenError, CircuitState } from './circuit_breaker';
+import { config } from '../config';
+import { logger } from '../logger';
 import {
   circuitBreakerState,
   circuitBreakerTripsTotal,
   circuitBreakerFallbacksTotal,
 } from '../metrics';
-import { config } from '../config';
-import { logger } from '../logger';
 
 export { CircuitBreakerOpenError, CircuitState };
 

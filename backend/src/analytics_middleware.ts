@@ -1,7 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import { createRateLimiterMiddleware, RateLimiterOptions } from './rate_limiter';
-import * as redis from './redis';
 import { logger } from './logger';
+import { createRateLimiterMiddleware } from './rate_limiter';
+import * as redis from './redis';
+
+import type { RateLimiterOptions } from './rate_limiter';
+import type { Request, Response, NextFunction } from 'express';
+
 
 /**
  * Middleware for caching analytics GET requests

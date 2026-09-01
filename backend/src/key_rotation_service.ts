@@ -31,8 +31,9 @@
  */
 
 import crypto from 'crypto';
-import { logger } from './logger';
+
 import { AuditEventLog } from './audit_event_log';
+import { logger } from './logger';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

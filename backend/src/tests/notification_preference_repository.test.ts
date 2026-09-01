@@ -1,7 +1,9 @@
 import {
-  NotificationPreferenceRepository,
-  NotificationPreferencePrisma,
+  NotificationPreferenceRepository
 } from '../modules/notifications/notification-preference.repository';
+
+import type {
+  NotificationPreferencePrisma} from '../modules/notifications/notification-preference.repository';
 
 function mockDb() {
   return {

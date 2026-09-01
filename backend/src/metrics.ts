@@ -1,5 +1,6 @@
 import { Registry, Counter, Histogram, Gauge, collectDefaultMetrics } from 'prom-client';
-import { Request, Response, NextFunction } from 'express';
+
+import type { Request, Response, NextFunction } from 'express';
 
 export const registry = new Registry();
 registry.setDefaultLabels({ app: 'stellar-save-backend' });

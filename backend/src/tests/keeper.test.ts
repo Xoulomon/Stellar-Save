@@ -1,5 +1,6 @@
 import { KeeperJob } from '../jobs/keeper_job';
-import { IStellarClient } from '../lib/stellar_client';
+
+import type { IStellarClient } from '../lib/stellar_client';
 
 jest.mock('../metrics', () => ({
   registry: {

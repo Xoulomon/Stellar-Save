@@ -1,4 +1,5 @@
 import { Keypair } from '@stellar/stellar-sdk';
+
 import { generateChallenge, verifySignature, issueJwt, verifyJwt } from '../auth_service';
 import * as redisClient from '../redis';
 
@@ -106,8 +107,8 @@ describe('verifySignature', () => {
 
     // Manually re-insert the challenge to simulate a replay attempt
     // (in practice the challenge is gone, but we test the nonce guard directly)
-    const nonce = challenge.match(/Nonce: ([a-f0-9]+)/)?.[1]!;
-    const timestamp = parseInt(challenge.match(/Timestamp: (\d+)/)?.[1]!);
+    const nonce = challenge.match(/Nonce: ([a-f0-9]+)/)![1];
+    const timestamp = parseInt(challenge.match(/Timestamp: (\d+)/)![1]);
     const challengeKey = `auth:challenge:${walletAddress}`;
     mockRedis.__store.set(
       challengeKey,
@@ -124,7 +125,7 @@ describe('verifySignature', () => {
     const signature = signMessage(challenge);
 
     // Backdate the stored timestamp by 6 minutes
-    const nonce = challenge.match(/Nonce: ([a-f0-9]+)/)?.[1]!;
+    const nonce = challenge.match(/Nonce: ([a-f0-9]+)/)![1];
     const staleTimestamp = Date.now() - 6 * 60 * 1000;
     const challengeKey = `auth:challenge:${walletAddress}`;
     mockRedis.__store.set(

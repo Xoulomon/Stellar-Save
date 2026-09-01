@@ -5,12 +5,10 @@ jest.mock('../../analytics_service');
 
 describe('AnalyticsHandler', () => {
   let mockDb: any;
-  let mockAnalyticsService: jest.Mocked<AnalyticsService>;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockDb = {};
-    mockAnalyticsService = new AnalyticsService(mockDb) as any;
   });
 
   it('should execute analytics resync with default lookback', async () => {

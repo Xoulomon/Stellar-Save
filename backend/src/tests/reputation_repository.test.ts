@@ -1,7 +1,9 @@
 import {
-  MemberReputationRepository,
-  MemberReputationPrisma,
+  MemberReputationRepository
 } from '../modules/reputation/reputation.repository';
+
+import type {
+  MemberReputationPrisma} from '../modules/reputation/reputation.repository';
 
 function mockDb() {
   return {

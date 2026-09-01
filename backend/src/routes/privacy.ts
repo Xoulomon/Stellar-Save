@@ -1,13 +1,17 @@
-import { Router, Response, NextFunction } from 'express';
-import { jwtAuthMiddleware, AuthenticatedRequest } from '../auth_middleware';
+import { Router } from 'express';
+
+import { jwtAuthMiddleware } from '../auth_middleware';
+import { AppError } from '../lib/errors';
+import { logger } from '../logger';
 import {
   exportUserData,
   deleteUserData,
   createPrivacyRequest,
   completePrivacyRequest,
 } from '../privacy_service';
-import { AppError } from '../lib/errors';
-import { logger } from '../logger';
+
+import type { AuthenticatedRequest } from '../auth_middleware';
+import type { Response, NextFunction } from 'express';
 
 /**
  * Privacy routes — GDPR/CCPA data rights (Issue #1107)

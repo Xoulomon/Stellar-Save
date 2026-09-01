@@ -1,6 +1,6 @@
-import { prisma } from './prisma_client';
-import { logger } from './logger';
 import { config } from './config';
+import { logger } from './logger';
+import { prisma } from './prisma_client';
 
 export interface FraudScore {
   entityType: 'account' | 'group';

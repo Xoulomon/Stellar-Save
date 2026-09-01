@@ -6,18 +6,7 @@
  * and reject unauthenticated requests.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
-
-// Mock auth middleware for testing
-const createMockAuthMiddleware = (requireAdmin = true) => {
-  return (req: any, res: any, next: any) => {
-    if (requireAdmin && !req.adminId && !req.headers['x-admin-secret']) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    req.adminId = 'test_admin_123';
-    next();
-  };
-};
+import { describe, it, expect } from '@jest/globals';
 
 describe('Admin Endpoints Authorization', () => {
   describe('Platform Stats Endpoint', () => {

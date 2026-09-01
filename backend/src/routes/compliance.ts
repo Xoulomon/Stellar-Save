@@ -1,6 +1,5 @@
-import { Router, Response, NextFunction } from 'express';
-import { adminAuthMiddleware, jwtAuthMiddleware, AuthenticatedRequest } from '../auth_middleware';
-import { AppError } from '../lib/errors';
+import { Router } from 'express';
+
 import {
   screenTransaction,
   flagTransaction,
@@ -8,6 +7,11 @@ import {
   reviewFlag,
   getAuditLog,
 } from '../aml_service';
+import { adminAuthMiddleware, jwtAuthMiddleware } from '../auth_middleware';
+import { AppError } from '../lib/errors';
+
+import type { AuthenticatedRequest } from '../auth_middleware';
+import type { Response, NextFunction } from 'express';
 
 export function createComplianceRouter(): Router {
   const router = Router();

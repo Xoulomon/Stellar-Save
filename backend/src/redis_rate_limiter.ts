@@ -1,9 +1,12 @@
-import Redis from 'ioredis';
-import { Request, Response, NextFunction } from 'express';
-import { logger } from './logger';
+
 import { Counter } from 'prom-client';
+
+import { logger } from './logger';
 import { registry } from './metrics';
 import redisClient from './redis';
+
+import type { Request, Response, NextFunction } from 'express';
+import type Redis from 'ioredis';
 
 export interface RateLimitWindow {
   windowMs: number;
@@ -52,7 +55,7 @@ const rateLimitWarnings = new Counter({
   registers: [registry],
 });
 
-let TIERS: Record<string, TierConfig> = {
+const TIERS: Record<string, TierConfig> = {
   free: {
     windows: [
       { windowMs: 60_000, max: 30, label: '1m' },
@@ -74,7 +77,7 @@ let TIERS: Record<string, TierConfig> = {
   admin: { windows: [] },
 };
 
-let ENDPOINT_COSTS: Record<string, EndpointCost> = {};
+const ENDPOINT_COSTS: Record<string, EndpointCost> = {};
 const DEFAULT_COST: EndpointCost = { cost: 1, category: 'read' };
 
 export function setEndpointCost(path: string, cost: number, category: string = 'read'): void {

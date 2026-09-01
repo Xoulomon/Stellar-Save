@@ -3,8 +3,9 @@
  * Separates job scheduling from handler logic.
  */
 import { S3Client } from '@aws-sdk/client-s3';
-import { logger } from '../logger';
+
 import { config } from '../config';
+import { logger } from '../logger';
 import { WarehouseHandler } from './handlers/warehouse.handler';
 
 let timer: ReturnType<typeof setInterval> | null = null;

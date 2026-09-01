@@ -15,10 +15,14 @@
  * See backend/src/redis_rate_limiter.ts for implementation.
  */
 
-import { Injectable, NestMiddleware } from '@nestjs/common';
-import { Request, Response, NextFunction } from 'express';
-import { createAuthRateLimiterMiddleware } from '../rate_limiter';
+import { Injectable } from '@nestjs/common';
+
+
 import { logger } from '../logger';
+import { createAuthRateLimiterMiddleware } from '../rate_limiter';
+
+import type { NestMiddleware } from '@nestjs/common';
+import type { Request, Response, NextFunction } from 'express';
 
 /**
  * Stricter rate limiting for mutation endpoints.

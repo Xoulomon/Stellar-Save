@@ -1,8 +1,9 @@
-import type { Request, Response, NextFunction } from 'express';
 import {
   attachCorrelationId,
   runWithRequestContext,
 } from '../lib/requestContext';
+
+import type { Request, Response, NextFunction } from 'express';
 
 /**
  * Request-id correlation middleware.

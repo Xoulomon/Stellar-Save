@@ -11,8 +11,11 @@
  * env-based allow-list so the UI can be fully demoed.
  */
 
-import { Router, NextFunction } from 'express';
+import { Router } from 'express';
+
 import { AppError } from '../lib/errors';
+
+import type { NextFunction } from 'express';
 
 export type ProposalStatus = 'active' | 'passed' | 'rejected' | 'executed' | 'expired';
 

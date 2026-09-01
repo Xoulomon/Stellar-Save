@@ -1,32 +1,33 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import { format as fastCsvFormat } from 'fast-csv';
 
-import { RecommendationEngine } from '../recommendation';
-import { EmailService } from '../email_service';
-import { ExportService } from '../export_service';
-import { parseOffsetParams, parseCursorParams, paginate, paginateArray, paginateCursorArray } from '../lib/pagination';
-import { BackupService, S3HttpClient } from '../backup_service';
-import { BackupScheduler } from '../backup_scheduler';
-import { RecoveryService } from '../recovery_service';
-import { BackupMonitor } from '../backup_monitor';
-import { BackupRestoreDrill } from '../backup_restore_drill';
-import { ContractEventIndexer } from '../contract_event_indexer';
-import { AnalyticsService } from '../analytics_service';
-import { FeedbackService } from '../feedback_service';
+import { AdminService } from '../admin_service';
 import { createAnalyticsMiddlewareStack, createAnalyticsCacheMiddleware } from '../analytics_middleware';
-import { Group, UserInteraction, UserPreference } from '../models';
+import { apiKeyAuthMiddleware, recordApiUsage } from '../api_key_rate_limiter';
+import { apiKeyService } from '../api_key_service';
+import { adminAuthMiddleware } from '../auth_middleware';
 import { toContractEventDTO } from '../dto';
+import { createGovernanceRouter } from './governance';
+import { createInsuranceRouter } from './insurance';
 import { createNotificationRouter } from './notifications';
 import { createSseRouter } from './sse';
-import { createInsuranceRouter } from './insurance';
-import { createGovernanceRouter } from './governance';
-import { adminAuthMiddleware } from '../auth_middleware';
-import { apiKeyService } from '../api_key_service';
-import { apiKeyAuthMiddleware, recordApiUsage } from '../api_key_rate_limiter';
-import { AdminService } from '../admin_service';
-import { logger } from '../logger';
 import { AppError } from '../lib/errors';
-import { validateBody, validateQuery, schemas } from '../lib/validation';
+import { parseOffsetParams, paginate, paginateArray } from '../lib/pagination';
+import { validateBody, schemas } from '../lib/validation';
+import { logger } from '../logger';
+
+import type { AnalyticsService } from '../analytics_service';
+import type { BackupMonitor } from '../backup_monitor';
+import type { BackupRestoreDrill } from '../backup_restore_drill';
+import type { BackupScheduler } from '../backup_scheduler';
+import type { BackupService} from '../backup_service';
+import type { ContractEventIndexer } from '../contract_event_indexer';
+import type { ExportService } from '../export_service';
+import type { FeedbackService } from '../feedback_service';
+import type { UserPreference } from '../models';
+import type { RecommendationEngine } from '../recommendation';
+import type { RecoveryService } from '../recovery_service';
+import type { NextFunction } from 'express';
 
 // ── Shared service instances (passed in from app) ────────────────────────────
 export interface V1Services {
@@ -54,7 +55,6 @@ export function createV1Router(services: V1Services): Router {
     backupRestoreDrill,
     eventIndexer,
     analyticsService,
-    feedbackService,
   } = services;
 
   // Setup analytics middleware
@@ -511,7 +511,7 @@ export function createV1Router(services: V1Services): Router {
     const { address } = req.params;
 
     // Delay loading mock data to keep startup fast
-    const { mockTransactions, mockGroups } = await import('../mock_data');
+    const { mockTransactions } = await import('../mock_data');
 
     const transactions = mockTransactions
       .filter((t) => t.memberAddress === address)

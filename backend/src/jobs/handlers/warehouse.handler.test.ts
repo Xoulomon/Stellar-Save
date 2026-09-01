@@ -5,15 +5,10 @@ jest.mock('../../warehouse_export');
 
 describe('WarehouseHandler', () => {
   let mockS3Client: any;
-  let mockWarehousePipeline: jest.Mocked<WarehouseExportPipeline>;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockS3Client = {};
-    mockWarehousePipeline = new WarehouseExportPipeline({
-      s3Client: mockS3Client,
-      bucket: 'test-bucket',
-    }) as any;
   });
 
   it('should execute warehouse export successfully', async () => {

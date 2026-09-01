@@ -1,8 +1,8 @@
 import { groupResolvers } from './groups';
 import { memberResolvers } from './members';
-import { transactionResolvers } from './transactions';
 import { recommendationResolvers } from './recommendations';
 import { searchResolvers } from './search';
+import { transactionResolvers } from './transactions';
 
 export const resolvers = {
   Query: {

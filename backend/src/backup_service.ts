@@ -1,7 +1,9 @@
 import crypto from 'crypto';
-import { BackupJob, BackupType, BackupStatus } from './models';
+
 import { config } from './config';
 import { backupJobsTotal } from './metrics';
+
+import type { BackupJob, BackupType} from './models';
 
 export interface S3Client {
   putObject(params: { Bucket: string; Key: string; Body: Buffer; ContentType: string }): Promise<void>;

@@ -1,6 +1,7 @@
 import { rpc as SorobanRpc } from '@stellar/stellar-sdk';
-import { withSpan } from '../tracing';
+
 import { config } from '../config';
+import { withSpan } from '../tracing';
 import { withSorobanCircuit } from './rpc_circuit_breaker';
 
 export interface SorobanPoolConfig {

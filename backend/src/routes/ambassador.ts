@@ -1,6 +1,5 @@
-import { Router, NextFunction } from 'express';
-import { jwtAuthMiddleware, adminAuthMiddleware } from '../auth_middleware';
-import { AppError } from '../lib/errors';
+import { Router } from 'express';
+
 import {
   getAmbassadorLeaderboard,
   getAmbassadorProfile,
@@ -8,6 +7,10 @@ import {
   distributeRewards,
   saveAmbassadorProfile,
 } from '../ambassador_service';
+import { jwtAuthMiddleware, adminAuthMiddleware } from '../auth_middleware';
+import { AppError } from '../lib/errors';
+
+import type { NextFunction } from 'express';
 
 export function createAmbassadorRouter(): Router {
   const router = Router();

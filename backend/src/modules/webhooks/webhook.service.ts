@@ -1,10 +1,13 @@
 // backend/src/modules/webhooks/webhook.service.ts
+import * as crypto from 'crypto';
+
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
-import * as crypto from 'crypto';
+
 import { logger } from '../../logger';
+
+import type { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class WebhookService {

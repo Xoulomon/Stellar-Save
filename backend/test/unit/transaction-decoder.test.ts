@@ -2,8 +2,9 @@
  * Unit tests for Transaction Decoder Service (Issue #1102)
  */
 
+import { Keypair } from '@stellar/stellar-sdk';
+
 import { TransactionDecoderService } from '../../src/transaction_decoder_service';
-import { Transaction, Operation, Networks, Keypair, Asset } from '@stellar/stellar-sdk';
 
 // Use the shared mock — this test only needs Keypair for fake key generation
 // (no real signing or on-chain calls). The shared mock provides stub classes.
@@ -12,12 +13,10 @@ jest.mock('@stellar/stellar-sdk');
 
 describe('TransactionDecoderService', () => {
   let service: TransactionDecoderService;
-  let sourceKeypair: Keypair;
   let destinationKeypair: Keypair;
 
   beforeEach(() => {
     service = new TransactionDecoderService();
-    sourceKeypair = Keypair.random();
     destinationKeypair = Keypair.random();
   });
 

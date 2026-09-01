@@ -1,13 +1,16 @@
 import crypto from 'crypto';
-import { BackupService, S3Client } from './backup_service';
-import { RecoveryService, RestoreTarget } from './recovery_service';
+
+import { fetchWithCorrelationId } from './lib/http';
+import { logger } from './logger';
 import {
   backupRestoreDrillDuration,
   backupRestoreDrillsTotal,
   backupRestoreLastSuccessfulTimestamp,
 } from './metrics';
-import { logger } from './logger';
-import { fetchWithCorrelationId } from './lib/http';
+import { RecoveryService } from './recovery_service';
+
+import type { BackupService, S3Client } from './backup_service';
+import type { RestoreTarget } from './recovery_service';
 
 export interface RestoreDrillConfig {
   checkIntervalMs: number;

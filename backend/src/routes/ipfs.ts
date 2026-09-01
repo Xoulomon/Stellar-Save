@@ -1,7 +1,11 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
+
 import { config } from '../config';
+import { PinningQueue } from '../ipfs';
 import { AppError } from '../lib/errors';
-import { IpfsClient, PinningService, PinningQueue, GroupMetadataCache, IpfsMonitor } from '../ipfs';
+
+import type { IpfsClient, PinningService, GroupMetadataCache, IpfsMonitor } from '../ipfs';
+import type { Request, Response, NextFunction } from 'express';
 
 export function createIpfsRouter(
   ipfs: IpfsClient,

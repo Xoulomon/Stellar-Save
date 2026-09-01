@@ -15,10 +15,10 @@
  */
 
 import { IpfsClient } from '../../src/ipfs/client';
-import { PinningService } from '../../src/ipfs/pinning_service';
 import { PinningQueue } from '../../src/ipfs/pinning_queue';
-import { IpfsTestNode } from '../helpers/ipfs-test-node';
+import { PinningService } from '../../src/ipfs/pinning_service';
 import { InMemoryRedis } from '../helpers/in-memory-redis';
+import { IpfsTestNode } from '../helpers/ipfs-test-node';
 
 const mockRedis = new InMemoryRedis();
 
@@ -34,7 +34,7 @@ describe('IPFS upload/retrieval service (integration)', () => {
 
   beforeAll(async () => {
     ipfsNode = new IpfsTestNode();
-    const port = await ipfsNode.start();
+    await ipfsNode.start();
     client = new IpfsClient(ipfsNode.baseUrl, 5000);
   });
 

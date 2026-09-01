@@ -1,5 +1,6 @@
-import { AuditLog, Member, Group, Transaction } from './models';
 import { mockMembers, mockGroups, mockTransactions, mockAuditLogs } from './mock_data';
+
+import type { AuditLog, Member, Group, Transaction } from './models';
 
 export class AdminService {
   private auditLogs: AuditLog[] = [...mockAuditLogs];

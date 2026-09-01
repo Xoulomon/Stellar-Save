@@ -1,5 +1,6 @@
 import { KeeperHandler } from './keeper.handler';
-import { IStellarClient } from '../../lib/stellar_client';
+
+import type { IStellarClient } from '../../lib/stellar_client';
 
 describe('KeeperHandler', () => {
   let mockDb: any;

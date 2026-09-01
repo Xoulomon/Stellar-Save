@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 
 export interface RateLimitPolicy {
     windowMs: number;
@@ -71,7 +71,7 @@ function extractUserId(req: AuthenticatedRateLimitRequest): string | undefined {
 }
 
 function isAuthenticated(req: AuthenticatedRateLimitRequest): boolean {
-    if (Boolean(req.adminId || req.userId || req.user?.id)) return true;
+    if (req.adminId || req.userId || req.user?.id) return true;
     return Boolean(readHeaderValue(req.headers.authorization));
 }
 

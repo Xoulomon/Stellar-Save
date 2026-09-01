@@ -1,6 +1,10 @@
-import { Injectable, NestMiddleware } from '@nestjs/common';
-import { Request, Response, NextFunction } from 'express';
+import { Injectable } from '@nestjs/common';
+
 import { createRateLimiterMiddleware, createAuthRateLimiterMiddleware } from '../rate_limiter';
+
+import type { NestMiddleware } from '@nestjs/common';
+import type { Request, Response, NextFunction } from 'express';
+
 
 /**
  * Global rate limiting middleware for general endpoints.

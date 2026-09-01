@@ -1,6 +1,6 @@
-import { prisma } from '../../prisma_client';
 import { AnalyticsService } from '../../analytics_service';
 import { logger } from '../../logger';
+import { prisma } from '../../prisma_client';
 
 export class AnalyticsHandler {
   private analyticsService: AnalyticsService;

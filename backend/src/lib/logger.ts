@@ -1,8 +1,10 @@
-import type { Request, Response, NextFunction } from 'express';
 import winston from 'winston';
+
 import 'winston-daily-rotate-file';
 import { config } from '../config';
 import { attachCorrelationId, getCorrelationId, runWithRequestContext } from './requestContext';
+
+import type { Request, Response, NextFunction } from 'express';
 
 // ── Winston logger with JSON formatter and daily log rotation ─────────────────
 

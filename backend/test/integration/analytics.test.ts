@@ -1,4 +1,5 @@
 import request from 'supertest';
+
 import { buildApp } from '../helpers/app';
 
 const { app, prisma } = buildApp();

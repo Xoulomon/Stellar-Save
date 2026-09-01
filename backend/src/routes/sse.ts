@@ -8,8 +8,10 @@
  * Falls back gracefully: if the client disconnects, no more messages are sent.
  */
 
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
+
 import type { ContractEventIndexer } from '../contract_event_indexer';
+import type { Request, Response } from 'express';
 
 // In-memory registry of active SSE clients per group (or global)
 // Maps groupId (or '*' for global) → Set of Response objects

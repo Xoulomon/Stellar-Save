@@ -16,8 +16,9 @@ import {
   CreateSecretCommand,
   TagResourceCommand,
 } from '@aws-sdk/client-secrets-manager';
-import { logger } from './logger';
+
 import { config } from './config';
+import { logger } from './logger';
 
 export interface SecretMetadata {
   name: string;
