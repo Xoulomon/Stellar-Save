@@ -13,3 +13,5 @@ pub use policy::{require_admin, require_allowlisted};
 mod test;
 #[cfg(test)]
 mod test_utils;
+#[cfg(test)]
+mod benchmark_tests;
