@@ -7,6 +7,7 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './src/test/visual',
+  testMatch: '**/*.spec.ts',
   timeout: 60_000,
   retries: 0,
   workers: 1, // Percy requires sequential snapshots

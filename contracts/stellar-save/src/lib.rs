@@ -62,6 +62,7 @@ pub mod zk_proof;
 
 // mod auto_contribution_tests;
 pub mod cei_tests;
+#[cfg(test)]
 pub mod gas_benchmark;
 pub mod insurance_integration_tests;
 pub mod test_utils;
@@ -90,4 +91,3 @@ pub use group::{Group, GroupStatus};
 pub use payout::PayoutRecord;
 pub use storage::StorageKeyBuilder;
 pub use types::{ContractConfig, MemberProfile};
-

@@ -10,7 +10,7 @@ pub use error::Error;
 pub use token::{DataKey, ExampleContract};
 
 #[cfg(test)]
-mod test;
+mod unit_tests;
 #[cfg(test)]
 mod test_utils;
 #[cfg(test)]

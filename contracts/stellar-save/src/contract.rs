@@ -3593,7 +3593,7 @@ impl StellarSaveContract {
     /// # Example
     /// ```ignore
     /// let reminders_sent = contract.emit_contribution_reminders(env, 1, 0)?;
-    /// println!("Sent {} reminders", reminders_sent);
+    /// Reports the number of reminders sent.
     /// ```
     pub fn emit_contribution_reminders(
         env: Env,

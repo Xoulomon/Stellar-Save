@@ -44,14 +44,12 @@ const envSchema = z.object({
   // ── Admin ─────────────────────────────────────────────────────────────────
   ADMIN_SECRET: z
     .string()
-    .min(1, 'ADMIN_SECRET must not be empty')
-    .default('super-secret-admin-key'),
+    .min(1, 'ADMIN_SECRET must not be empty'),
 
   // ── Auth / JWT ────────────────────────────────────────────────────────────
   JWT_SECRET: z
     .string()
-    .min(32, 'JWT_SECRET must be at least 32 characters')
-    .default('stellar-save-jwt-secret-change-in-production-min32chars'),
+    .min(32, 'JWT_SECRET must be at least 32 characters'),
   JWT_ACCESS_TOKEN_TTL: z.string().default('15m'),
   JWT_REFRESH_TOKEN_TTL_DAYS: z.string().regex(/^\d+$/).default('30').transform(Number),
 
@@ -103,8 +101,8 @@ const envSchema = z.object({
 
   // ── AWS ───────────────────────────────────────────────────────────────────
   AWS_REGION: z.string().default('us-east-1'),
-  AWS_ACCESS_KEY_ID: z.string().default(''),
-  AWS_SECRET_ACCESS_KEY: z.string().default(''),
+  AWS_ACCESS_KEY_ID: z.string().optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().optional(),
 
   // ── Elasticsearch ─────────────────────────────────────────────────────────
   ELASTICSEARCH_NODE: z
@@ -112,11 +110,11 @@ const envSchema = z.object({
     .url('ELASTICSEARCH_NODE must be a valid URL')
     .default('http://localhost:9200'),
   ELASTICSEARCH_USERNAME: z.string().default('elastic'),
-  ELASTICSEARCH_PASSWORD: z.string().default('changeme'),
+  ELASTICSEARCH_PASSWORD: z.string().optional(),
 
   // ── KYC (Issue #1024) ─────────────────────────────────────────────────────
   KYC_PROVIDER_URL: z.string().url().default('https://sandbox.kyc-provider.example.com'),
-  KYC_WEBHOOK_SECRET: z.string().default(''),
+  KYC_WEBHOOK_SECRET: z.string().optional(),
 
   // ── Keeper/relayer (Issue #1026) ──────────────────────────────────────────
   KEEPER_ENABLED: z
@@ -146,7 +144,7 @@ const envSchema = z.object({
   APP_URL: z.string().url().default('https://stellar-save.com'),
 
   // ── SendGrid ──────────────────────────────────────────────────────────────
-  SENDGRID_API_KEY: z.string().default(''),
+  SENDGRID_API_KEY: z.string().optional(),
   SENDGRID_FROM_EMAIL: z.string().email().default('noreply@stellar-save.com'),
   SENDGRID_REPLY_TO: z.string().email().default('support@stellar-save.com'),
 
@@ -158,8 +156,8 @@ const envSchema = z.object({
   ONESIGNAL_API_KEY: z.string().optional(),
 
   // ── VAPID (Web Push) ──────────────────────────────────────────────────────
-  VAPID_PUBLIC_KEY: z.string().default(''),
-  VAPID_PRIVATE_KEY: z.string().default(''),
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().default('mailto:noreply@stellar-save.com'),
 
   // ── Distributed Tracing (OpenTelemetry) ──────────────────────────────────
@@ -247,6 +245,153 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+}).superRefine((env, ctx) => {
+  if (env.NODE_ENV !== 'development') {
+    const origins = env.CORS_ALLOWED_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean);
+    if (origins.length === 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['CORS_ALLOWED_ORIGINS'],
+        message: 'CORS_ALLOWED_ORIGINS must be an explicit allow-list outside development',
+      });
+    }
+
+    for (const origin of origins) {
+      try {
+        const parsedOrigin = new URL(origin);
+        const hostname = parsedOrigin.hostname.toLowerCase();
+        if (
+          parsedOrigin.origin !== origin ||
+          parsedOrigin.username ||
+          parsedOrigin.password ||
+          (env.NODE_ENV === 'production' &&
+            (parsedOrigin.protocol !== 'https:' ||
+              hostname === 'localhost' ||
+              hostname.endsWith('.localhost') ||
+              hostname === '127.0.0.1' ||
+              hostname === '::1' ||
+              hostname.endsWith('.example.com'))
+        ) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['CORS_ALLOWED_ORIGINS'],
+            message: `Invalid CORS origin: ${origin}`,
+          });
+        }
+      } catch {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['CORS_ALLOWED_ORIGINS'],
+          message: `Invalid CORS origin: ${origin}`,
+        });
+      }
+    }
+  }
+
+  if (env.NODE_ENV !== 'production') return;
+
+  const hasDatabaseConfig =
+    Boolean(process.env['DATABASE_URL']?.trim()) ||
+    [
+      process.env['DB_USERNAME'],
+      process.env['DB_PASSWORD'],
+      process.env['DB_HOST'],
+      process.env['DB_PORT'],
+      process.env['DB_NAME'],
+    ].every((value) => Boolean(value?.trim()));
+  if (!hasDatabaseConfig) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['DATABASE_URL'],
+      message: 'DATABASE_URL or all DB_* connection variables must be explicitly configured in production',
+    });
+  }
+
+  const redisHost = process.env['REDIS_HOST']?.trim().toLowerCase();
+  if (
+    !redisHost ||
+    redisHost === 'localhost' ||
+    redisHost.endsWith('.localhost') ||
+    redisHost === '127.0.0.1' ||
+    redisHost === '::1'
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['REDIS_HOST'],
+      message: 'REDIS_HOST must be explicitly configured to a non-local host in production',
+    });
+  }
+
+  const productionUrlVariables = [
+    'STELLAR_RPC_URL',
+    'ELASTICSEARCH_NODE',
+    'KYC_PROVIDER_URL',
+    'FRONTEND_URL',
+    'APP_URL',
+    'HORIZON_URL',
+  ];
+  if (env.OTEL_TRACES_ENABLED) productionUrlVariables.push('OTEL_EXPORTER_OTLP_ENDPOINT');
+  if (env.IPFS_ENABLED) productionUrlVariables.push('IPFS_API_URL', 'IPFS_GATEWAY_URL');
+
+  for (const variable of productionUrlVariables) {
+    const value = process.env[variable]?.trim();
+    if (!value) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [variable],
+        message: `${variable} must be explicitly configured in production`,
+      });
+      continue;
+    }
+
+    try {
+      const hostname = new URL(value).hostname.toLowerCase();
+      if (
+        hostname === 'localhost' ||
+        hostname.endsWith('.localhost') ||
+        hostname === '127.0.0.1' ||
+        hostname === '::1' ||
+        hostname.includes('testnet') ||
+        hostname === 'sandbox.kyc-provider.example.com' ||
+        hostname.endsWith('.example.com')
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [variable],
+          message: `${variable} must not use a development, testnet, or example endpoint in production`,
+        });
+      }
+    } catch {
+      // URL validation is reported by the field schema.
+    }
+  }
+
+  if (!process.env['ELASTICSEARCH_PASSWORD']?.trim()) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['ELASTICSEARCH_PASSWORD'],
+      message: 'ELASTICSEARCH_PASSWORD must be explicitly configured in production',
+    });
+  }
+
+  if (
+    !process.env['STELLAR_NETWORK_PASSPHRASE']?.trim() ||
+    env.STELLAR_NETWORK_PASSPHRASE === 'Test SDF Network ; September 2015'
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['STELLAR_NETWORK_PASSPHRASE'],
+      message: 'STELLAR_NETWORK_PASSPHRASE must be explicitly configured for production',
+    });
+  }
+
+  if (env.STELLAR_NETWORK !== 'mainnet') {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['STELLAR_NETWORK'],
+      message: 'STELLAR_NETWORK must be mainnet in production',
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------

@@ -27,7 +27,7 @@ therefore never appear in any official Stellar-Save deployment.
 
 The internal `number()` function that reads the current secret number from
 storage is **private** (`fn number`) and only accessible within this crate.
-It is used exclusively in the test suite (`src/test.rs`) and is not callable
+It is used exclusively in the test suite (`src/unit_tests.rs`) and is not callable
 from outside the crate binary.  No public or `pub(crate)` answer-revealing
 getter is exposed.
 

@@ -29,7 +29,7 @@ pub fn require_allowlisted(e: &Env, account: &Address) {
 
 #[cfg(test)]
 mod tests {
-    // Policy unit tests are covered by the integration tests in test.rs
+    // Policy unit tests are covered by the integration tests in unit_tests.rs
     // (`centralized_access_control_guards_work`).
     // Individual guard logic is tested there against the deployed contract.
 }

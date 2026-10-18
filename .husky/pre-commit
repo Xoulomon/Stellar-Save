@@ -1,1 +1,10 @@
 npx lint-staged
+if git grep -n -E '\b(dbg!|println!|eprintln!|todo!|unimplemented!)' -- \
+  'contracts/**/*.rs' \
+  ':(exclude,glob)contracts/**/*_tests.rs' \
+  ':(exclude,glob)contracts/**/tests.rs' \
+  ':(exclude,glob)contracts/**/test_utils.rs' \
+  ':(exclude,glob)contracts/**/gas_benchmark.rs'; then
+  echo "Debug and placeholder macros are forbidden in non-test contract code."
+  exit 1
+fi

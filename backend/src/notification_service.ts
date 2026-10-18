@@ -18,14 +18,14 @@ export type NotificationDb = any;
 export interface NotificationServiceDeps {
   db?: NotificationDb;
   config?: {
-    sendgrid: { apiKey: string; fromEmail: string; replyTo?: string };
+    sendgrid: { apiKey?: string; fromEmail: string; replyTo?: string };
     push: { firebase: { projectId?: string; serviceAccount?: string } };
   };
   logger?: { info: (...args: unknown[]) => void; warn: (...args: unknown[]) => void; error: (...args: unknown[]) => void; debug: (...args: unknown[]) => void };
 }
 
 export class NotificationService {
-  private sendgridApiKey: string;
+  private sendgridApiKey: string | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Firebase service account is parsed from a raw JSON string; schema varies by Firebase SDK version
   private firebaseServiceAccount?: Record<string, unknown>;
   private firebaseProjectId?: string;

@@ -38,14 +38,17 @@ export class BackupService {
   private retentionDays: number;
 
   constructor(s3Client?: S3Client) {
+    const accessKeyId = config.aws.accessKeyId;
+    const secretAccessKey = config.aws.secretAccessKey;
+    const credentials =
+      accessKeyId && secretAccessKey
+        ? { accessKeyId, secretAccessKey }
+        : undefined;
     this.s3 =
       s3Client ??
       new S3Client({
         region: config.aws.region,
-        credentials: {
-          accessKeyId: config.aws.accessKeyId,
-          secretAccessKey: config.aws.secretAccessKey,
-        },
+        ...(credentials ? { credentials } : {}),
       });
     this.bucket = config.backup.bucket;
     this.retentionDays = config.backup.retentionDays;

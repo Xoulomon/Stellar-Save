@@ -117,6 +117,6 @@ impl GuessTheNumber {
     }
 }
 
-mod test;
+mod unit_tests;
 #[cfg(test)]
 mod test_utils;

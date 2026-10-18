@@ -1,5 +1,20 @@
 # Testing Guide
 
+## Test File Naming and Discovery
+
+| Workspace / runner | Test file pattern | Discovery |
+|--------------------|------------------|-----------|
+| Frontend unit tests (Vitest) | `*.test.ts` and `*.test.tsx` | `frontend/vitest.config.ts` |
+| Frontend Playwright E2E and visual tests | `*.spec.ts` | Playwright configs under `frontend/` |
+| Backend TypeScript tests (Jest) | `*.test.ts` | `backend/jest.config.js` (`src/tests/`) |
+| Database tests (Jest) | `*.test.ts` | `database/jest.config.js` |
+| SDK and shared-utils tests (Vitest) | `*.test.ts` | Each package's `vitest.config.ts` |
+| JavaScript load tests | `*.test.js` | Load-test scripts under `tests/load/` and `backend/tests/load/` |
+| Rust contract tests | `*_tests.rs` | `#[cfg(test)]` modules and contract test sources |
+
+Rust test modules use the plural suffix consistently; `test_utils.rs` files are
+shared test support modules, not test suites.
+
 ## Overview
 
 This project uses a comprehensive testing strategy including:
@@ -183,7 +198,7 @@ cargo test -- --nocapture
 ### Test Structure
 
 - Tests use Soroban SDK's `testutils` for mocking and assertions
-- Each contract has tests in either `src/test.rs` or `tests/test.rs`
+- Rust test source files use the `*_tests.rs` suffix.
 - Tests include mock auth, address generation, and cross-contract calls
 
 ---
@@ -418,5 +433,3 @@ cargo mutants --file src/penalty.rs --file src/pool.rs
 # Show caught mutants (for debugging)
 cargo mutants --caught
 ```
-
-

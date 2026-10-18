@@ -25,6 +25,7 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     // Every `*.spec.ts` in this package belongs to Playwright, not Vitest.
     // Without this, Vitest's default glob collects them and the suite fails
     // trying to import `@playwright/test` outside a Playwright runner.

@@ -3,6 +3,26 @@
  * from Secrets Manager environment variables.
  */
 
+function setProductionEnvironment(stellarRpcUrl: string): void {
+  Object.assign(process.env, {
+    NODE_ENV: 'production',
+    ADMIN_SECRET: 'configured-admin-secret',
+    JWT_SECRET: 'configured-jwt-secret-value-that-is-long-enough',
+    CORS_ALLOWED_ORIGINS: 'https://app.stellar-save.com',
+    STELLAR_NETWORK: 'mainnet',
+    STELLAR_RPC_URL: stellarRpcUrl,
+    STELLAR_NETWORK_PASSPHRASE: 'Public Global Stellar Network ; September 2015',
+    ELASTICSEARCH_NODE: 'https://search.stellar-save.com',
+    ELASTICSEARCH_PASSWORD: 'configured-search-password',
+    KYC_PROVIDER_URL: 'https://kyc.stellar-save.com',
+    FRONTEND_URL: 'https://app.stellar-save.com',
+    APP_URL: 'https://app.stellar-save.com',
+    HORIZON_URL: 'https://horizon.stellar.org',
+    DATABASE_URL: 'postgresql://stellar-save:configured@db.stellar-save.com:5432/stellar_save',
+    REDIS_HOST: 'redis.stellar-save.com',
+  });
+}
+
 describe('Config - Database URL Construction', () => {
   const originalEnv = process.env;
 
@@ -106,7 +126,7 @@ describe('Config - Validation & Schema', () => {
 
   describe('NODE_ENV validation', () => {
     it('should accept valid NODE_ENV values', async () => {
-      process.env.NODE_ENV = 'production';
+      setProductionEnvironment('https://rpc.stellar.org');
       const { config } = await import('../config');
       expect(config.nodeEnv).toBe('production');
     });
@@ -282,6 +302,7 @@ describe('Config - Validation & Schema', () => {
     });
 
     it('should handle empty CORS_ALLOWED_ORIGINS', async () => {
+      process.env.NODE_ENV = 'development';
       delete process.env.CORS_ALLOWED_ORIGINS;
       const { config } = await import('../config');
       expect(config.cors.allowedOrigins).toEqual([]);
@@ -317,13 +338,15 @@ describe('Config - Validation & Schema', () => {
       expect(config.captcha.secretKey).toBeUndefined();
     });
 
-    it('should provide sensible production defaults', async () => {
-      process.env.NODE_ENV = 'production';
-      const { config } = await import('../config');
+    it('should reject unsafe default endpoints in production', async () => {
+      setProductionEnvironment('https://soroban-testnet.stellar.org');
 
-      // Check that defaults are set
-      expect(config.logging.level).toBe('info');
-      expect(config.auth.jwtSecret.length).toBeGreaterThanOrEqual(32);
+      expect.assertions(1);
+      try {
+        await import('../config');
+      } catch {
+        expect(true).toBe(true);
+      }
     });
   });
 

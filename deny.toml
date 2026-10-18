@@ -43,8 +43,8 @@ ignore = [
   # Pulled in only as a proc-macro via soroban-sdk -> soroban-env-host ->
   # ark-bls12-381/ark-ec/ark-ff 0.4. No safe upgrade exists: arkworks dropped it
   # in 0.5, but soroban-env-host 23.x still pins arkworks 0.4.
-  { id = "RUSTSEC-2024-0388", reason = "transitive via soroban-env-host (arkworks 0.4); no upgrade path until soroban-sdk moves to arkworks 0.5" },
+  { id = "RUSTSEC-2024-0388", reason = "transitive via soroban-env-host (arkworks 0.4); no upgrade path until soroban-sdk moves to arkworks 0.5; reassess by 2026-12-31", expires = "2026-12-31" },
   # `paste` is unmaintained (informational, no known vulnerability).
   # Same path as above: proc-macro dependency of ark-ff 0.4 via soroban-env-host.
-  { id = "RUSTSEC-2024-0436", reason = "transitive via soroban-env-host (arkworks 0.4); no upgrade path until soroban-sdk moves to arkworks 0.5" },
+  { id = "RUSTSEC-2024-0436", reason = "transitive via soroban-env-host (arkworks 0.4); no upgrade path until soroban-sdk moves to arkworks 0.5; reassess by 2026-12-31", expires = "2026-12-31" },
 ]

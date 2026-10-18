@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { jwtAuthMiddleware } from '../modules/auth/auth_middleware';
 import { AppError } from '../lib/errors';
+import { config } from '../config';
 import { logger } from '../logger';
 import { submitKyc, getKycStatus, pollAndUpdateStatus, emitKycStatusChange, verifyKycWebhookSignature } from '../services/kyc';
 
@@ -51,13 +52,15 @@ export function createKycRouter(): Router {
 
   // POST /api/kyc/webhook — provider pushes status updates
   router.post('/webhook', async (req: Request, res: Response, next: NextFunction) => {
-    const secret = process.env['KYC_WEBHOOK_SECRET'] ?? '';
-    if (secret) {
-      const sig = (req.headers['x-kyc-signature'] as string) ?? '';
-      const rawBody = JSON.stringify(req.body);
-      if (!verifyKycWebhookSignature(secret, rawBody, sig)) {
-        return next(new AppError('INVALID_SIGNATURE', 'Invalid signature', 401));
-      }
+    const secret = config.kyc.webhookSecret;
+    if (!secret) {
+      return next(new AppError('KYC_WEBHOOK_UNCONFIGURED', 'KYC webhook is not configured', 503));
+    }
+
+    const sig = (req.headers['x-kyc-signature'] as string) ?? '';
+    const rawBody = JSON.stringify(req.body);
+    if (!verifyKycWebhookSignature(secret, rawBody, sig)) {
+      return next(new AppError('INVALID_SIGNATURE', 'Invalid signature', 401));
     }
 
     const { userId, status } = req.body as { userId?: string; status?: string };

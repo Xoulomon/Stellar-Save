@@ -10,7 +10,7 @@ pub use error::Error;
 pub use policy::{require_admin, require_allowlisted};
 
 #[cfg(test)]
-mod test;
+mod unit_tests;
 #[cfg(test)]
 mod test_utils;
 #[cfg(test)]

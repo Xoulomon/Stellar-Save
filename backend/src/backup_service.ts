@@ -21,8 +21,8 @@ export interface S3Client {
 export class S3HttpClient implements S3Client {
   private region: string;
   private bucket: string;
-  private accessKeyId: string;
-  private secretAccessKey: string;
+  private accessKeyId?: string;
+  private secretAccessKey?: string;
 
   constructor() {
     this.region = config.aws.region;
@@ -37,6 +37,10 @@ export class S3HttpClient implements S3Client {
     body: Buffer,
     contentType: string
   ): Record<string, string> {
+    if (!this.accessKeyId || !this.secretAccessKey) {
+      throw new Error('AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are required for S3 HTTP backups');
+    }
+
     const date =
       new Date()
         .toISOString()

@@ -15,7 +15,7 @@ import type { Group, Member, Transaction } from './models';
 
 export interface SearchServiceDeps {
   client?: Client;
-  config?: { elasticsearch: { node: string; username: string; password: string } };
+  config?: { elasticsearch: { node: string; username: string; password?: string } };
   logger?: { info: (...a: unknown[]) => void; error: (...a: unknown[]) => void; debug: (...a: unknown[]) => void };
 }
 
@@ -30,10 +30,12 @@ export class SearchService {
 
     this.client = deps?.client ?? new Client({
       node: resolvedConfig.elasticsearch.node,
-      auth: {
-        username: resolvedConfig.elasticsearch.username,
-        password: resolvedConfig.elasticsearch.password,
-      },
+      auth: resolvedConfig.elasticsearch.password
+        ? {
+            username: resolvedConfig.elasticsearch.username,
+            password: resolvedConfig.elasticsearch.password,
+          }
+        : undefined,
     });
   }
 

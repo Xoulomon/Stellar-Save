@@ -14,6 +14,7 @@ module.exports = {
       statements: 85,
     },
   },
+  setupFiles: ['<rootDir>/jest.setup.js'],
   setupFilesAfterEnv: [],
   moduleFileExtensions: ['ts', 'js'],
   // `@stellar-save/shared-utils` ships ESM (tsconfig `module: ESNext`) but this

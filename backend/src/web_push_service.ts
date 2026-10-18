@@ -30,7 +30,7 @@ export interface PushPayload {
 
 export interface WebPushServiceDeps {
   db?: PrismaClient;
-  config?: { vapid: { publicKey: string; privateKey: string; subject: string } };
+  config?: { vapid: { publicKey?: string; privateKey?: string; subject: string } };
   logger?: { info: (...a: unknown[]) => void; warn: (...a: unknown[]) => void; error: (...a: unknown[]) => void };
 }
 
@@ -48,7 +48,7 @@ export class WebPushService {
     const publicKey = resolvedConfig.vapid.publicKey;
     const privateKey = resolvedConfig.vapid.privateKey;
     const subject = resolvedConfig.vapid.subject;
-    this.vapidPublicKey = publicKey;
+    this.vapidPublicKey = publicKey ?? '';
 
     if (!publicKey || !privateKey) {
       this.log.warn(
