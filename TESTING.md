@@ -3,12 +3,36 @@
 ## Overview
 
 This project uses a comprehensive testing strategy including:
+
 - **Unit tests** for smart contracts (Rust) and frontend (TypeScript)
 - **Property-based testing** (fuzzing) for contracts
 - **Code coverage** tracking with 95% threshold for contracts
 - **Mutation testing** to verify test suite quality
 
 ---
+
+## Backend Test Layout
+
+The backend now uses a single canonical test root at `backend/tests/` so all Jest suites follow one discovery rule and contributors always know where a new test belongs.
+
+### Layout
+
+- `backend/tests/unit/` — unit tests
+- `backend/tests/integration/` — integration tests
+- `backend/tests/e2e/` — load or browser-style e2e scripts
+- `backend/tests/fixtures/` — shared test fixtures
+- `backend/tests/helpers/` — shared setup and app builders
+
+### Legacy directory migration summary
+
+| Legacy location             | Classification | Migrated files                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `backend/src/tests/`        | unit           | `admin.test.ts`, `admin_authz.test.ts`, `analytics.test.ts`, `auth.test.ts`, `backup.test.ts`, `circuit_breaker.test.ts`, `config.test.ts`, `dto.test.ts`, `export.test.ts`, `fiat_ramp_protection.test.ts`, `graceful_shutdown.test.ts`, `graphql.test.ts`, `groups_service.test.ts`, `health.test.ts`, `horizon_indexer_resilience.test.ts`, `i18n.test.ts`, `image_storage_service.test.ts`, `indexer.test.ts`, `keeper.test.ts`, `key_rotation_service.test.ts`, `kyc.test.ts`, `logger.test.ts`, `logger_structured.test.ts`, `monitoring.test.ts`, `notification_preference_repository.test.ts`, `notification_service.test.ts`, `rate_limiter.test.ts`, `recommendation.test.ts`, `redis_rate_limiter.test.ts`, `reminder_scheduler.test.ts`, `reputation.test.ts`, `reputation_repository.test.ts`, `request_id.test.ts`, `rpc_circuit_breaker.test.ts`, `schema-snapshot.test.ts`, `search.test.ts`, `sep24.test.ts`, `sep31.test.ts`, `soroban_pool.test.ts`, `tracing.test.ts`, `validation.test.ts`, `versioning.test.ts`, `webhooks.test.ts` |
+| `backend/test/unit/`        | unit           | `auth-service-coverage.test.ts`, `input-sanitization.test.ts`, `secrets-manager.test.ts`, `transaction-decoder.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `backend/test/integration/` | integration    | `analytics.test.ts`, `auth.test.ts`, `groups.test.ts`, `health.test.ts`, `ipfs.test.ts`, `members.test.ts`, `ramp.test.ts`, `rpc-failover.test.ts`, `sep24-fiat-ramp.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `backend/tests/e2e/`        | e2e            | `analytics.test.js`, `auth.test.js`, `groups.test.js`, `balance-assertions.js`, `concurrent-deposits.js`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+
+Jest discovery is configured to look only at `backend/tests/unit` and `backend/tests/integration`, while the `e2e` folder is treated as the load/browser-style suite and kept under the same root for clarity.
 
 ## Shared Stellar SDK Mock
 
@@ -18,6 +42,7 @@ removes the need for ad-hoc inline mocks in individual test files.
 ### Why a shared mock?
 
 Without a shared mock, each test file that touches the Stellar SDK would either:
+
 1. Make real HTTP calls to Horizon / Soroban RPC — making tests slow and flaky.
 2. Duplicate an inline `jest.mock(…, () => ({ … }))` factory — hard to keep in sync.
 
@@ -26,12 +51,13 @@ The shared mock ensures all unit tests are **offline-first**, **deterministic**,
 
 ### Mock file locations
 
-| Workspace | File | Test framework |
-|-----------|------|----------------|
+| Workspace | File                                             | Test framework   |
+| --------- | ------------------------------------------------ | ---------------- |
 | Frontend  | `frontend/src/__mocks__/@stellar/stellar-sdk.ts` | Vitest (`vi.fn`) |
 | Backend   | `backend/src/__mocks__/@stellar/stellar-sdk.ts`  | Jest (`jest.fn`) |
 
 Both mocks mirror the same `@stellar/stellar-sdk` API surface:
+
 - `Keypair` (static factories + instance methods)
 - `Networks` (passphrase constants)
 - `Asset` (native + custom)
@@ -83,8 +109,7 @@ it('handles loadAccount failure', async () => {
 **Using the helper factories:**
 
 ```typescript
-import { makeMockHorizonServer, FAKE_ACCOUNT_ID } from
-  '../__mocks__/@stellar/stellar-sdk';
+import { makeMockHorizonServer, FAKE_ACCOUNT_ID } from '../__mocks__/@stellar/stellar-sdk';
 
 const server = makeMockHorizonServer();
 server.loadAccount.mockResolvedValueOnce({
@@ -135,11 +160,14 @@ it('retries on RPC failure', async () => {
 **Using the helper factories:**
 
 ```typescript
-import { makeMockRpcServer, FAKE_ACCOUNT_ID } from
-  '../__mocks__/@stellar/stellar-sdk';
+import { makeMockRpcServer, FAKE_ACCOUNT_ID } from '../__mocks__/@stellar/stellar-sdk';
 
 const server = makeMockRpcServer();
-server.sendTransaction.mockResolvedValueOnce({ status: 'ERROR', hash: '', errorResult: 'bad_auth' });
+server.sendTransaction.mockResolvedValueOnce({
+  status: 'ERROR',
+  hash: '',
+  errorResult: 'bad_auth',
+});
 ```
 
 **When you need the real SDK (e.g. signing in auth tests):**
@@ -153,11 +181,11 @@ const keypair = Keypair.random(); // real Ed25519 key
 
 ### Which tests intentionally use the real SDK
 
-| File | Reason |
-|------|--------|
-| `backend/src/tests/auth.test.ts` | Needs real `Keypair.sign()` / `Keypair.verify()` to test the challenge–response auth flow |
-| `frontend/src/test/e2e-testnet/testnet.e2e.ts` | E2E tests submit real transactions to Stellar testnet |
-| `frontend/e2e/rosca-journey.spec.ts` | Playwright E2E — hits a running app, not a unit test |
+| File                                           | Reason                                                                                    |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `backend/src/tests/auth.test.ts`               | Needs real `Keypair.sign()` / `Keypair.verify()` to test the challenge–response auth flow |
+| `frontend/src/test/e2e-testnet/testnet.e2e.ts` | E2E tests submit real transactions to Stellar testnet                                     |
+| `frontend/e2e/rosca-journey.spec.ts`           | Playwright E2E — hits a running app, not a unit test                                      |
 
 All other tests that touch `@stellar/stellar-sdk` **must** use the shared mock.
 
@@ -215,12 +243,12 @@ npm run test:coverage
 
 ### Test Structure
 
-| Directory | Purpose |
-|-----------|---------|
-| `src/test/` | Component and hook unit tests |
-| `src/hooks/__tests__/` | Hook-specific unit tests (using shared Stellar mock) |
-| `src/test/e2e-testnet/` | Testnet E2E tests (real SDK, real network) |
-| `src/__mocks__/@stellar/` | Shared Vitest manual mocks |
+| Directory                 | Purpose                                              |
+| ------------------------- | ---------------------------------------------------- |
+| `src/test/`               | Component and hook unit tests                        |
+| `src/hooks/__tests__/`    | Hook-specific unit tests (using shared Stellar mock) |
+| `src/test/e2e-testnet/`   | Testnet E2E tests (real SDK, real network)           |
+| `src/__mocks__/@stellar/` | Shared Vitest manual mocks                           |
 
 ### Writing Tests
 
@@ -299,17 +327,18 @@ npm run test:integration    # integration tests (requires Docker)
 
 ### Test Structure
 
-| Directory | Config | Purpose |
-|-----------|--------|---------|
-| `src/tests/` | `jest.config.js` | Unit tests (default run) |
-| `test/unit/` | `jest.config.js` | Additional unit tests |
-| `test/integration/` | `jest.integration.config.js` | Integration tests |
-| `src/__mocks__/@stellar/` | — | Shared Jest manual mocks |
+| Directory                 | Config                       | Purpose                  |
+| ------------------------- | ---------------------------- | ------------------------ |
+| `src/tests/`              | `jest.config.js`             | Unit tests (default run) |
+| `test/unit/`              | `jest.config.js`             | Additional unit tests    |
+| `test/integration/`       | `jest.integration.config.js` | Integration tests        |
+| `src/__mocks__/@stellar/` | —                            | Shared Jest manual mocks |
 
 ### Jest version
 
 The backend uses **Jest 29** with **ts-jest 29** (ts-jest 30 is not yet released).
 The `package.json` `devDependencies` lock this at:
+
 ```json
 {
   "jest": "^29.7.0",
@@ -319,6 +348,7 @@ The `package.json` `devDependencies` lock this at:
 
 If tests fail with `TypeError: this._moduleMocker.clearMocksOnScope is not a function`,
 the installed jest version is 30. Fix by running:
+
 ```bash
 cd backend && pnpm install jest@29.7.0 --save-dev
 ```
@@ -347,11 +377,11 @@ These measurements were taken to verify the impact of the shared Stellar SDK moc
 
 ### Frontend (Vitest)
 
-| Metric | Baseline (2026-07-29) |
-|--------|-----------------------|
-| Total test files | 122 |
-| Tests | 840 |
-| Duration | ~226 s |
+| Metric                         | Baseline (2026-07-29)   |
+| ------------------------------ | ----------------------- |
+| Total test files               | 122                     |
+| Tests                          | 840                     |
+| Duration                       | ~226 s                  |
 | Stellar SDK live network calls | 0 (all via shared mock) |
 
 The 60 failing tests are **pre-existing failures** unrelated to the Stellar SDK mock
@@ -360,11 +390,11 @@ The `useTransaction` and `useBalance` hooks that use `@stellar/stellar-sdk` pass
 
 ### Backend (Jest)
 
-| Metric | Baseline (2026-07-29) |
-|--------|-----------------------|
-| Key Stellar SDK test: `soroban_pool.test.ts` | PASS (10/10 tests, ~4.6 s) |
-| Key Stellar SDK test: `transaction-decoder.test.ts` | PASS via shared mock |
-| Live Soroban RPC calls | 0 (all via shared mock) |
+| Metric                                              | Baseline (2026-07-29)      |
+| --------------------------------------------------- | -------------------------- |
+| Key Stellar SDK test: `soroban_pool.test.ts`        | PASS (10/10 tests, ~4.6 s) |
+| Key Stellar SDK test: `transaction-decoder.test.ts` | PASS via shared mock       |
+| Live Soroban RPC calls                              | 0 (all via shared mock)    |
 
 The backend has pre-existing test failures in modules that are not related to Stellar
 SDK mocking (TypeScript type errors, empty test suites, missing environment variables
@@ -389,23 +419,27 @@ Mutation testing verifies the quality of your test suite by introducing small ch
 ### What is Mutation Testing?
 
 Mutation testing works by:
+
 1. Creating "mutants" — small modifications to your code (e.g., changing `>` to `>=`, `+` to `-`)
 2. Running your test suite against each mutant
 3. Checking if tests fail (mutant "killed") or pass (mutant "survived")
 4. Calculating a mutation score: `killed / (killed + survived) × 100%`
 
 A surviving mutant indicates either:
+
 - Missing test coverage for that code path
 - Tests that don't assert the specific behavior being mutated
 
 ### Rust Contracts (cargo-mutants)
 
 **Installation:**
+
 ```bash
 cargo install cargo-mutants --locked
 ```
 
 **Running locally:**
+
 ```bash
 cd contracts/stellar-save
 
@@ -421,5 +455,3 @@ cargo mutants --file src/penalty.rs --file src/pool.rs
 # Show caught mutants (for debugging)
 cargo mutants --caught
 ```
-
-

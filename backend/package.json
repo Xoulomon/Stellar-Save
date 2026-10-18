@@ -14,7 +14,7 @@
     "test:integration": "jest --config jest.integration.config.js --runInBand",
     "test:sep24": "jest --config jest.integration.config.js --runInBand --testPathPattern=sep24-fiat-ramp",
     "schema:update": "tsx -e \"import { typeDefs } from './src/graphql/schema'; import { buildSchema, printSchema } from 'graphql'; import { mkdirSync, writeFileSync } from 'fs'; mkdirSync('src/graphql/snapshots', { recursive: true }); writeFileSync('src/graphql/snapshots/schema.graphql', printSchema(buildSchema(typeDefs)) + '\\n'); console.log('Schema snapshot updated: src/graphql/snapshots/schema.graphql');\"",
-    "schema:check": "jest src/tests/schema-snapshot.test.ts --no-coverage"
+    "schema:check": "jest tests/unit/schema-snapshot.test.ts --no-coverage"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +25,7 @@
     "@aws-sdk/client-compute-optimizer": "^3.600.0",
     "@aws-sdk/client-cost-explorer": "^3.600.0",
     "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/client-secrets-manager": "^3.622.0",
     "@elastic/elasticsearch": "^9.3.4",
     "@graphql-tools/schema": "^10.0.13",
     "@nestjs/bullmq": "^11.0.4",
@@ -65,6 +66,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@jest/globals": "^29.7.0",
     "eslint": "^9.39.1",
     "eslint-plugin-import": "^2.31.0",
     "globals": "^16.5.0",
