@@ -149,16 +149,17 @@ The `PayoutPositionIndex(group_id, position) → Address` reverse index (written
 
 ### Benchmark Coverage
 
-The benchmark suite lives in `contracts/stellar-save/src/gas_benchmark_tests.rs` and is run alongside the test suite:
+The benchmark suite lives in `contracts/stellar-save/src/benchmark.rs` (consolidated from the previous `gas_benchmark.rs`, `gas_benchmark_tests.rs`, and `storage_benchmark.rs`) and is run alongside the test suite:
 
 ```bash
-cargo test -- bench  --nocapture  # prints CPU instruction counts
+cargo test --manifest-path contracts/stellar-save/Cargo.toml benchmark -- --nocapture  # prints CPU instruction counts
 ```
 
 Benchmarks cover:
 - All group sizes: **5, 10, 15, 20 members**
 - Functions: `create_group`, `join_group`, `get_group`, `get_members`, `list_members`, `is_member`, `get_payout_position`
 - Regression guards: `join_group` N=20 must stay under 5M instructions; `get_members` N=20 must stay under 2M instructions
+- Baseline comparison: `create_group`, `contribute`, and `execute_payout` baselines are tracked in `scripts/benchmark_baseline.json` and checked by `scripts/benchmark_regression.sh`
 
 ---
 

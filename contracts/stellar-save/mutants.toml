@@ -18,9 +18,7 @@ exclude_globs = [
     "src/test_*.rs",
 
     # Benchmarks and non-logic helpers
-    "src/gas_benchmark*.rs",
-    "src/storage_benchmark.rs",
-    "src/storage_optimization.rs",
+    "src/benchmark.rs",
 
     # Migration scaffolding
     "src/migration*.rs",
