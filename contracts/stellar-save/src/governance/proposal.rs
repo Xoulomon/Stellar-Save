@@ -1,14 +1,16 @@
+use crate::auth;
 use crate::error::StellarSaveError;
 use crate::events::EventEmitter;
 use crate::group::{Group, GroupStatus};
 use crate::storage::StorageKeyBuilder;
-use soroban_sdk::Env;
+use soroban_sdk::{Address, Env};
 
 /// Proposes a new contribution amount for the next cycle.
 /// Only the group creator can propose; the group must allow dynamic contributions.
 pub fn propose_contribution_change(
     env: Env,
     group_id: u64,
+    caller: Address,
     new_amount: i128,
 ) -> Result<(), StellarSaveError> {
     let group_key = StorageKeyBuilder::group_data(group_id);
@@ -18,7 +20,7 @@ pub fn propose_contribution_change(
         .get::<_, Group>(&group_key)
         .ok_or(StellarSaveError::GroupNotFound)?;
 
-    group.creator.require_auth();
+    auth::require_group_creator(&env, group_id, &caller)?;
 
     if !group.allow_dynamic_contributions {
         return Err(StellarSaveError::InvalidState);

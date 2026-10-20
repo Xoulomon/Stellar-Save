@@ -1,3 +1,4 @@
+use crate::auth;
 use crate::contribution::ContributionRecord;
 use crate::error::StellarSaveError;
 use crate::events::EventEmitter;

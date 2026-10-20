@@ -288,10 +288,10 @@ impl StellarSaveContract {
 
         // 2. Admin-only Authorization
         if let Some(current_config) = env.storage().persistent().get::<_, ContractConfig>(&key) {
-            current_config.admin.require_auth();
+            auth::require_admin(&env, &current_config.admin)?;
         } else {
             // First time initialization: caller becomes admin
-            new_config.admin.require_auth();
+            auth::require_admin(&env, &new_config.admin)?;
 
             // Initialize storage version on first deployment
             initialize_storage_version(&env);
@@ -549,6 +549,7 @@ impl StellarSaveContract {
     pub fn update_group(
         env: Env,
         group_id: u64,
+        caller: Address,
         new_contribution: i128,
         new_duration: u64,
         new_max_members: u32,
@@ -561,8 +562,8 @@ impl StellarSaveContract {
             .get::<_, Group>(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        // 2. Task: Verify caller is creator
-        group.creator.require_auth();
+        // 2. Verify caller is the group creator
+        auth::require_creator(&caller, &group)?;
 
         // 3. Task: Check group is not yet active
         let status_key = StorageKeyBuilder::group_status(group_id);
@@ -726,10 +727,7 @@ impl StellarSaveContract {
         description: String,
         image_url: String,
     ) -> Result<(), StellarSaveError> {
-        // 1. Verify caller is authorized
-        caller.require_auth();
-
-        // 2. Load existing group
+        // 1. Load existing group
         let group_key = StorageKeyBuilder::group_data(group_id);
         let mut group = env
             .storage()
@@ -737,12 +735,10 @@ impl StellarSaveContract {
             .get::<_, Group>(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        // 3. Verify caller is the creator
-        if group.creator != caller {
-            return Err(StellarSaveError::Unauthorized);
-        }
+        // 2. Verify caller is the group creator
+        auth::require_creator(&caller, &group)?;
 
-        // 4. Validate metadata
+        // 3. Validate metadata
         // Name: 1–64 bytes, no null bytes
         if name.len() < 1 {
             return Err(StellarSaveError::InvalidMetadata);
@@ -754,12 +750,12 @@ impl StellarSaveContract {
             crate::helpers::validate_group_string(&description, 256)?;
         }
 
-        // 5. Update group metadata
+        // 4. Update group metadata
         group.name = Some(name.clone());
         group.description = Some(description.clone());
         group.image_url = Some(image_url.clone());
 
-        // 6. Save updated group
+        // 5. Save updated group
         env.storage().persistent().set(&group_key, &group);
 
         // 7. Emit event
@@ -1924,8 +1920,6 @@ impl StellarSaveContract {
         caller: Address,
         reason: soroban_sdk::String,
     ) -> Result<(), StellarSaveError> {
-        caller.require_auth();
-
         let group_key = StorageKeyBuilder::group_data(group_id);
         let mut group: Group = env
             .storage()
@@ -1933,11 +1927,8 @@ impl StellarSaveContract {
             .get(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        // Verify caller is a member
-        let member_key = StorageKeyBuilder::member_profile(group_id, caller.clone());
-        if !env.storage().persistent().has(&member_key) {
-            return Err(StellarSaveError::NotMember);
-        }
+        // Authorization + membership check
+        auth::require_member(&env, group_id, &caller)?;
 
         // Each member may only vote once per dispute round
         let vote_key = StorageKeyBuilder::group_dispute_vote(group_id, caller.clone());
@@ -2164,6 +2155,7 @@ impl StellarSaveContract {
     pub fn invite_member(
         env: Env,
         group_id: u64,
+        caller: Address,
         invitee: Address,
     ) -> Result<(), StellarSaveError> {
         let group_key = StorageKeyBuilder::group_data(group_id);
@@ -2173,7 +2165,7 @@ impl StellarSaveContract {
             .get::<_, Group>(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        group.creator.require_auth();
+        auth::require_creator(&caller, &group)?;
 
         let status: GroupStatus = env
             .storage()
@@ -2224,6 +2216,7 @@ impl StellarSaveContract {
     pub fn revoke_invitation(
         env: Env,
         group_id: u64,
+        caller: Address,
         invitee: Address,
     ) -> Result<(), StellarSaveError> {
         let group_key = StorageKeyBuilder::group_data(group_id);
@@ -2233,7 +2226,7 @@ impl StellarSaveContract {
             .get::<_, Group>(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        group.creator.require_auth();
+        auth::require_creator(&caller, &group)?;
 
         let status: GroupStatus = env
             .storage()
@@ -2815,10 +2808,7 @@ impl StellarSaveContract {
     /// * `Err(StellarSaveError::GroupNotArchivable)` if the group is not in a terminal state
     /// * `Err(StellarSaveError::InvalidState)` if the group is already archived
     pub fn archive_group(env: Env, caller: Address, group_id: u64) -> Result<(), StellarSaveError> {
-        // 1. Authorization
-        caller.require_auth();
-
-        // 2. Load the group
+        // 1. Load the group
         let group_key = StorageKeyBuilder::group_data(group_id);
         let mut group = env
             .storage()
@@ -2826,10 +2816,8 @@ impl StellarSaveContract {
             .get::<_, Group>(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        // 3. Only the creator may archive
-        if group.creator != caller {
-            return Err(StellarSaveError::Unauthorized);
-        }
+        // 2. Authorization: only the group creator may archive
+        auth::require_group_creator(&env, group_id, &caller)?;
 
         // 4. Group must be in a terminal state
         if !group.status.is_terminal() {
@@ -3992,8 +3980,6 @@ impl StellarSaveContract {
         member: Address,
         group_id: u64,
     ) -> Result<(), StellarSaveError> {
-        member.require_auth();
-
         // Load group
         let group_key = StorageKeyBuilder::group_data(group_id);
         let group: Group = env
@@ -4002,15 +3988,12 @@ impl StellarSaveContract {
             .get(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
+        // Authorization + membership check
+        auth::require_member(&env, group_id, &member)?;
+
         // Group must be complete
         if !group.is_complete() {
             return Err(StellarSaveError::InvalidState);
-        }
-
-        // Verify member exists
-        let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
-        if !env.storage().persistent().has(&member_key) {
-            return Err(StellarSaveError::NotMember);
         }
 
         // Prevent double claiming
@@ -4337,9 +4320,6 @@ impl StellarSaveContract {
         member: Address,
         amount: i128,
     ) -> Result<(), StellarSaveError> {
-        // Require authorization from the member
-        member.require_auth();
-
         // ── Step 1: Load group once — reuse for all subsequent checks ──────────
         // Gas opt: single SLOAD for the Group struct. All validation (status,
         // amount, paused flag) reads from this in-memory copy; no re-reads.
@@ -4349,6 +4329,9 @@ impl StellarSaveContract {
             .persistent()
             .get(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
+
+        // Authorization + membership check
+        auth::require_member(&env, group_id, &member)?;
 
         // ── Step 2: Validate group is Active ───────────────────────────────────
         if group.status != GroupStatus::Active {
@@ -4372,12 +4355,6 @@ impl StellarSaveContract {
         } else {
             (false, 0u64)
         };
-
-        // ── Step 3: Validate member is part of the group (1 SLOAD) ────────────
-        let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
-        if !env.storage().persistent().has(&member_key) {
-            return Err(StellarSaveError::NotMember);
-        }
 
         // ── Step 4: Validate amount against in-memory group (0 extra SLOADs) ──
         // Gas opt: compare directly against the already-loaded group struct

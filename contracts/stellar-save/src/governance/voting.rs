@@ -5,6 +5,7 @@
 //! [`super::storage`].  Actual group-state mutations triggered when a vote
 //! threshold is met are delegated to [`super::execution`].
 
+use crate::auth;
 use crate::error::StellarSaveError;
 use crate::governance::{execution, storage as gov_storage};
 use crate::group::{Group, GroupStatus};
@@ -25,8 +26,6 @@ use soroban_sdk::{Address, Env};
 /// - `GroupAlreadyDissolved`  - Group is already in a terminal state
 /// - `Overflow`               - Vote count overflow (should not occur in practice)
 pub fn vote_dissolve(env: Env, group_id: u64, caller: Address) -> Result<(), StellarSaveError> {
-    caller.require_auth();
-
     // ── Load group ────────────────────────────────────────────────────────────
     let group_key = StorageKeyBuilder::group_data(group_id);
     let mut group = env
@@ -51,11 +50,8 @@ pub fn vote_dissolve(env: Env, group_id: u64, caller: Address) -> Result<(), Ste
         GroupStatus::Pending => return Err(StellarSaveError::InvalidState),
     }
 
-    // ── Validate membership ───────────────────────────────────────────────────
-    let member_key = StorageKeyBuilder::member_profile(group_id, caller.clone());
-    if !env.storage().persistent().has(&member_key) {
-        return Err(StellarSaveError::NotMember);
-    }
+    // Authorization + membership check
+    auth::require_member(&env, group_id, &caller)?;
 
     // ── Check and record vote (idempotency guard) ─────────────────────────────
     if gov_storage::has_voted_dissolve(&env, group_id, &caller) {
@@ -95,7 +91,7 @@ pub fn vote_contribution_change(
     group_id: u64,
     member: Address,
 ) -> Result<(), StellarSaveError> {
-    member.require_auth();
+    // Authorization checked via auth::require_member below
 
     // ── Load group ────────────────────────────────────────────────────────────
     let group_key = StorageKeyBuilder::group_data(group_id);
@@ -109,11 +105,8 @@ pub fn vote_contribution_change(
         return Err(StellarSaveError::InvalidState);
     }
 
-    // ── Validate membership ───────────────────────────────────────────────────
-    let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
-    if !env.storage().persistent().has(&member_key) {
-        return Err(StellarSaveError::NotMember);
-    }
+    // Authorization + membership check
+    auth::require_member(&env, group_id, &member)?;
 
     // ── Require an open proposal ──────────────────────────────────────────────
     let new_amount = gov_storage::pending_contribution_amount(&env, group_id)

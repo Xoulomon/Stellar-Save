@@ -1,7 +1,7 @@
 use soroban_sdk::{Address, Env};
 
 use crate::{
-    error::StellarSaveError, events::EventEmitter, group::Group, storage::StorageKeyBuilder,
+    auth, error::StellarSaveError, events::EventEmitter, group::Group, storage::StorageKeyBuilder,
     time_source::{LedgerTimeSource, TimeSource},
 };
 
@@ -53,13 +53,6 @@ pub fn extend_deadline_with_time<T: TimeSource>(
     extension_seconds: u64,
     time_source: &T,
 ) -> Result<(), StellarSaveError> {
-    caller.require_auth();
-
-    // Validate extension amount
-    if extension_seconds == 0 || extension_seconds > MAX_EXTENSION_SECONDS {
-        return Err(StellarSaveError::DeadlineExtensionExceedsMax);
-    }
-
     // Load group
     let group_key = StorageKeyBuilder::group_data(group_id);
     let group: Group = env
@@ -68,9 +61,12 @@ pub fn extend_deadline_with_time<T: TimeSource>(
         .get(&group_key)
         .ok_or(StellarSaveError::GroupNotFound)?;
 
-    // Only the creator may extend deadlines
-    if group.creator != caller {
-        return Err(StellarSaveError::Unauthorized);
+    // Authorization: only the group creator may extend deadlines
+    auth::require_creator(&caller, &group)?;
+
+    // Validate extension amount
+    if extension_seconds == 0 || extension_seconds > MAX_EXTENSION_SECONDS {
+        return Err(StellarSaveError::DeadlineExtensionExceedsMax);
     }
 
     // Group must be active

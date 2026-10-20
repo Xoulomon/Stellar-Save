@@ -29,6 +29,7 @@
 
 pub mod admin_actions_tests;
 pub mod auth;
+pub mod benchmark;
 pub mod clone;
 pub mod constants;
 pub mod contract;
@@ -52,9 +53,8 @@ pub mod refund;
 pub mod repository;
 pub mod search;
 pub mod status;
+pub mod keys;
 pub mod storage;
-pub mod storage_benchmark;
-pub mod storage_optimization;
 pub mod time_source;
 pub mod token;
 pub mod types;
@@ -62,7 +62,6 @@ pub mod zk_proof;
 
 // mod auto_contribution_tests;
 pub mod cei_tests;
-pub mod gas_benchmark;
 pub mod insurance_integration_tests;
 pub mod test_utils;
 // mod invitation_tests;
@@ -79,11 +78,16 @@ pub mod zk_integration_tests;
 pub mod zk_tests;
 
 // ── Re-exports ────────────────────────────────────────────────────────────────
-pub use auth::{is_active_member, require_admin, require_creator, require_member};
+pub use auth::{
+    is_active_member, require_admin, require_creator, require_group_creator,
+    require_member, require_not_member,
+};
 pub use contract::{StellarSaveContract, StellarSaveContractClient};
 pub use contribution::{ContributionPage, ContributionRecord};
 pub use error::{ContractResult, ErrorCategory, StellarSaveError};
 pub use errors::{ContractError, ErrorRecoveryStrategy};
+// Note: `ContractError` is a type alias for `StellarSaveError` defined in `errors.rs`
+// for backward compatibility. All error codes remain stable.
 pub use events::EventEmitter;
 pub use events::*;
 pub use group::{Group, GroupStatus};
