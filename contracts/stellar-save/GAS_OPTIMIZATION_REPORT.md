@@ -399,11 +399,13 @@ if amount != group.contribution_amount {
 
 ### Potential Future Optimizations (not implemented)
 
-1. **Bitmap-Based Contribution Tracking** (already designed in `storage_optimization.rs`)
-   - Replace individual `CONTRIB_{group_id}_{cycle}_{address}` keys with a bitmap
-   - Savings: O(N) → O(1) storage entries per cycle
-   - Impact: 97%+ storage reduction for large groups
-   - **Note**: Requires migration strategy for existing groups
+1. **Bitmap-Based Contribution Tracking** (superseded)
+   - The `storage_optimization.rs` module (now retired) designed a bitmap
+     approach to replace individual `CONTRIB_{group_id}_{cycle}_{address}` keys
+   - The flat `StorageKey` enum in `keys.rs` already provides efficient
+     per-member contribution tracking without the bitmap abstraction
+   - The bitmap/compact-profile optimizations are superseded by the current
+     key layout
 
 2. **Temporary Storage for Reentrancy Guard**
    - Use `temporary()` instead of `persistent()` for short-lived flags

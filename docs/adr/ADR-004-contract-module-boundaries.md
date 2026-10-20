@@ -45,8 +45,9 @@ Split the crate by **domain responsibility**, not by technical layer, so each mo
 
 ### Storage and migration
 
-- **`storage.rs`** — `StorageKeyBuilder` and the storage schema version (`STORAGE_VERSION`), the single source of truth for how state is keyed.
-- **`storage_benchmark.rs`** / **`storage_optimization.rs`** — measurement and layout-optimization helpers for storage, kept out of the hot path modules.
+- **`keys.rs`** — single source of truth for all storage key definitions (`StorageKey` enum, `StorageKeyBuilder`, `key_prefixes`, `StorageLayout`, `STORAGE_VERSION`). Replaces the previous split between `storage.rs` and `storage_optimization.rs`.
+- **`storage.rs`** — thin re-export of `keys.rs` for backward compatibility.
+- **`storage_benchmark.rs`** — measurement helpers for storage, kept out of the hot path modules.
 - **`migration.rs`** / **`migrations/`** — upgrades stored data between `STORAGE_VERSION`s.
 - **`repository.rs`** — a repository-pattern abstraction over group-related `env.storage()` reads/writes, so storage access isn't duplicated across modules.
 

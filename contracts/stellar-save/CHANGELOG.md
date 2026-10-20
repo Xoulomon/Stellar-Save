@@ -17,6 +17,16 @@ Git tags prefixed with `contracts/`.
 ### Added
 - `get_current_timestamp` — canonical, auditable time source exposed as a
   public contract entry point.
+- `keys.rs` — single source of truth for all storage key definitions,
+  replacing the split between `storage.rs` and `storage_optimization.rs`.
+  Includes a collision test asserting no two key constructors share a byte
+  prefix.
+
+### Removed
+- `storage_optimization.rs` — retired. Its `OptimizedStorageKey` enum and
+  `OptimizedStorageKeyBuilder` were unused by any production code and their
+  bitmap/compact-profile optimizations were superseded by the current
+  flat `StorageKey` layout defined in `keys.rs`.
 
 ---
 
@@ -81,8 +91,6 @@ Initial release of the `stellar-save` Soroban contract on testnet and mainnet.
 - **`zk`** — ZK membership-proof circuit integration (Circom + snarkjs).
 - **`events`** — structured on-chain event emission for all state transitions.
 - **`repository`** — `GroupRepository` storage abstraction layer.
-- **`storage_optimization`** — TTL management and storage-size reduction
-  utilities.
 - **`payout_executor`** — extended payout scheduling and `AssignmentMode`
   (join-order vs. random vs. voted).
 
