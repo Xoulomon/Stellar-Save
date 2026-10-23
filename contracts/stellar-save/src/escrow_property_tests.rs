@@ -31,6 +31,7 @@ mod escrow_property_tests {
     use crate::{
         contribution::ContributionRecord,
         payout::PayoutRecord,
+        pool::PoolCalculator,
     };
     use proptest::prelude::*;
     use soroban_sdk::testutils::Address as _;
@@ -56,6 +57,67 @@ mod escrow_property_tests {
     /// Generate a group id.
     fn any_group_id() -> impl Strategy<Value = u64> {
         1_u64..=u64::MAX
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig {
+            cases: 10_000,
+            .. ProptestConfig::default()
+        })]
+
+        /// The escrow balance equals the sum of all successful contributions.
+        #[test]
+        fn prop_escrow_math_contributions_equal_balance(
+            contributions in prop::collection::vec(1_i128..=1_000_000_000_000_i128, 1..=50),
+        ) {
+            let mut ledger = EscrowLedger::new(contributions.len());
+            let expected_total = contributions
+                .iter()
+                .try_fold(0_i128, |total, amount| total.checked_add(*amount))
+                .expect("generated contribution total must fit i128");
+
+            for (member_idx, amount) in contributions.into_iter().enumerate() {
+                ledger.apply_deposit(member_idx, amount).unwrap();
+            }
+
+            prop_assert_eq!(ledger.total_deposited(), expected_total);
+            prop_assert_eq!(ledger.total_balance(), expected_total);
+        }
+
+        /// A calculated payout cannot exceed the balance funded by contributions.
+        #[test]
+        fn prop_escrow_math_payout_never_exceeds_balance(
+            contribution in 1_i128..=1_000_000_000_000_i128,
+            member_count in 2_u32..=50_u32,
+        ) {
+            let mut ledger = EscrowLedger::new(member_count as usize);
+            for member_idx in 0..member_count as usize {
+                ledger.apply_deposit(member_idx, contribution).unwrap();
+            }
+
+            let escrow_balance = ledger.total_balance();
+            let pool = PoolCalculator::calculate_total_pool(contribution, member_count).unwrap();
+            let payout = PoolCalculator::calculate_payout_amount(pool).unwrap();
+
+            prop_assert_eq!(pool, escrow_balance);
+            prop_assert!(payout <= escrow_balance);
+        }
+
+        /// Integer division distributes only whole shares; the undistributed
+        /// remainder accounts for every unit and is always smaller than the share count.
+        #[test]
+        fn prop_escrow_math_rounding_never_creates_value(
+            escrow_amount in 0_i128..=1_000_000_000_000_i128,
+            share_count in 1_i128..=50_i128,
+        ) {
+            let share = escrow_amount / share_count;
+            let distributed = share.checked_mul(share_count).unwrap();
+            let remainder = escrow_amount.checked_sub(distributed).unwrap();
+
+            prop_assert!(distributed <= escrow_amount);
+            prop_assert_eq!(distributed + remainder, escrow_amount);
+            prop_assert!(remainder < share_count);
+        }
     }
 
     // ── Escrow Simulation State Machine ────────────────────────────────────────

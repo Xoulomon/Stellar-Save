@@ -241,6 +241,20 @@ cargo test -- --nocapture
 - Each contract has tests in either `src/test.rs` or `tests/test.rs`
 - Tests include mock auth, address generation, and cross-contract calls
 
+### Escrow math property tests
+
+The escrow math properties check contribution-to-balance conservation, payout
+solvency, and rounding conservation. Each property runs **10,000 cases**:
+
+```bash
+cargo test -p stellar-save prop_escrow_math_
+```
+
+Proptest chooses a random seed for each run and reports it when a case fails;
+replay a run with `PROPTEST_RNG_SEED=<seed>`. Minimized failing cases are saved
+in `contracts/stellar-save/src/escrow_property_tests.proptest-regressions` and
+should be committed as regression cases.
+
 ---
 
 ## Frontend Tests (Vitest + React Testing Library)
