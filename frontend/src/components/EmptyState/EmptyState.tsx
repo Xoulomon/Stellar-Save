@@ -8,6 +8,11 @@ export interface EmptyStateProps {
   actionLabel?: string;
   onAction?: () => void;
   className?: string;
+  /**
+   * Accessible label surfaced to screen readers via `aria-label`.
+   * Defaults to the visible `title` when omitted.
+   */
+  'aria-label'?: string;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
@@ -17,9 +22,14 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   actionLabel,
   onAction,
   className = '',
+  'aria-label': ariaLabel,
 }) => {
   return (
-    <div className={['empty-state', className].filter(Boolean).join(' ')}>
+    <div
+      className={['empty-state', className].filter(Boolean).join(' ')}
+      role="status"
+      aria-label={ariaLabel ?? title ?? undefined}
+    >
       {illustration ? <div className="empty-state__illustration">{illustration}</div> : null}
 
       <div className="empty-state__content">
