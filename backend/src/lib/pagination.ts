@@ -276,3 +276,53 @@ function computeHasMore<T>(data: T[], limit: number, total?: number): boolean {
   // Without total, fall back to: if we got a full page there may be more
   return data.length >= limit;
 }
+
+// ---------------------------------------------------------------------------
+// Route-level adapters (backwards-compatible response shapes)
+// ---------------------------------------------------------------------------
+
+/**
+ * Adapter for endpoints that expose a legacy `{ items, total }` shape
+ * (e.g. governance proposals) while still honouring the canonical
+ * limit/offset contract.
+ *
+ * @example
+ * const params = parseOffsetParams(req.query);
+ * res.json(toItemsTotal(paginateArray(all, params)));
+ */
+export function toItemsTotal<T>(
+  result: PaginatedResult<T>
+): { items: T[]; total: number; limit: number; offset: number; hasMore: boolean } {
+  return {
+    items: result.data,
+    total: result.pagination.total,
+    limit: result.pagination.limit,
+    offset: result.pagination.offset,
+    hasMore: result.pagination.hasMore,
+  };
+}
+
+/**
+ * Adapter for endpoints that wrap the canonical envelope in a custom
+ * `createEnvelopeWithPagination`-style object (e.g. compliance).
+ *
+ * The returned object keeps the canonical `data`/`pagination` fields and
+ * additionally exposes `meta` for clients that relied on the legacy wrapper.
+ *
+ * @example
+ * const params = parseOffsetParams(req.query);
+ * res.json(toEnvelopeWithPagination(paginateArray(all, params)));
+ */
+export function toEnvelopeWithPagination<T>(
+  result: PaginatedResult<T>
+): PaginatedResult<T> & { meta: { total: number; limit: number; offset: number; hasMore: boolean } } {
+  return {
+    ...result,
+    meta: {
+      total: result.pagination.total,
+      limit: result.pagination.limit,
+      offset: result.pagination.offset,
+      hasMore: result.pagination.hasMore,
+    },
+  };
+}

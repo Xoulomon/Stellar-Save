@@ -4,6 +4,7 @@ import { Router } from 'express';
 
 import { AppError } from '../lib/errors';
 import { fetchWithCorrelationId } from '../lib/http';
+import { parseOffsetParams, paginateArray } from '../lib/pagination';
 import { logger } from '../logger';
 import { prisma } from '../prisma_client';
 
@@ -69,10 +70,17 @@ export function createWebhookRouter(): Router {
     }
   });
 
-  // GET /api/webhooks?userId=... — list webhooks for a user
+  // GET /api/webhooks?userId=...&page=...&pageSize=... — list webhooks for a user
   router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const { userId } = req.query;
     if (!userId) return next(new AppError('MISSING_FIELDS', 'userId query param is required', 400));
+
+    let pagination: { page: number; pageSize: number; skip: number; take: number };
+    try {
+      pagination = parseOffsetParams(req.query as Record<string, unknown>);
+    } catch (err: unknown) {
+      return next(err);
+    }
 
     try {
       const webhooks = await webhookDb.webhook.findMany({
@@ -80,7 +88,8 @@ export function createWebhookRouter(): Router {
         orderBy: { createdAt: 'desc' },
       });
       // Mask secrets in list response
-      return res.json(webhooks.map((w: WebhookItem) => ({ ...w, secret: undefined })));
+      const masked = webhooks.map((w: WebhookItem) => ({ ...w, secret: undefined }));
+      return res.json(paginateArray(masked, pagination));
     } catch {
       return next(new AppError('WEBHOOKS_FETCH_FAILED', 'Failed to fetch webhooks', 500));
     }

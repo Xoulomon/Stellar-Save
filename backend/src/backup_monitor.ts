@@ -30,38 +30,10 @@ export class BackupMonitor {
 
   /**
    * Run health checks and return generated alerts.
-   * Called by BackupOrchestrator on its timer.
+   * Called by BackupOrchestrator on its timer; this class owns no lifecycle.
    */
   async runChecks(): Promise<BackupAlert[]> {
-    const newAlerts: BackupAlert[] = [];
-
-    // Check 1: any failed backup jobs
-    const failed = this.service.listJobs().filter((j) => j.status === 'failed');
-    for (const job of failed) {
-      if (!this.alerts.find((a) => a.backupJobId === job.id && a.level === 'error')) {
-        const alert = this.createAlert(
-          job.id,
-          'error',
-          `Backup job ${job.id} failed: ${job.error ?? 'unknown error'}`
-        );
-        newAlerts.push(alert);
-      }
-    }
-
-    // Check 2: latest full backup is too old
-    const latest = this.service.getLatestCompleted('full');
-    if (!latest) {
-      newAlerts.push(this.createAlert('none', 'warning', 'No completed full backup found'));
-    } else if (Date.now() - latest.createdAt > this.config.maxBackupAgeMs) {
-      const ageH = Math.round((Date.now() - latest.createdAt) / 3600000);
-      newAlerts.push(
-        this.createAlert(
-          latest.id,
-          'warning',
-          `Latest full backup is ${ageH}h old (threshold: ${this.config.maxBackupAgeMs / 3600000}h)`
-        )
-      );
-    }
+    const newAlerts = this.evaluate();
 
     this.alerts.push(...newAlerts);
 
@@ -71,6 +43,14 @@ export class BackupMonitor {
     }
 
     return newAlerts;
+  }
+
+  /**
+   * Pure evaluation of all health checks without mutating tracked state.
+   * Combines failed-job and stale-backup checks in a single pass.
+   */
+  private evaluate(): BackupAlert[] {
+    return [...this.checkFailedJobs(), ...this.checkStaleBackups()];
   }
 
   /**

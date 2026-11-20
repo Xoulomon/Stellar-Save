@@ -109,4 +109,32 @@ export class CacheKeyBuilder {
   static cacheWarming(endpoint: string): string {
     return this.buildKey(CACHE_KEY_PREFIXES.CACHE_WARMING, endpoint);
   }
+
+  /**
+   * Build a pattern for invalidating all cache warming entries.
+   * @returns Pattern string for delPattern matching
+   */
+  static cacheWarmingPattern(): string {
+    return `${CACHE_KEY_PREFIXES.CACHE_WARMING}${CACHE_KEY_SEPARATOR}*`;
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Generic helpers
+  // ──────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Build a pattern for invalidating all HTTP response cache entries.
+   * @returns Pattern string for delPattern matching
+   */
+  static httpResponsePattern(): string {
+    return `${CACHE_KEY_PREFIXES.HTTP_CACHE}${CACHE_KEY_SEPARATOR}*`;
+  }
+
+  /**
+   * Build a pattern for invalidating all analytics cache entries.
+   * @returns Pattern string for delPattern matching
+   */
+  static analyticsPattern(): string {
+    return `${CACHE_KEY_PREFIXES.ANALYTICS}${CACHE_KEY_SEPARATOR}*`;
+  }
 }

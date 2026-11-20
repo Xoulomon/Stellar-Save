@@ -149,12 +149,16 @@ export function createV2Router(services: V1Services): Router {
     }
   );
 
-  // Backup list — v2 now uses shared pagination utility with offset/limit
-  router.get('/backup', (req: Request, res: Response) => {
-    const pageParams = parseOffsetParams(req.query, { limit: 20 });
-    const allJobs = backupService.listJobs();
-    const result = paginateArray(allJobs, pageParams);
-    res.json(migrateV1ToV2(result));
+  // Backup list — v2 uses the shared pagination utility with offset/limit
+  router.get('/backup', (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const pageParams = parseOffsetParams(req.query, { limit: 20 });
+      const allJobs = backupService.listJobs();
+      const result = paginateArray(allJobs, pageParams);
+      res.json(migrateV1ToV2(result));
+    } catch (err: unknown) {
+      next(err);
+    }
   });
 
   // All other v2 routes are stubs — return 501 with migration hint

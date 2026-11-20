@@ -87,32 +87,6 @@ export class BackupRestoreDrill {
     this.config = config;
   }
 
-  /**
-   * Note: Timer management moved to BackupOrchestrator.
-   * This class now only executes drills when called.
-   * @deprecated Use BackupOrchestrator instead of calling start/stop directly.
-   */
-  start(): void {
-    logger.info('backup restore drill start() called - use BackupOrchestrator for timer management', {
-      check_interval_ms: this.config.checkIntervalMs,
-      max_restore_duration_ms: this.config.maxRestoreDurationMs,
-    });
-  }
-
-  /**
-   * @deprecated Use BackupOrchestrator instead of calling start/stop directly.
-   */
-  stop(): void {
-    logger.info('backup restore drill stop() called - timers managed by BackupOrchestrator');
-  }
-
-  /**
-   * @deprecated No longer tracked by this class. See BackupOrchestrator for lifecycle.
-   */
-  isRunning(): boolean {
-    return false;
-  }
-
   listRuns(): RestoreDrillRun[] {
     return [...this.runs].sort((a, b) => b.startedAt - a.startedAt);
   }

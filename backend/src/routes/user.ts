@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { jwtAuthMiddleware, requireSelf } from '../modules/auth/auth_middleware';
 import { AppError } from '../lib/errors';
+import { parsePagination, buildPaginatedResponse } from '../lib/pagination';
 import { logger } from '../logger';
 
 import type { AuthenticatedRequest } from '../modules/auth/auth_middleware';
@@ -57,6 +58,33 @@ export function createUserRouter(): Router {
       } catch (error) {
         logger.error('Error fetching user preferences', { error: String(error) });
         return next(new AppError('PREFERENCES_FETCH_FAILED', 'Failed to fetch preferences', 500));
+      }
+    }
+  );
+
+  /**
+   * GET /api/user/:walletAddress/preferences/history
+   * Returns a paginated list of preference change history for the wallet owner.
+   * Uses the shared pagination helpers so query parsing and response shape
+   * stay consistent with other list endpoints.
+   */
+  router.get(
+    '/:walletAddress/preferences/history',
+    requireSelf,
+    async (req: AuthenticatedRequest, res, next: NextFunction) => {
+      try {
+        const { page, limit } = parsePagination(req.query as Record<string, unknown>);
+        const { UserPreferenceManager } = await import('../user_preference_manager');
+        const { items, total } = await UserPreferenceManager.getPreferenceHistory(
+          req.walletAddress!,
+          { page, limit }
+        );
+        return res.json(buildPaginatedResponse(items, total, page, limit));
+      } catch (error) {
+        logger.error('Error fetching preference history', { error: String(error) });
+        return next(
+          new AppError('PREFERENCES_HISTORY_FETCH_FAILED', 'Failed to fetch preference history', 500)
+        );
       }
     }
   );

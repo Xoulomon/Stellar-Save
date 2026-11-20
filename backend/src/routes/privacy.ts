@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { jwtAuthMiddleware } from '../modules/auth/auth_middleware';
 import { AppError } from '../lib/errors';
+import { parsePagination, buildPaginatedResponse } from '../lib/pagination';
 import { logger } from '../logger';
 import {
   exportUserData,
@@ -89,15 +90,25 @@ export function createPrivacyRouter(): Router {
    * GET /api/privacy/requests
    *
    * Returns the history of privacy requests (export/deletion) for the authenticated wallet.
+   * Paginated via the shared pagination helpers (Issue #2064).
    */
   router.get('/requests', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
+      const { page, pageSize, skip, take } = parsePagination(req.query);
       const { prisma } = await import('../prisma_client');
-      const requests = await prisma.privacyRequest.findMany({
-        where: { walletAddress: req.walletAddress! },
-        orderBy: { createdAt: 'desc' },
-      });
-      return res.status(200).json({ requests });
+      const where = { walletAddress: req.walletAddress! };
+
+      const [requests, total] = await Promise.all([
+        prisma.privacyRequest.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take,
+        }),
+        prisma.privacyRequest.count({ where }),
+      ]);
+
+      return res.status(200).json(buildPaginatedResponse(requests, total, page, pageSize));
     } catch (error) {
       logger.error('Error fetching privacy requests', { error: String(error) });
       return next(

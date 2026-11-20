@@ -9,6 +9,7 @@ import {
 } from '../ambassador_service';
 import { jwtAuthMiddleware, adminAuthMiddleware } from '../modules/auth/auth_middleware';
 import { AppError } from '../lib/errors';
+import { parseOffsetParams, paginateArray } from '../lib/pagination';
 import {
   createEnvelope,
   createEnvelopeWithPagination,
@@ -21,8 +22,14 @@ export function createAmbassadorRouter(): Router {
   const router = Router();
 
   // GET /ambassadors/leaderboard — public
-  router.get('/leaderboard', (_req, res) => {
-    res.json(createEnvelopeWithPagination(getAmbassadorLeaderboard()));
+  router.get('/leaderboard', (req, res, next: NextFunction) => {
+    try {
+      const { offset, limit } = parseOffsetParams(req.query as Record<string, unknown>);
+      const { items, total } = paginateArray(getAmbassadorLeaderboard(), offset, limit);
+      res.json(createEnvelopeWithPagination(items, { offset, limit, total }));
+    } catch (err: unknown) {
+      next(err);
+    }
   });
 
   // GET /ambassadors/:address — public
