@@ -74,10 +74,18 @@ export function CycleProgress({
             <span>Contribution Progress</span>
             <span className="progress-percentage">{contributionProgress.toFixed(0)}%</span>
           </div>
-          <div className="progress-bar">
+          <div
+            className="progress-bar"
+            role="progressbar"
+            aria-valuenow={Math.round(Math.min(contributionProgress, 100))}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Contribution progress: ${contributedCount} of ${totalMembers} members`}
+          >
             <div
               className="progress-fill"
               style={{ width: `${Math.min(contributionProgress, 100)}%` }}
+              aria-hidden="true"
             />
           </div>
         </div>
@@ -87,10 +95,18 @@ export function CycleProgress({
             <span>Amount Progress</span>
             <span className="progress-percentage">{amountProgress.toFixed(0)}%</span>
           </div>
-          <div className="progress-bar">
+          <div
+            className="progress-bar"
+            role="progressbar"
+            aria-valuenow={Math.round(Math.min(amountProgress, 100))}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Amount progress: ${currentAmount.toLocaleString()} of ${targetAmount.toLocaleString()} XLM`}
+          >
             <div
               className="progress-fill progress-fill--amount"
               style={{ width: `${Math.min(amountProgress, 100)}%` }}
+              aria-hidden="true"
             />
           </div>
         </div>

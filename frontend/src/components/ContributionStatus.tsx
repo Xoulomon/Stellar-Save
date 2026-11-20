@@ -40,8 +40,15 @@ function DeadlineBadge({ deadline }: { deadline: Date }) {
       className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
         isUrgent ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-yellow-100 text-yellow-700'
       }`}
+      aria-label={`Deadline: ${timeLeft}`}
     >
-      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg
+        className="w-3 h-3"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        aria-hidden="true"
+      >
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -62,8 +69,9 @@ function MemberRow({ member, isCurrentUser }: { member: Member; isCurrentUser: b
       } ${isCurrentUser ? 'ring-2 ring-indigo-400' : ''}`}
     >
       <div className="flex items-center gap-3">
-        {/* Status indicator */}
+        {/* Status indicator dot — decorative; status text below is the accessible label */}
         <div
+          aria-hidden="true"
           className={`w-3 h-3 rounded-full flex-shrink-0 ${
             member.contributed ? 'bg-green-500' : 'bg-red-400'
           }`}
@@ -142,12 +150,15 @@ export function ContributionStatus({
                 }}
                 className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
                 title="Refresh"
+                aria-label="Refresh contribution status"
+                type="button"
               >
                 <svg
                   className="w-4 h-4 text-white"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -170,10 +181,19 @@ export function ContributionStatus({
           </span>
           <span className="text-sm font-bold text-indigo-600">{Math.round(progress)}%</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2.5">
+        {/* Progressbar: role + aria attributes expose value to assistive technologies */}
+        <div
+          className="w-full bg-gray-200 rounded-full h-2.5"
+          role="progressbar"
+          aria-valuenow={Math.round(progress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Contribution progress: ${cycle.contributedCount} of ${cycle.totalMembers} members contributed`}
+        >
           <div
             className="bg-gradient-to-r from-indigo-500 to-green-500 h-2.5 rounded-full transition-all duration-500"
             style={{ width: `${progress}%` }}
+            aria-hidden="true"
           />
         </div>
         <div className="flex justify-between mt-2 text-xs text-gray-500">
@@ -188,7 +208,8 @@ export function ContributionStatus({
         {contributed.length > 0 && (
           <div>
             <h3 className="text-sm font-semibold text-green-700 mb-2 flex items-center gap-1">
-              <span className="w-2 h-2 bg-green-500 rounded-full inline-block" />
+              {/* Decorative dot — heading text is the accessible label */}
+              <span aria-hidden="true" className="w-2 h-2 bg-green-500 rounded-full inline-block" />
               Contributed ({contributed.length})
             </h3>
             <div className="space-y-2">
@@ -207,7 +228,8 @@ export function ContributionStatus({
         {pending.length > 0 && (
           <div>
             <h3 className="text-sm font-semibold text-red-600 mb-2 flex items-center gap-1">
-              <span className="w-2 h-2 bg-red-400 rounded-full inline-block" />
+              {/* Decorative dot — heading text is the accessible label */}
+              <span aria-hidden="true" className="w-2 h-2 bg-red-400 rounded-full inline-block" />
               Pending ({pending.length})
             </h3>
             <div className="space-y-2">
