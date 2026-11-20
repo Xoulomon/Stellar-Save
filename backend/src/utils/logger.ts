@@ -10,6 +10,7 @@
  */
 
 import { config } from '../config';
+import { getCorrelationId } from '../middleware/requestContext';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -23,6 +24,7 @@ export interface LogEntry {
   message: string;
   service: string;
   environment: string;
+  correlation_id?: string;
   [key: string]: unknown;
 }
 
@@ -75,8 +77,14 @@ function write(level: LogLevel, message: string, fields: LogFields = {}): void {
     message,
     service: SERVICE_NAME,
     environment: ENVIRONMENT,
-    ...normalizeFields(fields),
   };
+
+  const correlationId = getCorrelationId();
+  if (correlationId) {
+    entry.correlation_id = correlationId;
+  }
+
+  Object.assign(entry, normalizeFields(fields));
 
   const line = JSON.stringify(entry) + '\n';
 
