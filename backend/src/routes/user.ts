@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { jwtAuthMiddleware, requireSelf } from '../modules/auth/auth_middleware';
 import { AppError } from '../lib/errors';
 import { logger } from '../logger';
+import { UserPreferenceManager } from '../user_preference_manager';
 
 import type { AuthenticatedRequest } from '../modules/auth/auth_middleware';
 import type { NextFunction } from 'express';
@@ -51,7 +52,6 @@ export function createUserRouter(): Router {
     requireSelf,
     async (req: AuthenticatedRequest, res, next: NextFunction) => {
       try {
-        const { UserPreferenceManager } = await import('../user_preference_manager');
         const prefs = await UserPreferenceManager.getOrCreatePreferences(req.walletAddress!);
         return res.json(prefs);
       } catch (error) {
@@ -70,7 +70,6 @@ export function createUserRouter(): Router {
     requireSelf,
     async (req: AuthenticatedRequest, res, next: NextFunction) => {
       try {
-        const { UserPreferenceManager } = await import('../user_preference_manager');
         const updated = await UserPreferenceManager.updatePreferences(req.walletAddress!, req.body);
         return res.json({ message: 'Preferences updated', preferences: updated });
       } catch (error) {
