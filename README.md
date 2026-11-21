@@ -96,3 +96,8 @@ execute_payout(group_id)
 is_complete(group_id) -> bool
 pause_group(group_id, caller)    // Creator-only: halt contributions & payouts
 unpause_group(group_id, caller)  // Creator-only: resume contributions & payouts
+
+## Handsoff notes
+
+<!-- handsoff-issue-2051 -->
+- #2051: [Backend] Split monolithic services into NestJS modules
