@@ -2,7 +2,7 @@ import winston from 'winston';
 
 import 'winston-daily-rotate-file';
 import { config } from '../config';
-import { attachCorrelationId, getCorrelationId, runWithRequestContext } from './requestContext';
+import { attachCorrelationId, getCorrelationId } from './requestContext';
 
 import type { Request, Response, NextFunction } from 'express';
 
@@ -226,61 +226,55 @@ function extractWallet(req: Request): string | null {
  *
  * Correlation-id assignment lives in `middleware/requestId.ts`; this
  * middleware reuses an already-attached id when present and falls back to
- * attaching one so it remains usable standalone.
+ * attaching one so it remains usable standalone. The request context
+ * (AsyncLocalStorage) is owned by that middleware — this one only reads the
+ * id via `getCorrelationId()` in the JSON formatter, so no second scope is
+ * created here.
  */
 export function requestLogger(req: Request, res: Response, next: NextFunction): void {
   const start = Date.now();
   const correlationId = attachCorrelationId(req, res);
 
-  runWithRequestContext(
-    {
-      correlationId,
+  res.on('finish', () => {
+    const durationMs = Date.now() - start;
+    const walletAddress = extractWallet(req);
+
+    logger.info('http request', {
+      correlation_id: correlationId,
       method: req.method,
       path: req.path,
-    },
-    () => {
-      res.on('finish', () => {
-        const durationMs = Date.now() - start;
-        const walletAddress = extractWallet(req);
+      status_code: res.statusCode,
+      duration_ms: durationMs,
+      wallet_address: walletAddress,
+      user_agent: req.headers['user-agent'],
+      ip: req.ip,
+    });
 
-        logger.info('http request', {
-          correlation_id: correlationId,
-          method: req.method,
-          path: req.path,
-          status_code: res.statusCode,
-          duration_ms: durationMs,
-          wallet_address: walletAddress,
-          user_agent: req.headers['user-agent'],
-          ip: req.ip,
-        });
-
-        // Persist to audit_logs table (non-blocking)
-        getPrisma()
-          .then((prisma) => {
-            if (prisma) {
-              prisma.auditLog
-                .create({
-                  data: {
-                    walletAddress,
-                    method: req.method,
-                    path: req.path,
-                    statusCode: res.statusCode,
-                    durationMs,
-                    ipAddress: req.ip || null,
-                    userAgent: req.headers['user-agent'] || null,
-                  },
-                })
-                .catch(() => {
-                  /* non-blocking */
-                });
-            }
-          })
-          .catch(() => {
-            /* non-blocking */
-          });
+    // Persist to audit_logs table (non-blocking)
+    getPrisma()
+      .then((prisma) => {
+        if (prisma) {
+          prisma.auditLog
+            .create({
+              data: {
+                walletAddress,
+                method: req.method,
+                path: req.path,
+                statusCode: res.statusCode,
+                durationMs,
+                ipAddress: req.ip || null,
+                userAgent: req.headers['user-agent'] || null,
+              },
+            })
+            .catch(() => {
+              /* non-blocking */
+            });
+        }
+      })
+      .catch(() => {
+        /* non-blocking */
       });
+  });
 
-      next();
-    }
-  );
+  next();
 }

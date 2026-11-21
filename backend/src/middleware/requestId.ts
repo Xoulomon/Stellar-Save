@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 import {
   attachCorrelationId,
   runWithRequestContext,
@@ -8,12 +10,13 @@ import type { Request, Response, NextFunction } from 'express';
 /**
  * Request-id correlation middleware.
  *
- * - Reuses an inbound `x-correlation-id` header when present, otherwise
- *   generates a UUID.
+ * - Reuses an inbound `x-request-id` or `x-correlation-id` header when present,
+ *   otherwise generates a UUID.
  * - Echoes the id back on the response `x-correlation-id` header.
  * - Runs the remainder of the request inside an AsyncLocalStorage context so
  *   every `logger.*` call made while handling the request is automatically
- *   stamped with `correlation_id` (see `lib/logger.ts`).
+ *   stamped with `correlation_id` (see `lib/logger.ts`), and error middleware
+ *   can read the id from the shared context.
  *
  * Mount this early — before `requestLogger` and route handlers.
  */
