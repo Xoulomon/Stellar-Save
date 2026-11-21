@@ -101,3 +101,6 @@ unpause_group(group_id, caller)  // Creator-only: resume contributions & payouts
 
 <!-- handsoff-issue-2051 -->
 - #2051: [Backend] Split monolithic services into NestJS modules
+
+<!-- handsoff-issue-2104 -->
+- #2104: [Testing] Integration tests for REST API with test DB
