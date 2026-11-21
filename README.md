@@ -99,5 +99,5 @@ unpause_group(group_id, caller)  // Creator-only: resume contributions & payouts
 
 ## Handsoff notes
 
-<!-- handsoff-issue-2107 -->
-- #2107: [Testing] Remove redundant duplicated tests
+<!-- handsoff-issue-2051 -->
+- #2051: [Backend] Split monolithic services into NestJS modules

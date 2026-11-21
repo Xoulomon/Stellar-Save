@@ -1,8 +1,8 @@
 import { Router } from 'express';
 
 import { config } from '../config';
-import { deviceTokenService } from '../device_token_service';
 import { AppError } from '../lib/errors';
+import { parsePagination, buildPaginatedResponse } from '../lib/pagination';
 import { logger } from '../logger';
 import { NotificationService } from '../notification_service';
 import { NotificationTemplateManager } from '../notification_template_manager';
@@ -325,13 +325,21 @@ export function createNotificationRouter(): Router {
 
   /**
    * GET /api/v1/notifications/templates
-   * List all notification templates
+   * List all notification templates (paginated)
    */
   router.get('/templates', async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const templates = await NotificationTemplateManager.getAllTemplates();
-      res.json(templates);
+      const { page, pageSize, offset } = parsePagination(req.query);
+
+      const allTemplates = await NotificationTemplateManager.getAllTemplates();
+      const total = allTemplates.length;
+      const templates = allTemplates.slice(offset, offset + pageSize);
+
+      res.json(buildPaginatedResponse(templates, total, page, pageSize));
     } catch (error) {
+      if (error instanceof AppError) {
+        return next(error);
+      }
       logger.error('Error fetching templates', { error: String(error) });
       next(new AppError('TEMPLATES_FETCH_FAILED', 'Failed to fetch templates', 500));
     }

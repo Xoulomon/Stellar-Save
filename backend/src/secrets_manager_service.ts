@@ -10,7 +10,6 @@ import {
   SecretsManagerClient,
   GetSecretValueCommand,
   PutSecretValueCommand,
-  UpdateSecretCommand,
   RotateSecretCommand,
   DescribeSecretCommand,
   CreateSecretCommand,
@@ -178,32 +177,10 @@ export class SecretsManagerService {
   }
 
   /**
-   * Enable automatic rotation for a secret
-   */
-  async enableRotation(secretName: string, rotationConfig: RotationConfig): Promise<void> {
-    try {
-      const command = new UpdateSecretCommand({
-        SecretId: secretName,
-        RotationLambdaARN: rotationConfig.lambdaArn,
-        RotationRules: {
-          AutomaticallyAfterDays: rotationConfig.automaticallyAfterDays,
-        },
-      });
-
-      await this.client.send(command);
-
-      logger.info('Secret rotation enabled', {
-        secretName,
-        intervalDays: rotationConfig.automaticallyAfterDays,
-      });
-    } catch (error) {
-      logger.error('Failed to enable rotation', { secretName, error });
-      throw error;
-    }
-  }
-
-  /**
-   * Manually trigger secret rotation
+   * Manually trigger secret rotation.
+   *
+   * Rotation scheduling/configuration lives in the key rotation service; this
+   * method only triggers an immediate rotation and invalidates the local cache.
    */
   async rotateSecret(secretName: string): Promise<void> {
     try {
@@ -304,43 +281,6 @@ export class SecretsManagerService {
 
     return results;
   }
-
-  /**
-   * Check rotation status for all managed secrets
-   */
-  async checkRotationStatus(secretNames: string[]): Promise<{
-    upToDate: string[];
-    needsRotation: string[];
-    failed: string[];
-  }> {
-    const upToDate: string[] = [];
-    const needsRotation: string[] = [];
-    const failed: string[] = [];
-
-    await Promise.all(
-      secretNames.map(async (name) => {
-        try {
-          const metadata = await this.getSecretMetadata(name);
-
-          if (!metadata.rotationEnabled) {
-            needsRotation.push(name);
-            return;
-          }
-
-          if (metadata.nextRotation && metadata.nextRotation < new Date()) {
-            needsRotation.push(name);
-          } else {
-            upToDate.push(name);
-          }
-        } catch (error) {
-          failed.push(name);
-          logger.error('Failed to check rotation status', { secretName: name, error });
-        }
-      })
-    );
-
-    return { upToDate, needsRotation, failed };
-  }
 }
 
 /**
@@ -401,6 +341,8 @@ export async function initializeSecrets(): Promise<void> {
 
       logger.info('Secret loaded from AWS', { secretName: name });
     } catch (error) {
+      // Fall back to the existing environment-provided value (already loaded
+      // into config) so startup is not blocked by Secrets Manager outages.
       logger.warn('Failed to load secret from AWS, using environment variable', {
         secretName: name,
         error: error instanceof Error ? error.message : 'Unknown error',

@@ -15,6 +15,8 @@ export const depthLimitRule = depthLimit(MAX_DEPTH);
 // ── Complexity rule ───────────────────────────────────────────────────────────
 // Field costs: list fields cost more than scalar fields.
 
+// Keys must stay in sync with the composed schema (see schema/index.ts).
+// Root list fields cost more; nested list fields add a smaller surcharge.
 const FIELD_COSTS: Record<string, number> = {
   groups: 10,
   members: 10,
@@ -62,3 +64,39 @@ export function complexityLimitRule(maxComplexity: number) {
 }
 
 export const validationRules = [depthLimitRule, complexityLimitRule(MAX_COMPLEXITY)];
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+// Jest: backend/src/graphql/__tests__/complexity.test.ts
+//
+// import { parse, validate, buildSchema } from 'graphql';
+// import { complexityLimitRule, MAX_COMPLEXITY } from '../complexity';
+//
+// const schema = buildSchema(`
+//   type Query {
+//     groups: [Group]
+//     members: [Member]
+//     transactions: [Transaction]
+//     recommendations: [Recommendation]
+//     search(term: String): [SearchResult]
+//   }
+//   type Group { id: ID members: [Member] transactions: [Transaction] }
+//   type Member { id: ID groups: [Group] }
+//   type Transaction { id: ID }
+//   type Recommendation { id: ID group: Group }
+//   type SearchResult { id: ID }
+// `);
+//
+// const run = (query: string) =>
+//   validate(schema, parse(query), [complexityLimitRule(MAX_COMPLEXITY)]);
+//
+// describe('complexityLimitRule', () => {
+//   it('accepts queries under the budget', () => {
+//     expect(run('{ groups { id } }')).toHaveLength(0);
+//   });
+//
+//   it('rejects queries over the budget', () => {
+//     const errors = run('{ search { id } recommendations { id } groups { id } }');
+//     expect(errors).toHaveLength(1);
+//     expect(errors[0].message).toMatch(/exceeds maximum allowed complexity/);
+//   });
+// });

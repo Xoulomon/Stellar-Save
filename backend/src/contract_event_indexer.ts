@@ -45,6 +45,49 @@ interface HorizonEventRecord {
   paging_token?: string;
 }
 
+// ── Pipeline stage primitives ────────────────────────────────────────────────
+// Each stage is a pure-ish unit of work with a single input and output so the
+// indexer can be composed, tested and reasoned about in isolation.
+
+export interface PipelineStage<TIn, TOut> {
+  readonly name: string;
+  run(input: TIn): Promise<TOut>;
+}
+
+/** A decoded, normalised event ready for persistence and emission. */
+export interface NormalisedEvent {
+  contractId: string;
+  eventType: string;
+  topics: unknown[];
+  data: Record<string, unknown>;
+  txHash?: string;
+  ledgerSeq?: number;
+  timestamp: Date;
+  blockTime: Date;
+  pagingToken?: string;
+  /** Original Horizon record, retained for notification payloads. */
+  raw: HorizonEventRecord;
+}
+
+/** Result of the fetch stage for a single poll iteration. */
+export interface FetchResult {
+  records: HorizonEventRecord[];
+  nextCursor: string;
+}
+
+/** Result of the persist stage for a single event. */
+export interface PersistedEvent {
+  event: NormalisedEvent;
+  stored: {
+    contractId: string;
+    eventType: string;
+    txHash?: string | null;
+    ledgerSeq?: number | null;
+    timestamp: Date;
+    data: Record<string, unknown>;
+  };
+}
+
 // Extract member addresses from Stellar contract event topics/data
 function extractMemberAddresses(event: HorizonEventRecord): string[] {
   const addresses: string[] = [];
@@ -62,6 +105,42 @@ function extractMemberAddresses(event: HorizonEventRecord): string[] {
   }
 
   return [...new Set(addresses)];
+}
+
+/**
+ * Normalise a raw Horizon record into the canonical event shape. Pure function
+ * so it can be unit tested without any I/O.
+ */
+export function decodeEventRecord(
+  record: HorizonEventRecord,
+  fallbackContractId: string
+): NormalisedEvent {
+  const createdAt = record.createdAt ? new Date(record.createdAt) : new Date();
+  return {
+    contractId: record.contractId || fallbackContractId,
+    eventType: record.type || record.eventType || 'unknown',
+    topics: record.topic || [],
+    data: record.data || {},
+    txHash: record.transactionHash || record.txHash,
+    ledgerSeq: record.ledger || record.ledgerSeq,
+    timestamp: createdAt,
+    blockTime: createdAt,
+    pagingToken: record.paging_token,
+    raw: record,
+  };
+}
+
+/**
+ * Validate a normalised event against the canonical schema. Unknown event
+ * types are rejected so drift is surfaced rather than silently persisted.
+ */
+export function validateEvent(event: NormalisedEvent): NormalisedEvent {
+  const normalised = event.eventType.toLowerCase().replace(/-/g, '_');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- CONTRACT_EVENT_TOPICS is string[], the cast narrows the predicate
+  if (!CONTRACT_EVENT_TOPICS.includes(normalised as any)) {
+    throw new Error(`[contract_event_indexer] Unknown event topic: ${event.eventType}`);
+  }
+  return event;
 }
 
 export class ContractEventIndexer {
@@ -154,6 +233,143 @@ export class ContractEventIndexer {
     return { events, total, limit, offset };
   }
 
+  // ── Pipeline stages ──────────────────────────────────────────────────────────
+
+  /** Stage 1: fetch a page of events from Horizon for the given cursor. */
+  private readonly fetchStage: PipelineStage<string, FetchResult> = {
+    name: 'fetch',
+    run: async (cursor: string): Promise<FetchResult> => {
+      const url = new URL('/events', this.server.serverURL.toString());
+      url.searchParams.set('contract', this.contractId);
+      url.searchParams.set('startLedger', cursor);
+      url.searchParams.set('order', 'asc');
+      url.searchParams.set('limit', String(PAGE_LIMIT));
+
+      // Guarded by the Horizon breaker so a degraded endpoint backs the poll
+      // loop off immediately instead of burning the full request timeout on
+      // every iteration (#1511).
+      const data: Record<string, unknown> = await withHorizonCircuit(async () => {
+        const response = await fetchWithCorrelationId(url.toString());
+        sorobanRpcCallsTotal.inc({
+          method: 'getEvents',
+          status: response.ok ? 'success' : 'error',
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status} from ${url}`);
+        }
+        return response.json();
+      });
+      const records: HorizonEventRecord[] =
+        (data._embedded as { records?: HorizonEventRecord[] })?.records ?? [];
+      const nextCursor =
+        records.length > 0 ? records[records.length - 1].paging_token ?? cursor : cursor;
+      return { records, nextCursor };
+    },
+  };
+
+  /** Stage 2: decode raw Horizon records into normalised events. */
+  private readonly decodeStage: PipelineStage<HorizonEventRecord[], NormalisedEvent[]> = {
+    name: 'decode',
+    run: async (records) => records.map((r) => decodeEventRecord(r, this.contractId)),
+  };
+
+  /** Stage 3: validate normalised events against the canonical schema. */
+  private readonly validateStage: PipelineStage<NormalisedEvent[], NormalisedEvent[]> = {
+    name: 'validate',
+    run: async (events) => events.map((e) => validateEvent(e)),
+  };
+
+  /** Stage 4: persist a single normalised event to Prisma. */
+  private readonly persistStage: PipelineStage<NormalisedEvent, PersistedEvent> = {
+    name: 'persist',
+    run: async (event) => {
+      const stored = await withSpan(
+        'indexer.db.insert_event',
+        {
+          'db.system': 'postgresql',
+          'db.operation': 'insert',
+          'event.type': event.eventType,
+        },
+        () =>
+          this.prisma.contractEvent.create({
+            data: {
+              contractId: event.contractId,
+              eventType: event.eventType,
+              topics: event.topics,
+              data: event.data,
+              txHash: event.txHash,
+              ledgerSeq: event.ledgerSeq,
+              timestamp: event.timestamp,
+              blockTime: event.blockTime,
+            },
+          })
+      );
+      logger.info(`Stored event: ${event.eventType} in ledger ${event.ledgerSeq}`);
+      eventsIndexedTotal.inc({ event_type: event.eventType });
+      return { event, stored };
+    },
+  };
+
+  /** Stage 5: emit side effects (cache invalidation, webhooks, reputation). */
+  private readonly emitStage: PipelineStage<PersistedEvent, void> = {
+    name: 'emit',
+    run: async ({ event, stored }) => {
+      // Bust cache for state-mutating events
+      if (isStateMutatingEvent(stored.eventType)) {
+        const groupId = this.extractGroupId(stored.data);
+        if (groupId) {
+          await GroupStateCache.invalidate(stored.contractId, String(groupId), stored.eventType);
+        } else {
+          await GroupStateCache.invalidateContract(stored.contractId, stored.eventType);
+        }
+      }
+
+      // Deliver signed webhook notifications for group events
+      const webhookEvent = this.mapToWebhookEvent(stored.eventType);
+      if (webhookEvent) {
+        const groupId = this.extractGroupId(stored.data);
+        deliverWebhookEvent(
+          webhookEvent,
+          {
+            contractId: stored.contractId,
+            txHash: stored.txHash,
+            ledgerSeq: stored.ledgerSeq,
+            timestamp: stored.timestamp.toISOString(),
+            data: stored.data,
+          },
+          groupId
+        ).catch(() => {
+          /* non-blocking */
+        });
+      }
+
+      // Update member reputation for contribution events
+      if (webhookEvent === 'contribution.created') {
+        const data = stored.data as Record<string, unknown>;
+        const memberAddress = (data?.['member'] ?? data?.['address']) as string | undefined;
+        if (memberAddress) {
+          // Treat all indexed contributions as on-time (late detection requires cycle data)
+          recordContribution(String(memberAddress), true).catch(() => {
+            /* non-blocking */
+          });
+        }
+      }
+
+      // Push notifications (best-effort, non-blocking on failure)
+      await this.notifyOnEvent(event.raw);
+    },
+  };
+
+  /** Process a single page of records through decode → validate → persist → emit. */
+  private async processRecords(records: HorizonEventRecord[]): Promise<void> {
+    const decoded = await this.decodeStage.run(records);
+    const validated = await this.validateStage.run(decoded);
+    for (const event of validated) {
+      const persisted = await this.persistStage.run(event);
+      await this.emitStage.run(persisted);
+    }
+  }
+
   // ── Private helpers ──────────────────────────────────────────────────────────
 
   private async streamEvents(startLedger: number): Promise<void> {
@@ -172,28 +388,7 @@ export class ContractEventIndexer {
         'indexer.poll',
         { 'indexer.contract_id': this.contractId, 'indexer.cursor': cursor },
         async (span): Promise<number> => {
-          const url = new URL('/events', this.server.serverURL.toString());
-          url.searchParams.set('contract', this.contractId);
-          url.searchParams.set('startLedger', cursor);
-          url.searchParams.set('order', 'asc');
-          url.searchParams.set('limit', String(PAGE_LIMIT));
-
-          // Guarded by the Horizon breaker so a degraded endpoint backs the poll
-          // loop off immediately instead of burning the full request timeout on
-          // every iteration (#1511).
-          const data: Record<string, unknown> = await withHorizonCircuit(async () => {
-            const response = await fetchWithCorrelationId(url.toString());
-            sorobanRpcCallsTotal.inc({
-              method: 'getEvents',
-              status: response.ok ? 'success' : 'error',
-            });
-            if (!response.ok) {
-              throw new Error(`HTTP ${response.status} from ${url}`);
-            }
-            return response.json();
-          });
-          const records: HorizonEventRecord[] =
-            (data._embedded as { records?: HorizonEventRecord[] })?.records ?? [];
+          const { records, nextCursor } = await this.fetchStage.run(cursor);
           span.setAttribute('indexer.records', records.length);
 
           // No new events — idle until the next poll interval.
@@ -204,16 +399,11 @@ export class ContractEventIndexer {
           await withSpan(
             'indexer.process_events',
             { 'indexer.records': records.length },
-            async () => {
-              for (const event of records) {
-                await this.storeEventFromHorizon(event);
-                await this.notifyOnEvent(event);
-              }
-            }
+            () => this.processRecords(records)
           );
 
           // Update cursor to the last processed event and keep draining (no delay).
-          cursor = records[records.length - 1].paging_token;
+          cursor = nextCursor;
           return 0;
         }
       ).catch((error) => {
@@ -271,77 +461,6 @@ export class ContractEventIndexer {
     }
   }
 
-  private async storeEvent(event: HorizonEventRecord): Promise<void> {
-    try {
-      const stored = await withSpan(
-        'indexer.db.insert_event',
-        {
-          'db.system': 'postgresql',
-          'db.operation': 'insert',
-          'event.type': event.type || 'unknown',
-        },
-        () =>
-          this.prisma.contractEvent.create({
-            data: {
-              contractId: event.contractId || this.contractId,
-              eventType: event.type || 'unknown',
-              topics: event.topic || [],
-              data: event.data || {},
-              txHash: event.transactionHash || event.txHash,
-              ledgerSeq: event.ledger || event.ledgerSeq,
-              timestamp: event.createdAt ? new Date(event.createdAt) : new Date(),
-              blockTime: event.createdAt ? new Date(event.createdAt) : new Date(),
-            },
-          })
-      );
-      logger.info(`Stored event: ${event.type} in ledger ${event.ledger}`);
-      eventsIndexedTotal.inc({ event_type: event.type || 'unknown' });
-
-      // Bust cache for state-mutating events
-      if (isStateMutatingEvent(stored.eventType)) {
-        const groupId = this.extractGroupId(stored.data);
-        if (groupId) {
-          await GroupStateCache.invalidate(stored.contractId, String(groupId), stored.eventType);
-        } else {
-          await GroupStateCache.invalidateContract(stored.contractId, stored.eventType);
-        }
-      }
-
-      // Deliver signed webhook notifications for group events
-      const webhookEvent = this.mapToWebhookEvent(stored.eventType);
-      if (webhookEvent) {
-        const groupId = this.extractGroupId(stored.data);
-        deliverWebhookEvent(
-          webhookEvent,
-          {
-            contractId: stored.contractId,
-            txHash: stored.txHash,
-            ledgerSeq: stored.ledgerSeq,
-            timestamp: stored.timestamp.toISOString(),
-            data: stored.data,
-          },
-          groupId
-        ).catch(() => {
-          /* non-blocking */
-        });
-      }
-
-      // Update member reputation for contribution events
-      if (webhookEvent === 'contribution.created') {
-        const data = stored.data as Record<string, unknown>;
-        const memberAddress = (data?.['member'] ?? data?.['address']) as string | undefined;
-        if (memberAddress) {
-          // Treat all indexed contributions as on-time (late detection requires cycle data)
-          recordContribution(String(memberAddress), true).catch(() => {
-            /* non-blocking */
-          });
-        }
-      }
-    } catch (error) {
-      logger.error('[ContractEventIndexer] Error storing event:', error);
-    }
-  }
-
   private async notifyOnEvent(event: HorizonEventRecord): Promise<void> {
     if (!this.webPush) return;
 
@@ -383,12 +502,6 @@ export class ContractEventIndexer {
     }
   }
 
-  async stop() {
-    this.isRunning = false;
-    await this.prisma.$disconnect();
-    logger.info('Indexer stopped');
-  }
-
   async readinessCheckDatabase(): Promise<DependencyHealth> {
     const start = Date.now();
     try {
@@ -426,49 +539,5 @@ export class ContractEventIndexer {
 
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  // Method to get events with pagination and filtering
-  async getEvents(options: {
-    contractId?: string;
-    eventType?: string;
-    startLedger?: number;
-    endLedger?: number;
-    startTime?: Date;
-    endTime?: Date;
-    limit?: number;
-    offset?: number;
-  }) {
-    const where: Record<string, unknown> = {};
-
-    if (options.contractId) where.contractId = options.contractId;
-    if (options.eventType) where.eventType = options.eventType;
-    if (options.startLedger || options.endLedger) {
-      where.ledgerSeq = {};
-      if (options.startLedger)
-        (where.ledgerSeq as Record<string, unknown>).gte = options.startLedger;
-      if (options.endLedger) (where.ledgerSeq as Record<string, unknown>).lte = options.endLedger;
-    }
-    if (options.startTime || options.endTime) {
-      where.timestamp = {};
-      if (options.startTime) (where.timestamp as Record<string, unknown>).gte = options.startTime;
-      if (options.endTime) (where.timestamp as Record<string, unknown>).lte = options.endTime;
-    }
-
-    const events = await this.prisma.contractEvent.findMany({
-      where,
-      orderBy: { timestamp: 'desc' },
-      take: options.limit || 50,
-      skip: options.offset || 0,
-    });
-
-    const total = await this.prisma.contractEvent.count({ where });
-
-    return {
-      events,
-      total,
-      limit: options.limit || 50,
-      offset: options.offset || 0,
-    };
   }
 }

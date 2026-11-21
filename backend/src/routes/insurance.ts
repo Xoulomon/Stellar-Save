@@ -12,6 +12,7 @@
 import { Router } from 'express';
 
 import { AppError } from '../lib/errors';
+import { paginate, parsePaginationQuery } from '../lib/pagination';
 
 import type { NextFunction } from 'express';
 
@@ -57,6 +58,14 @@ export function createInsuranceRouter(): Router {
   router.get('/', (req, res) => {
     const pool = getOrCreate(req.params['groupId'] as string);
     res.json(pool);
+  });
+
+  // GET /api/v1/groups/:groupId/insurance/claims
+  // Paginated claim history (standardized pagination, Issue #2064)
+  router.get('/claims', (req, res) => {
+    const pool = getOrCreate(req.params['groupId'] as string);
+    const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
+    res.json(paginate(pool.claims, page, pageSize));
   });
 
   // PUT /api/v1/groups/:groupId/insurance

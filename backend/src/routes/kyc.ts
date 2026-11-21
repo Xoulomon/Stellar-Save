@@ -2,11 +2,13 @@ import { Router } from 'express';
 
 import { config } from '../config';
 import { AppError } from '../lib/errors';
+import { parsePagination, buildPaginatedResponse } from '../lib/pagination';
 import { logger } from '../logger';
 import { jwtAuthMiddleware } from '../modules/auth/auth_middleware';
 import {
   submitKyc,
   getKycStatus,
+  getKycStatusHistory,
   pollAndUpdateStatus,
   emitKycStatusChange,
   verifyKycWebhookSignature,
@@ -56,6 +58,24 @@ export function createKycRouter(): Router {
           error: err instanceof Error ? err.message : String(err),
         });
         return next(new AppError('KYC_STATUS_FETCH_FAILED', 'Failed to fetch KYC status', 500));
+      }
+    }
+  );
+
+  // GET /api/kyc/history — paginated KYC status history for the authenticated user
+  router.get(
+    '/history',
+    jwtAuthMiddleware,
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      try {
+        const { page, pageSize } = parsePagination(req.query);
+        const { items, total } = await getKycStatusHistory(req.walletAddress!, { page, pageSize });
+        return res.json(buildPaginatedResponse(items, total, { page, pageSize }));
+      } catch (err: unknown) {
+        logger.error('[kyc] history error', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return next(new AppError('KYC_HISTORY_FETCH_FAILED', 'Failed to fetch KYC history', 500));
       }
     }
   );

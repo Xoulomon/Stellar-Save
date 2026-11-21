@@ -6,6 +6,7 @@ import { createRateLimiterMiddleware } from './rate_limiter';
 import * as redis from './redis';
 import { CacheKeyBuilder } from './lib/cache-key-builder';
 import { CACHE_TTL_SECONDS } from './lib/cache-config';
+import { invalidateAnalyticsCacheByDate as invalidateAnalyticsCacheByDateService } from './analytics_service';
 
 import type { RateLimiterOptions } from './rate_limiter';
 import type { Request, Response, NextFunction } from 'express';
@@ -115,21 +116,10 @@ export async function invalidateAnalyticsCache(pattern: string = 'http_cache:/an
 }
 
 /**
- * Invalidate specific analytic cache entries by date
+ * Invalidate specific analytic cache entries by date.
+ * Delegates to the consolidated implementation in analytics_service.ts
+ * so cache-key patterns live in a single place.
  */
 export async function invalidateAnalyticsCacheByDate(date: Date) {
-  const dateStr = date.toISOString().split('T')[0];
-  const patterns = [
-    `http_cache:*/analytics/platform*date=${dateStr}*`,
-    `http_cache:*/analytics/users/*date=${dateStr}*`,
-    `http_cache:*/analytics/groups/*date=${dateStr}*`,
-  ];
-
-  for (const pattern of patterns) {
-    try {
-      await redis.delPattern(pattern);
-    } catch (error) {
-      logger.error(`Error invalidating cache pattern ${pattern}:`, error);
-    }
-  }
+  await invalidateAnalyticsCacheByDateService(date);
 }

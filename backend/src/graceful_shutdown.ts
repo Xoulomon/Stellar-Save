@@ -21,9 +21,17 @@ interface RegisteredResource {
 
 const DEFAULT_STOP_TIMEOUT_MS = 10_000;
 
+/**
+ * Upper bound for the entire shutdown sequence. Individual resources are
+ * bounded by the per-resource timeout, but a global deadline guarantees the
+ * process exits even if many resources each consume their full budget.
+ */
+const DEFAULT_GLOBAL_TIMEOUT_MS = 30_000;
+
 export class ShutdownCoordinator {
   private readonly resources: RegisteredResource[] = [];
   private shuttingDown = false;
+  private shutdownPromise: Promise<void> | undefined;
 
   register(name: string, resource: Lifecycle): void {
     this.resources.push({ name, resource });
@@ -42,22 +50,52 @@ export class ShutdownCoordinator {
 
   /**
    * Stop all registered resources in reverse start order, each bounded by
-   * `timeoutMs`. Resources that fail to stop in time are logged.
+   * `timeoutMs`, and the whole sequence bounded by `globalTimeoutMs`.
+   * Resources that fail to stop in time are logged. Repeated calls return the
+   * same in-flight promise so shutdown runs exactly once.
    */
-  async shutdown(timeoutMs: number = DEFAULT_STOP_TIMEOUT_MS): Promise<void> {
-    if (this.shuttingDown) {
-      return;
+  shutdown(
+    timeoutMs: number = DEFAULT_STOP_TIMEOUT_MS,
+    globalTimeoutMs: number = DEFAULT_GLOBAL_TIMEOUT_MS,
+  ): Promise<void> {
+    if (this.shutdownPromise) {
+      return this.shutdownPromise;
     }
     this.shuttingDown = true;
+    this.shutdownPromise = this.runShutdown(timeoutMs, globalTimeoutMs);
+    return this.shutdownPromise;
+  }
 
+  private async runShutdown(timeoutMs: number, globalTimeoutMs: number): Promise<void> {
     const failed: string[] = [];
-    for (let i = this.resources.length - 1; i >= 0; i--) {
-      const { name, resource } = this.resources[i];
-      try {
-        await this.stopWithTimeout(name, resource, timeoutMs);
-      } catch (err) {
-        failed.push(name);
-        logger.error(`Resource ${name} did not stop within ${timeoutMs}ms`, err);
+    let globalTimer: NodeJS.Timeout | undefined;
+    const globalDeadline = new Promise<never>((_, reject) => {
+      globalTimer = setTimeout(
+        () => reject(new Error(`Global shutdown timed out after ${globalTimeoutMs}ms`)),
+        globalTimeoutMs,
+      );
+      globalTimer.unref?.();
+    });
+
+    const sequence = (async () => {
+      for (let i = this.resources.length - 1; i >= 0; i--) {
+        const { name, resource } = this.resources[i];
+        try {
+          await this.stopWithTimeout(name, resource, timeoutMs);
+        } catch (err) {
+          failed.push(name);
+          logger.error(`Resource ${name} did not stop within ${timeoutMs}ms`, err);
+        }
+      }
+    })();
+
+    try {
+      await Promise.race([sequence, globalDeadline]);
+    } catch (err) {
+      logger.error('Global shutdown deadline exceeded', err);
+    } finally {
+      if (globalTimer) {
+        clearTimeout(globalTimer);
       }
     }
 
@@ -97,8 +135,28 @@ export function httpServerLifecycle(server: Server): Lifecycle {
     start: () => undefined,
     stop: (timeoutMs: number) =>
       new Promise<void>((resolve, reject) => {
-        server.close((err) => (err ? reject(err) : resolve()));
-        setTimeout(() => reject(new Error('HTTP server close timed out')), timeoutMs).unref();
+        let settled = false;
+        const timer = setTimeout(() => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          reject(new Error('HTTP server close timed out'));
+        }, timeoutMs);
+        timer.unref?.();
+
+        server.close((err) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          clearTimeout(timer);
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
       }),
   };
 }
@@ -165,18 +223,36 @@ export function createShutdownCoordinator(deps: {
 }
 
 let coordinator: ShutdownCoordinator | undefined;
+let signalHandlersRegistered = false;
 
 export function setShutdownCoordinator(c: ShutdownCoordinator): void {
   coordinator = c;
 }
 
+/**
+ * Register SIGTERM/SIGINT handlers. Registration is idempotent: repeated calls
+ * are no-ops, and repeated signals during an in-flight shutdown are ignored.
+ */
 export function registerSignalHandlers(): void {
+  if (signalHandlersRegistered) {
+    return;
+  }
+  signalHandlersRegistered = true;
+
+  let handling = false;
   const handle = (signal: NodeJS.Signals) => {
+    if (handling) {
+      logger.warn(`Received ${signal} during shutdown, ignoring`);
+      return;
+    }
+    handling = true;
     logger.info(`Received ${signal}, starting graceful shutdown`);
+
     if (!coordinator) {
       logger.error('No shutdown coordinator registered');
       process.exit(1);
     }
+
     coordinator
       .shutdown()
       .then(() => process.exit(0))
