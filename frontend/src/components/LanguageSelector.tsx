@@ -5,16 +5,17 @@ import { useI18n } from '../hooks/useI18n';
 import type { LanguageCode } from '../i18n';
 
 export function LanguageSelector() {
-  const { currentLanguage, changeLanguage, supportedLanguages } = useI18n();
+  const { t, currentLanguage, changeLanguage, supportedLanguages } = useI18n();
+  const languageLabel = t('settings.language');
 
   return (
     <FormControl size="small" sx={{ minWidth: 160 }}>
-      <InputLabel id="language-select-label">Language</InputLabel>
+      <InputLabel id="language-select-label">{languageLabel}</InputLabel>
       <Select
         labelId="language-select-label"
         id="language-select"
         value={currentLanguage}
-        label="Language"
+        label={languageLabel}
         onChange={(e) => changeLanguage(e.target.value as LanguageCode)}
         inputProps={{ 'aria-label': 'Select language' }}
       >
