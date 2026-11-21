@@ -7,6 +7,10 @@ import { defineConfig, devices } from '@playwright/test';
  * connect wallet -> join a group -> contribute to the pool. It is kept in its
  * own project so it can be run in isolation (`--project=join-and-contribute`)
  * while still sharing the base config with the rest of the suite.
+ *
+ * The `payout` spec exercises the payout journey: request a payout -> validate
+ * the amount -> submit -> confirm the payout is recorded. It is likewise kept
+ * in its own project so it can be run in isolation (`--project=payout`).
  */
 export default defineConfig({
   testDir: './tests/e2e',
@@ -25,12 +29,17 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: /join-and-contribute\.spec\.ts/,
+      testIgnore: /(join-and-contribute|payout)\.spec\.ts/,
     },
     {
       name: 'join-and-contribute',
       use: { ...devices['Desktop Chrome'] },
       testMatch: /join-and-contribute\.spec\.ts/,
+    },
+    {
+      name: 'payout',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /payout\.spec\.ts/,
     },
   ],
   webServer: process.env.E2E_BASE_URL
