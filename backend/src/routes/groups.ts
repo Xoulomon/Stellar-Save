@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { InMemoryGroupsRepository } from '../services/group/groups.repository';
 import { GroupsService } from '../services/group/groups.service';
+import { parseOffsetParams, paginateArray } from '../lib/pagination';
 
 /**
  * Groups controller: request/response mapping only. No business rules and no

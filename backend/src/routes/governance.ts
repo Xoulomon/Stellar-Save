@@ -15,6 +15,7 @@ import { Router } from 'express';
 
 import { config } from '../config';
 import { AppError } from '../lib/errors';
+import { parsePagination, paginate } from '../lib/pagination';
 
 import type { NextFunction } from 'express';
 
@@ -114,11 +115,19 @@ export function createGovernanceRouter(): Router {
   const router = Router();
 
   // GET /api/v1/governance/proposals
-  router.get('/proposals', (_req, res) => {
+  router.get('/proposals', (req, res, next: NextFunction) => {
+    let pagination;
+    try {
+      pagination = parsePagination(req.query as Record<string, unknown>);
+    } catch (err) {
+      return next(err);
+    }
+
     const list = Array.from(proposals.values()).sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-    res.json({ proposals: list, total: list.length });
+    const result = paginate(list, pagination);
+    res.json({ proposals: result.items, total: result.total });
   });
 
   // GET /api/v1/governance/proposals/:id

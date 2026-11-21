@@ -14,17 +14,12 @@ export const CACHE_TTL_SECONDS = {
 
   // ── Analytics ──────────────────────────────────────────────────────────────
   ANALYTICS_HTTP_RESPONSE: 3600, // 1 hour - HTTP response caching for analytics endpoints
-  ANALYTICS_PLATFORM_STATS: 3600, // 1 hour - platform-wide statistics
-  ANALYTICS_USER_STATS: 3600, // 1 hour - user-specific statistics
 
   // ── Group State ────────────────────────────────────────────────────────────
   GROUP_STATE: 10, // 10 seconds - short-lived group state cache
 
   // ── IPFS Metadata ──────────────────────────────────────────────────────────
   IPFS_GROUP_METADATA: 300, // 5 minutes - IPFS group metadata cache
-
-  // ── Cache Warming ──────────────────────────────────────────────────────────
-  CACHE_WARMING_DEFAULT: 3600, // 1 hour - default for cache warming jobs
 } as const;
 
 /**
@@ -40,11 +35,7 @@ export const CACHE_KEY_PREFIXES = {
   GROUP_STATE: 'group_state',
 
   // ── IPFS ───────────────────────────────────────────────────────────────────
-  IPFS_GROUP_CID: 'ipfs:group:cid',
   IPFS_GROUP_METADATA: 'ipfs:group:cache',
-
-  // ── Cache Warming ──────────────────────────────────────────────────────────
-  CACHE_WARMING: 'cache',
 } as const;
 
 /**

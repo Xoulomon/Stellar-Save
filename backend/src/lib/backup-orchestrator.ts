@@ -105,10 +105,10 @@ export class BackupOrchestrator {
     incrementalIntervalMs: 6 * 60 * 60 * 1000,        // 6 hours
     monitorCheckIntervalMs: 30 * 60 * 1000,           // 30 minutes
     maxBackupAgeMs: 25 * 60 * 60 * 1000,              // 25 hours
-    monitorAlertWebhookUrl: undefined,
+    monitorAlertWebhookUrl: '',
     drillCheckIntervalMs: 24 * 60 * 60 * 1000,        // 24 hours
     maxRestoreDurationMs: 5 * 60 * 1000,              // 5 minutes
-    drillAlertWebhookUrl: undefined,
+    drillAlertWebhookUrl: '',
     pruneIntervalMs: 12 * 60 * 60 * 1000,             // 12 hours
     enableDetailedLogging: false,
   };
@@ -146,28 +146,36 @@ export class BackupOrchestrator {
       pruneIntervalMs: this.config.pruneIntervalMs,
     });
 
-    // Start scheduler: full backup immediately, then on interval
-    await this.runSchedulerOnce('full');
-    this.schedulerTimer = setInterval(() => {
-      void this.runSchedulerCycle();
-    }, Math.min(this.config.fullBackupIntervalMs, this.config.incrementalIntervalMs));
+    try {
+      // Start scheduler: full backup immediately, then on interval
+      await this.runSchedulerOnce('full');
+      this.schedulerTimer = setInterval(() => {
+        void this.runSchedulerCycle();
+      }, Math.min(this.config.fullBackupIntervalMs, this.config.incrementalIntervalMs));
 
-    // Start monitor: initial check, then on interval
-    await this.runMonitorOnce();
-    this.monitorTimer = setInterval(() => {
-      void this.runMonitorOnce();
-    }, this.config.monitorCheckIntervalMs);
+      // Start monitor: initial check, then on interval
+      await this.runMonitorOnce();
+      this.monitorTimer = setInterval(() => {
+        void this.runMonitorOnce();
+      }, this.config.monitorCheckIntervalMs);
 
-    // Start drill: initial run, then on interval
-    await this.runDrillOnce();
-    this.drillTimer = setInterval(() => {
-      void this.runDrillOnce();
-    }, this.config.drillCheckIntervalMs);
+      // Start drill: initial run, then on interval
+      await this.runDrillOnce();
+      this.drillTimer = setInterval(() => {
+        void this.runDrillOnce();
+      }, this.config.drillCheckIntervalMs);
 
-    // Start pruner: on interval only (no initial run to avoid startup lag)
-    this.pruneTimer = setInterval(() => {
-      void this.runPruneOnce();
-    }, this.config.pruneIntervalMs);
+      // Start pruner: on interval only (no initial run to avoid startup lag)
+      this.pruneTimer = setInterval(() => {
+        void this.runPruneOnce();
+      }, this.config.pruneIntervalMs);
+    } catch (err) {
+      // Roll back partial startup so the orchestrator stays in a consistent state
+      this.clearTimers();
+      this.running = false;
+      logger.error('[BackupOrchestrator] Startup failed:', err);
+      throw err;
+    }
 
     logger.info('[BackupOrchestrator] Started successfully');
     this.emit({
@@ -188,15 +196,7 @@ export class BackupOrchestrator {
       return;
     }
 
-    if (this.schedulerTimer) clearInterval(this.schedulerTimer);
-    if (this.monitorTimer) clearInterval(this.monitorTimer);
-    if (this.drillTimer) clearInterval(this.drillTimer);
-    if (this.pruneTimer) clearInterval(this.pruneTimer);
-
-    this.schedulerTimer = null;
-    this.monitorTimer = null;
-    this.drillTimer = null;
-    this.pruneTimer = null;
+    this.clearTimers();
 
     this.running = false;
     logger.info('[BackupOrchestrator] Stopped');
@@ -222,6 +222,26 @@ export class BackupOrchestrator {
    */
   removeEventListener(listener: BackupActivityListener): void {
     this.listeners.delete(listener);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Private helpers
+  // ──────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Clear all timers and reset their handles to null.
+   * Single place responsible for timer teardown.
+   */
+  private clearTimers(): void {
+    if (this.schedulerTimer) clearInterval(this.schedulerTimer);
+    if (this.monitorTimer) clearInterval(this.monitorTimer);
+    if (this.drillTimer) clearInterval(this.drillTimer);
+    if (this.pruneTimer) clearInterval(this.pruneTimer);
+
+    this.schedulerTimer = null;
+    this.monitorTimer = null;
+    this.drillTimer = null;
+    this.pruneTimer = null;
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -257,17 +277,28 @@ export class BackupOrchestrator {
    * Execute a single backup (full or incremental).
    */
   private async runSchedulerOnce(type: 'full' | 'incremental'): Promise<void> {
-    if (this.config.enableDetailedLogging) {
-      logger.debug(`[BackupOrchestrator] Triggering ${type} backup`);
-    }
+    try {
+      if (this.config.enableDetailedLogging) {
+        logger.debug(`[BackupOrchestrator] Triggering ${type} backup`);
+      }
 
-    const job = await this.scheduler.triggerManual(type);
-    this.emit({
-      type: 'backup_started',
-      timestamp: Date.now(),
-      component: 'scheduler',
-      details: { jobId: job.id, backupType: job.type },
-    });
+      const job = await this.scheduler.triggerManual(type);
+      this.emit({
+        type: 'backup_started',
+        timestamp: Date.now(),
+        component: 'scheduler',
+        details: { jobId: job.id, backupType: job.type },
+      });
+    } catch (err) {
+      logger.error(`[BackupOrchestrator] ${type} backup failed:`, err);
+      this.emit({
+        type: 'backup_failed',
+        timestamp: Date.now(),
+        component: 'scheduler',
+        details: { backupType: type, error: err instanceof Error ? err.message : String(err) },
+      });
+      throw err;
+    }
   }
 
   /**
@@ -324,6 +355,8 @@ export class BackupOrchestrator {
           drillId: run.id,
           status: run.status,
           durationMs: run.durationMs,
+          exceededMaxDuration:
+            typeof run.durationMs === 'number' && run.durationMs > this.config.maxRestoreDurationMs,
         },
       });
     } catch (err) {

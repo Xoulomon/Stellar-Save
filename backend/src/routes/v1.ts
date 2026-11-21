@@ -836,8 +836,7 @@ export function createV1Router(services: V1Services): Router {
     apiKeyAuthMiddleware,
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
-        const offset = parseInt(req.query.offset as string) || 0;
+        const pageParams = parseOffsetParams(req.query, { limit: 20, maxLimit: 100 });
         interface EventIndexerGroupsDb {
           prisma: {
             contractEvent: {
@@ -849,8 +848,8 @@ export function createV1Router(services: V1Services): Router {
         const groups = await indexerDb.prisma.contractEvent.findMany({
           where: { eventType: 'GroupCreated' },
           orderBy: { timestamp: 'desc' },
-          take: limit,
-          skip: offset,
+          take: pageParams.limit,
+          skip: pageParams.offset,
         });
         await recordApiUsage(req, res);
         res.json(
