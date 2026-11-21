@@ -18,6 +18,7 @@ stellar-save-common = { workspace = true }
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
 proptest = { version = "1.4.0", default-features = false, features = ["std"] }
+stellar-save-common = { workspace = true, features = ["testutils"] }
 
 [features]
 # Enable coverage instrumentation (used by cargo-tarpaulin / cargo-llvm-cov)

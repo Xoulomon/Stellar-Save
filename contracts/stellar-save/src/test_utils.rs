@@ -8,30 +8,24 @@
 //! `store_contract_config`, `store_group`, `store_token_config`, `store_test_group`
 //! and `store_test_group_with_status` replace the duplicated local setup code that
 //! previously existed in `admin_actions_tests.rs` and `auto_contribution_tests.rs`.
+//!
+//! ## Consolidated test utils
+//! `create_env` and `generate_address` are imported from `stellar_save_common::test_support`
+//! (the canonical location). `generate_addresses` and `create_string` were removed as
+//! dead code (they were never called from any test).
 
 #![cfg(test)]
 
 use soroban_sdk::{
     testutils::Address as _,
-    token::{StellarAssetClient, TokenClient},
-    Address, Env, String,
+    token::StellarAssetClient,
+    Address, Env,
 };
 
 use crate::{StellarSaveContractClient, StellarSaveContract};
+use stellar_save_common::test_support::{create_env, generate_address};
 
-// ─── Environment & Client Setup ──────────────────────────────────────────────
-
-/// Initialize a test environment with default settings.
-///
-/// Sets up a fresh Soroban environment with all authentications mocked.
-///
-/// # Returns
-/// A new `Env` instance ready for testing.
-pub fn create_env() -> Env {
-    let env = Env::default();
-    env.mock_all_auths();
-    env
-}
+// ─── Environment & Client Setup ──────────────────────────────────────
 
 /// Initialize the StellarSave contract and return all necessary test components.
 ///
@@ -72,11 +66,11 @@ pub fn setup<'a>() -> (Env, StellarSaveContractClient<'a>, Address, StellarAsset
 /// # Returns
 /// The address of the newly deployed token contract
 pub fn deploy_mock_token(env: &Env) -> Address {
-    let admin = Address::generate(env);
+    let admin = generate_address(env);
     env.register_stellar_asset_contract_v2(admin).address()
 }
 
-// ─── Token Utilities ─────────────────────────────────────────────────────────
+// ─── Token Utilities ─────────────────────────────────────────────────
 
 /// Mint tokens to an address.
 ///
@@ -91,18 +85,6 @@ pub fn mint(sac: &StellarAssetClient, address: &Address, xlm: i128) {
     sac.mint(address, &(xlm * crate::xlm::STROOPS_PER_XLM));
 }
 
-/// Get the balance of an address for a token.
-///
-/// # Arguments
-/// * `tc` - TokenClient for the token contract
-/// * `address` - The address to check
-///
-/// # Returns
-/// The balance in stroops
-pub fn get_balance(tc: &TokenClient, address: &Address) -> i128 {
-    tc.balance(address)
-}
-
 /// Convert stroops to XLM (whole units).
 ///
 /// # Arguments
@@ -114,7 +96,7 @@ pub fn stroops_to_xlm(stroops: i128) -> i128 {
     stroops / crate::xlm::STROOPS_PER_XLM
 }
 
-// ─── Group Setup Utilities ───────────────────────────────────────────────────
+// ─── Group Setup Utilities ───────────────────────────────────────────
 
 /// Create a test group with 3 members and return all details.
 ///
@@ -182,48 +164,7 @@ pub fn setup_3_member_group(
     setup_3_member_group_with_params(env, client, sac, contribution, 10u32, 100)
 }
 
-/// Generate a new test address.
-///
-/// # Arguments
-/// * `env` - The Soroban environment
-///
-/// # Returns
-/// A new unique address
-pub fn generate_address(env: &Env) -> Address {
-    Address::generate(env)
-}
-
-/// Batch-generate multiple test addresses.
-///
-/// # Arguments
-/// * `env` - The Soroban environment
-/// * `count` - Number of addresses to generate
-///
-/// # Returns
-/// A vector of unique addresses
-pub fn generate_addresses(env: &Env, count: usize) -> Vec<Address> {
-    let mut addresses = Vec::new();
-    for _ in 0..count {
-        addresses.push(Address::generate(env));
-    }
-    addresses
-}
-
-// ─── String Utilities ────────────────────────────────────────────────────────
-
-/// Create a test string with the given content.
-///
-/// # Arguments
-/// * `env` - The Soroban environment
-/// * `content` - The string content
-///
-/// # Returns
-/// A Soroban String instance
-pub fn create_string(env: &Env, content: &str) -> String {
-    String::from_str(env, content)
-}
-
-// ─── Shared Storage Fixtures (issue #1717) ───────────────────────────────────
+// ─── Shared Storage Fixtures (issue #1717) ───────────────────────────
 //
 // The following helpers centralise test-setup code that was previously
 // duplicated between admin_actions_tests.rs and auto_contribution_tests.rs
