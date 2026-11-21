@@ -1,95 +1,99 @@
 import { describe, it, expect } from 'vitest';
 
-import { formatAmount, formatPercentage, formatDate, formatDateRange } from '../utils/format';
+import {
+  formatAmount,
+  formatDate,
+  formatDateAbsolute,
+  formatAddress,
+  formatPercentage,
+  formatDateRange,
+  formatXlm,
+  formatShortAddress,
+  formatShortDate,
+} from '../utils/format';
+
+const ADDR = 'GAAZI4TCR3TY5OJHCTJC2A4QSY5MGZTPVAJFO3T55V3L7RPLM3U6VJ6Q';
 
 describe('formatAmount', () => {
-  it('formats amount with USD currency by default', () => {
-    const result = formatAmount(1000);
-    expect(result).toContain('1,000');
-    expect(result).toContain('$');
+  it('appends XLM by default', () => {
+    expect(formatAmount(1234.5678)).toBe('1,234.5678 XLM');
   });
-
-  it('handles decimal amounts', () => {
-    const result = formatAmount(1234.56);
-    expect(result).toContain('1,234.56');
+  it('supports custom symbol and hiding it', () => {
+    expect(formatAmount(50, { symbol: 'USDC' })).toBe('50 USDC');
+    expect(formatAmount(100, { showSymbol: false })).toBe('100');
   });
-
-  it('formats with custom fractionDigits', () => {
-    const result = formatAmount(1000.123456, { fractionDigits: 4 });
-    expect(result).toContain('1,000.1235');
+  it('limits decimals', () => {
+    expect(formatAmount(1.23456789, { decimals: 2 })).toBe('1.23 XLM');
   });
-
-  it('handles zero amount', () => {
-    const result = formatAmount(0);
-    expect(result).toContain('0');
-  });
-
-  it('handles negative amounts', () => {
-    const result = formatAmount(-1000);
-    expect(result).toContain('-');
-  });
-
-  it('formats with different currency', () => {
-    const result = formatAmount(1000, { currency: 'EUR' });
-    expect(result).toContain('1,000');
+  it('returns zero for non-numeric input', () => {
+    expect(formatAmount('abc')).toBe('0 XLM');
+    expect(formatAmount('abc', { showSymbol: false })).toBe('0');
   });
 });
 
-describe('formatPercentage', () => {
-  it('formats percentage with default 1 decimal place', () => {
-    const result = formatPercentage(50.555);
-    expect(result).toBe('50.6%');
+describe('formatAddress', () => {
+  it('truncates long addresses', () => {
+    expect(formatAddress(ADDR)).toBe(`${ADDR.slice(0, 6)}...${ADDR.slice(-4)}`);
   });
-
-  it('formats percentage with custom fraction digits', () => {
-    const result = formatPercentage(50.555, 3);
-    expect(result).toBe('50.555%');
+  it('honors custom lengths', () => {
+    expect(formatAddress(ADDR, { prefixChars: 8, suffixChars: 6 })).toBe(
+      `${ADDR.slice(0, 8)}...${ADDR.slice(-6)}`
+    );
   });
-
-  it('handles zero', () => {
-    expect(formatPercentage(0)).toBe('0.0%');
-  });
-
-  it('handles 100', () => {
-    expect(formatPercentage(100)).toBe('100.0%');
+  it('returns short or empty input unchanged', () => {
+    expect(formatAddress('GABC')).toBe('GABC');
+    expect(formatAddress('')).toBe('');
   });
 });
 
 describe('formatDate', () => {
-  it('formats date in medium format by default', () => {
-    const date = new Date('2024-01-15');
-    const result = formatDate(date);
-    expect(result).toContain('2024');
-    expect(result).toContain('15');
+  it('formats absolute dates', () => {
+    const out = formatDateAbsolute(new Date(2024, 0, 15, 12, 0));
+    expect(out).toContain('Jan');
+    expect(out).toContain('2024');
   });
-
-  it('formats date in short format', () => {
-    const date = new Date('2024-01-15');
-    const result = formatDate(date, { format: 'short' });
-    expect(result).toMatch(/\d{1,2}\/\d{1,2}\/\d{2,4}/);
+  it('throws on invalid input', () => {
+    expect(() => formatDate('not a date')).toThrow('Invalid date input');
   });
+});
 
-  it('formats date in long format', () => {
-    const date = new Date('2024-01-15');
-    const result = formatDate(date, { format: 'long' });
-    expect(result).toContain('January');
-    expect(result).toContain('2024');
+describe('formatPercentage', () => {
+  it('uses one decimal by default', () => {
+    expect(formatPercentage(50.555)).toBe('50.6%');
+    expect(formatPercentage(0)).toBe('0.0%');
+    expect(formatPercentage(100)).toBe('100.0%');
+  });
+  it('supports custom fraction digits', () => {
+    expect(formatPercentage(50.555, 3)).toBe('50.555%');
+  });
+  it('treats NaN and Infinity as zero', () => {
+    expect(formatPercentage(NaN)).toBe('0.0%');
+    expect(formatPercentage(Infinity)).toBe('0.0%');
   });
 });
 
 describe('formatDateRange', () => {
-  it('formats date range', () => {
-    const start = new Date('2024-01-01');
-    const end = new Date('2024-02-01');
-    const result = formatDateRange(start, end);
-    expect(result).toContain(' - ');
-    expect(result).toContain('2024');
+  it('formats a range', () => {
+    expect(formatDateRange(new Date(2024, 0, 1), new Date(2024, 1, 1))).toBe(
+      'Jan 1, 2024 - Feb 1, 2024'
+    );
   });
+  it('throws on invalid dates', () => {
+    expect(() => formatDateRange('bad', new Date())).toThrow('Invalid date input');
+    expect(() => formatDateRange(new Date(), 'bad')).toThrow('Invalid date input');
+  });
+});
 
-  it('formats date range with custom format', () => {
-    const start = new Date('2024-01-01');
-    const end = new Date('2024-02-01');
-    const result = formatDateRange(start, end, { format: 'short' });
-    expect(result).toContain(' - ');
+describe('re-exported lib/formatters helpers', () => {
+  it('converts stroops to XLM', () => {
+    expect(formatXlm(10_000_000)).toBe('1');
+    expect(formatXlm(15_000_000)).toBe('1.5');
+  });
+  it('shortens addresses', () => {
+    expect(formatShortAddress(ADDR)).toBe(`${ADDR.slice(0, 6)}...${ADDR.slice(-4)}`);
+  });
+  it('formats short dates and handles missing ones', () => {
+    expect(formatShortDate(new Date(2025, 0, 5))).toBe('Jan 5, 2025');
+    expect(formatShortDate(null)).toBe('—');
   });
 });
