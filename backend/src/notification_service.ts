@@ -2,6 +2,11 @@ import { config } from './config';
 import { logger } from './logger';
 import { prisma } from './prisma_client';
 import { createPushProvider, PushProvider } from './push_provider';
+import {
+  renderTemplate as renderSharedTemplate,
+  resolveTemplate,
+  TemplateRecord,
+} from './notification_template_layer';
 
 /**
  * Notification Service
@@ -77,14 +82,14 @@ export class NotificationService {
         where: { templateKey: templateId },
       });
 
-      if (!template || template.templateType !== 'email') {
-        throw new Error(`Email template ${templateId} not found`);
-      }
+      const resolved = resolveTemplate(template as TemplateRecord | null, 'email', templateId);
 
-      // Render template with data
-      const htmlContent = this.renderTemplate(template.htmlContent, templateData);
-      const textContent = this.renderTemplate(template.textContent, templateData);
-      const finalSubject = this.renderTemplate(subject || template.subject || '', templateData);
+      // Render template with data via shared template layer
+      const htmlContent = renderSharedTemplate(resolved.htmlContent, templateData);
+      const finalSubject = renderSharedTemplate(
+        subject || resolved.subject || '',
+        templateData
+      );
 
       if (!this.sendgridApiKey) {
         this.log.warn('SendGrid API key not configured. Email would be sent to:', to);
@@ -142,13 +147,11 @@ export class NotificationService {
         where: { templateKey: templateId },
       });
 
-      if (!template || template.templateType !== 'push') {
-        throw new Error(`Push template ${templateId} not found`);
-      }
+      const resolved = resolveTemplate(template as TemplateRecord | null, 'push', templateId);
 
-      const renderedContent = this.renderTemplate(template.htmlContent, templateData);
-      const finalTitle = this.renderTemplate(title, templateData);
-      const finalBody = this.renderTemplate(body, templateData);
+      const renderedContent = renderSharedTemplate(resolved.htmlContent, templateData);
+      const finalTitle = renderSharedTemplate(title, templateData);
+      const finalBody = renderSharedTemplate(body, templateData);
 
       const messageId = await this.pushProvider.send(deviceToken, {
         title: finalTitle,

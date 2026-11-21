@@ -5,6 +5,7 @@ import { Router } from 'express';
 import { config } from '../config';
 import { AppError } from '../lib/errors';
 import { parseOffsetParams, paginateArray } from '../lib/pagination';
+import { withApiVersion } from '../lib/response-envelope';
 import { logger } from '../logger';
 import { ValidationMiddleware } from '../middleware/validation';
 import { groupInvitationSchema } from '../middleware/validation.schemas';
@@ -22,7 +23,7 @@ import type { Request, Response, NextFunction } from 'express';
 export function migrateV1ToV2<T extends Record<string, unknown>>(
   v1Response: T
 ): T & { apiVersion: 'v2' } {
-  return { ...v1Response, apiVersion: 'v2' as const };
+  return withApiVersion(v1Response, 'v2');
 }
 
 export function createV2Router(services: V1Services): Router {
@@ -32,11 +33,14 @@ export function createV2Router(services: V1Services): Router {
   // Health — v2 adds uptime
   router.get('/health', (_req: Request, res: Response) => {
     res.json(
-      migrateV1ToV2({
-        status: 'ok',
-        version: 'v2',
-        uptime: process.uptime(),
-      })
+      withApiVersion(
+        {
+          status: 'ok',
+          version: 'v2',
+          uptime: process.uptime(),
+        },
+        'v2'
+      )
     );
   });
 
@@ -54,12 +58,15 @@ export function createV2Router(services: V1Services): Router {
     const up = database.up && horizon.up && cache.up;
 
     res.status(up ? 200 : 503).json(
-      migrateV1ToV2({
-        status: up ? 'ready' : 'not_ready',
-        version: 'v2',
-        responseTimeMs,
-        dependencies: { database, horizon, cache },
-      })
+      withApiVersion(
+        {
+          status: up ? 'ready' : 'not_ready',
+          version: 'v2',
+          responseTimeMs,
+          dependencies: { database, horizon, cache },
+        },
+        'v2'
+      )
     );
   });
 
@@ -67,7 +74,7 @@ export function createV2Router(services: V1Services): Router {
   router.get('/recommendations/:userId', (req: Request, res: Response) => {
     const { userId } = req.params;
     const recommendations = engine.getRecommendations(userId, 'collaborative');
-    res.json(migrateV1ToV2({ userId, algorithm: 'collaborative', recommendations }));
+    res.json(withApiVersion({ userId, algorithm: 'collaborative', recommendations }, 'v2'));
   });
 
   // Group invitation email
@@ -134,11 +141,14 @@ export function createV2Router(services: V1Services): Router {
         );
 
         res.status(201).json(
-          migrateV1ToV2({
-            invitationId: invitation.id,
-            status: 'sent',
-            joinLink,
-          })
+          withApiVersion(
+            {
+              invitationId: invitation.id,
+              status: 'sent',
+              joinLink,
+            },
+            'v2'
+          )
         );
       } catch (err: unknown) {
         logger.error('Failed to send group invitation', {
@@ -149,16 +159,12 @@ export function createV2Router(services: V1Services): Router {
     }
   );
 
-  // Backup list — v2 uses the shared pagination utility with offset/limit
-  router.get('/backup', (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const pageParams = parseOffsetParams(req.query, { limit: 20 });
-      const allJobs = backupService.listJobs();
-      const result = paginateArray(allJobs, pageParams);
-      res.json(migrateV1ToV2(result));
-    } catch (err: unknown) {
-      next(err);
-    }
+  // Backup list — v2 now uses shared pagination utility with offset/limit
+  router.get('/backup', (req: Request, res: Response) => {
+    const pageParams = parseOffsetParams(req.query, { limit: 20 });
+    const allJobs = backupService.listJobs();
+    const result = paginateArray(allJobs, pageParams);
+    res.json(withApiVersion(result, 'v2'));
   });
 
   // All other v2 routes are stubs — return 501 with migration hint

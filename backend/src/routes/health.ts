@@ -9,6 +9,12 @@
  *
  * Response shapes are documented in `openapi.yaml` under `/healthz` and
  * `/readyz`.
+ *
+ * Intentional exception to the standardized API response envelope (Issue
+ * #2069): operational probes are consumed by Kubernetes and load balancers,
+ * not by API clients, and their flat bodies are part of the documented
+ * contract in `openapi.yaml`. Wrapping them in the shared envelope would break
+ * existing probe consumers, so the shapes below are kept as-is.
  */
 
 import { Router } from 'express';
@@ -143,6 +149,8 @@ export function createHealthRouter(deps: HealthCheckDeps): Router {
   const { checkDatabase, checkRpc } = deps;
 
   router.get('/healthz', (_req: Request, res: Response) => {
+    // Flat body by design — see the envelope exception note at the top of
+    // this module.
     const body: LivenessResponse = {
       status: 'ok',
       uptimeSeconds: process.uptime(),
@@ -169,6 +177,8 @@ export function createHealthRouter(deps: HealthCheckDeps): Router {
       });
     }
 
+    // Flat body by design — see the envelope exception note at the top of
+    // this module.
     const body: ReadinessResponse = {
       status: ready ? 'ready' : 'not_ready',
       responseTimeMs: Date.now() - start,
