@@ -1,99 +1,118 @@
 import { test, expect } from '@playwright/test';
 
-/**
- * E2E tests: Group creation flow
- * Covers navigation to create group page, form rendering, and validation.
- */
+import type { Page } from '@playwright/test';
+
+const PUBLIC_KEY = 'GTEST1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ABCDE';
+
+async function mockConnectedWallet(page: Page) {
+  await page.addInitScript((publicKey: string) => {
+    const wallet = {
+      isConnected: () => Promise.resolve(true),
+      isAllowed: () => Promise.resolve(true),
+      getPublicKey: () => Promise.resolve(publicKey),
+      getNetwork: () => Promise.resolve('TESTNET'),
+      getNetworkDetails: () =>
+        Promise.resolve({
+          network: 'TESTNET',
+          networkPassphrase: 'Test SDF Network ; September 2015',
+        }),
+      signTransaction: (xdr: string) => Promise.resolve(xdr),
+      signAuthEntry: (entry: string) => Promise.resolve(entry),
+    };
+    (window as unknown as Record<string, unknown>).freighter = wallet;
+    (window as unknown as Record<string, unknown>).freighterApi = wallet;
+  }, PUBLIC_KEY);
+}
+
+async function openCreateGroupPage(page: Page) {
+  await mockConnectedWallet(page);
+  await page.goto('/groups/create');
+  await expect(page.getByRole('heading', { name: /create new rosca group/i })).toBeVisible();
+  await expect(page.getByLabel(/group name/i)).toBeVisible();
+}
+
+async function fillRequiredSteps(page: Page) {
+  await page.getByLabel(/group name/i).fill('E2E Savings Circle');
+  await page.getByLabel(/description/i).fill('Automated end-to-end test group');
+  await page.getByRole('button', { name: /^next$/i }).click();
+
+  await page.getByLabel(/contribution amount/i).fill('50');
+  await page.getByRole('combobox').selectOption('604800');
+  await page.getByRole('button', { name: /^next$/i }).click();
+
+  await page.getByLabel(/maximum members/i).fill('8');
+  await page.getByLabel(/minimum members/i).fill('2');
+  await page.getByRole('button', { name: /^next$/i }).click();
+
+  await page.getByRole('button', { name: /^next$/i }).click();
+  await expect(page.getByRole('heading', { name: /review & confirm/i })).toBeVisible();
+}
+
 test.describe('Group creation flow', () => {
-  test('create group page loads without crashing', async ({ page }) => {
-    await page.goto('/groups/create');
-    await expect(page.locator('body')).toBeVisible();
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.removeItem('create-group-draft'));
   });
 
-  test('create group page has correct title', async ({ page }) => {
-    await page.goto('/groups/create');
+  test('loads the create-group page and shows the five-step wizard', async ({ page }) => {
+    await openCreateGroupPage(page);
+
     await expect(page).toHaveTitle(/create group|stellar.save/i);
+    await expect(page.getByText(/step 1 of 5/i)).toBeVisible();
+    await expect(page.getByRole('navigation', { name: /form progress/i })).toBeVisible();
   });
 
-  test('create group page shows content (form or wallet prompt)', async ({ page }) => {
-    await page.goto('/groups/create');
-    // Wait for page to settle
-    await page.waitForLoadState('networkidle');
-    const bodyText = await page.locator('body').textContent();
-    // Page should have some content
-    expect(bodyText?.trim().length).toBeGreaterThan(0);
+  test('blocks advancement and shows validation errors for missing basics', async ({ page }) => {
+    await openCreateGroupPage(page);
+
+    await page.getByRole('button', { name: /^next$/i }).click();
+
+    await expect(page.getByText(/at least 3 characters/i)).toBeVisible();
+    await expect(page.getByText(/description is required/i)).toBeVisible();
+    await expect(page.getByText(/step 1 of 5/i)).toBeVisible();
   });
 
-  test('navigation to create group from landing page works', async ({ page }) => {
-    await page.goto('/');
-    // Find a link to create a group or get started
-    const getStartedBtn = page.getByRole('button', { name: /get started/i });
-    if (await getStartedBtn.isVisible()) {
-      await getStartedBtn.click();
-      // Should navigate somewhere (home, dashboard, or create group)
-      await expect(page.locator('body')).toBeVisible();
-    }
+  test('blocks financial advancement for invalid contribution settings', async ({ page }) => {
+    await openCreateGroupPage(page);
+
+    await page.getByLabel(/group name/i).fill('E2E Savings Circle');
+    await page.getByLabel(/description/i).fill('Automated end-to-end test group');
+    await page.getByRole('button', { name: /^next$/i }).click();
+    await page.getByRole('button', { name: /^next$/i }).click();
+
+    await expect(page.getByText(/contribution amount must be greater than 0/i)).toBeVisible();
+    await expect(page.getByText(/please select a valid cycle duration/i)).toBeVisible();
   });
 
-  test('create group form shows group name field when wallet connected', async ({ page }) => {
-    await page.addInitScript(() => {
-      (window as unknown as Record<string, unknown>).freighter = {
-        isConnected: () => Promise.resolve(true),
-        getPublicKey: () =>
-          Promise.resolve('GTEST1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ABCDE'),
-        getNetwork: () => Promise.resolve('TESTNET'),
-        signTransaction: () => Promise.resolve('mock-signed-tx'),
-      };
-    });
-    await page.goto('/groups/create');
-    await page.waitForLoadState('networkidle');
+  test('creates a group and redirects to the created group', async ({ page }) => {
+    await openCreateGroupPage(page);
+    await fillRequiredSteps(page);
 
-    const nameField = page.getByLabel(/group name/i);
-    const connectPrompt = page.getByText(/connect.*wallet/i);
+    await page.getByRole('button', { name: /create group/i }).click();
 
-    const nameVisible = await nameField.isVisible().catch(() => false);
-    const connectVisible = await connectPrompt.isVisible().catch(() => false);
-    const bodyHasContent = (await page.locator('body').textContent())?.trim().length ?? 0;
-
-    // Either the form is shown, a connect wallet prompt, or some content
-    expect(nameVisible || connectVisible || bodyHasContent > 0).toBe(true);
+    await expect(page.getByRole('status')).toContainText(/group created successfully/i);
+    await expect(page).toHaveURL(/\/groups\/mock-group-id$/, { timeout: 5_000 });
   });
 
-  test('create group form shows validation errors on empty submit', async ({ page }) => {
-    await page.goto('/groups/create');
-    await page.waitForLoadState('networkidle');
+  test('shows an error for an invalid insurance premium and stays on insurance step', async ({
+    page,
+  }) => {
+    await openCreateGroupPage(page);
+    await fillRequiredSteps(page);
 
-    const nameField = page.getByLabel(/group name/i);
-    if (!(await nameField.isVisible().catch(() => false))) {
-      test.skip();
-      return;
-    }
+    await page.getByRole('button', { name: /back/i }).click();
+    await page.getByLabel(/enable insurance pool/i).check();
+    await page.getByLabel(/premium rate/i).fill('101');
+    await page.getByRole('button', { name: /^next$/i }).click();
 
-    const nextBtn = page.getByRole('button', { name: /next/i });
-    await nextBtn.click();
-
-    await expect(page.getByText(/required|at least|characters/i).first()).toBeVisible({
-      timeout: 3000,
-    });
+    await expect(page.getByText(/premium must be between 0 and 100/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /insurance pool/i })).toBeVisible();
   });
 
-  test('create group form step 1 accepts valid input and advances', async ({ page }) => {
-    await page.goto('/groups/create');
-    await page.waitForLoadState('networkidle');
+  test('cancel returns to the dashboard', async ({ page }) => {
+    await openCreateGroupPage(page);
 
-    const nameField = page.getByLabel(/group name/i);
-    if (!(await nameField.isVisible().catch(() => false))) {
-      test.skip();
-      return;
-    }
+    await page.getByRole('button', { name: /cancel/i }).click();
 
-    await nameField.fill('My E2E Savings Circle');
-    const descField = page.getByLabel(/description/i);
-    await descField.fill('An E2E test savings group');
-
-    const nextBtn = page.getByRole('button', { name: /next/i });
-    await nextBtn.click();
-
-    await expect(page.getByLabel(/contribution amount/i)).toBeVisible({ timeout: 3000 });
+    await expect(page).toHaveURL(/\/dashboard$/);
   });
 });
