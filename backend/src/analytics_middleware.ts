@@ -32,8 +32,7 @@ export function createAnalyticsCacheMiddleware(ttlSeconds: number = CACHE_TTL_SE
       // Store original res.json to intercept response
       const originalJson = res.json.bind(res);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- overriding Express res.json which accepts any serialisable body
-      res.json = (data: any) => {
+      res.json = (data: unknown) => {
         // Cache the response
         redis.set(cacheKey, data, ttlSeconds).catch((err) => {
           logger.error('Error caching analytics response:', err);

@@ -15,8 +15,7 @@ const MISSED_CONTRIBUTION_TYPES: string[] = ['contribution_missed'];
 
 // Fail fast if topics drift from the canonical schema
 const unknownTopics = [...PAYOUT_EVENT_TYPES, ...MISSED_CONTRIBUTION_TYPES].filter(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- CONTRACT_EVENT_TOPICS is string[], the cast narrows the filter predicate
-  (t) => !CONTRACT_EVENT_TOPICS.includes(t as any)
+  (t) => !(CONTRACT_EVENT_TOPICS as readonly string[]).includes(t)
 );
 if (unknownTopics.length) {
   throw new Error(`[contract_event_indexer] Unknown event topics: ${unknownTopics.join(', ')}`);
@@ -136,8 +135,7 @@ export function decodeEventRecord(
  */
 export function validateEvent(event: NormalisedEvent): NormalisedEvent {
   const normalised = event.eventType.toLowerCase().replace(/-/g, '_');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- CONTRACT_EVENT_TOPICS is string[], the cast narrows the predicate
-  if (!CONTRACT_EVENT_TOPICS.includes(normalised as any)) {
+  if (!(CONTRACT_EVENT_TOPICS as readonly string[]).includes(normalised)) {
     throw new Error(`[contract_event_indexer] Unknown event topic: ${event.eventType}`);
   }
   return event;

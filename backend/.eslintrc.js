@@ -16,7 +16,7 @@ module.exports = {
   },
   ignorePatterns: ['dist/', 'node_modules/'],
   rules: {
-    '@typescript-eslint/no-explicit-any': 'off',
+    '@typescript-eslint/no-explicit-any': ['error', { fixToUnknown: true }],
   },
   overrides: [
     {
