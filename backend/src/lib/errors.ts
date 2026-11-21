@@ -1,79 +1,139 @@
-export interface ErrorEnvelope {
-  code: string;
+/**
+ * Typed application error hierarchy.
+ *
+ * Every client-caused failure should be thrown as an `AppError` subclass so the
+ * global error handler can map it to a stable HTTP status and error code.
+ */
+
+export type AppErrorCode =
+  | 'VALIDATION_ERROR'
+  | 'UNAUTHORIZED'
+  | 'NOT_FOUND'
+  | 'CONFLICT'
+  | 'UPSTREAM_FAILURE'
+  | 'INTERNAL_ERROR';
+
+/**
+ * Canonical error payload used inside the standardized API response envelope.
+ *
+ * Shape: `{ code, message, details?, correlationId?, timestamp }`.
+ */
+export interface ApiError {
+  code: AppErrorCode;
   message: string;
   details?: unknown;
-  correlationId: string;
+  correlationId?: string;
   timestamp: string;
 }
 
 export class AppError extends Error {
+  readonly status: number;
+  readonly code: AppErrorCode;
+  readonly details?: unknown;
+  readonly isOperational: boolean;
+
   constructor(
-    public readonly code: string,
     message: string,
-    public readonly statusCode: number = 500,
-    public readonly details?: unknown
+    status: number,
+    code: AppErrorCode,
+    details?: unknown,
   ) {
     super(message);
-    this.name = 'AppError';
+    this.name = new.target.name;
+    this.status = status;
+    this.code = code;
+    this.details = details;
+    this.isOperational = true;
+    Object.setPrototypeOf(this, new.target.prototype);
   }
-}
 
-export class NotFoundError extends AppError {
-  constructor(message: string, details?: unknown) {
-    super('NOT_FOUND', message, 404, details);
-    this.name = 'NotFoundError';
+  /**
+   * Map this error to the canonical `ApiError` shape.
+   *
+   * @param correlationId Optional request correlation id to attach.
+   * @param timestamp Optional ISO timestamp (defaults to now).
+   */
+  toEnvelope(correlationId?: string, timestamp = new Date().toISOString()): ApiError {
+    const envelope: ApiError = {
+      code: this.code,
+      message: this.message,
+      timestamp,
+    };
+    if (this.details !== undefined) {
+      envelope.details = this.details;
+    }
+    if (correlationId !== undefined) {
+      envelope.correlationId = correlationId;
+    }
+    return envelope;
   }
 }
 
 export class ValidationError extends AppError {
-  constructor(message: string, details?: unknown) {
-    super('VALIDATION_ERROR', message, 400, details);
-    this.name = 'ValidationError';
+  constructor(message = 'Validation failed', details?: unknown) {
+    super(message, 400, 'VALIDATION_ERROR', details);
   }
 }
 
-export class UnauthorizedError extends AppError {
-  constructor(message: string = 'Unauthorized', details?: unknown) {
-    super('UNAUTHORIZED', message, 401, details);
-    this.name = 'UnauthorizedError';
+export class AuthError extends AppError {
+  constructor(message = 'Unauthorized', details?: unknown) {
+    super(message, 401, 'UNAUTHORIZED', details);
   }
 }
 
-export class ForbiddenError extends AppError {
-  constructor(message: string = 'Forbidden', details?: unknown) {
-    super('FORBIDDEN', message, 403, details);
-    this.name = 'ForbiddenError';
+export class NotFoundError extends AppError {
+  constructor(message = 'Resource not found', details?: unknown) {
+    super(message, 404, 'NOT_FOUND', details);
   }
 }
 
 export class ConflictError extends AppError {
-  constructor(message: string, details?: unknown) {
-    super('CONFLICT', message, 409, details);
-    this.name = 'ConflictError';
+  constructor(message = 'Conflict', details?: unknown) {
+    super(message, 409, 'CONFLICT', details);
   }
 }
 
-export class CircuitBreakerOpenError extends AppError {
-  constructor(message: string = 'Circuit breaker is OPEN') {
-    super('CIRCUIT_OPEN', message, 503, undefined);
-    this.name = 'CircuitBreakerOpenError';
+export class UpstreamError extends AppError {
+  constructor(message = 'Upstream service failure', details?: unknown) {
+    super(message, 502, 'UPSTREAM_FAILURE', details);
   }
 }
 
-export class ImageValidationError extends AppError {
-  constructor(message: string) {
-    super('IMAGE_VALIDATION_ERROR', message, 400, undefined);
-    this.name = 'ImageValidationError';
-  }
+export function isAppError(err: unknown): err is AppError {
+  return err instanceof AppError;
 }
 
-export { AppError as ApiError };
+/**
+ * Resolve the HTTP status code for any thrown value.
+ *
+ * Known `AppError`s expose their own status; anything else is treated as an
+ * unexpected internal failure (500).
+ */
+export function statusCodeOf(err: unknown): number {
+  return isAppError(err) ? err.status : 500;
+}
 
-export function toEnvelope(err: unknown, correlationId: string): ErrorEnvelope {
-  const timestamp = new Date().toISOString();
-  if (err instanceof AppError) {
-    return { code: err.code, message: err.message, details: err.details, correlationId, timestamp };
+/**
+ * Map any thrown value to the canonical `ApiError` shape.
+ *
+ * Non-`AppError` values are normalized to an `INTERNAL_ERROR` envelope so raw
+ * exception messages are never leaked to clients.
+ */
+export function toEnvelope(
+  err: unknown,
+  correlationId?: string,
+  timestamp = new Date().toISOString(),
+): ApiError {
+  if (isAppError(err)) {
+    return err.toEnvelope(correlationId, timestamp);
   }
-  const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-  return { code: 'INTERNAL_ERROR', message, correlationId, timestamp };
+  const envelope: ApiError = {
+    code: 'INTERNAL_ERROR',
+    message: 'Internal server error',
+    timestamp,
+  };
+  if (correlationId !== undefined) {
+    envelope.correlationId = correlationId;
+  }
+  return envelope;
 }

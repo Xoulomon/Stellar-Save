@@ -7,9 +7,9 @@ import {
   validateFormStep,
   validateAndTransformFormData,
   VALIDATION_CONSTANTS,
-} from '../schemas/groupSchema';
+  type CreateGroupInput,
+} from './CreateGroupForm/schema';
 
-import type { GroupData } from '../utils/groupApi';
 import './CreateGroupForm.css';
 
 export const CYCLE_DURATION_OPTIONS = [
@@ -55,7 +55,7 @@ const EMPTY_FORM: FormData = {
 type FormErrors = Record<string, string | undefined>;
 
 interface CreateGroupFormProps {
-  onSubmit: (data: GroupData) => void;
+  onSubmit: (data: CreateGroupInput) => void;
   onCancel?: () => void;
   isSubmitting?: boolean;
 }

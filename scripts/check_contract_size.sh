@@ -20,8 +20,16 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WASM="${WASM_PATH:-$ROOT/target/wasm32-unknown-unknown/release/stellar_save.wasm}"
-LIMIT_KB="${WASM_SIZE_LIMIT_KB:-100}"
-WARN_PCT="${WARN_THRESHOLD_PCT:-80}"
+
+# Source the single source of truth for the WASM size budget.
+# scripts/wasm_size_budget.sh defines WASM_SIZE_BUDGET_KB and
+# WASM_WARN_THRESHOLD_PCT.  Env vars take precedence over the constants
+# (see wasm_size_budget.sh), so CI can still override per-pipeline.
+# shellcheck source=wasm_size_budget.sh
+source "$ROOT/scripts/wasm_size_budget.sh"
+
+LIMIT_KB="${WASM_SIZE_LIMIT_KB:-$WASM_SIZE_BUDGET_KB}"
+WARN_PCT="${WARN_THRESHOLD_PCT:-$WASM_WARN_THRESHOLD_PCT}"
 SHA="${GIT_SHA:-$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)}"
 HISTORY="$ROOT/deployment-records/size_history.json"
 REPORT="$ROOT/deployment-records/size_report.md"

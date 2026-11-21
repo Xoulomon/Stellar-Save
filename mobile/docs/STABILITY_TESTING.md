@@ -90,12 +90,24 @@ These values are set conservatively for testnet latency. Tighten them only if
 
 | Flow | Fixed waits added | Seed fix | Status |
 |---|---|---|---|
-| `onboarding.yaml` | — (no async ops) | — | ✅ no changes needed |
-| `smoke.yaml` | — (navigation only) | — | ✅ no changes needed |
-| `create_group.yaml` | `group-created-success` 30 s, `group-detail-screen` 10 s | — | ✅ fixed |
-| `contribute.yaml` | `contribution-success-modal` 30 s, `group-detail-screen` 10 s | — | ✅ fixed |
-| `join_group.yaml` | `join-success-message` 30 s, `group-detail-screen` 10 s | — | ✅ fixed |
-| `wallet_creation.yaml` | `wallet-created-success` 15 s, `dashboard-screen` 10 s | `copyTextFrom` + `pasteText` | ✅ fixed |
+| `setup.yaml` | Clears app data before each suite | `MAESTRO_TESTING`, PIN, and pending KYC fixture | ✅ shared setup |
+| `onboarding.yaml` | Dashboard and balance testIDs | Dev-only auth bypass and balance fixture | ✅ aligned to current app |
+| `onboarding_full.yaml` | Group create form and native success alert | In-memory group fixture service | ✅ aligned to current app |
+| `onboarding_wallet_setup.yaml` | Wallet tab testID | No network dependency | ✅ aligned to current app |
+| `onboarding_kyc_form.yaml` | Group form validation messages | No network dependency | ✅ aligned to current app |
+| `onboarding_kyc_status.yaml` | Group list and fixture names | In-memory group fixtures | ✅ aligned to current app |
+| `onboarding_biometric_auth.yaml` | Dashboard and group list testIDs | Dev-only auth bypass | ✅ aligned to current app |
+| `smoke.yaml` | Dashboard, balance, and fixture group testIDs | In-memory fixtures | ✅ updated |
+| `create_group.yaml` | Group form and native success alert | In-memory group fixture service | ✅ updated |
+| `contribute.yaml` | Active group fixture; contribution UI is not implemented | In-memory group fixtures | ⚠️ contribution action unavailable |
+| `join_group.yaml` | Fixture lookup, preview, and native success alert | In-memory group fixture service | ✅ updated |
+| `wallet_creation.yaml` | Wallet tab testID; wallet creation is not implemented | No network dependency | ✅ aligned to current app |
+
+Every runnable flow starts by invoking `setup.yaml`; the runner excludes that
+shared setup flow from its standalone suite list. Maestro flows use the mobile
+application ID from `mobile/app.json`. Some flow filenames remain for continuity
+but now target current screens: the app does not yet implement onboarding, KYC,
+wallet creation, or contribution journeys.
 
 ---
 

@@ -5,6 +5,8 @@
  * The SW must live at the root so it can control all app pages.
  */
 
+import { logger } from '../utils/logger';
+
 let swRegistration: ServiceWorkerRegistration | null = null;
 
 /**
@@ -21,7 +23,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 
   try {
     swRegistration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-    console.info('[SW] Service worker registered:', swRegistration.scope);
+    logger.info('[SW] Service worker registered:', swRegistration.scope);
 
     // Listen for messages from the SW (e.g. navigation requests, version updates)
     navigator.serviceWorker.addEventListener('message', handleSwMessage);
@@ -81,7 +83,7 @@ function handleSwMessage(event: MessageEvent): void {
   // A new SW version activated and purged stale caches. The controllerchange
   // listener handles the reload; we just log here for observability.
   if (event.data.type === 'SW_UPDATED') {
-    console.info('[SW] New version active:', event.data.version);
+    logger.info('[SW] New version active:', event.data.version);
     return;
   }
 

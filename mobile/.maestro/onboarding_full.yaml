@@ -1,0 +1,21 @@
+# Full group setup flow using local deterministic fixtures.
+appId: com.stellarsave.mobile
+---
+- runFlow: setup.yaml
+- tapOn:
+    id: "create-group-button"
+- assertVisible:
+    id: "create-group-screen"
+- tapOn:
+    id: "contribution-amount-input"
+- inputText: "100"
+- tapOn:
+    id: "cycle-duration-input"
+- inputText: "30"
+- tapOn:
+    id: "max-members-input"
+- inputText: "10"
+- tapOn:
+    id: "create-group-submit-button"
+- assertVisible:
+    text: "Group Created"

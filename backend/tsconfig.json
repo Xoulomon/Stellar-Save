@@ -11,7 +11,7 @@
     "incremental": true,
     "skipLibCheck": true,
     "strict": true,
-    "strictPropertyInitialization": false,
+    "strictPropertyInitialization": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "types": ["jest", "node"],
@@ -21,6 +21,7 @@
   "exclude": [
     "node_modules",
     "dist",
+    "lambdas",
     "../packages/events-schema/generated"
   ]
 }

@@ -1,9 +1,11 @@
 #![allow(clippy::items_after_test_module)]
 
-const ONE_XLM: i128 = 10_000_000; // 1 XLM in stroops;
+// ONE_XLM is the canonical STROOPS_PER_XLM constant from common.
+// Re-aliased locally so existing call sites (to_stroops) are unchanged.
+use stellar_save_common::constants::STROOPS_PER_XLM;
 
 pub const fn to_stroops(num: u64) -> i128 {
-    (num as i128) * ONE_XLM
+    (num as i128) * STROOPS_PER_XLM
 }
 
 #[cfg(not(test))]

@@ -54,8 +54,8 @@ const prismaSingleton = new PrismaReadReplicaClient();
 
 /** Single managed Prisma instance — import this everywhere instead of `new PrismaClient()`. */
 export const prisma = new Proxy(prismaSingleton.getClient(), {
-  get: (target: any, prop: string) => {
-    if (typeof target[prop] === 'function') {
+  get: (target: PrismaClient, prop: string) => {
+    if (typeof (target as unknown as Record<string, unknown>)[prop] === 'function') {
       const isWrite = [
         'create',
         'update',
@@ -66,9 +66,9 @@ export const prisma = new Proxy(prismaSingleton.getClient(), {
         'deleteMany',
       ].some((m) => prop.endsWith(m));
       const client = prismaSingleton.getClient(isWrite);
-      return (client as any)[prop]?.bind(client);
+      return (client as unknown as Record<string, unknown>)[prop];
     }
-    return target[prop];
+    return (target as unknown as Record<string, unknown>)[prop];
   },
 }) as PrismaClient;
 

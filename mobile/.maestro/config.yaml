@@ -2,7 +2,7 @@
 # Docs: https://maestro.mobile.dev/reference/configuration
 
 # Default app bundle ID – override per flow with appId: field
-appId: com.stellarsave.app
+appId: com.stellarsave.mobile
 
 # Retry failed flows up to 2 times before marking as failed
 retryOnFailure: 2

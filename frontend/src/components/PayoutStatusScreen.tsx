@@ -1,5 +1,6 @@
 import { Box, Stack, Typography, Chip, Divider, LinearProgress } from '@mui/material';
 
+import { formatShortDate as formatDate } from '../lib/formatters';
 import { getExplorerTxUrl } from '../utils/explorerUrl';
 
 import type { PayoutEntry, PayoutQueueData } from '../types/contribution';
@@ -16,10 +17,6 @@ export interface PayoutStatusScreenProps {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
 
 function pluralise(n: number, singular: string, plural = `${singular}s`): string {
   return `${n} ${n === 1 ? singular : plural}`;

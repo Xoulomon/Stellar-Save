@@ -6,7 +6,7 @@
 
 import express from 'express';
 
-import { jwtAuthMiddleware } from './auth_middleware';
+import { jwtAuthMiddleware } from './modules/auth/auth_middleware';
 import {
   sanitizeInputMiddleware,
   sanitizeGroupMetadataMiddleware,
@@ -16,7 +16,7 @@ import { logger } from './logger';
 import { secretsManager } from './secrets_manager_service';
 import { transactionDecoderService } from './transaction_decoder_service';
 
-import type { AuthenticatedRequest } from './auth_middleware';
+import type { AuthenticatedRequest } from './modules/auth/auth_middleware';
 import type { Request, Response } from 'express';
 
 const router = express.Router();

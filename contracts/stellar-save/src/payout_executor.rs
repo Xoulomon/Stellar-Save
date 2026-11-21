@@ -1,22 +1,37 @@
-//! Payout Executor Module
+//! # Payout Executor
 //!
-//! This module implements the core fund distribution mechanism for the Stellar-Save
-//! ROSCA (Rotational Savings and Credit Association) smart contract.
+//! This module owns all payout **execution** logic for the Stellar-Save ROSCA.
 //!
-//! The payout executor orchestrates the automated transfer of pooled funds to eligible
-//! recipients when a savings cycle completes. It handles:
-//! - Cycle completion verification
-//! - Recipient identification based on payout position
-//! - Payout amount calculation
-//! - Fund transfer execution
-//! - Payout record creation
-//! - Member status updates
-//! - Cycle advancement
-//! - Event emission
+//! ## Responsibility boundary
 //!
-//! The design follows a permissionless execution model where any address can trigger
+//! | Concern                        | Module                        |
+//! |--------------------------------|-------------------------------|
+//! | Payout data types & records    | `payout`                      |
+//! | Recipient selection & execution| **`payout_executor`** (here)  |
+//!
+//! ## Call Flow
+//! ```text
+//! contract.rs::StellarSaveContract::execute_payout(group_id)
+//!   → payout_executor::execute_payout(env, group_id)
+//!       1.  validate_cycle_complete      — all members contributed
+//!       2.  apply_missed_contribution_penalties (if enabled)
+//!       3.  identify_recipient           — Sequential / Random / Bid
+//!       4.  verify_recipient_eligibility
+//!       5.  calculate_and_validate_payout_amount
+//!       6.  verify_contract_balance
+//!       7.  record_payout                — writes PayoutRecord to storage
+//!       8.  update_member_status
+//!       9.  emit_payout_event            — non-critical
+//!      10.  advance_cycle_or_complete
+//!      11.  execute_transfer             — SEP-41 token xfer (Checks-Effects-Interactions last)
+//!
+//! get_next_recipient(env, group_id) — read-only view for off-chain indexers
+//! ```
+//!
+//! The design follows a permissionless execution model: any address can trigger
 //! payout execution once preconditions are met.
-
+//!
+//! ## Call Flow
 use crate::auth::is_active_member;
 use crate::error::StellarSaveError;
 use crate::events::EventEmitter;
@@ -26,6 +41,82 @@ use crate::pool::PoolCalculator;
 use crate::storage::StorageKeyBuilder;
 use crate::MemberProfile;
 use soroban_sdk::{Address, Env};
+
+// ─── Read-only view ───────────────────────────────────────────────────────────
+
+/// Returns the address of the next scheduled payout recipient without executing
+/// the payout.
+///
+/// The recipient is derived from the group's `current_cycle` and the payout
+/// position reverse-index stored at join/assign time.  This is an O(1)
+/// read-only view function intended for off-chain indexers and UIs.
+///
+/// # Arguments
+/// * `env`      - Soroban environment
+/// * `group_id` - ID of the group to query
+///
+/// # Returns
+/// * `Ok(Address)` - Address of the member scheduled to receive the next payout
+/// * `Err(StellarSaveError::GroupNotFound)` - Group does not exist
+/// * `Err(StellarSaveError::InvalidState)`  - Group is not Active or no
+///   recipient found for the current cycle
+pub fn get_next_recipient(env: &Env, group_id: u64) -> Result<Address, StellarSaveError> {
+    use crate::group::GroupStatus;
+
+    let group_key = StorageKeyBuilder::group_data(group_id);
+    let group: crate::group::Group = env
+        .storage()
+        .persistent()
+        .get(&group_key)
+        .ok_or(StellarSaveError::GroupNotFound)?;
+
+    if group.status != GroupStatus::Active {
+        return Err(StellarSaveError::InvalidState);
+    }
+
+    // O(1) lookup: position → Address via the reverse index written at
+    // join_group / assign_payout_positions time.
+    let pos_idx_key =
+        StorageKeyBuilder::group_payout_position_index(group_id, group.current_cycle);
+    env.storage()
+        .persistent()
+        .get::<_, Address>(&pos_idx_key)
+        .ok_or(StellarSaveError::InvalidState)
+}
+
+/// Returns the address of the next scheduled payout recipient without executing the payout.
+///
+/// The recipient is derived from the group's `current_cycle` and the payout position
+/// reverse-index stored at join/assign time. This is an O(1) read-only view function
+/// used by off-chain indexers and query clients.
+///
+/// # Arguments
+/// * `env`      - Soroban environment
+/// * `group_id` - ID of the group to query
+///
+/// # Returns
+/// * `Ok(Address)` - Address of the member scheduled to receive the next payout
+/// * `Err(StellarSaveError::GroupNotFound)` - Group does not exist
+/// * `Err(StellarSaveError::InvalidState)` - Group is not Active or no recipient found
+pub fn get_next_recipient(env: &Env, group_id: u64) -> Result<Address, StellarSaveError> {
+    let group_key = StorageKeyBuilder::group_data(group_id);
+    let group: Group = env
+        .storage()
+        .persistent()
+        .get(&group_key)
+        .ok_or(StellarSaveError::GroupNotFound)?;
+
+    if group.status != GroupStatus::Active {
+        return Err(StellarSaveError::InvalidState);
+    }
+
+    // O(1) lookup: position → Address via the reverse index written at join/assign time
+    let pos_idx_key = StorageKeyBuilder::group_payout_position_index(group_id, group.current_cycle);
+    env.storage()
+        .persistent()
+        .get::<_, Address>(&pos_idx_key)
+        .ok_or(StellarSaveError::InvalidState)
+}
 
 /// Validates that the current cycle is complete and ready for payout.
 ///
@@ -147,7 +238,7 @@ fn identify_recipient_sequential(
 
     match match_count {
         0 => Err(StellarSaveError::InvalidState),
-        1 => Ok(recipient.unwrap()),
+        1 => Ok(recipient.unwrap()), // INVARIANT: match_count == 1 verified above; unwrap is unreachable
         _ => Err(StellarSaveError::InvalidState),
     }
 }
@@ -194,7 +285,7 @@ fn identify_recipient_random(
         .wrapping_add(group_id as u64))
         % eligible.len() as u64) as u32;
 
-    Ok(eligible.get(idx).unwrap())
+    Ok(eligible.get(idx).unwrap()) // INVARIANT: idx < eligible.len() guaranteed by modulo; unwrap is unreachable
 }
 
 /// Selects the recipient for `Bid` order: the member with the highest bid for
@@ -445,10 +536,12 @@ fn record_payout(
     amount: i128,
     timestamp: u64,
 ) -> Result<(), StellarSaveError> {
-    // Create PayoutRecord with all required fields
-    // The PayoutRecord::new constructor validates that amount > 0
-    // and will panic if validation fails
-    let payout_record = PayoutRecord::new(recipient.clone(), group_id, cycle, amount, timestamp);
+    // Create PayoutRecord with all required fields.
+    // PayoutRecord::new returns Err(InvalidAmount) when amount <= 0;
+    // calculate_and_validate_payout_amount already enforces this invariant
+    // before record_payout is called, so this ? is purely defensive.
+    let payout_record =
+        PayoutRecord::new(recipient.clone(), group_id, cycle, amount, timestamp)?;
 
     // Validate the record before storage
     // This ensures the record meets all validation constraints

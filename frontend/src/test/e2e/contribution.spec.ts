@@ -1,10 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 /**
  * E2E tests: Contribution flow
  * Covers navigating to a group detail page and interacting with contribution UI.
  */
-test.describe('Contribution flow', () => {
+test.describe('@journey Contribution flow', () => {
   test('group detail page loads without crashing', async ({ page }) => {
     await page.goto('/groups/test-group-1');
     await expect(page.locator('body')).toBeVisible();
@@ -29,15 +29,7 @@ test.describe('Contribution flow', () => {
   test('contribution button is present on group detail page when wallet connected', async ({
     page,
   }) => {
-    await page.addInitScript(() => {
-      (window as unknown as Record<string, unknown>).freighter = {
-        isConnected: () => Promise.resolve(true),
-        getPublicKey: () =>
-          Promise.resolve('GTEST1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ABCDE'),
-        getNetwork: () => Promise.resolve('TESTNET'),
-        signTransaction: () => Promise.resolve('mock-signed-tx'),
-      };
-    });
+    await mockConnectedWallet(page);
     await page.goto('/groups/test-group-1');
     await page.waitForLoadState('networkidle');
 
@@ -54,12 +46,13 @@ test.describe('Contribution flow', () => {
   });
 
   test('clicking contribute button opens confirmation modal', async ({ page }) => {
+    await mockConnectedWallet(page);
     await page.goto('/groups/test-group-1');
     await page.waitForLoadState('networkidle');
 
     const contributeBtn = page.getByRole('button', { name: /contribute/i });
     if (!(await contributeBtn.isVisible().catch(() => false))) {
-      test.skip();
+      test.skip(true, 'Contribute button not rendered even with a connected wallet mocked');
       return;
     }
 
@@ -70,12 +63,13 @@ test.describe('Contribution flow', () => {
   });
 
   test('contribution modal shows cancel button', async ({ page }) => {
+    await mockConnectedWallet(page);
     await page.goto('/groups/test-group-1');
     await page.waitForLoadState('networkidle');
 
     const contributeBtn = page.getByRole('button', { name: /contribute/i });
     if (!(await contributeBtn.isVisible().catch(() => false))) {
-      test.skip();
+      test.skip(true, 'Contribute button not rendered even with a connected wallet mocked');
       return;
     }
 
@@ -85,12 +79,13 @@ test.describe('Contribution flow', () => {
   });
 
   test('clicking cancel closes the contribution modal', async ({ page }) => {
+    await mockConnectedWallet(page);
     await page.goto('/groups/test-group-1');
     await page.waitForLoadState('networkidle');
 
     const contributeBtn = page.getByRole('button', { name: /contribute/i });
     if (!(await contributeBtn.isVisible().catch(() => false))) {
-      test.skip();
+      test.skip(true, 'Contribute button not rendered even with a connected wallet mocked');
       return;
     }
 

@@ -10,14 +10,13 @@ import {
   SecretsManagerClient,
   GetSecretValueCommand,
   PutSecretValueCommand,
-  UpdateSecretCommand,
   RotateSecretCommand,
   DescribeSecretCommand,
   CreateSecretCommand,
   TagResourceCommand,
 } from '@aws-sdk/client-secrets-manager';
 
-import { config } from './config';
+import { config, updateConfigSecret } from './config';
 import { logger } from './logger';
 
 export interface SecretMetadata {
@@ -40,22 +39,38 @@ export interface RotationConfig {
   lambdaArn?: string; // For custom rotation
 }
 
+export interface SecretsManagerServiceDeps {
+  client?: SecretsManagerClient;
+  config?: { aws: { region: string; accessKeyId?: string; secretAccessKey?: string } };
+  logger?: {
+    info: (...a: unknown[]) => void;
+    error: (...a: unknown[]) => void;
+    warn: (...a: unknown[]) => void;
+    debug: (...a: unknown[]) => void;
+  };
+}
+
 export class SecretsManagerService {
   private client: SecretsManagerClient;
   private cache: Map<string, { value: string; expiry: number }> = new Map();
   private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+  private readonly log: NonNullable<SecretsManagerServiceDeps['logger']>;
 
-  constructor() {
-    this.client = new SecretsManagerClient({
-      region: config.aws.region,
-      credentials:
-        config.aws.accessKeyId && config.aws.secretAccessKey
-          ? {
-              accessKeyId: config.aws.accessKeyId,
-              secretAccessKey: config.aws.secretAccessKey,
-            }
-          : undefined,
-    });
+  constructor(deps?: SecretsManagerServiceDeps) {
+    const resolvedConfig = deps?.config ?? config;
+    this.log = deps?.logger ?? logger;
+    this.client =
+      deps?.client ??
+      new SecretsManagerClient({
+        region: resolvedConfig.aws.region,
+        credentials:
+          resolvedConfig.aws.accessKeyId && resolvedConfig.aws.secretAccessKey
+            ? {
+                accessKeyId: resolvedConfig.aws.accessKeyId,
+                secretAccessKey: resolvedConfig.aws.secretAccessKey,
+              }
+            : undefined,
+      });
   }
 
   /**
@@ -162,32 +177,10 @@ export class SecretsManagerService {
   }
 
   /**
-   * Enable automatic rotation for a secret
-   */
-  async enableRotation(secretName: string, rotationConfig: RotationConfig): Promise<void> {
-    try {
-      const command = new UpdateSecretCommand({
-        SecretId: secretName,
-        RotationLambdaARN: rotationConfig.lambdaArn,
-        RotationRules: {
-          AutomaticallyAfterDays: rotationConfig.automaticallyAfterDays,
-        },
-      });
-
-      await this.client.send(command);
-
-      logger.info('Secret rotation enabled', {
-        secretName,
-        intervalDays: rotationConfig.automaticallyAfterDays,
-      });
-    } catch (error) {
-      logger.error('Failed to enable rotation', { secretName, error });
-      throw error;
-    }
-  }
-
-  /**
-   * Manually trigger secret rotation
+   * Manually trigger secret rotation.
+   *
+   * Rotation scheduling/configuration lives in the key rotation service; this
+   * method only triggers an immediate rotation and invalidates the local cache.
    */
   async rotateSecret(secretName: string): Promise<void> {
     try {
@@ -288,43 +281,6 @@ export class SecretsManagerService {
 
     return results;
   }
-
-  /**
-   * Check rotation status for all managed secrets
-   */
-  async checkRotationStatus(secretNames: string[]): Promise<{
-    upToDate: string[];
-    needsRotation: string[];
-    failed: string[];
-  }> {
-    const upToDate: string[] = [];
-    const needsRotation: string[] = [];
-    const failed: string[] = [];
-
-    await Promise.all(
-      secretNames.map(async (name) => {
-        try {
-          const metadata = await this.getSecretMetadata(name);
-
-          if (!metadata.rotationEnabled) {
-            needsRotation.push(name);
-            return;
-          }
-
-          if (metadata.nextRotation && metadata.nextRotation < new Date()) {
-            needsRotation.push(name);
-          } else {
-            upToDate.push(name);
-          }
-        } catch (error) {
-          failed.push(name);
-          logger.error('Failed to check rotation status', { secretName: name, error });
-        }
-      })
-    );
-
-    return { upToDate, needsRotation, failed };
-  }
 }
 
 /**
@@ -367,21 +323,26 @@ export async function initializeSecrets(): Promise<void> {
   logger.info('Initializing secrets from AWS Secrets Manager');
 
   // List of secrets to initialize
-  const secretConfigs = [
-    { name: 'stellar-save/jwt-secret', envVar: 'JWT_SECRET' },
-    { name: 'stellar-save/admin-secret', envVar: 'ADMIN_SECRET' },
-    { name: 'stellar-save/db-password', envVar: 'DB_PASSWORD' },
+  const secretConfigs: Array<{
+    name: string;
+    key: 'JWT_SECRET' | 'ADMIN_SECRET' | 'DB_PASSWORD';
+  }> = [
+    { name: 'stellar-save/jwt-secret', key: 'JWT_SECRET' },
+    { name: 'stellar-save/admin-secret', key: 'ADMIN_SECRET' },
+    { name: 'stellar-save/db-password', key: 'DB_PASSWORD' },
   ];
 
-  for (const { name, envVar } of secretConfigs) {
+  for (const { name, key } of secretConfigs) {
     try {
       const secret = await secretsManager.getSecret(name);
 
-      // Override environment variable with secret from AWS
-      process.env[envVar] = secret.value;
+      // Override configuration secret in memory without touching process.env
+      updateConfigSecret(key, secret.value);
 
       logger.info('Secret loaded from AWS', { secretName: name });
     } catch (error) {
+      // Fall back to the existing environment-provided value (already loaded
+      // into config) so startup is not blocked by Secrets Manager outages.
       logger.warn('Failed to load secret from AWS, using environment variable', {
         secretName: name,
         error: error instanceof Error ? error.message : 'Unknown error',

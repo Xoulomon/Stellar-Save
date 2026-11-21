@@ -48,7 +48,7 @@ export function KycFormScreen({ kycClient, onSubmitted }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="kyc-form-screen">
       <Text style={styles.title}>Identity verification</Text>
 
       <TextInput
@@ -56,16 +56,18 @@ export function KycFormScreen({ kycClient, onSubmitted }: Props) {
         placeholder="Full name"
         value={fields.fullName ?? ''}
         onChangeText={(value) => setFields((prev) => ({ ...prev, fullName: value }))}
+        testID="kyc-full-name-input"
       />
-      {errors.fullName && <Text style={styles.error}>{errors.fullName}</Text>}
+      {errors.fullName && <Text style={styles.error} testID="kyc-error-full-name">{errors.fullName}</Text>}
 
       <TextInput
         style={styles.input}
         placeholder="Date of birth (YYYY-MM-DD)"
         value={fields.dateOfBirth ?? ''}
         onChangeText={(value) => setFields((prev) => ({ ...prev, dateOfBirth: value }))}
+        testID="kyc-dob-input"
       />
-      {errors.dateOfBirth && <Text style={styles.error}>{errors.dateOfBirth}</Text>}
+      {errors.dateOfBirth && <Text style={styles.error} testID="kyc-error-dob">{errors.dateOfBirth}</Text>}
 
       <TextInput
         style={styles.input}
@@ -74,26 +76,29 @@ export function KycFormScreen({ kycClient, onSubmitted }: Props) {
         maxLength={2}
         value={fields.country ?? ''}
         onChangeText={(value) => setFields((prev) => ({ ...prev, country: value.toUpperCase() }))}
+        testID="kyc-country-input"
       />
-      {errors.country && <Text style={styles.error}>{errors.country}</Text>}
+      {errors.country && <Text style={styles.error} testID="kyc-error-country">{errors.country}</Text>}
 
       {permission?.granted ? (
-        <CameraView ref={cameraRef} style={styles.camera} facing="back" />
+        <CameraView ref={cameraRef} style={styles.camera} facing="back" testID="kyc-camera-viewfinder" />
       ) : (
-        <Pressable style={styles.secondaryButton} onPress={requestPermission}>
+        <Pressable style={styles.secondaryButton} onPress={requestPermission} testID="kyc-enable-camera-button">
           <Text style={styles.secondaryButtonText}>Enable camera</Text>
         </Pressable>
       )}
-      <Pressable style={styles.secondaryButton} onPress={captureDocument}>
+      <Pressable style={styles.secondaryButton} onPress={captureDocument} testID="kyc-capture-document-button">
         <Text style={styles.secondaryButtonText}>
           {fields.documentImageBase64 ? 'Document captured ✓' : 'Capture ID document'}
         </Text>
       </Pressable>
-      {errors.documentImageBase64 && <Text style={styles.error}>{errors.documentImageBase64}</Text>}
+      {errors.documentImageBase64 && <Text style={styles.error} testID="kyc-error-document">{errors.documentImageBase64}</Text>}
 
       {submitError && <Text style={styles.error}>{submitError}</Text>}
-      <Pressable style={styles.button} onPress={handleSubmit} disabled={submitting}>
-        {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit</Text>}
+      <Pressable style={styles.button} onPress={handleSubmit} disabled={submitting} testID="kyc-submit-button">
+        {submitting
+          ? <ActivityIndicator color="#fff" testID="kyc-submitting-indicator" />
+          : <Text style={styles.buttonText}>Submit</Text>}
       </Pressable>
     </View>
   );

@@ -1,4 +1,19 @@
 # List of quarantined Maestro flows — one path per line (relative to mobile/).
 # Lines starting with # are comments.
+#
+# Issue #1912: a quarantine with no owner and no return date rots silently.
+# Every active entry must record both, so this file stays current:
+#   <path>    # QUARANTINED <YYYY-MM-DD>, owner: <github-handle>, expires: <YYYY-MM-DD>, issue: #<n> — <one-line reason>
+#
+# When an entry expires, its owner re-triages it into exactly one outcome:
+#   - fix:     the flaky cause (timing, shared state, network) is understood
+#              and fixed; un-quarantine in the same PR.
+#   - rewrite: the flow still matters but needs a different approach; replace
+#              it and un-quarantine.
+#   - delete:  the flow duplicates coverage elsewhere, or tests a feature
+#              that's gone; delete the flow file and this line.
+# An entry is never silently re-dated past its expiry without one of the
+# three outcomes above.
+#
 # Example:
-#   .maestro/flaky_flow.yaml    # QUARANTINED: see issue #123
+#   .maestro/flaky_flow.yaml    # QUARANTINED 2026-10-20, owner: @alice, expires: 2026-11-03, issue: #123 — intermittent timeout waiting for balance refresh

@@ -1,1 +1,5 @@
+#!/usr/bin/env sh
+set -eu
 
+echo "Running stellar-save contract coverage gate (85% minimum)..."
+cargo tarpaulin --config tarpaulin.toml

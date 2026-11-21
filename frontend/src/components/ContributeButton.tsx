@@ -1,9 +1,10 @@
-import { useState } from "react";
-import type { ContributeButtonProps } from "../types/contribution";
-import { ContributionSuccessModal } from "./ContributionSuccessModal";
-import { Dialog } from "./Dialog";
-import { useTransaction, explorerUrl } from "../hooks/useTransaction";
-import { useContract } from "../hooks/useContract";
+import { useState } from 'react';
+import type { ContributeButtonProps } from '../types/contribution';
+import { ContributionSuccessModal } from './ContributionSuccessModal';
+import { Dialog } from './Dialog';
+import { useTransaction, explorerUrl } from '../hooks/useTransaction';
+import { useGroupRepository } from '../lib/GroupRepositoryContext';
+import { logger } from '../lib/logger';
 
 // ── Confirmation Modal ──────────────────────────────────────────────────────
 
@@ -27,8 +28,18 @@ function ConfirmModal({
       describedBy="confirm-contribution-description"
       className="max-w-sm"
     >
-      <h3 id="confirm-contribution-title" className="text-lg font-bold text-gray-900 text-center mb-1">Confirm Contribution</h3>
-      <p id="confirm-contribution-description" className="text-gray-500 text-sm text-center mb-4">Cycle #{cycleId}</p>
+      <h3
+        id="confirm-contribution-title"
+        className="text-lg font-bold text-gray-900 text-center mb-1"
+      >
+        Confirm Contribution
+      </h3>
+      <p
+        id="confirm-contribution-description"
+        className="text-gray-500 text-sm text-center mb-4"
+      >
+        Cycle #{cycleId}
+      </p>
       <div className="bg-gray-50 rounded-xl p-4 mb-5">
         <div className="flex justify-between text-sm">
           <span className="text-gray-500">Amount</span>
@@ -70,22 +81,26 @@ export function ContributeButton({
   disabled = false,
 }: ContributeButtonProps) {
   const { state, txHash, error, execute, reset } = useTransaction();
-  const { contribute } = useContract();
+  const groupRepository = useGroupRepository();
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const isPending = state === "pending";
-  const isDisabled = disabled || isPending || state === "confirmed" || !walletAddress;
+  const isPending = state === 'pending';
+  const isDisabled = disabled || isPending || state === 'confirmed' || !walletAddress;
 
   const handleClick = () => {
-    if (state === "failed") { reset(); return; }
+    if (state === 'failed') {
+      reset();
+      return;
+    }
     setShowConfirm(true);
   };
 
   const handleConfirm = async () => {
     setShowConfirm(false);
     await execute(async () => {
-      const result = await contribute({
+      logger.debug('Submitting contribution', { cycleId, amount });
+      const result = await groupRepository.contribute({
         groupId: BigInt(cycleId),
         amount: BigInt(Math.round(amount * 10_000_000)),
       });
@@ -96,20 +111,26 @@ export function ContributeButton({
 
   // Note: state is read after execute resolves
   const buttonLabel =
-    state === "pending" ? "Processing…" :
-    state === "confirmed" ? "Contributed!" :
-    state === "failed" ? "Try Again" :
-    "Contribute";
+    state === 'pending'
+      ? 'Processing…'
+      : state === 'confirmed'
+        ? 'Contributed!'
+        : state === 'failed'
+          ? 'Try Again'
+          : 'Contribute';
 
   const buttonClass =
-    state === "pending" ? "bg-yellow-500 text-white cursor-wait" :
-    state === "confirmed" ? "bg-green-500 text-white" :
-    state === "failed" ? "bg-red-500 hover:bg-red-600 text-white" :
-    "bg-indigo-600 hover:bg-indigo-700 text-white";
+    state === 'pending'
+      ? 'bg-yellow-500 text-white cursor-wait'
+      : state === 'confirmed'
+        ? 'bg-green-500 text-white'
+        : state === 'failed'
+          ? 'bg-red-500 hover:bg-red-600 text-white'
+          : 'bg-indigo-600 hover:bg-indigo-700 text-white';
 
   // Fire callbacks after state settles
-  if (state === "confirmed" && txHash && !showSuccess) {
-    // handled via showSuccess flag below
+  if (state === 'confirmed' && txHash && !showSuccess) {
+    logger.info('Contribution confirmed', { cycleId });
   }
 
   return (
@@ -124,26 +145,36 @@ export function ContributeButton({
         onClick={handleClick}
         disabled={isDisabled}
         aria-label={
-          state === 'pending' ? 'Processing contribution…' :
-          state === 'confirmed' ? 'Contribution confirmed' :
-          state === 'failed' ? 'Retry contribution' :
-          `Contribute ${amount} XLM for cycle ${cycleId}`
+          state === 'pending'
+            ? 'Processing contribution…'
+            : state === 'confirmed'
+              ? 'Contribution confirmed'
+              : state === 'failed'
+                ? 'Retry contribution'
+                : `Contribute ${amount} XLM for cycle ${cycleId}`
         }
         className={`w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm ${buttonClass}`}
       >
         {isPending && (
           <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
         )}
         {buttonLabel}
-        {state === "idle" && (
+        {state === 'idle' && (
           <span className="ml-1 bg-white/20 px-2 py-0.5 rounded-full text-xs">{amount} XLM</span>
         )}
       </button>
 
-      {state === "confirmed" && txHash && (
+      {state === 'confirmed' && txHash && (
         <div className="mt-3 p-3 rounded-xl border bg-green-50 border-green-200">
           <p className="text-sm font-medium text-green-700">Transaction confirmed! ✓</p>
           <a
@@ -157,10 +188,16 @@ export function ContributeButton({
         </div>
       )}
 
-      {state === "failed" && error && (
+      {state === 'failed' && error && (
         <div className="mt-3 p-3 rounded-xl border bg-red-50 border-red-200 flex items-start justify-between">
           <p className="text-sm font-medium text-red-700">{error}</p>
-          <button onClick={reset} className="text-sm text-red-700 hover:opacity-70 ml-2" aria-label="Dismiss error">✕</button>
+          <button
+            onClick={reset}
+            className="text-sm text-red-700 hover:opacity-70 ml-2"
+            aria-label="Dismiss error"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -181,7 +218,7 @@ export function ContributeButton({
         onClose={() => {
           setShowSuccess(false);
           reset();
-          onSuccess?.(txHash ?? "");
+          onSuccess?.(txHash ?? '');
         }}
       />
     </div>

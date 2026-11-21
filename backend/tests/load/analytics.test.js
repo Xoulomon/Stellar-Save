@@ -8,7 +8,7 @@
  */
 import { check, sleep, group } from 'k6';
 import http from 'k6/http';
-import { Trend, Rate } from 'k6/metrics';
+import { Counter, Trend, Rate } from 'k6/metrics';
 
 import { BASE_URL, loadOptions } from '../../tests/load/config.js';
 
@@ -16,9 +16,16 @@ import { BASE_URL, loadOptions } from '../../tests/load/config.js';
 const statsGroupsDuration = new Trend('stats_groups_duration', true);
 const analyticsUserDuration = new Trend('analytics_user_duration', true);
 const errorRate = new Rate('analytics_errors');
+const analyticsReadOps = new Counter('analytics_read_ops');
 
 // ── Options ───────────────────────────────────────────────────────────────────
-export const options = loadOptions;
+export const options = {
+  ...loadOptions,
+  thresholds: {
+    ...loadOptions.thresholds,
+    analytics_read_ops: ['rate>5'],
+  },
+};
 
 function randomUserId() {
   return `user_${Math.floor(Math.random() * 1000)}`;
@@ -30,6 +37,7 @@ export default function () {
 
   group('platform-wide group stats', () => {
     const res = http.get(`${BASE_URL}/api/v1/stats/groups`);
+    analyticsReadOps.add(1);
     statsGroupsDuration.add(res.timings.duration);
     const ok = check(res, {
       'stats/groups status 200': (r) => r.status === 200,
@@ -44,6 +52,7 @@ export default function () {
 
   group('user analytics', () => {
     const res = http.get(`${BASE_URL}/api/v1/analytics/${userId}`);
+    analyticsReadOps.add(1);
     analyticsUserDuration.add(res.timings.duration);
     const ok = check(res, {
       'analytics status 200 or 404': (r) => r.status === 200 || r.status === 404,
@@ -54,19 +63,13 @@ export default function () {
   sleep(0.5);
 
   group('group analytics', () => {
-    // First get a group ID
-    const listRes = http.get(`${BASE_URL}/api/v1/groups`);
-    if (listRes.status === 200) {
-      const groups = listRes.json();
-      if (groups.length > 0) {
-        const groupId = groups[0].id;
-        const res = http.get(`${BASE_URL}/api/v1/analytics/groups/${groupId}`);
-        const ok = check(res, {
-          'group analytics status 200': (r) => r.status === 200 || r.status === 404,
-        });
-        errorRate.add(!ok);
-      }
-    }
+    const groupId = Math.floor(Math.random() * 1000);
+    const res = http.get(`${BASE_URL}/api/v1/analytics/groups/${groupId}`);
+    analyticsReadOps.add(1);
+    const ok = check(res, {
+      'group analytics status 200 or 404': (r) => r.status === 200 || r.status === 404,
+    });
+    errorRate.add(!ok);
   });
 
   sleep(1);

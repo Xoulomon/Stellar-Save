@@ -1,7 +1,7 @@
-
 import { logger } from '../../logger';
 import { WarehouseExportPipeline } from '../../warehouse_export';
 
+import type { WarehouseExportResult } from '../../warehouse_export';
 import type { S3Client } from '@aws-sdk/client-s3';
 
 export class WarehouseHandler {
@@ -15,7 +15,7 @@ export class WarehouseHandler {
     });
   }
 
-  async execute(): Promise<any> {
+  async execute(): Promise<WarehouseExportResult> {
     try {
       const result = await this.pipeline.run();
       logger.info('[warehouse] Export completed', result);

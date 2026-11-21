@@ -23,6 +23,7 @@
  *   ✗ Mobile Capacitor deep-link approval
  *   ✗ iOS / Android build-specific flows
  */
+/* eslint-disable @typescript-eslint/no-explicit-any -- page.addInitScript callbacks run in browser context; window property injection requires `any` to bypass TypeScript's strict Window type */
 import { test, expect } from '@playwright/test';
 
 import type { Page } from '@playwright/test';
@@ -168,7 +169,7 @@ async function injectBrokenMock(page: Page): Promise<void> {
 // Mirrors "Connect flow" section in docs/manual-wallet-testing.md.
 // Hardware-extension variants remain manual; the mock-based path is automated.
 
-test.describe('AUTOMATED – Connect flow (mock wallet)', () => {
+test.describe('@smoke AUTOMATED – Connect flow (mock wallet)', () => {
   test('mock wallet: connected address appears truncated in the header', async ({ page }) => {
     await injectAutoApproveMock(page);
     await page.goto('/');
@@ -223,7 +224,7 @@ test.describe('AUTOMATED – Connect flow (mock wallet)', () => {
 // ─── Reject flow ──────────────────────────────────────────────────────────────
 // Mirrors "Reject flow" in the manual checklist.
 
-test.describe('AUTOMATED – Reject flow (mock wallet)', () => {
+test.describe('@journey AUTOMATED – Reject flow (mock wallet)', () => {
   test('after connect rejection, button is not stuck in connecting state', async ({ page }) => {
     await injectRejectingMock(page);
     await page.goto('/');
@@ -269,7 +270,7 @@ test.describe('AUTOMATED – Reject flow (mock wallet)', () => {
 // ─── Disconnect flow ──────────────────────────────────────────────────────────
 // Mirrors "Disconnect flow" in the manual checklist.
 
-test.describe('AUTOMATED – Disconnect flow', () => {
+test.describe('@journey AUTOMATED – Disconnect flow', () => {
   test('after disconnect, localStorage wallet keys are cleared', async ({ page }) => {
     // Pre-seed localStorage to simulate a previously connected session
     await page.goto('/');
@@ -346,7 +347,7 @@ test.describe('AUTOMATED – Disconnect flow', () => {
 // ─── Session restore ──────────────────────────────────────────────────────────
 // Mirrors "Session restore" in the manual checklist.
 
-test.describe('AUTOMATED – Session restore', () => {
+test.describe('@journey AUTOMATED – Session restore', () => {
   test('pre-seeded localStorage: address is shown on load without re-prompting', async ({ page }) => {
     // Plant the keys before the page loads so WalletProvider can hydrate
     await page.goto('/');
@@ -382,7 +383,7 @@ test.describe('AUTOMATED – Session restore', () => {
 // The real-wallet steps (Freighter → Mainnet, Albedo wrong passphrase) remain
 // manual; this test exercises the same guard via an injected mock.
 
-test.describe('AUTOMATED – Network mismatch', () => {
+test.describe('@journey AUTOMATED – Network mismatch', () => {
   test('wrong-network mock: app shows an error or does not proceed', async ({ page }) => {
     await injectWrongNetworkMock(page);
     await page.goto('/');
@@ -420,7 +421,7 @@ test.describe('AUTOMATED – Network mismatch', () => {
 // This test injects a broken wallet mock (connect hangs forever) and asserts
 // the test suite correctly identifies that the connect flow did NOT complete.
 
-test.describe('AUTOMATED – Deliberate-break test (confirms detection)', () => {
+test.describe('@journey AUTOMATED – Deliberate-break test (confirms detection)', () => {
   test('broken connect mock: address never appears within timeout', async ({ page }) => {
     await injectBrokenMock(page);
     await page.goto('/');

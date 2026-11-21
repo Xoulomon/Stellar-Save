@@ -19,6 +19,13 @@ import {
   xdr,
 } from '@stellar/stellar-sdk';
 import { loadSecretKey } from '../wallet/secureStore';
+import { MAESTRO_TEST_MODE } from '../lib/maestroTestMode';
+import {
+  createMaestroGroup,
+  getMaestroGroup,
+  joinMaestroGroup,
+  listMaestroGroups,
+} from './maestroFixtures';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -137,6 +144,7 @@ async function signAndSubmit(
  * CONTRACT_ID is set.
  */
 export async function listGroups(): Promise<Group[]> {
+  if (MAESTRO_TEST_MODE) return listMaestroGroups();
   if (!CONTRACT_ID) {
     // Return an empty list when no contract is configured (test / CI environments).
     return [];
@@ -146,6 +154,7 @@ export async function listGroups(): Promise<Group[]> {
 }
 
 export async function getGroup(groupId: string): Promise<Group | null> {
+  if (MAESTRO_TEST_MODE) return getMaestroGroup(groupId);
   if (!CONTRACT_ID) return null;
   // TODO: replace with SorobanRPC contract.call('get_group', groupId)
   throw new ContractError(null, 'getGroup requires a configured CONTRACT_ID');
@@ -153,6 +162,7 @@ export async function getGroup(groupId: string): Promise<Group | null> {
 
 /** Create a new savings group on-chain. Returns the new group ID. */
 export async function createGroup(params: CreateGroupParams): Promise<string> {
+  if (MAESTRO_TEST_MODE) return createMaestroGroup(params);
   try {
     const kp = await getKeypair();
     // Build a manage-data operation as a placeholder for the Soroban invoke.
@@ -175,6 +185,10 @@ export async function createGroup(params: CreateGroupParams): Promise<string> {
 
 /** Join an existing savings group. */
 export async function joinGroup(params: JoinGroupParams): Promise<string> {
+  if (MAESTRO_TEST_MODE) {
+    joinMaestroGroup(String(params.groupId));
+    return `maestro-join-${params.groupId}`;
+  }
   try {
     const kp = await getKeypair();
     const op = Operation.manageData({
@@ -189,6 +203,7 @@ export async function joinGroup(params: JoinGroupParams): Promise<string> {
 
 /** Fetch the native XLM balance for a public key from Horizon. */
 export async function getXlmBalance(publicKey: string): Promise<string> {
+  if (MAESTRO_TEST_MODE) return '10000.0000000';
   try {
     const account = await horizon.loadAccount(publicKey);
     const native = account.balances.find((b) => b.asset_type === 'native');

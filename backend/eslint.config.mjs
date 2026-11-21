@@ -14,6 +14,18 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist', 'coverage', 'src/generated/**'],
+    // Test mocks often use mock implementations and stubs
+    files: [
+      '**/*.test.{ts,tsx,js,mjs,cjs}',
+      '**/*.spec.{ts,tsx,js,mjs,cjs}',
+      '**/test/**',
+      '**/tests/**',
+    ],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
   },
+  {
+    ignores: ['src/generated/**'],
+  }
 );

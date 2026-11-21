@@ -27,3 +27,19 @@ Thumbs.db
 
 # Test snapshots (optional - uncomment if you don't want to commit these)
 # **/test_snapshots/
+
+# Package manager: pnpm only — pnpm-lock.yaml is the single root lockfile (#1935)
+/package-lock.json
+/yarn.lock
+
+# Generated artifacts — never commit (#1936)
+coverage/
+*.tsbuildinfo
+*.log
+logs/
+.turbo/
+*.rcgu.o
+
+# Drill reports live in docs/releases/ only (#1937)
+/ssl_drill_report.json
+/tests/failover-results.json

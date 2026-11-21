@@ -7,6 +7,9 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      '@': path.resolve(__dirname, 'src'),
+      // Shared utilities package alias — mirrors vite.config.ts
+      '@shared-utils': path.resolve(__dirname, '../packages/shared-utils/src'),
       '@creit.tech/stellar-wallets-kit/modules/freighter': path.resolve(
         __dirname,
         'node_modules/@creit.tech/stellar-wallets-kit/esm/sdk/modules/freighter.module.js',
@@ -25,6 +28,10 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    // Every `*.spec.ts` in this package belongs to Playwright, not Vitest.
+    // Without this, Vitest's default glob collects them and the suite fails
+    // trying to import `@playwright/test` outside a Playwright runner.
+    exclude: ['**/node_modules/**', '**/dist/**', '**/*.spec.ts', '**/*.spec.tsx'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'cobertura', 'json-summary'],

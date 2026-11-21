@@ -212,7 +212,7 @@ async function main(): Promise<void> {
 
   let groupId: bigint = 0n;
 
-  await test('create_group submits and confirms on-chain', async () => {
+  await test('@testnet create_group submits and confirms on-chain', async () => {
     const totalBefore = await readContract<bigint>(contract.call('get_total_groups_created'));
 
     await submitTx(
@@ -235,7 +235,7 @@ async function main(): Promise<void> {
     groupId = totalAfter;
   });
 
-  await test('get_group returns correct group data after creation', async () => {
+  await test('@testnet get_group returns correct group data after creation', async () => {
     const group = await readContract<Record<string, unknown>>(
       contract.call('get_group', nativeToScVal(groupId, { type: 'u64' }))
     );
@@ -248,7 +248,7 @@ async function main(): Promise<void> {
     );
   });
 
-  await test('creator is automatically a member after create_group', async () => {
+  await test('@testnet creator is automatically a member after create_group', async () => {
     const memberCount = await readContract<number>(
       contract.call('get_member_count', nativeToScVal(groupId, { type: 'u64' }))
     );
@@ -260,7 +260,7 @@ async function main(): Promise<void> {
 
   let multiGroupId: bigint = 0n;
 
-  await test('Wallet A creates a new group for multi-user test', async () => {
+  await test('@testnet Wallet A creates a new group for multi-user test', async () => {
     const totalBefore = await readContract<bigint>(contract.call('get_total_groups_created'));
 
     await submitTx(
@@ -279,7 +279,7 @@ async function main(): Promise<void> {
     multiGroupId = totalAfter;
   });
 
-  await test('Wallet B joins the group', async () => {
+  await test('@testnet Wallet B joins the group', async () => {
     const membersBefore = await readContract<number>(
       contract.call('get_member_count', nativeToScVal(multiGroupId, { type: 'u64' }))
     );
@@ -302,7 +302,7 @@ async function main(): Promise<void> {
     );
   });
 
-  await test('on-chain member count reflects both users', async () => {
+  await test('@testnet on-chain member count reflects both users', async () => {
     const memberCount = await readContract<number>(
       contract.call('get_member_count', nativeToScVal(multiGroupId, { type: 'u64' }))
     );
@@ -312,7 +312,7 @@ async function main(): Promise<void> {
   // ── Suite 3: Error scenarios ──────────────────────────────────────────────
   console.log('\n📋 Suite 3: Error scenarios');
 
-  await test('joining a group twice returns AlreadyMember error (code 2001)', async () => {
+  await test('@testnet joining a group twice returns AlreadyMember error (code 2001)', async () => {
     let threw = false;
     try {
       await submitTx(
@@ -338,7 +338,7 @@ async function main(): Promise<void> {
     assert(threw, 'expected an error when joining twice');
   });
 
-  await test('joining a full group returns GroupFull error (code 1002)', async () => {
+  await test('@testnet joining a full group returns GroupFull error (code 1002)', async () => {
     // Create a group with max_members = 1 (only creator, immediately full)
     const totalBefore = await readContract<bigint>(contract.call('get_total_groups_created'));
 

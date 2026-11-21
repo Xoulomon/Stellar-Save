@@ -9,7 +9,27 @@ import { logger, errFields, winstonLogger } from '../lib/logger';
  * so assertions don't depend on the timing of the Console transport's stdout
  * writes (which can be flushed after the test body returns).
  */
-function capture(fn: () => void): any[] {
+interface CapturedEntry {
+  level?: string;
+  message?: string;
+  service?: string;
+  userId?: string;
+  count?: number;
+  error?: string;
+  stack?: string;
+  detail?: unknown[];
+  secret?: string;
+  authorization?: string;
+  password?: string;
+  wallet?: {
+    address?: string;
+    secretKey?: string;
+    seed?: string;
+  };
+  [key: string]: unknown;
+}
+
+function capture(fn: () => void): CapturedEntry[] {
   const chunks: string[] = [];
   const sink = new Writable({
     write(chunk, _enc, cb) {
@@ -58,7 +78,9 @@ describe('structured logger', () => {
   });
 
   it('carries the service metadata on the logger instance', () => {
-    expect((winstonLogger as any).defaultMeta).toEqual({ service: 'stellar-save-backend' });
+    expect(
+      (winstonLogger as unknown as { defaultMeta: Record<string, unknown> }).defaultMeta
+    ).toEqual({ service: 'stellar-save-backend' });
   });
 
   it('merges a fields object into the log entry (structured form)', () => {
@@ -91,5 +113,37 @@ describe('structured logger', () => {
       expect(typeof logger[m]).toBe('function');
     }
     expect(winstonLogger.transports.length).toBeGreaterThanOrEqual(2);
+  });
+
+  describe('sensitive data redaction', () => {
+    it('redacts sensitive keys such as secret and authorization', () => {
+      const [entry] = capture(() =>
+        logger.info('user authentication', {
+          userId: 'u1',
+          secret: 'super-secret-key-value',
+          authorization: 'Bearer eyJhbGciOi...',
+          password: 'my-plaintext-password',
+        })
+      );
+      expect(entry.secret).toBe('[REDACTED]');
+      expect(entry.authorization).toBe('[REDACTED]');
+      expect(entry.password).toBe('[REDACTED]');
+      expect(entry.userId).toBe('u1');
+    });
+
+    it('redacts nested keys within wallet payloads', () => {
+      const [entry] = capture(() =>
+        logger.info('wallet transaction submit', {
+          wallet: {
+            address: 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFTGXDTVWNXRW24DC4TOW',
+            secretKey: 'SCVG...SECRET',
+            seed: 'sample-seed-phrase',
+          },
+        })
+      );
+      expect(entry.wallet.secretKey).toBe('[REDACTED]');
+      expect(entry.wallet.seed).toBe('[REDACTED]');
+      expect(entry.wallet.address).toBe('GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFTGXDTVWNXRW24DC4TOW');
+    });
   });
 });

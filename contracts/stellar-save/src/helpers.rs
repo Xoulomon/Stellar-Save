@@ -26,6 +26,7 @@ pub fn validate_group_string(s: &String, max_bytes: u32) -> Result<(), StellarSa
     // Convert to Bytes and scan for null bytes (0x00)
     let bytes = s.to_bytes();
     for i in 0..bytes.len() {
+        // INVARIANT: i < bytes.len() guaranteed by loop bounds; get() is infallible here
         if bytes.get(i).unwrap() == 0x00 {
             return Err(StellarSaveError::InvalidMetadata);
         }

@@ -5,12 +5,15 @@
   "main": "generated/events.ts",
   "scripts": {
     "codegen": "node codegen.js",
-    "check-drift": "node check-drift.js"
+    "check-drift": "node check-drift.js",
+    "check-rust-drift": "node check-rust-drift.js",
+    "lint": "eslint ."
   },
   "files": [
     "schema.json",
     "generated/",
     "codegen.js",
-    "check-drift.js"
+    "check-drift.js",
+    "check-rust-drift.js"
   ]
 }

@@ -2,4 +2,4 @@ packages:
   - "packages/*"
   - "frontend"
   - "backend"
-  - "mobile"
+  # mobile/ was archived to docs/archive/mobile-expo-rn/ — see docs/adr/ADR-006-mobile-app-ownership.md

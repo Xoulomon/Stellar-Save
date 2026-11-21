@@ -113,6 +113,21 @@ mod property_tests {
         }
     }
 
+    /// Seeded boundary: i128::MAX contribution × 2 members must overflow.
+    ///
+    /// This deterministic regression guards the exact overflow boundary that
+    /// proptest's random generator is unlikely to hit.  Previously asserted in
+    /// mutation_tests.rs (test_pool_overflow_returns_internal_error); moved here
+    /// so all pool-size invariants live in one place.
+    #[test]
+    fn pool_size_overflow_at_i128_max_is_detected() {
+        use crate::pool::PoolCalculator;
+        use crate::error::StellarSaveError;
+        let result = PoolCalculator::calculate_total_pool(i128::MAX, 2);
+        assert_eq!(result, Err(StellarSaveError::InternalError),
+            "i128::MAX × 2 must return InternalError (overflow detected)");
+    }
+
     // ── Cycle number properties ───────────────────────────────────────────────
 
     proptest! {
@@ -126,18 +141,10 @@ mod property_tests {
             prop_assert!(cycle_b > cycle_a);
         }
 
-        /// A contribution's cycle number is preserved through record creation.
-        #[test]
-        fn prop_contribution_cycle_round_trip(
-            cycle in any_cycle(),
-            amount in positive_amount(),
-            gid in any_group_id(),
-        ) {
-            let env = Env::default();
-            let addr = Address::generate(&env);
-            let rec = ContributionRecord::new(addr, gid, cycle, amount, 0);
-            prop_assert_eq!(rec.cycle_number, cycle);
-        }
+        // prop_contribution_cycle_round_trip removed: it verified only that
+        // ContributionRecord preserves the cycle field, which is a strict subset
+        // of fuzz_tests::prop_contribution_amount_stored_exactly, which verifies
+        // amount, cycle_number, and group_id all in one property.
     }
 
     // ── Group member count bounds ─────────────────────────────────────────────

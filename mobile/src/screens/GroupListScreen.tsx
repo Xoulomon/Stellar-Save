@@ -50,6 +50,7 @@ function GroupCard({ group, onPress }: { group: Group; onPress: () => void }) {
 
   return (
     <TouchableOpacity
+      testID={`group-card-${group.id}`}
       style={styles.card}
       onPress={onPress}
       accessibilityRole="button"
@@ -103,6 +104,7 @@ export function GroupListScreen() {
 
   return (
     <FlatList
+      testID="groups-screen"
       style={styles.list}
       data={groups}
       keyExtractor={(g) => g.id}

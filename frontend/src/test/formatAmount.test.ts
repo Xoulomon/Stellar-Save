@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-
-import { formatAmount } from '../utils/formatAmount';
+import { formatAmount } from '@shared-utils/formatting';
 
 describe('formatAmount', () => {
   it('formats a whole number with XLM symbol', () => {

@@ -1,5 +1,6 @@
 import { AnalyticsHandler } from './analytics.handler';
 import { AnalyticsService } from '../../analytics_service';
+import { createPrismaMock } from '../../../tests/helpers/prismaMock';
 
 jest.mock('../../analytics_service');
 
@@ -8,7 +9,7 @@ describe('AnalyticsHandler', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockDb = {};
+    mockDb = createPrismaMock();
   });
 
   it('should execute analytics resync with default lookback', async () => {

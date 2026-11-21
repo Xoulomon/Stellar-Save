@@ -1,0 +1,12 @@
+[
+  {
+    "timestamp": "2026-10-19T05:07:48.667439Z",
+    "sha": "b472c4f5",
+    "size_bytes": 97926,
+    "size_kb": 96,
+    "limit_kb": 100,
+    "used_pct": 95.6,
+    "status": "WARN",
+    "delta_bytes": 0
+  }
+]

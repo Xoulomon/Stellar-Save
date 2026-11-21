@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
-import { jwtAuthMiddleware } from '../auth_middleware';
 import { AppError } from '../lib/errors';
+import { jwtAuthMiddleware } from '../modules/auth/auth_middleware';
 import { getQuotaUsage, getTierConfig, getConfiguredTiers } from '../redis_rate_limiter';
 
 import type { Request, Response, NextFunction } from 'express';
@@ -13,7 +13,11 @@ export function createQuotaReporterRouter(): Router {
     '/usage',
     jwtAuthMiddleware,
     async (req: Request, res: Response, next: NextFunction) => {
-      const r = req as any;
+      const r = req as Request & {
+        userId?: string;
+        user?: { id?: string };
+        apiKey?: { tier?: string };
+      };
       const userId = r.userId || r.user?.id;
 
       if (!userId) {
@@ -34,7 +38,7 @@ export function createQuotaReporterRouter(): Router {
 
   router.get('/tiers', jwtAuthMiddleware, async (_req: Request, res: Response) => {
     const tiers = getConfiguredTiers();
-    const configs: Record<string, any> = {};
+    const configs: Record<string, Array<{ window: string; windowMs: number; max: number }>> = {};
     for (const tier of tiers) {
       const cfg = getTierConfig(tier);
       if (cfg) {

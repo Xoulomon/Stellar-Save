@@ -1,7 +1,8 @@
-import { paginateResults } from './shared';
-import { mockGroups, mockMembers, mockTransactions } from '../../mock_data';
+import { paginateArray } from '@app/backend/lib/pagination';
+import { mockGroups, mockMembers, mockTransactions } from '@app/backend/mock_data';
 
-import type { Transaction } from '../../models';
+import type { OffsetParams } from '@app/backend/lib/pagination';
+import type { Transaction } from '@app/backend/models';
 
 export const transactionResolvers = {
   Query: {
@@ -12,7 +13,13 @@ export const transactionResolvers = {
       const filtered = groupId
         ? mockTransactions.filter((t) => t.groupId === groupId)
         : mockTransactions;
-      return paginateResults(filtered, limit, offset);
+
+      const params: OffsetParams = {
+        limit: Math.min(100, Math.max(1, limit ?? 20)),
+        offset: Math.max(0, offset ?? 0),
+      };
+
+      return paginateArray(filtered, params);
     },
     transaction: (_: unknown, { id }: { id: string }) =>
       mockTransactions.find((t) => t.id === id) ?? null,

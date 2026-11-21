@@ -79,8 +79,7 @@ pub fn execute_dissolution(
             continue;
         }
 
-        token_client.transfer(&env.current_contract_address(), &member, &refund_amount);
-
+        // Checks-effects-interactions: persist refund record before external transfer
         let refund_record = crate::refund::RefundRecord {
             group_id,
             member: member.clone(),
@@ -89,6 +88,8 @@ pub fn execute_dissolution(
             refunded_at: now,
         };
         env.storage().persistent().set(&refund_key, &refund_record);
+
+        token_client.transfer(&env.current_contract_address(), &member, &refund_amount);
 
         EventEmitter::emit_refund_issued(env, group_id, member, refund_amount, current_cycle, now);
 

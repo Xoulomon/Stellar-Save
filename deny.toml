@@ -1,3 +1,7 @@
+# deny.toml — cargo-deny configuration for Rust dependency license and advisory checks.
+# Read by `cargo deny check` and the dependency-scan.yml CI workflow.
+# Enforces license allowlist (MIT/Apache-2.0/BSD etc.) and RustSec advisory policy.
+
 # cargo-deny configuration
 # Policy: allow permissive OSS licenses; deny copyleft and proprietary.
 # To add an exception, add the crate name to the relevant [[licenses.exceptions]] entry.
@@ -19,17 +23,8 @@ allow = [
   "Zlib",
   "BSL-1.0",  # Boost Software License
 ]
-
-deny = [
-  "GPL-2.0",
-  "GPL-3.0",
-  "LGPL-2.0",
-  "LGPL-2.1",
-  "LGPL-3.0",
-  "AGPL-3.0",
-  "SSPL-1.0",
-  "Commons-Clause",
-]
+# Any license not in `allow` (GPL, LGPL, AGPL, SSPL, proprietary, ...) is rejected.
+# The explicit `deny` list was removed from cargo-deny (EmbarkStudios/cargo-deny#611).
 
 # Crates whose licenses are checked but whose specific license is known and accepted
 exceptions = []
@@ -43,5 +38,17 @@ deny = []
 # Point to the RustSec advisory database.
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
-# Fail on any unmaintained or vulnerable crate.
-ignore = []
+# Every vulnerable, unmaintained, unsound or yanked crate fails the check unless
+# listed below. Each exception must name the advisory, explain why it cannot be
+# fixed yet, and be removed as soon as an upstream fix lands.
+# Last audited: 2026-09-25 (issue #1755) — run `cargo deny check advisories`.
+ignore = [
+  # `derivative` is unmaintained (informational, no known vulnerability).
+  # Pulled in only as a proc-macro via soroban-sdk -> soroban-env-host ->
+  # ark-bls12-381/ark-ec/ark-ff 0.4. No safe upgrade exists: arkworks dropped it
+  # in 0.5, but soroban-env-host 23.x still pins arkworks 0.4.
+  { id = "RUSTSEC-2024-0388", reason = "transitive via soroban-env-host (arkworks 0.4); no upgrade path until soroban-sdk moves to arkworks 0.5" },
+  # `paste` is unmaintained (informational, no known vulnerability).
+  # Same path as above: proc-macro dependency of ark-ff 0.4 via soroban-env-host.
+  { id = "RUSTSEC-2024-0436", reason = "transitive via soroban-env-host (arkworks 0.4); no upgrade path until soroban-sdk moves to arkworks 0.5" },
+]

@@ -1,17 +1,3 @@
-export {
-  truncateAddress,
-  formatDate,
-  formatRelativeTime,
-  formatCurrency,
-  formatNumber,
-  formatPercent,
-} from './formatting';
-
-export {
-  STELLAR_ADDRESS_REGEX,
-  isValidStellarAddress,
-  isValidEmail,
-  clampLimit,
-  clampOffset,
-  isPositiveNumber,
-} from './validation';
+// Public API of @stellar-save/shared-utils. Only add an export here once
+// something outside this package consumes it — see CHANGELOG.md.
+export { withRetry, type RetryOptions } from './retry';

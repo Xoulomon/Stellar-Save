@@ -61,11 +61,11 @@ export function OnboardingTutorial({ forceShow = false, onComplete }: Onboarding
   const current = STEPS[step];
   const showTutorial = !((completed && !forceShow) || !visible);
 
-  function finish() {
+  const finish = useCallback(() => {
     setCompleted(true);
     setVisible(false);
     onComplete?.();
-  }
+  }, [setCompleted, onComplete]);
 
   const handleNext = () => {
     if (isLast) {
@@ -85,8 +85,7 @@ export function OnboardingTutorial({ forceShow = false, onComplete }: Onboarding
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') finish();
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [finish]
   );
 
   // Trap Tab/Shift+Tab within the dialog while visible and restore focus to

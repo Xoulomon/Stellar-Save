@@ -1,0 +1,6 @@
+# Load Test Results
+
+This directory holds JSON summary artifacts produced by k6's `handleSummary` hook.
+
+Files are gitignored (see `.gitignore`) and are only kept locally or as CI artifacts.
+Do not commit raw result files — add baselines to `tests/load/README.md` instead.

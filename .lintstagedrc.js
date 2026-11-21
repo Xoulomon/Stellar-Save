@@ -1,25 +1,14 @@
+// lint-staged runs from the repo root, so resolve each file's config from its
+// own directory (frontend/, backend/, mobile/, packages/* or the root
+// eslint.config.mjs)
+// instead of only looking in the cwd. Files outside every config's scope are
+// skipped silently rather than failing --max-warnings 0.
+const eslint = 'eslint --flag v10_config_lookup_from_file --no-warn-ignored --max-warnings 0';
+
 module.exports = {
   // TypeScript and JavaScript files: lint + format check
-  'frontend/**/*.{ts,tsx,js,jsx,mjs,cjs}': [
-    'eslint --config frontend/eslint.config.js --max-warnings 0',
-    'prettier --check',
-  ],
-  'backend/**/*.{ts,tsx,js,jsx,mjs,cjs}': [
-    'eslint --config backend/eslint.config.mjs --max-warnings 0',
-    'prettier --check',
-  ],
-  'mobile/**/*.{ts,tsx,js,jsx,mjs,cjs}': [
-    'eslint --config mobile/eslint.config.js --max-warnings 0',
-    'prettier --check',
-  ],
-  'packages/**/*.{ts,tsx}': [
-    'eslint --config eslint.config.base.js --max-warnings 0',
-    'prettier --check',
-  ],
-  '*.{js,jsx,mjs,cjs}': [
-    'eslint --config eslint.config.base.js --global module --max-warnings 0',
-    'prettier --check',
-  ],
+  '*.{ts,tsx}': [eslint, 'prettier --check'],
+  '*.{js,jsx,mjs,cjs}': [eslint, 'prettier --check'],
 
   // CSS files (frontend): stylelint
   'frontend/**/*.css': ['stylelint'],

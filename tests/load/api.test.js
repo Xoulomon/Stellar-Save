@@ -11,21 +11,29 @@
  */
 import http from 'k6/http';
 import { check, sleep, group } from 'k6';
-import { Trend, Rate } from 'k6/metrics';
+import { Counter, Trend, Rate } from 'k6/metrics';
 import { BASE_URL, loadOptions, smokeOptions, stressOptions } from './config.js';
 
 // ── Custom metrics ────────────────────────────────────────────────────────────
 const recommendationDuration = new Trend('recommendation_duration', true);
 const searchDuration = new Trend('search_duration', true);
 const errorRate = new Rate('api_errors');
+const apiRequestOps = new Counter('api_request_ops');
 
 // ── Options ───────────────────────────────────────────────────────────────────
 const SCENARIO = __ENV.SCENARIO || 'load';
-export const options = SCENARIO === 'smoke'
+const profileOptions = SCENARIO === 'smoke'
   ? smokeOptions
   : SCENARIO === 'stress'
     ? stressOptions
     : loadOptions;
+export const options = {
+  ...profileOptions,
+  thresholds: {
+    ...profileOptions.thresholds,
+    ...(SCENARIO === 'smoke' ? {} : { api_request_ops: ['rate>25'] }),
+  },
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const HEADERS = { 'Content-Type': 'application/json' };
@@ -40,6 +48,7 @@ export default function () {
 
   group('health check', () => {
     const res = http.get(`${BASE_URL}/api/v1/health`);
+    apiRequestOps.add(1);
     const ok = check(res, {
       'health status 200': (r) => r.status === 200,
       'health body ok': (r) => r.json('status') === 'ok',
@@ -51,6 +60,7 @@ export default function () {
 
   group('recommendations', () => {
     const res = http.get(`${BASE_URL}/api/v1/recommendations/${userId}`);
+    apiRequestOps.add(1);
     recommendationDuration.add(res.timings.duration);
     const ok = check(res, {
       'recommendations status 200': (r) => r.status === 200,
@@ -65,6 +75,7 @@ export default function () {
     const queries = ['savings', 'group', 'stellar', 'rosca', 'contribution'];
     const q = queries[Math.floor(Math.random() * queries.length)];
     const res = http.get(`${BASE_URL}/api/v1/search?q=${q}`);
+    apiRequestOps.add(1);
     searchDuration.add(res.timings.duration);
     const ok = check(res, {
       'search status 200': (r) => r.status === 200,
@@ -82,9 +93,33 @@ export default function () {
       preferredGroupSize: 10,
     });
     const res = http.post(`${BASE_URL}/api/v1/preferences`, payload, { headers: HEADERS });
+    apiRequestOps.add(1);
     const ok = check(res, {
       'preferences status 200': (r) => r.status === 200,
     });
+    errorRate.add(!ok);
+  });
+
+  if (Math.random() < 0.1) {
+    group('request export', () => {
+      const payload = JSON.stringify({
+        userId,
+        email: `${userId}@example.com`,
+        format: Math.random() > 0.5 ? 'CSV' : 'JSON',
+      });
+      const res = http.post(`${BASE_URL}/api/v1/export`, payload, { headers: HEADERS });
+      apiRequestOps.add(1);
+      const ok = check(res, {
+        'export accepted or validated': (r) => r.status === 202 || r.status === 400,
+      });
+      errorRate.add(!ok);
+    });
+  }
+
+  group('metrics', () => {
+    const res = http.get(`${BASE_URL}/metrics`);
+    apiRequestOps.add(1);
+    const ok = check(res, { 'metrics status 200': (r) => r.status === 200 });
     errorRate.add(!ok);
   });
 

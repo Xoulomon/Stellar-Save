@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   Dialog,
@@ -15,12 +14,15 @@ import { Button } from './Button';
 import { useContract } from '../hooks/useContract';
 import { useTransaction, explorerUrl } from '../hooks/useTransaction';
 import { useWallet } from '../hooks/useWallet';
+import { VALIDATION_CONSTANTS } from '../schemas/groupSchema';
 
 import type { GroupDetail } from '../types/group';
 
-const NAME_MIN = 3;
-const NAME_MAX = 50;
-const DESC_MAX = 500;
+// Limits come from the shared schema rather than local copies, so this form and
+// the contract-level validation cannot drift apart.
+const NAME_MIN = VALIDATION_CONSTANTS.GROUP_NAME_MIN;
+const NAME_MAX = VALIDATION_CONSTANTS.GROUP_NAME_MAX;
+const DESC_MAX = VALIDATION_CONSTANTS.GROUP_DESCRIPTION_MAX;
 
 interface GroupSettingsProps {
   group: GroupDetail;

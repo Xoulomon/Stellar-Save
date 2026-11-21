@@ -6,12 +6,12 @@ interface Props {
 
 export function WelcomeScreen({ onContinue }: Props) {
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="welcome-screen">
       <Text style={styles.title}>Welcome to Stellar Save</Text>
       <Text style={styles.body}>
         Let&apos;s set up your wallet and verify your identity so you can start saving.
       </Text>
-      <Pressable style={styles.button} onPress={onContinue}>
+      <Pressable style={styles.button} onPress={onContinue} testID="get-started-button">
         <Text style={styles.buttonText}>Get started</Text>
       </Pressable>
     </View>

@@ -2,13 +2,21 @@ declare module 'jest-axe' {
   import type { ReactElement } from 'react';
 
   interface AxeNode {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [key: string]: any;
+    html?: string;
+    target?: string[];
+    failureSummary?: string;
+    [key: string]: unknown;
   }
 
   interface AxeResult {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [key: string]: any;
+    id?: string;
+    impact?: string;
+    tags?: string[];
+    description?: string;
+    help?: string;
+    helpUrl?: string;
+    nodes?: AxeNode[];
+    [key: string]: unknown;
   }
 
   export interface AxeResults {

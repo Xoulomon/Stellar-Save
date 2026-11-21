@@ -17,7 +17,38 @@ stellar-save-common = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
+proptest = { version = "1.4.0", default-features = false, features = ["std"] }
 
 [features]
 # Enable coverage instrumentation (used by cargo-tarpaulin / cargo-llvm-cov)
 coverage = []
+
+# Unfinished / not-yet-wired features — excluded from production builds by default.
+#
+# Tracking notes:
+#   group-templates  — list_templates / get_template / create_group_from_template are
+#                      implemented and tested but no #[contractimpl] entry-point in
+#                      contract.rs calls them.  Wire them when the frontend template-
+#                      picker flow is ready (see docs/group-templates.md).
+#                      GitHub tracking: add "Templates API" entry-points to contract.rs
+#                      before enabling this feature in the release profile.
+#
+#   clone-group      — clone_group / CloneOverrides are implemented and tested but
+#                      not exposed through any contract entry-point.  Wire them when
+#                      the clone-group UX is ready (see docs/admin-actions.md §clone).
+#                      GitHub tracking: add "CloneGroup" entry-point to contract.rs
+#                      before enabling this feature in the release profile.
+#
+#   zk               — Ed25519-based contribution-proof verification (Phase 1 of the
+#                      ZK subsystem documented in zk/CIRCUIT_AUDIT.md and
+#                      docs/zk-verification.md). Excluded from production builds until
+#                      the circuit audit closes (issue #1327). When enabled:
+#                        • zk_proof.rs and its verify_contribution_proof call site in
+#                          contract.rs are compiled in.
+#                        • zk_tests.rs and zk_integration_tests.rs are compiled and run.
+#                        • ed25519-dalek dev-dependency becomes available.
+#                      To run the ZK test suite:
+#                        cargo test -p stellar-save --features zk
+group-templates = []
+clone-group = []
+zk = ["dep:ed25519-dalek"]

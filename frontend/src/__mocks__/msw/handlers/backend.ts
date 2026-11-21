@@ -12,6 +12,49 @@
 
 import { http, HttpResponse } from 'msw';
 
+// ── Request body types ────────────────────────────────────────────────────────
+
+/** Shape of a create-group request body. */
+interface CreateGroupBody {
+  name?: string;
+  description?: string;
+  contributionAmount?: number;
+  currency?: string;
+  cycleDuration?: number;
+  [key: string]: unknown;
+}
+
+/** Shape of a join-group / create-member request body. */
+interface CreateMemberBody {
+  address?: string;
+  name?: string;
+  [key: string]: unknown;
+}
+
+/** Shape of a create-contribution request body. */
+interface CreateContributionBody {
+  memberId?: string;
+  amount?: number;
+  [key: string]: unknown;
+}
+
+/** Shape of an update-profile request body. */
+interface UpdateUserBody {
+  name?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Narrows an unknown JSON payload to a plain object record.
+ * Returns an empty object when the payload is not an object.
+ */
+function asRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 export const DEFAULT_GROUPS = [
@@ -90,7 +133,7 @@ export function createBackendHandlers() {
     }),
 
     http.post('/api/groups', async ({ request }) => {
-      const body = await request.json() as Record<string, unknown>;
+      const body = asRecord(await request.json()) as CreateGroupBody;
       return HttpResponse.json({ id: 'new-group-id', ...body }, { status: 201 });
     }),
 
@@ -100,7 +143,7 @@ export function createBackendHandlers() {
     }),
 
     http.post('/api/groups/:groupId/members', async ({ request }) => {
-      const body = await request.json() as Record<string, unknown>;
+      const body = asRecord(await request.json()) as CreateMemberBody;
       return HttpResponse.json({ id: 'new-member-id', ...body }, { status: 201 });
     }),
 
@@ -110,7 +153,7 @@ export function createBackendHandlers() {
     }),
 
     http.post('/api/groups/:groupId/contributions', async ({ request }) => {
-      const body = await request.json() as Record<string, unknown>;
+      const body = asRecord(await request.json()) as CreateContributionBody;
       return HttpResponse.json({ id: 'new-contribution-id', ...body, status: 'pending' }, { status: 201 });
     }),
 
@@ -130,7 +173,7 @@ export function createBackendHandlers() {
     }),
 
     http.put('/api/users/:address', async ({ request }) => {
-      const body = await request.json() as Record<string, unknown>;
+      const body = asRecord(await request.json()) as UpdateUserBody;
       return HttpResponse.json({ ...body });
     }),
   ];

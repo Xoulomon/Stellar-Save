@@ -2,11 +2,46 @@ import winston from 'winston';
 
 import 'winston-daily-rotate-file';
 import { config } from '../config';
-import { attachCorrelationId, getCorrelationId, runWithRequestContext } from './requestContext';
+import { attachCorrelationId, getCorrelationId } from './requestContext';
 
 import type { Request, Response, NextFunction } from 'express';
 
 // ── Winston logger with JSON formatter and daily log rotation ─────────────────
+
+const SENSITIVE_KEY_REGEX =
+  /(secret|authorization|password|token|api_?key|private_?key|seed|credential)/i;
+
+/**
+ * Deeply redact sensitive keys (such as `secret`, `authorization`, private keys, etc.)
+ * in metadata objects and wallet payloads before logging.
+ */
+export function redactSensitive<T>(value: T, depth = 0): T {
+  if (depth > 10 || value === null || value === undefined) return value;
+  if (Array.isArray(value)) {
+    return value.map((item) => redactSensitive(item, depth + 1)) as unknown as T;
+  }
+  if (
+    typeof value === 'object' &&
+    !(value instanceof Error) &&
+    !(value instanceof Date) &&
+    !(value instanceof RegExp)
+  ) {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (SENSITIVE_KEY_REGEX.test(k)) {
+        result[k] = '[REDACTED]';
+      } else if (typeof v === 'object' && v !== null) {
+        result[k] = redactSensitive(v, depth + 1);
+      } else {
+        result[k] = v;
+      }
+    }
+    return result as unknown as T;
+  }
+  return value;
+}
+
+const redactFormat = winston.format((info) => redactSensitive(info))();
 
 const jsonFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.SSSZ' }),
@@ -19,6 +54,7 @@ const jsonFormat = winston.format.combine(
     }
     return info;
   })(),
+  redactFormat,
   winston.format.json()
 );
 
@@ -29,7 +65,9 @@ const transports: winston.transport[] = [
     stderrLevels: ['error'],
   }),
   // Rotating file transport — one file per day, keep 14 days
-  new (winston.transports as any).DailyRotateFile({
+  new (
+    winston.transports as unknown as { DailyRotateFile: new (opts: unknown) => winston.transport }
+  ).DailyRotateFile({
     filename: 'logs/app-%DATE%.log',
     datePattern: 'YYYY-MM-DD',
     maxFiles: '14d',
@@ -42,6 +80,7 @@ const transports: winston.transport[] = [
 export const winstonLogger = winston.createLogger({
   level: config.logging.level,
   defaultMeta: { service: 'stellar-save-backend' },
+  format: redactFormat,
   transports,
 });
 
@@ -75,16 +114,19 @@ function safeStringify(value: unknown): string {
  */
 function toMeta(rest: unknown[]): Record<string, unknown> | undefined {
   if (rest.length === 0) return undefined;
+  let meta: Record<string, unknown> | undefined;
   if (rest.length === 1) {
     const [only] = rest;
     if (only === undefined || only === null) return undefined;
-    if (only instanceof Error) return errFields(only);
-    if (typeof only === 'object') return only as Record<string, unknown>;
-    return { detail: only };
+    if (only instanceof Error) meta = errFields(only);
+    else if (typeof only === 'object') meta = only as Record<string, unknown>;
+    else meta = { detail: only };
+  } else {
+    meta = {
+      detail: rest.map((r) => (r instanceof Error ? (r.stack ?? r.message) : r)),
+    };
   }
-  return {
-    detail: rest.map((r) => (r instanceof Error ? (r.stack ?? r.message) : r)),
-  };
+  return meta ? (redactSensitive(meta) as Record<string, unknown>) : undefined;
 }
 
 function emit(level: LogLevel, msg: unknown, rest: unknown[]): void {
@@ -137,11 +179,13 @@ function installConsoleBridge(): void {
       winstonLogger.log(level, message);
     };
 
+  /* eslint-disable no-console -- logger module: intentionally patches console */
   console.log = bridge('info');
   console.info = bridge('info');
   console.warn = bridge('warn');
   console.error = bridge('error');
   console.debug = bridge('debug');
+  /* eslint-enable no-console */
 }
 
 if (config.nodeEnv !== 'test') {
@@ -149,12 +193,18 @@ if (config.nodeEnv !== 'test') {
 }
 
 // ── Lazy prisma import — avoids circular dep (logger ← prisma_client ← logger) ─
-let _prisma: any = null;
-async function getPrisma(): Promise<any> {
+type AuditPrisma = {
+  auditLog: {
+    create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
+  };
+};
+
+let _prisma: AuditPrisma | null = null;
+async function getPrisma(): Promise<AuditPrisma | null> {
   if (!_prisma) {
     try {
       const { prisma } = await import('../prisma_client');
-      _prisma = prisma;
+      _prisma = prisma as unknown as AuditPrisma;
     } catch {
       // prisma_client unavailable; audit logging silently skipped
     }
@@ -176,61 +226,55 @@ function extractWallet(req: Request): string | null {
  *
  * Correlation-id assignment lives in `middleware/requestId.ts`; this
  * middleware reuses an already-attached id when present and falls back to
- * attaching one so it remains usable standalone.
+ * attaching one so it remains usable standalone. The request context
+ * (AsyncLocalStorage) is owned by that middleware — this one only reads the
+ * id via `getCorrelationId()` in the JSON formatter, so no second scope is
+ * created here.
  */
 export function requestLogger(req: Request, res: Response, next: NextFunction): void {
   const start = Date.now();
   const correlationId = attachCorrelationId(req, res);
 
-  runWithRequestContext(
-    {
-      correlationId,
+  res.on('finish', () => {
+    const durationMs = Date.now() - start;
+    const walletAddress = extractWallet(req);
+
+    logger.info('http request', {
+      correlation_id: correlationId,
       method: req.method,
       path: req.path,
-    },
-    () => {
-      res.on('finish', () => {
-        const durationMs = Date.now() - start;
-        const walletAddress = extractWallet(req);
+      status_code: res.statusCode,
+      duration_ms: durationMs,
+      wallet_address: walletAddress,
+      user_agent: req.headers['user-agent'],
+      ip: req.ip,
+    });
 
-        logger.info('http request', {
-          correlation_id: correlationId,
-          method: req.method,
-          path: req.path,
-          status_code: res.statusCode,
-          duration_ms: durationMs,
-          wallet_address: walletAddress,
-          user_agent: req.headers['user-agent'],
-          ip: req.ip,
-        });
-
-        // Persist to audit_logs table (non-blocking)
-        getPrisma()
-          .then((prisma) => {
-            if (prisma) {
-              prisma.auditLog
-                .create({
-                  data: {
-                    walletAddress,
-                    method: req.method,
-                    path: req.path,
-                    statusCode: res.statusCode,
-                    durationMs,
-                    ipAddress: req.ip || null,
-                    userAgent: req.headers['user-agent'] || null,
-                  },
-                })
-                .catch(() => {
-                  /* non-blocking */
-                });
-            }
-          })
-          .catch(() => {
-            /* non-blocking */
-          });
+    // Persist to audit_logs table (non-blocking)
+    getPrisma()
+      .then((prisma) => {
+        if (prisma) {
+          prisma.auditLog
+            .create({
+              data: {
+                walletAddress,
+                method: req.method,
+                path: req.path,
+                statusCode: res.statusCode,
+                durationMs,
+                ipAddress: req.ip || null,
+                userAgent: req.headers['user-agent'] || null,
+              },
+            })
+            .catch(() => {
+              /* non-blocking */
+            });
+        }
+      })
+      .catch(() => {
+        /* non-blocking */
       });
+  });
 
-      next();
-    }
-  );
+  next();
 }

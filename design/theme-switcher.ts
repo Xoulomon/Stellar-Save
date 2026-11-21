@@ -4,23 +4,23 @@
  * Closes #1173
  */
 
-import { generateCSSVars, type Theme } from "./tokens";
+import { generateCSSVars, type Theme } from './tokens';
 
-const STORAGE_KEY = "stellar-save:theme";
+const STORAGE_KEY = 'stellar-save:theme';
 
-export type ThemePreference = Theme | "system";
+export type ThemePreference = Theme | 'system';
 
 function resolveTheme(pref: ThemePreference): Theme {
-  if (pref !== "system") return pref;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  if (pref !== 'system') return pref;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 function applyTheme(theme: Theme): void {
   // Inject or update <style id="theme-vars">
-  let el = document.getElementById("theme-vars") as HTMLStyleElement | null;
+  let el = document.getElementById('theme-vars') as HTMLStyleElement | null;
   if (!el) {
-    el = document.createElement("style");
-    el.id = "theme-vars";
+    el = document.createElement('style');
+    el.id = 'theme-vars';
     document.head.appendChild(el);
   }
   el.textContent = generateCSSVars(theme);
@@ -33,15 +33,16 @@ export function setTheme(pref: ThemePreference): void {
 }
 
 export function loadTheme(): void {
-  const saved = (localStorage.getItem(STORAGE_KEY) as ThemePreference | null) ?? "system";
+  const saved = (localStorage.getItem(STORAGE_KEY) as ThemePreference | null) ?? 'system';
   applyTheme(resolveTheme(saved));
 
   // React to OS-level changes when preference is "system"
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-    if ((localStorage.getItem(STORAGE_KEY) ?? "system") === "system") applyTheme(resolveTheme("system"));
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if ((localStorage.getItem(STORAGE_KEY) ?? 'system') === 'system')
+      applyTheme(resolveTheme('system'));
   });
 }
 
 export function getThemePreference(): ThemePreference {
-  return (localStorage.getItem(STORAGE_KEY) as ThemePreference | null) ?? "system";
+  return (localStorage.getItem(STORAGE_KEY) as ThemePreference | null) ?? 'system';
 }

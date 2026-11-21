@@ -19,21 +19,60 @@ import { JoinGroupScreen } from '../screens/JoinGroupScreen';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+/**
+ * Routes on the bottom tab bar.
+ *
+ * Note the deliberate name difference from the root stack: the same screen can
+ * be reachable under two names, because the stack hosts it as a standalone
+ * page while the tab bar hosts it as a tab.
+ */
 export type TabParamList = {
   Dashboard: undefined;
   Groups: undefined;
   Wallet: undefined;
 };
 
+/**
+ * Every route on the root stack.
+ *
+ * `Wallet` is intentionally absent: it only exists as a tab, and listing it
+ * here used to make `navigate('Wallet')` typecheck while no stack screen
+ * handled the action, which React Navigation reports at runtime as
+ * "the action 'NAVIGATE' with payload ... was not handled by any navigator".
+ * A route the stack cannot serve does not belong in the stack's param list.
+ */
 export type RootStackParamList = {
-  // Tabs
+  /** Wraps the whole tab navigator — see the note on its `Stack.Screen`. */
   Dashboard: undefined;
   GroupList: undefined;
-  Wallet: undefined;
-  // Modal / stack screens
   CreateGroup: undefined;
   JoinGroup: { groupId?: string };
 };
+
+/**
+ * The routes registered on the root stack, mirroring the `Stack.Screen`
+ * elements in `RootNavigator` below.
+ *
+ * Exported so the two lists can be held in sync by the compiler rather than by
+ * review: `AssertParamListsMatch` fails the build if a screen is registered
+ * without being declared, or declared without being registered. The previous
+ * mismatch — `Wallet` — was invisible to `tsc` precisely because nothing
+ * compared the two.
+ */
+export const STACK_ROUTES = ['Dashboard', 'GroupList', 'CreateGroup', 'JoinGroup'] as const;
+
+type AssertParamListsMatch = Assert<
+  Equal<(typeof STACK_ROUTES)[number], keyof RootStackParamList>
+>;
+
+type Equal<X, Y> =
+  (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2 ? true : false;
+
+type Assert<T extends true> = T;
+
+// Keep the unused type alias referenced so lint does not flag it while the
+// constraint itself still fails the build on a mismatch.
+export type StackRoutesAreDeclared = AssertParamListsMatch;
 
 // ─── Navigators ───────────────────────────────────────────────────────────────
 
@@ -66,13 +105,21 @@ function Tabs() {
         headerTitleStyle: { fontWeight: '700' },
       })}
     >
-      <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Dashboard' }} />
+      <Tab.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{ title: 'Dashboard', tabBarButtonTestID: 'dashboard-tab' }}
+      />
       <Tab.Screen
         name="Groups"
         component={GroupListScreen}
-        options={{ title: 'Groups' }}
+        options={{ title: 'Groups', tabBarButtonTestID: 'groups-tab' }}
       />
-      <Tab.Screen name="Wallet" component={WalletScreen} options={{ title: 'Wallet' }} />
+      <Tab.Screen
+        name="Wallet"
+        component={WalletScreen}
+        options={{ title: 'Wallet', tabBarButtonTestID: 'wallet-tab' }}
+      />
     </Tab.Navigator>
   );
 }
@@ -88,7 +135,12 @@ export function RootNavigator() {
           contentStyle: { backgroundColor: '#0f1117' },
         }}
       >
-        {/* Tab root — no header (tabs handle their own headers) */}
+        {/*
+          Tab root — no header (tabs handle their own headers).
+          Named `Dashboard` for continuity with callers that navigate back to
+          "the dashboard"; the component it renders is the whole tab navigator,
+          not DashboardScreen.
+        */}
         <Stack.Screen name="Dashboard" component={Tabs} options={{ headerShown: false }} />
 
         {/* Stack screens */}

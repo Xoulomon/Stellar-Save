@@ -1,16 +1,12 @@
 import { useRef } from 'react';
 
+import {
+  formatShortAddress as formatAddress,
+  formatShortDate as formatDate,
+} from '../lib/formatters';
 import { getExplorerTxUrl } from '../utils/explorerUrl';
 
 import type { PayoutQueueData, PayoutEntry, PayoutStatus } from '../types/contribution';
-
-function formatAddress(address: string): string {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
-}
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
 
 const STATUS_CONFIG: Record<
   PayoutStatus,

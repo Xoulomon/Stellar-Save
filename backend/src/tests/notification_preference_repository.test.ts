@@ -1,42 +1,31 @@
 import {
   NotificationPreferenceRepository
 } from '../modules/notifications/notification-preference.repository';
+import { NotificationFactory } from '../../test/fixtures/factory';
+import { createPrismaMock } from '../../tests/helpers/prismaMock';
 
 import type {
   NotificationPreferencePrisma} from '../modules/notifications/notification-preference.repository';
 
-function mockDb() {
-  return {
-    notificationPreference: {
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      findMany: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-      count: jest.fn(),
-      groupBy: jest.fn(),
-    },
-  };
-}
-
 describe('NotificationPreferenceRepository', () => {
-  let db: ReturnType<typeof mockDb>;
+  let db: ReturnType<typeof createPrismaMock>;
   let repo: NotificationPreferenceRepository;
 
   beforeEach(() => {
-    db = mockDb();
+    db = createPrismaMock();
     repo = new NotificationPreferenceRepository(db as unknown as NotificationPreferencePrisma);
   });
 
   it('findByUserId queries by userId', async () => {
-    db.notificationPreference.findUnique.mockResolvedValue({ userId: 'u1' });
+    const pref = NotificationFactory.buildPreference('u1');
+    db.notificationPreference.findUnique.mockResolvedValue(pref);
     await repo.findByUserId('u1');
     expect(db.notificationPreference.findUnique).toHaveBeenCalledWith({ where: { userId: 'u1' } });
   });
 
   it('findByUnsubscribeToken queries by unsubscribeToken', async () => {
-    db.notificationPreference.findUnique.mockResolvedValue(null);
+    const pref = NotificationFactory.buildPreference('u2', { unsubscribeToken: 'tok-123' });
+    db.notificationPreference.findUnique.mockResolvedValue(pref);
     await repo.findByUnsubscribeToken('tok-123');
     expect(db.notificationPreference.findUnique).toHaveBeenCalledWith({
       where: { unsubscribeToken: 'tok-123' },

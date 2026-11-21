@@ -24,13 +24,10 @@
  * back gracefully and log a warning rather than crashing.
  */
 
-import {
-  Contract,
-  xdr,
-  scValToNative,
-} from '@stellar/stellar-sdk';
+import { Contract, xdr, scValToNative } from '@stellar/stellar-sdk';
 import { Gauge, Counter } from 'prom-client';
 
+import { config } from './config';
 import { GroupStateCache } from './lib/cache';
 import { isCircuitOpenError } from './lib/rpc_circuit_breaker';
 import { getSorobanPool } from './lib/soroban';
@@ -38,7 +35,7 @@ import { logger } from './logger';
 import { circuitBreakerFallbacksTotal, cacheStaleReadsTotal } from './metrics';
 import { registry } from './metrics';
 import { prisma } from './prisma_client';
-
+import { withRetry, type RetryPolicy } from './lib/retry_policies';
 
 // ── Prometheus metrics ─────────────────────────────────────────────────────
 
@@ -84,13 +81,25 @@ export interface ReconciliationConfig {
   intervalMs: number;
   /** Soroban contract ID to query */
   contractId: string;
+  /**
+   * Retry policy applied to on-chain reads. Delegated to the shared
+   * `lib/retry_policies` implementation so reconciliation does not carry its
+   * own duplicated backoff logic. Defaults to a bounded exponential policy.
+   */
+  retryPolicy: RetryPolicy;
 }
 
 const DEFAULT_CONFIG: ReconciliationConfig = {
   sampleSize: 50,
   driftThreshold: 3,
   intervalMs: 15 * 60 * 1000,
-  contractId: process.env.CONTRACT_ID ?? '',
+  contractId: config.indexer.contractId,
+  retryPolicy: {
+    maxAttempts: 3,
+    baseDelayMs: 200,
+    maxDelayMs: 2_000,
+    jitter: true,
+  },
 };
 
 // ── Drift record ────────────────────────────────────────────────────────────
@@ -110,6 +119,29 @@ export interface ReconciliationResult {
   healed: number;
   alertRaised: boolean;
 }
+
+interface ContractEventDb {
+  id: string;
+  data: unknown;
+  timestamp: Date;
+}
+
+interface ContractEventPrismaClient {
+  contractEvent: {
+    findMany(args: {
+      orderBy?: { timestamp: 'asc' | 'desc' };
+      take?: number;
+      select?: { data: boolean };
+    }): Promise<Array<{ data: unknown }>>;
+    findFirst(args: {
+      where?: { data?: { path?: string[]; equals?: string } };
+      orderBy?: { timestamp: 'asc' | 'desc' };
+    }): Promise<ContractEventDb | null>;
+    update(args: { where: { id: string }; data: { data: unknown } }): Promise<ContractEventDb>;
+  };
+}
+
+const eventPrisma = prisma as unknown as ContractEventPrismaClient;
 
 // ── ReconciliationService ───────────────────────────────────────────────────
 
@@ -224,7 +256,7 @@ export class ReconciliationService {
     const take = this.cfg.sampleSize > 0 ? this.cfg.sampleSize : 10_000;
 
     // Extract distinct groupIds from recent event data payloads
-    const events = await (prisma as any).contractEvent.findMany({
+    const events = await eventPrisma.contractEvent.findMany({
       orderBy: { timestamp: 'desc' },
       take: take * 10, // over-fetch to get enough distinct groups
       select: { data: true },
@@ -254,7 +286,7 @@ export class ReconciliationService {
     const drifted: DriftRecord[] = [];
 
     // DB: latest contribution-related event for this group
-    const dbEvent = await (prisma as any).contractEvent.findFirst({
+    const dbEvent = await eventPrisma.contractEvent.findFirst({
       where: { data: { path: ['groupId'], equals: groupId } },
       orderBy: { timestamp: 'desc' },
     });
@@ -307,19 +339,35 @@ export class ReconciliationService {
     }
 
     try {
-      const state = await getSorobanPool().withClient(async (client) => {
-        const contract = new Contract(this.cfg.contractId);
-        const op = contract.call('get_group', xdr.ScVal.scvString(groupId));
-        const tx = {
-          operations: [op],
-          sourceAccount: this.cfg.contractId,
-        } as any;
+      // Retries are delegated to the shared retry policy so backoff behaviour
+      // stays consistent with the job handlers in `src/jobs`.
+      const state = await withRetry(
+        () =>
+          getSorobanPool().withClient(async (client) => {
+            const contract = new Contract(this.cfg.contractId);
+            const op = contract.call('get_group', xdr.ScVal.scvString(groupId));
+            const tx = {
+              operations: [op],
+              sourceAccount: this.cfg.contractId,
+            };
 
-        const sim = await (client as any).simulateTransaction(tx);
-        if (!sim?.result?.retval) return null;
+            const rpcClient = client as unknown as {
+              simulateTransaction: (
+                txPayload: unknown
+              ) => Promise<{ result?: { retval?: unknown } }>;
+            };
+            const sim = await rpcClient.simulateTransaction(tx);
+            if (!sim?.result?.retval) return null;
 
-        return scValToNative(sim.result.retval) as Record<string, unknown>;
-      }, 'get_group');
+            return scValToNative(sim.result.retval as xdr.ScVal) as Record<string, unknown>;
+          }, 'get_group'),
+        {
+          ...this.cfg.retryPolicy,
+          // Circuit-open errors are terminal: retrying them only delays the
+          // fallback to cached state.
+          shouldRetry: (err) => !isCircuitOpenError(err),
+        }
+      );
 
       if (state !== null) {
         // Prime the cache so a later outage has something to fall back to.
@@ -353,7 +401,7 @@ export class ReconciliationService {
    */
   private async heal(record: DriftRecord): Promise<boolean> {
     try {
-      const latest = await (prisma as any).contractEvent.findFirst({
+      const latest = await eventPrisma.contractEvent.findFirst({
         where: { data: { path: ['groupId'], equals: record.groupId } },
         orderBy: { timestamp: 'desc' },
       });
@@ -365,7 +413,7 @@ export class ReconciliationService {
         [record.field]: record.onChainValue,
       };
 
-      await (prisma as any).contractEvent.update({
+      await eventPrisma.contractEvent.update({
         where: { id: latest.id },
         data: { data: updatedData },
       });

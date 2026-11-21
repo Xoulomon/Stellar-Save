@@ -12,6 +12,59 @@ export const DEPRECATED_VERSIONS: Partial<
   },
 };
 
+/**
+ * Route inventory for the v1 surface.
+ *
+ * Every route exposed by `backend/src/routes/v1.ts` is listed here with its
+ * documented status. Routes that have a v2 equivalent are marked `deprecated`
+ * and emit `Deprecation` / `Sunset` headers; routes without a v2 equivalent
+ * remain `supported` until a replacement ships.
+ *
+ * See `docs/api/versioning.md` for the full sunset plan.
+ */
+export interface RouteStatus {
+  /** HTTP method, e.g. `GET`. */
+  method: string;
+  /** Path relative to the version prefix, e.g. `/export`. */
+  path: string;
+  /** `deprecated` when a v2 equivalent exists, otherwise `supported`. */
+  status: 'deprecated' | 'supported';
+  /** The v2 equivalent path, if any. */
+  v2Equivalent?: string;
+}
+
+export const V1_ROUTE_INVENTORY: readonly RouteStatus[] = [
+  { method: 'GET', path: '/export', status: 'supported' },
+  { method: 'GET', path: '/backup', status: 'supported' },
+  { method: 'POST', path: '/admin/groups/:id/flag', status: 'supported' },
+];
+
+/** Returns the inventory entry for a v1 route, if documented. */
+export function getV1RouteStatus(method: string, path: string): RouteStatus | undefined {
+  return V1_ROUTE_INVENTORY.find(
+    (route) => route.method === method.toUpperCase() && route.path === path,
+  );
+}
+
+/**
+ * Marks a v1 route as deprecated by emitting `Deprecation` and `Sunset`
+ * response headers. Used by v1 routes that have a v2 equivalent.
+ */
+export function markRouteDeprecated(res: Response, v2Equivalent: string): void {
+  const deprecation = DEPRECATED_VERSIONS.v1;
+  const sunsetDate = deprecation?.sunsetDate ?? '2027-01-01';
+  res.setHeader('Deprecation', 'true');
+  res.setHeader('Sunset', sunsetDate);
+  res.setHeader(
+    'Link',
+    `<${v2Equivalent}>; rel="successor-version"`,
+  );
+  res.setHeader(
+    'X-API-Deprecation-Notice',
+    deprecation?.message ?? 'API v1 is deprecated. Please migrate to v2.',
+  );
+}
+
 /** Extracts the version from the URL path (e.g. /api/v1/...) and attaches it to req. */
 export function versionMiddleware(req: Request, res: Response, next: NextFunction): void {
   const match = req.path.match(/^\/api\/(v\d+)\//);

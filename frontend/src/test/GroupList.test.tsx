@@ -6,27 +6,9 @@ import { GroupList } from '../components/GroupList';
 import type { Group } from '../components/GroupList';
 
 const mockGroups: Group[] = [
-  {
-    id: '1',
-    name: 'Alpha Group',
-    description: 'First test group',
-    memberCount: 10,
-    createdAt: new Date('2024-01-01'),
-  },
-  {
-    id: '2',
-    name: 'Beta Group',
-    description: 'Second test group',
-    memberCount: 25,
-    createdAt: new Date('2024-02-01'),
-  },
-  {
-    id: '3',
-    name: 'Gamma Group',
-    description: 'Third test group',
-    memberCount: 5,
-    createdAt: new Date('2024-03-01'),
-  },
+  makePublicGroup({ id: '1', name: 'Alpha Group', description: 'First test group', memberCount: 10, createdAt: new Date('2024-01-01') }) as unknown as Group,
+  makePublicGroup({ id: '2', name: 'Beta Group', description: 'Second test group', memberCount: 25, createdAt: new Date('2024-02-01') }) as unknown as Group,
+  makePublicGroup({ id: '3', name: 'Gamma Group', description: 'Third test group', memberCount: 5, createdAt: new Date('2024-03-01') }) as unknown as Group,
 ];
 
 describe('GroupList', () => {

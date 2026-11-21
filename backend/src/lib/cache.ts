@@ -1,16 +1,10 @@
 import { cacheHitsTotal, cacheMissesTotal, cacheInvalidationsTotal } from '../metrics';
 import { get, set, del, delPattern } from '../redis';
-
-const TTL_SECONDS = 10;
-const KEY_PREFIX = 'group_state';
+import { CacheKeyBuilder, CACHE_TTL_SECONDS } from './cache-config';
 
 // Single-flight map: prevents cache stampede by coalescing concurrent fetches
 // for the same key into a single in-flight promise.
 const inFlight = new Map<string, Promise<unknown>>();
-
-function cacheKey(contractId: string, groupId: string): string {
-  return `${KEY_PREFIX}:${contractId}:${groupId}`;
-}
 
 export class GroupStateCache {
   /**
@@ -18,7 +12,7 @@ export class GroupStateCache {
    * Increments the appropriate Prometheus counter.
    */
   static async get<T = unknown>(contractId: string, groupId: string): Promise<T | null> {
-    const value = await get(cacheKey(contractId, groupId));
+    const value = await get(CacheKeyBuilder.groupState(contractId, groupId));
     if (value !== null) {
       cacheHitsTotal.inc({ cache: 'group_state' });
       return value as T;
@@ -36,7 +30,7 @@ export class GroupStateCache {
     groupId: string,
     loader: () => Promise<T>
   ): Promise<T> {
-    const key = cacheKey(contractId, groupId);
+    const key = CacheKeyBuilder.groupState(contractId, groupId);
 
     const cached = await get(key);
     if (cached !== null) {
@@ -50,7 +44,7 @@ export class GroupStateCache {
 
     const promise = loader()
       .then(async (result) => {
-        await set(key, result, TTL_SECONDS);
+        await set(key, result, CACHE_TTL_SECONDS.GROUP_STATE);
         inFlight.delete(key);
         return result;
       })
@@ -63,9 +57,9 @@ export class GroupStateCache {
     return promise as Promise<T>;
   }
 
-  /** Store group state with a 10-second TTL. */
+  /** Store group state with the configured group-state TTL. */
   static async set(contractId: string, groupId: string, state: unknown): Promise<void> {
-    await set(cacheKey(contractId, groupId), state, TTL_SECONDS);
+    await set(CacheKeyBuilder.groupState(contractId, groupId), state, CACHE_TTL_SECONDS.GROUP_STATE);
   }
 
   /** Invalidate a single group's cached state (called on relevant contract events). */
@@ -74,7 +68,7 @@ export class GroupStateCache {
     groupId: string,
     eventType = 'unknown'
   ): Promise<void> {
-    await del(cacheKey(contractId, groupId));
+    await del(CacheKeyBuilder.groupState(contractId, groupId));
     cacheInvalidationsTotal.inc({ event_type: eventType });
   }
 
@@ -83,7 +77,7 @@ export class GroupStateCache {
    * Used when a contract event doesn't carry a specific groupId.
    */
   static async invalidateContract(contractId: string, eventType = 'unknown'): Promise<void> {
-    await delPattern(`${KEY_PREFIX}:${contractId}:*`);
+    await delPattern(CacheKeyBuilder.groupStatePattern(contractId));
     cacheInvalidationsTotal.inc({ event_type: eventType });
   }
 }

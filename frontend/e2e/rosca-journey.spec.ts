@@ -27,7 +27,7 @@ async function connectWallet(page: Page): Promise<void> {
   }
 }
 
-test.describe.serial('ROSCA full journey', () => {
+test.describe.serial('@journey ROSCA full journey', () => {
   test('landing page loads and shows key content', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle(/stellar.save/i);

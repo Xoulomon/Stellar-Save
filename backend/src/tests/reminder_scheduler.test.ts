@@ -4,6 +4,7 @@ import {
   formatLocalTime,
   adjustTimeForTimezone
 } from '../services/reminder_scheduler';
+import { NotificationFactory } from '../../test/fixtures/factory';
 
 import type {
   ReminderPreferences} from '../services/reminder_scheduler';
@@ -44,7 +45,13 @@ describe('Reminder Scheduler Module Unit Tests', () => {
     });
 
     it('marks slots as muted when user opts out or enables muteAll', () => {
-      const prefOptOut: ReminderPreferences = { contributionReminders: false };
+      // Use factory to build preference and derive ReminderPreferences from it
+      const disabledPref = NotificationFactory.buildPreference('user-scheduler', {
+        contributionReminders: false,
+      });
+      const prefOptOut: ReminderPreferences = {
+        contributionReminders: disabledPref.contributionReminders,
+      };
       const slots1 = calculateReminderSchedules({
         deadline,
         preferences: prefOptOut,

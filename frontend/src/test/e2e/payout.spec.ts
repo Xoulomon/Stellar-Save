@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
  * E2E tests: Payout execution flow
  * Covers payout queue visibility and payout trigger UI on group detail pages.
  */
-test.describe('Payout execution flow', () => {
+test.describe('@journey Payout execution flow', () => {
   test('group detail page renders without crashing', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (err) => errors.push(err.message));

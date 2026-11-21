@@ -1,0 +1,116 @@
+# KYC status screen — all four states
+# Covers: KycStatusScreen pending / approved / rejected / expired states
+# Prereq: app is showing KycStatusScreen (reached via the full onboarding flow
+#         or by launching into a state-seeded build using MAESTRO_KYC_STATUS).
+appId: com.stellarsave.app
+---
+# ── Pending state ─────────────────────────────────────────────────────────────
+- launchApp:
+    clearState: true
+    env:
+      MAESTRO_KYC_STATUS: "pending"
+
+- extendedWaitUntil:
+    visible:
+      id: "kyc-status-screen"
+    timeout: 15000
+
+- assertVisible:
+    id: "kyc-status-title"
+    text: "Verification in progress"
+
+- assertVisible:
+    id: "kyc-status-body"
+    text: "We're reviewing your documents"
+
+# App should remain usable — dashboard tab is accessible from pending state
+- assertVisible:
+    id: "continue-to-app-button"
+
+- tapOn:
+    id: "continue-to-app-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 10000
+
+# ── Approved state ────────────────────────────────────────────────────────────
+- launchApp:
+    clearState: true
+    env:
+      MAESTRO_KYC_STATUS: "approved"
+
+- extendedWaitUntil:
+    visible:
+      id: "kyc-status-screen"
+    timeout: 15000
+
+- assertVisible:
+    id: "kyc-status-title"
+    text: "You're verified"
+
+- assertVisible:
+    id: "kyc-status-body"
+    text: "Fiat ramp features are now unlocked"
+
+# Approved state should navigate to dashboard automatically or show CTA
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 15000
+
+# ── Rejected state ────────────────────────────────────────────────────────────
+- launchApp:
+    clearState: true
+    env:
+      MAESTRO_KYC_STATUS: "rejected"
+
+- extendedWaitUntil:
+    visible:
+      id: "kyc-status-screen"
+    timeout: 15000
+
+- assertVisible:
+    id: "kyc-status-title"
+    text: "Verification failed"
+
+- assertVisible:
+    id: "kyc-status-body"
+    text: "We couldn't verify your identity"
+
+# User should be offered a re-submit CTA
+- assertVisible:
+    id: "kyc-resubmit-button"
+
+- tapOn:
+    id: "kyc-resubmit-button"
+
+# Tapping re-submit should return to the KYC form
+- extendedWaitUntil:
+    visible:
+      id: "kyc-form-screen"
+    timeout: 10000
+
+# ── Expired state ─────────────────────────────────────────────────────────────
+- launchApp:
+    clearState: true
+    env:
+      MAESTRO_KYC_STATUS: "expired"
+
+- extendedWaitUntil:
+    visible:
+      id: "kyc-status-screen"
+    timeout: 15000
+
+- assertVisible:
+    id: "kyc-status-title"
+    text: "Verification expired"
+
+- assertVisible:
+    id: "kyc-status-body"
+    text: "Your verification has expired"
+
+# Expired also surfaces a re-submit CTA
+- assertVisible:
+    id: "kyc-resubmit-button"

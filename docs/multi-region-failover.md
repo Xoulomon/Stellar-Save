@@ -239,7 +239,7 @@ test that automates the manual runbook above. It works in two modes:
    if the test errors out.
 8. **Assert primary recovery** — polls until DNS shifts back to the primary IP
    (or `RTO_SECONDS` elapses).
-9. **Write results** — writes `tests/failover-results.json`.
+9. **Write results** — writes `docs/releases/failover-results.json` (override with `RESULTS_DIR`).
 
 ### Environment variables
 
@@ -310,7 +310,8 @@ DRY_RUN=0 \
 
 ### Test results
 
-Results are written to **`tests/failover-results.json`** after every run:
+Results are written to **`docs/releases/failover-results.json`** after every run
+(set `RESULTS_DIR` to write elsewhere):
 
 ```json
 {

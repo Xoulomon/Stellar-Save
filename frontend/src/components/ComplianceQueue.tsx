@@ -1,4 +1,5 @@
 import React from 'react';
+import { logger } from '../lib/logger';
 
 type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 type FlagReason = 'sanctioned_address' | 'high_value' | 'rapid_succession' | 'blacklist_match';
@@ -54,6 +55,14 @@ function truncate(str: string, len = 16): string {
 }
 
 const ComplianceQueue: React.FC = () => {
+  const handleReview = (flag: ComplianceFlag, decision: 'approve' | 'reject'): void => {
+    logger.info('Compliance flag reviewed', {
+      flagId: flag.id,
+      riskLevel: flag.riskLevel,
+      decision,
+    });
+  };
+
   return (
     <div style={{ padding: '24px', fontFamily: 'sans-serif' }}>
       <p style={{ color: 'var(--color-text-secondary)', fontSize: '13px', marginBottom: '8px' }}>
@@ -105,7 +114,7 @@ const ComplianceQueue: React.FC = () => {
                 {!flag.reviewed && (
                   <>
                     <button
-                      onClick={() => {}}
+                      onClick={() => handleReview(flag, 'approve')}
                       style={{
                         marginRight: '6px',
                         padding: '4px 10px',
@@ -119,7 +128,7 @@ const ComplianceQueue: React.FC = () => {
                       Approve
                     </button>
                     <button
-                      onClick={() => {}}
+                      onClick={() => handleReview(flag, 'reject')}
                       style={{
                         padding: '4px 10px',
                         background: '#c0392b',

@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
+import { AuditFactory } from '../../test/fixtures/factory';
 
 describe('Admin Endpoints Authorization', () => {
   describe('Platform Stats Endpoint', () => {
@@ -116,42 +117,36 @@ describe('Admin Endpoints Authorization', () => {
 
   describe('Audit Trail of Admin Actions', () => {
     it('should log user updates to audit trail', async () => {
-      const action = {
-        type: 'UPDATE_USER',
+      const action = AuditFactory.buildAuditLog('UPDATE_USER', {
+        userId: 'admin_001',
         targetId: 'user_123',
         targetType: 'Member',
-        adminId: 'admin_001',
-        timestamp: Date.now(),
         metadata: { changes: { name: 'New Name' } },
-      };
-      expect(action.type).toBe('UPDATE_USER');
-      expect(action.adminId).toBe('admin_001');
+      });
+      expect(action.action).toBe('UPDATE_USER');
+      expect(action.userId).toBe('admin_001');
     });
 
     it('should log user deletions to audit trail', async () => {
-      const action = {
-        type: 'DELETE_USER',
+      const action = AuditFactory.buildAuditLog('DELETE_USER', {
+        userId: 'admin_001',
         targetId: 'user_123',
         targetType: 'Member',
-        adminId: 'admin_001',
-        timestamp: Date.now(),
-      };
-      expect(action.type).toBe('DELETE_USER');
-      expect(action.adminId).toBe('admin_001');
+      });
+      expect(action.action).toBe('DELETE_USER');
+      expect(action.userId).toBe('admin_001');
     });
 
     it('should log group flags to audit trail', async () => {
-      const action = {
-        type: 'FLAG_GROUP',
+      const action = AuditFactory.buildAuditLog('FLAG_GROUP', {
+        userId: 'admin_001',
         targetId: 'group_123',
         targetType: 'Group',
-        adminId: 'admin_001',
-        timestamp: Date.now(),
         metadata: { flagged: true },
-      };
-      expect(action.type).toBe('FLAG_GROUP');
-      expect(action.adminId).toBe('admin_001');
-      expect(action.metadata.flagged).toBe(true);
+      });
+      expect(action.action).toBe('FLAG_GROUP');
+      expect(action.userId).toBe('admin_001');
+      expect((action.metadata as any).flagged).toBe(true);
     });
   });
 

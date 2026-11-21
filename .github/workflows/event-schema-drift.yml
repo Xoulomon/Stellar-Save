@@ -6,14 +6,22 @@ on:
       - 'packages/events-schema/schema.json'
       - 'packages/events-schema/generated/**'
       - 'packages/events-schema/codegen.js'
+      - 'packages/events-schema/check-rust-drift.js'
+      - 'contracts/stellar-save/src/events.rs'
   pull_request:
     paths:
       - 'packages/events-schema/schema.json'
       - 'packages/events-schema/generated/**'
       - 'packages/events-schema/codegen.js'
+      - 'packages/events-schema/check-rust-drift.js'
       - 'frontend/src/types/events.ts'
       - 'backend/src/contract_event_indexer.ts'
       - 'contracts/stellar-save/src/events.rs'
+
+# Drift is checked in two halves:
+#   schema.json ↔ generated/events.ts → codegen diff (below)
+#   schema.json ↔ events.rs           → check-rust-drift.js (below), mirrored by
+#                                        events.rs::tests::test_every_*_topic_*
 
 jobs:
   check-event-schema-drift:
@@ -39,3 +47,6 @@ jobs:
             exit 1
           fi
           echo "✅ Generated types match schema."
+
+      - name: Fail if events.rs and schema.json topics differ
+        run: node packages/events-schema/check-rust-drift.js

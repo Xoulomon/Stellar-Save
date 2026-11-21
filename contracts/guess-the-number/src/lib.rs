@@ -5,6 +5,7 @@ mod error;
 mod xlm;
 
 use error::Error;
+use stellar_save_common::admin::require_owner;
 
 #[contract]
 pub struct GuessTheNumber;
@@ -84,9 +85,11 @@ impl GuessTheNumber {
         env.deployer().update_current_contract_wasm(new_wasm_hash);
     }
 
-    /// readonly function to get the current number
-    /// `pub(crate)` makes it accessible in the same crate, but not outside of it
-    pub(crate) fn number(env: &Env) -> u64 {
+    /// Reads the current secret number from instance storage.
+    ///
+    /// **Private** — only accessible within this file.  Use `env.as_contract`
+    /// in tests to invoke this function for assertion purposes.
+    fn number(env: &Env) -> u64 {
         env.storage()
             .instance()
             .get(THE_NUMBER)
@@ -107,11 +110,13 @@ impl GuessTheNumber {
         env.storage().instance().set(ADMIN_KEY, &admin);
     }
 
-    /// Private helper function to require auth from the admin and return the admin Address
+    /// Private helper function to require auth from the admin and return the admin Address.
+    ///
+    /// Delegates to [`stellar_save_common::admin::require_owner`] so the
+    /// instance-storage owner-auth pattern is not duplicated here and in
+    /// `nft-enumerable`.
     fn require_admin(env: &Env) -> Address {
-        let admin = Self::admin(env).expect("admin not set");
-        admin.require_auth();
-        admin
+        require_owner(env, ADMIN_KEY)
     }
 }
 

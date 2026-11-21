@@ -86,7 +86,9 @@ const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 function crc16(data: Uint8Array): number {
   let crc = 0;
   for (let i = 0; i < data.length; i++) {
-    crc ^= data[i] << 8;
+    // noUncheckedIndexedAccess: byte is always defined because `i < data.length`
+    const byte = data[i] ?? 0;
+    crc ^= byte << 8;
     for (let j = 0; j < 8; j++) {
       crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
       crc &= 0xffff;
@@ -101,7 +103,9 @@ function base32Decode(input: string): Uint8Array | null {
 
   let bits = '';
   for (let i = 0; i < input.length; i++) {
-    const value = BASE32_ALPHABET.indexOf(input[i]);
+    // noUncheckedIndexedAccess: char is always defined because `i < input.length`
+    const char = input[i] ?? '';
+    const value = BASE32_ALPHABET.indexOf(char);
     if (value === -1) return null;
     bits += value.toString(2).padStart(5, '0');
   }
@@ -150,7 +154,8 @@ export function validateAddress(address: string): ValidateAddressResult {
   }
 
   const expectedCrc = crc16(bytes.slice(0, 33));
-  const actualCrc = (bytes[33] << 8) | bytes[34];
+  // noUncheckedIndexedAccess: indices 33 and 34 are always present (bytes has 35 elements)
+  const actualCrc = ((bytes[33] ?? 0) << 8) | (bytes[34] ?? 0);
   if (expectedCrc !== actualCrc) {
     return { valid: false, error: 'Checksum mismatch' };
   }

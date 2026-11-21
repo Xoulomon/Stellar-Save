@@ -1,6 +1,7 @@
 import { AppError } from '../lib/errors';
 import { InMemoryGroupsRepository } from '../services/group/groups.repository';
 import { GroupsService } from '../services/group/groups.service';
+import { GroupFactory } from '../../test/fixtures/factory';
 
 import type { Group } from '../models';
 import type { GroupsRepository} from '../services/group/groups.repository';
@@ -11,36 +12,31 @@ import type { GroupsRepository} from '../services/group/groups.repository';
  */
 
 const groups: Group[] = [
-  {
+  GroupFactory.buildGroup({
     id: '1',
     name: 'Weekly Savers',
     contributionAmount: 100,
-    cycleDuration: 604800,
     maxMembers: 10,
     currentMembers: 5,
-    status: 'Active',
     tags: ['weekly'],
-  },
-  {
+  }),
+  GroupFactory.buildGroup({
     id: '2',
     name: 'Full Circle',
     contributionAmount: 50,
-    cycleDuration: 604800,
     maxMembers: 5,
     currentMembers: 5,
-    status: 'Active',
     tags: [],
-  },
-  {
+  }),
+  GroupFactory.buildGroup({
     id: '3',
     name: 'Closed Circle',
     contributionAmount: 50,
-    cycleDuration: 604800,
     maxMembers: 8,
     currentMembers: 2,
     status: 'Completed',
     tags: [],
-  },
+  }),
 ];
 
 function makeService(

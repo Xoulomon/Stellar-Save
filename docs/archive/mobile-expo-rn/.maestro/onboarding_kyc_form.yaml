@@ -1,0 +1,199 @@
+# KYC form flow — field entry, validation, document capture, submission
+# Covers: KycFormScreen happy path, client-side validation errors,
+#         camera permission request, document capture, and form submission
+# Prereq: user has completed wallet setup; app is at the KYC form screen.
+#         Run after onboarding_wallet_setup.yaml or use the full flow file.
+appId: com.stellarsave.app
+---
+# ── Navigate to KYC form ──────────────────────────────────────────────────────
+- launchApp:
+    clearState: true
+
+- tapOn:
+    id: "get-started-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "wallet-setup-screen"
+    timeout: 10000
+
+- tapOn:
+    id: "create-wallet-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "kyc-form-screen"
+    timeout: 15000
+
+- assertVisible:
+    text: "Identity verification"
+
+# ── Verify all form fields are present ───────────────────────────────────────
+- assertVisible:
+    id: "kyc-full-name-input"
+
+- assertVisible:
+    id: "kyc-dob-input"
+
+- assertVisible:
+    id: "kyc-country-input"
+
+- assertVisible:
+    id: "kyc-capture-document-button"
+
+- assertVisible:
+    id: "kyc-submit-button"
+
+# ── Validation: submit with empty fields shows errors ─────────────────────────
+- tapOn:
+    id: "kyc-submit-button"
+
+- assertVisible:
+    id: "kyc-error-full-name"
+
+- assertVisible:
+    id: "kyc-error-dob"
+
+- assertVisible:
+    id: "kyc-error-country"
+
+- assertVisible:
+    id: "kyc-error-document"
+
+# ── Validation: malformed date of birth shows error ──────────────────────────
+- tapOn:
+    id: "kyc-dob-input"
+- inputText: "25/09/1990"
+
+- tapOn:
+    id: "kyc-submit-button"
+
+- assertVisible:
+    id: "kyc-error-dob"
+    text: "Date of birth must be in YYYY-MM-DD format."
+
+# ── Validation: invalid country code shows error ─────────────────────────────
+- clearText:
+    id: "kyc-dob-input"
+
+- tapOn:
+    id: "kyc-country-input"
+- inputText: "Nigeria"
+
+- tapOn:
+    id: "kyc-submit-button"
+
+- assertVisible:
+    id: "kyc-error-country"
+    text: "Country must be an ISO 3166-1 alpha-2 code."
+
+# ── Happy path: fill all fields correctly ────────────────────────────────────
+- tapOn:
+    id: "kyc-full-name-input"
+- inputText: "Ada Okafor"
+
+- clearText:
+    id: "kyc-dob-input"
+- tapOn:
+    id: "kyc-dob-input"
+- inputText: "1990-09-25"
+
+- clearText:
+    id: "kyc-country-input"
+- tapOn:
+    id: "kyc-country-input"
+- inputText: "NG"
+
+# ── Camera permission request ─────────────────────────────────────────────────
+- tapOn:
+    id: "kyc-capture-document-button"
+
+# System permission dialog — grant camera access
+- extendedWaitUntil:
+    visible:
+      text: "Allow"
+    timeout: 8000
+
+- tapOn:
+    text: "Allow"
+
+# Camera viewfinder should now be visible
+- extendedWaitUntil:
+    visible:
+      id: "kyc-camera-viewfinder"
+    timeout: 10000
+
+# ── Document capture ──────────────────────────────────────────────────────────
+- tapOn:
+    id: "kyc-capture-document-button"
+
+# After capture the button label changes to confirm capture was stored
+- extendedWaitUntil:
+    visible:
+      text: "Document captured ✓"
+    timeout: 10000
+
+# Ensure the document error is gone now that a photo has been taken
+- assertNotVisible:
+    id: "kyc-error-document"
+
+# ── Submit the form ───────────────────────────────────────────────────────────
+- tapOn:
+    id: "kyc-submit-button"
+
+# Submission spinner appears while the request is in flight
+- extendedWaitUntil:
+    visible:
+      id: "kyc-submitting-indicator"
+    timeout: 5000
+
+# After successful submission, navigate to KYC status screen
+- extendedWaitUntil:
+    visible:
+      id: "kyc-status-screen"
+    timeout: 30000
+
+# ── Camera permission already denied path ────────────────────────────────────
+# Restart with camera permission denied to verify the "Enable camera" fallback.
+- launchApp:
+    clearState: true
+    permissions:
+      camera: denied
+
+- tapOn:
+    id: "get-started-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "wallet-setup-screen"
+    timeout: 10000
+
+- tapOn:
+    id: "create-wallet-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "kyc-form-screen"
+    timeout: 15000
+
+# With camera denied, the "Enable camera" button should appear instead of the
+# viewfinder; tapping it re-requests permission.
+- assertVisible:
+    id: "kyc-enable-camera-button"
+    text: "Enable camera"
+
+- tapOn:
+    id: "kyc-enable-camera-button"
+
+# System dialog appears again — this time deny it to test the blocked state
+- extendedWaitUntil:
+    visible:
+      text: "Don't Allow"
+    timeout: 8000
+
+- tapOn:
+    text: "Don't Allow"
+
+# The enable-camera button remains; the form is still fillable but capture is blocked
+- assertVisible:
+    id: "kyc-enable-camera-button"

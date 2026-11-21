@@ -21,7 +21,7 @@ async function connectWallet(page: Page): Promise<void> {
   }
 }
 
-test.describe.serial('Wallet Connect → Deposit → Withdraw E2E Flow', () => {
+test.describe.serial('@journey Wallet Connect → Deposit → Withdraw E2E Flow', () => {
   test.beforeEach(async ({ page }) => {
     // Inject mock wallet into window object prior to navigation
     await injectMockWallet(page, 'creator');

@@ -9,6 +9,7 @@ public reporting and historical trend analysis.
 | Workspace  | Language / Runtime | Coverage tool       | Codecov flag | Report format       |
 |------------|--------------------|---------------------|--------------|---------------------|
 | frontend   | React + TS (Vite)  | vitest + `@vitest/coverage-v8` | `frontend`   | `lcov` / `cobertura` |
+| shared-utils | TS utilities     | vitest + `@vitest/coverage-v8` | `shared-utils` | `lcov` / `cobertura` |
 | contracts  | Rust (Soroban)     | `cargo-tarpaulin`   | `contracts`  | `cobertura` (XML)    |
 | backend    | Node + TS          | `jest` (`ts-jest`)  | `backend`    | `lcov` / `cobertura` |
 
@@ -27,6 +28,7 @@ Thresholds are enforced in two complementary places:
 | Workspace  | Lines | Branches | Functions | Statements | Enforced by |
 |------------|-------|----------|-----------|------------|-------------|
 | frontend   | 80%   | 70%      | 80%       | 80%        | `frontend/vitest.config.ts` (`coverage.thresholds`) + Codecov flag `frontend` |
+| shared-utils | 90% | 90%      | 90%       | 90%        | `packages/shared-utils/vitest.config.ts` (`coverage.thresholds`) + Codecov flag `shared-utils` |
 | contracts  | 90%   | —        | —         | —          | `tarpaulin.toml` (`fail-under = 90`) + `contracts/cargo-llvm-cov.toml` + Codecov flag `contracts` |
 | backend    | 85%   | 85%      | 85%       | 85%        | `backend/jest.config.js` (`coverageThreshold`) + Codecov flag `backend` |
 
@@ -64,6 +66,9 @@ while any coverage check is failing.
 ## Running coverage locally
 
 ```bash
+# Shared utilities (vitest) — produces ./packages/shared-utils/coverage
+cd packages/shared-utils && pnpm test -- --coverage
+
 # Contracts (Rust) — tarpaulin & cargo-llvm-cov
 cargo tarpaulin --config tarpaulin.toml
 cargo llvm-cov --config contracts/cargo-llvm-cov.toml --html

@@ -1,0 +1,91 @@
+# Biometric auth gate — first-launch and re-lock scenarios
+# Covers: AuthGate initial unlock, biometric prompt, PIN fallback, idle re-lock
+# Prereq: app installed fresh (clearState: true)
+appId: com.stellarsave.app
+---
+# ── Fresh launch: biometric prompt fires automatically ────────────────────────
+- launchApp:
+    clearState: true
+
+# AuthGate shows a 'checking' state briefly then either unlocks or shows PIN.
+# On a fresh install there is no stored PIN yet — the gate should pass through.
+- extendedWaitUntil:
+    visible:
+      id: "welcome-screen"
+    timeout: 15000
+
+# ── Biometric available path: gate passes, app content is shown ──────────────
+# (Emulator simulation: biometric always passes when enrolled in AVD settings.
+#  On a real device, approve the prompt when it appears.)
+- assertVisible:
+    id: "welcome-screen"
+
+# ── PIN fallback path ─────────────────────────────────────────────────────────
+# Simulate biometric failure by launching in a state where biometrics
+# are not enrolled. The PIN screen should appear.
+- launchApp:
+    clearState: true
+    env:
+      MAESTRO_BIOMETRIC_AVAILABLE: "false"
+
+- extendedWaitUntil:
+    visible:
+      id: "pin-screen"
+    timeout: 15000
+
+- assertVisible:
+    text: "Enter your PIN"
+
+# ── PIN entry: correct 4-digit PIN unlocks the app ───────────────────────────
+# Fixture PIN is 1234 (see mobile/docs/E2E_FIXTURES.md)
+- tapOn:
+    id: "pin-key-1"
+- tapOn:
+    id: "pin-key-2"
+- tapOn:
+    id: "pin-key-3"
+- tapOn:
+    id: "pin-key-4"
+
+- extendedWaitUntil:
+    visible:
+      id: "welcome-screen"
+    timeout: 10000
+
+# ── Wrong PIN shows error and does not unlock ─────────────────────────────────
+- launchApp:
+    clearState: true
+    env:
+      MAESTRO_BIOMETRIC_AVAILABLE: "false"
+
+- extendedWaitUntil:
+    visible:
+      id: "pin-screen"
+    timeout: 15000
+
+# Enter wrong PIN: 0000
+- tapOn:
+    id: "pin-key-0"
+- tapOn:
+    id: "pin-key-0"
+- tapOn:
+    id: "pin-key-0"
+- tapOn:
+    id: "pin-key-0"
+
+- assertVisible:
+    id: "pin-error-message"
+
+# App must still show the PIN screen (not unlocked)
+- assertVisible:
+    id: "pin-screen"
+
+# ── Delete digit (backspace) works ────────────────────────────────────────────
+- tapOn:
+    id: "pin-key-1"
+- tapOn:
+    id: "pin-key-backspace"
+
+# After backspace, only 0 dots filled (the entered digit was removed)
+- assertVisible:
+    id: "pin-dot-0-empty"

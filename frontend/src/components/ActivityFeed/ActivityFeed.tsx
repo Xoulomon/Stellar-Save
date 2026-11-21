@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import { useActivityFeed } from '../../hooks/useActivityFeed';
+import { formatXlm as formatXlmAmount } from '../../lib/formatters';
 import { EmptyState } from '../EmptyState/EmptyState';
 import { Skeleton } from '../Skeleton/Skeleton';
 
@@ -108,8 +109,7 @@ function formatRelativeTime(ms: number): string {
 }
 
 function formatXlm(stroops: bigint): string {
-  const xlm = Number(stroops) / 10_000_000;
-  return `${xlm.toLocaleString('en-US', { maximumFractionDigits: 2 })} XLM`;
+  return `${formatXlmAmount(stroops)} XLM`;
 }
 
 function shortenAddress(address: string): string {

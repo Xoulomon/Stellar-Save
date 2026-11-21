@@ -4,18 +4,15 @@ import { describe, it, expect, vi } from 'vitest';
 import { GroupDetails } from '../components/GroupDetails';
 
 import type { GroupInfo, GroupMember, Contribution, CycleInfo } from '../components/GroupDetails';
+import { makeGroup } from './factories';
 
-const group: GroupInfo = {
+const group: GroupInfo = makeGroup({
   id: 'g1',
   name: 'Test Group',
   description: 'A test savings group',
   createdAt: new Date('2024-01-01'),
-  totalMembers: 2,
-  targetAmount: 2000,
-  currentAmount: 1000,
-  contributionFrequency: 'monthly',
   status: 'active',
-};
+}) as unknown as GroupInfo;
 
 const members: GroupMember[] = [
   {

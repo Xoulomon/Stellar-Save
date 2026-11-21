@@ -72,7 +72,7 @@ export function PinScreen({
   void shakeError; // prevent unused-var lint warning — AuthGate drives error via `errorMessage` prop
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="pin-screen">
       <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
 
@@ -82,12 +82,13 @@ export function PinScreen({
           <View
             key={i}
             style={[styles.dot, digits.length > i && styles.dotFilled]}
+            testID={digits.length > i ? `pin-dot-${i}-filled` : `pin-dot-${i}-empty`}
           />
         ))}
       </View>
 
       {error ? (
-        <Text style={styles.error} accessibilityLiveRegion="assertive">
+        <Text style={styles.error} accessibilityLiveRegion="assertive" testID="pin-error-message">
           {error}
         </Text>
       ) : null}
@@ -102,6 +103,7 @@ export function PinScreen({
             disabled={key === ''}
             accessibilityLabel={key === '⌫' ? 'Delete' : key === '' ? undefined : key}
             accessibilityRole="button"
+            testID={key === '⌫' ? 'pin-key-backspace' : key === '' ? undefined : `pin-key-${key}`}
           >
             <Text style={styles.keyText}>{key}</Text>
           </TouchableOpacity>

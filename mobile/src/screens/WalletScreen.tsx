@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 export function WalletScreen() {
   return (
-    <View style={styles.container}>
+    <View testID="wallet-screen" style={styles.container}>
       <Text style={styles.title}>Wallet</Text>
       <Text>Placeholder wallet tab — see #996/#997 for implementation.</Text>
     </View>

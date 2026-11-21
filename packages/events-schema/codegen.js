@@ -9,6 +9,21 @@ const schema = JSON.parse(
   fs.readFileSync(path.join(__dirname, 'schema.json'), 'utf8')
 );
 
+// ── Validation: every event must declare schema_version ──────────────────────
+const missingVersion = Object.entries(schema.events)
+  .filter(([, def]) => !Object.prototype.hasOwnProperty.call(def.fields, 'schema_version'))
+  .map(([topic]) => topic);
+
+if (missingVersion.length > 0) {
+  console.error(
+    '\n❌ schema.json is missing schema_version in the following events:\n' +
+    missingVersion.map((t) => `   • ${t}`).join('\n') + '\n' +
+    '   Add "schema_version": "u32" as the first field of each entry.\n'
+  );
+  process.exit(1);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 /** Map schema field types to TypeScript types */
 function tsType(fieldType) {
   switch (fieldType) {
@@ -65,7 +80,7 @@ for (const [topic, def] of Object.entries(events)) {
 // Union type
 lines.push(`export type ContractEvent =`);
 typeNames.forEach((name, i) => {
-  const sep = i < typeNames.length - 1 ? ' |' : ';';
+  const sep = i < typeNames.length - 1 ? '' : ';';
   lines.push(`  | ${name}${sep}`);
 });
 lines.push('');
@@ -82,9 +97,14 @@ for (const topic of Object.keys(events)) {
 lines.push('];');
 lines.push('');
 
+// Current schema version constant — bump when a breaking change is made
+lines.push(`/** The schema version embedded in every on-chain event payload. */`);
+lines.push(`export const CURRENT_SCHEMA_VERSION = ${schema.version};`);
+lines.push('');
+
 const outDir = path.join(__dirname, 'generated');
 if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
 
 const outPath = path.join(outDir, 'events.ts');
 fs.writeFileSync(outPath, lines.join('\n'), 'utf8');
-console.log(`Generated ${outPath} (${typeNames.length} event types)`);
+process.stdout.write(`Generated ${outPath} (${typeNames.length} event types, all with schema_version)\n`);

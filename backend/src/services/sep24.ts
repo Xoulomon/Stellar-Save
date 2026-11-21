@@ -109,6 +109,16 @@ export async function initiateWithdraw(opts: Sep24InitOpts): Promise<Sep24Result
   return initiate('withdraw', opts);
 }
 
+interface RampTransactionDelegate {
+  rampTransaction: {
+    create: (args: unknown) => Promise<{ id: string }>;
+    findUnique: (args: unknown) => Promise<RampTransactionRecord | null>;
+    update: (args: unknown) => Promise<RampTransactionRecord>;
+  };
+}
+
+const rampDb = prisma as unknown as RampTransactionDelegate;
+
 async function initiate(type: 'deposit' | 'withdraw', opts: Sep24InitOpts): Promise<Sep24Result> {
   return fiatRampCircuitBreaker.fire(async () => {
     const { anchorDomain, stellarAccount, assetCode, assetIssuer, amount, userId } = opts;
@@ -145,7 +155,7 @@ async function initiate(type: 'deposit' | 'withdraw', opts: Sep24InitOpts): Prom
     if (!res.ok) throw new Error(`SEP-24 ${type} failed: ${res.status}`);
     const { id: anchorId, url: interactiveUrl } = (await res.json()) as { id: string; url: string };
 
-    const record = await (prisma as any).rampTransaction.create({
+    const record = await rampDb.rampTransaction.create({
       data: {
         userId,
         type,
@@ -170,7 +180,7 @@ async function initiate(type: 'deposit' | 'withdraw', opts: Sep24InitOpts): Prom
  * Wrapped in circuit breaker.
  */
 export async function syncTransactionStatus(id: string): Promise<RampTransactionRecord> {
-  const record: RampTransactionRecord | null = await (prisma as any).rampTransaction.findUnique({
+  const record: RampTransactionRecord | null = await rampDb.rampTransaction.findUnique({
     where: { id },
   });
   if (!record) throw new Error(`RampTransaction ${id} not found`);
@@ -201,7 +211,7 @@ export async function syncTransactionStatus(id: string): Promise<RampTransaction
       transaction: { status: string; more_info_url?: string };
     };
 
-    const updated: RampTransactionRecord = await (prisma as any).rampTransaction.update({
+    const updated: RampTransactionRecord = await rampDb.rampTransaction.update({
       where: { id },
       data: { status: transaction.status, moreInfoUrl: transaction.more_info_url ?? null },
     });
@@ -212,7 +222,7 @@ export async function syncTransactionStatus(id: string): Promise<RampTransaction
 }
 
 export async function getTransaction(id: string): Promise<RampTransactionRecord> {
-  const record: RampTransactionRecord | null = await (prisma as any).rampTransaction.findUnique({
+  const record: RampTransactionRecord | null = await rampDb.rampTransaction.findUnique({
     where: { id },
   });
   if (!record) throw new Error(`RampTransaction ${id} not found`);

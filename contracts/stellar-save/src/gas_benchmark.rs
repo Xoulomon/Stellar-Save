@@ -1,7 +1,9 @@
 //! Gas Cost Profiling & Optimization Benchmark
+//! # Gas Cost Profiling & Optimization Benchmark
 //!
 //! This module profiles and benchmarks the gas (storage operation) costs for the
-//! most frequently called contract functions, with a focus on `contribute()`.
+//! most frequently called contract functions, with a focus on `contribute()` and
+//! `search_groups()` (issue #67).
 //!
 //! ## Methodology
 //! Soroban charges fees based on the number and size of storage read/write
@@ -38,6 +40,25 @@
 //! `cycle_total` placeholder, which was incorrect for all but the first
 //! contributor. **After**: The actual running total is passed, making events
 //! accurate at zero extra cost.
+//!
+//! ### 5. Eliminate Duplicate Event Emission and Redundant Map Read in Cycle Advancement
+//! **Before**: `try_advance_cycle` emitted `CycleAdvanced` twice with identical parameters.
+//! `tick` loaded `group_members` (a serialized `Map<u32, Address>`) via `is_cycle_complete`
+//! to check cycle completion despite `group.member_count` already residing in memory.
+//! **After**: Duplicate event emission eliminated in `try_advance_cycle`. In `tick`,
+//! `group.member_count` is read directly from memory (0 extra SLOADs) and `is_cycle_complete`
+//! reads `group_data` (scalar record) instead of `group_members` (arbitrary map).
+//! Saves **1 redundant event emission** and **1 large Map SLOAD per tick/cycle check**.
+//!
+//! ### 6. Skip Redundant Contribution Existence Checks in Batches and Auto-Contributions
+//! **Before**: `contribute_batch` checked `has(&contrib_key)` for every cycle in upfront
+//! validation, and then `record_contribution` checked `has(&contrib_key)` a second time
+//! for each cycle. Similarly, `execute_auto_contributions` checked `has(&contrib_key)`
+//! before checking balance/allowance and then checked `has(&contrib_key)` again in
+//! `record_contribution`.
+//! **After**: `record_contribution_unchecked` skips the second `has(&contrib_key)` SLOAD
+//! for validated calls.
+//! Saves **1 SLOAD per contribution** in batch and auto-contribution paths.
 //!
 //! ## Storage Operation Count — `contribute()` (per call)
 //!
@@ -90,6 +111,18 @@
 //!
 //! At 100 members / 100 cycles the optimizations eliminate ~29,900 storage ops,
 //! which at Stellar's fee schedule translates to a significant fee reduction.
+//!
+//! ## Storage Operation Count — `search_groups()` (per call, worst case, issue #67)
+//!
+//! | Sort variant      | Persistent reads              | In-memory comparisons      |
+//! |-------------------|-------------------------------|----------------------------|
+//! | CreatedDesc/Asc   | 1 + 2 × MAX_PAGE_SIZE = **101** | 0                        |
+//! | MemberCountDesc   | 1 + 2 × MAX_PAGE_SIZE = **101** | ≤ MAX_PAGE_SIZE² = 2,500 |
+//! | MemberCountAsc    | 1 + 2 × MAX_PAGE_SIZE = **101** | ≤ MAX_PAGE_SIZE² = 2,500 |
+//!
+//! All paths are bounded at compile time by `MAX_PAGE_SIZE` = 50.
+//! Requests above that limit are rejected with `ContractError::PageSizeTooLarge`
+//! before any storage is touched. See [`profile_search_ops`] for the full model.
 
 /// Profiles the storage operation count for `contribute()` before and after
 /// the optimizations described in this module.
@@ -200,9 +233,130 @@ pub fn full_lifecycle_savings(member_count: u32, cycle_count: u32) -> (u64, u64,
     (total_before, total_after, saved, pct)
 }
 
+/// Profiles the storage operation count for cycle advancement via `tick()` before
+/// and after the optimizations.
+///
+/// Returns `(ops_before, ops_after)` for a single tick call.
+pub fn profile_tick_ops() -> (u32, u32) {
+    // Before: load group (1) + load group_members map (1) + load cycle count (1) + write group (1)
+    let ops_before: u32 = 1 + 1 + 1 + 1;
+    // After: load group (1) + load cycle count (1) + write group (1)
+    // (group.member_count used from memory instead of loading group_members map)
+    let ops_after: u32 = 1 + 1 + 1;
+    (ops_before, ops_after)
+}
+
+/// Profiles the worst-case storage operation count for `search_groups()` at
+/// the page-size limit defined by `MAX_PAGE_SIZE` (50).
+///
+/// # Read model
+/// Every candidate group ID requires **two** persistent reads:
+/// 1. `group_data(id)` — load the [`Group`] struct.
+/// 2. `group_archived(id)` — check whether the group has been archived.
+///
+/// In the worst case (all groups match the filters, scan fills the page exactly)
+/// the outer scan loop executes `MAX_PAGE_SIZE` = 50 iterations, yielding:
+///
+/// ```text
+/// reads = 2 × MAX_PAGE_SIZE = 2 × 50 = 100
+/// ```
+///
+/// One additional read is performed at the start to load the `NextGroupId`
+/// counter (to determine the scan range):
+///
+/// ```text
+/// total reads = 1 (NextGroupId) + 2 × MAX_PAGE_SIZE = 101
+/// ```
+///
+/// The `MemberCount*` sort variants add an in-memory insertion sort
+/// (O(MAX_PAGE_SIZE²) comparisons) but **zero additional storage reads** —
+/// all data is already in memory from the scan phase.
+///
+/// # Returns
+/// `(reads_scan_only, reads_member_count_sort)`
+///
+/// Both values are identical because the sort phase does not touch storage.
+/// The pair is returned for API consistency with the other `profile_*` functions.
+///
+/// # Gas bound reference (issue #67)
+/// | Sort variant      | Persistent reads | In-memory comparisons |
+/// |-------------------|------------------|-----------------------|
+/// | CreatedDesc/Asc   | 101              | 0                     |
+/// | MemberCountDesc   | 101              | ≤ MAX_PAGE_SIZE² = 2,500 |
+/// | MemberCountAsc    | 101              | ≤ MAX_PAGE_SIZE² = 2,500 |
+pub fn profile_search_ops() -> (u32, u32) {
+    use crate::search::MAX_PAGE_SIZE;
+
+    // 1 read for NextGroupId counter
+    // + 2 reads per group (group_data + group_archived) × MAX_PAGE_SIZE
+    let reads: u32 = 1 + 2 * MAX_PAGE_SIZE;
+
+    // MemberCount* sort is in-memory only — same read count.
+    let reads_with_sort: u32 = reads;
+
+    (reads, reads_with_sort)
+}
+
+/// Profiles storage operation count for `contribute_batch()` with `batch_size` cycles.
+///
+/// Returns `(ops_before, ops_after)` for a batch contribution call.
+pub fn profile_batch_contribute_ops(batch_size: u32) -> (u32, u32) {
+    // Common group and token config checks
+    let common_base = 3;
+    // Before: validation checks has(contrib_key) per cycle (batch_size) +
+    // record_contribution repeats has(contrib_key) per cycle (batch_size) +
+    // remaining persistent writes/reads per cycle (8 * batch_size)
+    let ops_before = common_base + (batch_size * 10);
+    // After: record_contribution_unchecked eliminates 1 SLOAD per cycle
+    let ops_after = common_base + (batch_size * 9);
+    (ops_before, ops_after)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_profile_search_ops_at_max_page_size() {
+        use crate::search::MAX_PAGE_SIZE;
+
+        let (reads, reads_with_sort) = profile_search_ops();
+
+        // Both variants must be equal (sort is in-memory, no extra storage reads).
+        assert_eq!(reads, reads_with_sort);
+
+        // 1 (NextGroupId) + 2 × MAX_PAGE_SIZE (group_data + group_archived per id)
+        let expected: u32 = 1 + 2 * MAX_PAGE_SIZE;
+        assert_eq!(
+            reads, expected,
+            "search_groups at MAX_PAGE_SIZE should require {} persistent reads, got {}",
+            expected, reads
+        );
+
+        // Sanity: bound must be under 200 reads (well inside Soroban instruction limits).
+        assert!(
+            reads < 200,
+            "search ops at MAX_PAGE_SIZE ({}) must be < 200 reads",
+            reads
+        );
+    }
+
+    #[test]
+    fn test_tick_ops_reduction() {
+        let (before, after) = profile_tick_ops();
+        assert!(after < before);
+        assert_eq!(before, 4);
+        assert_eq!(after, 3);
+        let reduction_pct = ((before - after) * 100) / before;
+        assert_eq!(reduction_pct, 25);
+    }
+
+    #[test]
+    fn test_batch_contribute_ops_reduction() {
+        let (before, after) = profile_batch_contribute_ops(5);
+        assert!(after < before);
+        assert_eq!(before - after, 5); // 5 redundant SLOADs eliminated
+    }
 
     #[test]
     fn test_contribute_ops_reduction() {

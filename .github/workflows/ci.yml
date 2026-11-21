@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ── Frontend Quality Checks ──────────────────────────────────────────
+      # ── Frontend Quality Checks ──────────────────────────────────
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -58,7 +58,7 @@ jobs:
         working-directory: backend
         continue-on-error: false
 
-      # ── Rust Quality Checks ──────────────────────────────────────────────
+      # ── Rust Quality Checks ──────────────────────────────────────
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -88,7 +88,7 @@ jobs:
           cargo tree --manifest-path contracts/stellar-save/Cargo.toml --duplicates
           cargo tree --manifest-path contracts/stellar-save/Cargo.toml --depth 1
 
-  # ─── Frontend Tests & Coverage ──────────────────────────────────────────────
+  # ─── Frontend Tests & Coverage ──────────────────────────────────────
   frontend:
     name: Frontend Tests
     runs-on: ubuntu-latest
@@ -133,7 +133,52 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-  # ─── Rust Contract Tests & Coverage ─────────────────────────────────────────
+  # ─── Shared Utils Tests & Coverage ──────────────────────────────────
+  shared-utils:
+    name: Shared Utils Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/shared-utils
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Run tests with coverage
+        run: pnpm run test:coverage
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shared-utils-coverage
+          path: packages/shared-utils/coverage/
+          retention-days: 30
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: packages/shared-utils/coverage/lcov.info
+          flags: shared-utils
+          name: shared-utils-coverage
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  # ─── Rust Contract Tests & Coverage ──────────────────────────────────
   contracts:
     name: Contract Tests
     runs-on: ubuntu-latest
@@ -208,7 +253,7 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-  # ─── Build Verification ──────────────────────────────────────────────────────
+  # ─── Build Verification ──────────────────────────────────────────────
   build:
     name: Build Verification
     runs-on: ubuntu-latest
@@ -247,7 +292,7 @@ jobs:
             --target wasm32-unknown-unknown \
             --release
 
-  # ─── Performance Monitoring (Lighthouse CI) ─────────────────────────────────
+  # ─── Performance Monitoring (Lighthouse CI) ─────────────────────────
   performance:
     name: Lighthouse CI Performance
     needs: [build]
@@ -294,7 +339,7 @@ jobs:
           name: lighthouse-report-log
           path: /tmp/lhci-frontend.log
 
-  # ─── Automated Deployment (testnet/mainnet) ────────────────────────────────
+  # ─── Automated Deployment (testnet/mainnet) ────────────────────────
   deploy-testnet:
     name: Deploy to Testnet
     needs: [build, performance]

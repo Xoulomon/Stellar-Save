@@ -1,5 +1,6 @@
 export {
   AnalyticsService,
+  AnalyticsAggregator,
   type AnalyticsOptions,
   type PlatformStats,
   type UserStats,
@@ -10,4 +11,3 @@ export {
   type SorobanSyncOptions,
   type SorobanSyncResult,
 } from '../analytics_service';
-export { AnalyticsAggregator } from '../analytics_aggregator';

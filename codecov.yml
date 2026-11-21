@@ -1,3 +1,7 @@
+# codecov.yml — Codecov project configuration read by the coverage.yml CI workflow.
+# Sets per-workspace coverage gates (project status) and PR patch thresholds.
+# Acts as a required merge gate: PRs that drop below target % are blocked.
+
 coverage:
   precision: 2
   round: down
@@ -17,6 +21,13 @@ coverage:
         threshold: 1%
         flags:
           - frontend
+        if_not_found: success
+        if_ci_failed: error
+      shared-utils:
+        target: 90%
+        threshold: 1%
+        flags:
+          - shared-utils
         if_not_found: success
         if_ci_failed: error
       contracts:
@@ -53,6 +64,11 @@ coverage:
     frontend:
       paths:
         - frontend/src/
+      carryforward: false
+
+    shared-utils:
+      paths:
+        - packages/shared-utils/src/
       carryforward: false
 
     contracts:

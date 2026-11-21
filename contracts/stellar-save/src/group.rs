@@ -474,6 +474,7 @@ impl Group {
         self.current_cycle = self
             .current_cycle
             .checked_add(1)
+            // INVARIANT: max_members <= MAX_MEMBERS (20), so u32 overflow is unreachable
             .expect("cycle counter overflow");
 
         // Mark as complete if we've reached the final cycle
@@ -545,6 +546,8 @@ impl Group {
     pub fn total_pool_amount(&self) -> i128 {
         self.contribution_amount
             .checked_mul(self.max_members as i128)
+            // INVARIANT: contribution_amount and max_members are validated at group creation
+            // (contribution_amount > 0, max_members <= MAX_MEMBERS=20); overflow is unreachable
             .expect("pool amount overflow")
     }
 
@@ -586,6 +589,8 @@ impl Group {
         self.member_count = self
             .member_count
             .checked_add(1)
+            // INVARIANT: join_group checks member_count < max_members before calling add_member;
+            // max_members <= MAX_MEMBERS (20), so u32 overflow is unreachable
             .expect("member_count overflow");
     }
 
@@ -924,5 +929,14 @@ mod tests {
         let mut group = make_group(&env, 3, 0);
         group.status = GroupStatus::Paused;
         assert!(group.is_paused());
+    }
+
+    #[test]
+    fn test_total_pool_amount_no_overflow() {
+        let env = Env::default();
+        let creator = Address::generate(&env);
+        // max_members=20, contribution_amount=100_000_000 → 2_000_000_000 < i128::MAX
+        let g = Group::new(1, creator, 100_000_000, 604800, 20, 2, 0);
+        assert_eq!(g.total_pool_amount(), 2_000_000_000);
     }
 }

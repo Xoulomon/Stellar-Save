@@ -5,6 +5,8 @@
 import { Refresh } from '@mui/icons-material';
 import { Alert, AlertTitle, Button } from '@mui/material';
 
+import type { JSX } from 'react';
+
 interface StaleDataBannerProps {
   isStale?: boolean;
   fromCache?: boolean;

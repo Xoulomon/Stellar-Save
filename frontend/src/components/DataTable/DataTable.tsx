@@ -56,7 +56,7 @@ export interface DataTableProps<T> {
   columns: DataTableColumn<T>[];
   /** Row data array. Each row must have a unique `id` field (or provide `rowKey`). */
   rows: T[];
-  /** Function that returns a unique key for each row. Defaults to `(row) => (row as any).id`. */
+  /** Function that returns a unique key for each row. Defaults to `(row) => (row as Record<string, unknown>)['id']`. */
   rowKey?: (row: T) => string | number;
   /** Whether data is currently loading */
   loading?: boolean;
@@ -191,7 +191,7 @@ export function DataTable<T>({
   return (
     <div className={`data-table-wrapper ${className}`} data-testid="data-table">
       <div className="data-table-scroll" role="region" aria-label={caption ?? 'Data table'}>
-        <table className="data-table" aria-busy={loading} aria-label={caption}>
+        <table className="data-table" aria-busy={loading} aria-label={caption ?? 'Data table'}>
           {caption && <caption className="data-table__caption">{caption}</caption>}
 
           <colgroup>
@@ -217,17 +217,6 @@ export function DataTable<T>({
                       .filter(Boolean)
                       .join(' ')}
                     onClick={col.sortable ? () => handleSort(col.key) : undefined}
-                    onKeyDown={
-                      col.sortable
-                        ? (e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              handleSort(col.key);
-                            }
-                          }
-                        : undefined
-                    }
-                    tabIndex={col.sortable ? 0 : undefined}
                     aria-sort={
                       col.sortable
                         ? isActive
@@ -238,12 +227,24 @@ export function DataTable<T>({
                         : undefined
                     }
                   >
-                    <span className="data-table__th-content">
-                      {col.header}
-                      {col.sortable && (
-                        <SortIcon direction={isActive ? sortDir : null} active={isActive} />
-                      )}
-                    </span>
+                    {col.sortable ? (
+                      <button
+                        type="button"
+                        className="data-table__sort-button"
+                        aria-label={`Sort by ${col.header}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleSort(col.key);
+                        }}
+                      >
+                        <span className="data-table__th-content">
+                          {col.header}
+                          <SortIcon direction={isActive ? sortDir : null} active={isActive} />
+                        </span>
+                      </button>
+                    ) : (
+                      <span className="data-table__th-content">{col.header}</span>
+                    )}
                   </th>
                 );
               })}
@@ -279,19 +280,24 @@ export function DataTable<T>({
                   className={['data-table__row', onRowClick ? 'data-table__row--clickable' : '']
                     .filter(Boolean)
                     .join(' ')}
-                  onClick={onRowClick ? () => onRowClick(row) : undefined}
-                  onKeyDown={
+                  onClick={
                     onRowClick
-                      ? (e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            onRowClick(row);
-                          }
+                      ? (event) => {
+                          if ((event.target as HTMLElement).closest('button, a, input, select, textarea')) return;
+                          onRowClick(row);
                         }
                       : undefined
                   }
-                  tabIndex={onRowClick ? 0 : undefined}
-                  role={onRowClick ? 'button' : undefined}
+                  onKeyDown={
+                    onRowClick
+                      ? (event) => {
+                          if (event.key !== 'Enter' && event.key !== ' ') return;
+                          if ((event.target as HTMLElement).closest('button, a, input, select, textarea')) return;
+                          event.preventDefault();
+                          onRowClick(row);
+                        }
+                      : undefined
+                  }
                 >
                   {columns.map((col) => (
                     <td
@@ -299,6 +305,24 @@ export function DataTable<T>({
                       className={['data-table__td', col.cellClassName ?? '']
                         .filter(Boolean)
                         .join(' ')}
+                      tabIndex={onRowClick ? 0 : undefined}
+                      onKeyDown={
+                        onRowClick
+                          ? (event) => {
+                              const cell = event.currentTarget;
+                              const row = cell.parentElement;
+                              const rowIndex = row ? Array.from(row.parentElement?.children ?? []).indexOf(row) : -1;
+                              const cellIndex = Array.from(row?.children ?? []).indexOf(cell);
+                              const rowDelta = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
+                              const cellDelta = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+                              if (!rowDelta && !cellDelta) return;
+                              event.preventDefault();
+                              const targetRow = row?.parentElement?.children.item(rowIndex + rowDelta);
+                              const targetCell = targetRow?.children.item(cellIndex + cellDelta);
+                              if (targetCell instanceof HTMLElement) targetCell.focus();
+                            }
+                          : undefined
+                      }
                     >
                       {col.render
                         ? col.render(row)

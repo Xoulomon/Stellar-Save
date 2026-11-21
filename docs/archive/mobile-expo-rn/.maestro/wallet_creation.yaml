@@ -1,0 +1,87 @@
+# Wallet creation flow — create new wallet, backup seed phrase, confirm
+appId: com.stellarsave.app
+---
+# Step 1: Launch app
+- launchApp:
+    clearState: true
+
+# Step 2: Navigate to wallet setup
+- tapOn:
+    id: "get-started-button"
+- assertVisible:
+    id: "wallet-connect-screen"
+
+# Step 3: Tap "Create New Wallet"
+- tapOn:
+    text: "Create New Wallet"
+
+# Step 4: Wallet creation screen
+- assertVisible:
+    id: "create-wallet-screen"
+- assertVisible:
+    text: "Create New Wallet"
+
+# Step 5: Tap Generate Seed Phrase
+- tapOn:
+    id: "generate-seed-phrase-button"
+
+# Step 6: Seed phrase backup screen
+- assertVisible:
+    id: "seed-phrase-screen"
+- assertVisible:
+    text: "Back Up Your Seed Phrase"
+- assertVisible:
+    text: "Never share your seed phrase"
+
+# Step 7: Seed phrase words are displayed (12 words)
+- assertVisible:
+    id: "seed-word-1"
+- assertVisible:
+    id: "seed-word-12"
+
+# Step 8: Read the first word dynamically so verification uses the real seed,
+# not a hardcoded literal that would always fail against a generated phrase.
+- copyTextFrom:
+    id: "seed-word-1"
+
+# Step 9 (was 8): Check the backup confirmation checkbox
+- tapOn:
+    id: "backup-confirmed-checkbox"
+
+# Step 10 (was 9): Proceed to confirmation
+- tapOn:
+    id: "i-have-backed-up-button"
+
+# Step 11 (was 10): Verify seed phrase confirmation screen
+- assertVisible:
+    id: "confirm-seed-screen"
+- assertVisible:
+    text: "Verify Your Seed Phrase"
+
+# Step 12 (was 11): Enter the first seed word using the value copied earlier.
+# pasteText inserts whatever was stored by copyTextFrom, making this robust
+# against any randomly generated phrase rather than assuming "word1".
+- tapOn:
+    id: "seed-verify-input-1"
+- pasteText
+
+# Step 13 (was 12): Submit verification
+- tapOn:
+    id: "verify-seed-button"
+
+# Step 14 (was 13): Wait for wallet creation to complete; key derivation may
+# take a moment, so poll instead of asserting immediately.
+- extendedWaitUntil:
+    visible:
+      id: "wallet-created-success"
+    timeout: 15000
+- assertVisible:
+    text: "Wallet Created!"
+
+# Step 15 (was 14): Navigate to dashboard
+- tapOn:
+    id: "go-to-dashboard-button"
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 10000

@@ -15,9 +15,9 @@ use crate::refund::RefundRecord;
 use crate::search::{SearchParams, SearchResult};
 use crate::storage::{StorageKey, StorageKeyBuilder};
 use crate::types::{AssignmentMode, ContractConfig, MemberProfile, PayoutScheduleEntry};
-use crate::{governance, migration, milestones, payout_executor, penalty, rating, refund, search};
+use soroban_sdk::{contract, contractimpl, Address, Bytes, Env, String, Symbol, Vec, Map, BytesN};
 use core::cmp;
-use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, Map, String, Symbol, Vec};
+use crate::{auth, governance, milestones, payout_executor, penalty, rating, refund, search, migration};
 
 #[contract]
 pub struct StellarSaveContract;
@@ -162,6 +162,33 @@ impl StellarSaveContract {
             return Err(StellarSaveError::AlreadyContributed);
         }
 
+        Self::record_contribution_unchecked(
+            env,
+            group_id,
+            cycle_number,
+            member_address,
+            amount,
+            timestamp,
+        )
+    }
+
+    /// Gas opt: records contribution without repeating the `has(&contrib_key)` SLOAD.
+    /// Callers such as `contribute_batch` and `execute_auto_contributions` that have
+    /// already validated contribution status can bypass the redundant storage read.
+    fn record_contribution_unchecked(
+        env: &Env,
+        group_id: u64,
+        cycle_number: u32,
+        member_address: Address,
+        amount: i128,
+        timestamp: u64,
+    ) -> Result<i128, StellarSaveError> {
+        let contrib_key = StorageKeyBuilder::contribution_individual(
+            group_id,
+            cycle_number,
+            member_address.clone(),
+        );
+
         // 2. Create and store contribution record (1 SSTORE)
         let contribution = ContributionRecord::new(
             member_address.clone(),
@@ -290,20 +317,8 @@ impl StellarSaveContract {
     /// * `Ok(())` - If migration completed successfully or no migration needed
     /// * `Err(StellarSaveError)` - If migration failed or caller is not admin
     pub fn migrate_storage(env: Env, caller: Address) -> Result<(), StellarSaveError> {
-        // Require admin authorization
-        let config_key = StorageKeyBuilder::contract_config();
-        if let Some(config) = env
-            .storage()
-            .persistent()
-            .get::<_, ContractConfig>(&config_key)
-        {
-            if config.admin != caller {
-                return Err(StellarSaveError::Unauthorized);
-            }
-            caller.require_auth();
-        } else {
-            return Err(StellarSaveError::InvalidState); // No config means contract not initialized
-        }
+        // Require admin authorization via shared helper
+        auth::require_admin(&env, &caller)?;
 
         // Perform migration
         migrate(&env)?;
@@ -348,20 +363,27 @@ impl StellarSaveContract {
         new_wasm: BytesN<32>,
         new_version: u32,
     ) -> Result<(), StellarSaveError> {
-        caller.require_auth();
-
-        // Verify admin
-        let config_key = StorageKeyBuilder::contract_config();
-        let config = env
-            .storage()
-            .persistent()
-            .get::<_, ContractConfig>(&config_key)
-            .ok_or(StellarSaveError::Unauthorized)?;
-        if config.admin != caller {
-            return Err(StellarSaveError::Unauthorized);
-        }
+        auth::require_admin(&env, &caller)?;
 
         migration::execute_upgrade(&env, caller, new_wasm, new_version)
+    }
+
+    /// Pauses the whole contract. Admin only.
+    ///
+    /// While paused, contributions and payouts return `ContractPaused`. Group-level
+    /// pause (`pause_group`) is separate and unchanged.
+    pub fn pause_contract(env: Env, admin: Address) -> Result<(), StellarSaveError> {
+        crate::pause::set_contract_paused(&env, &admin, true)
+    }
+
+    /// Lifts the contract-wide pause. Admin only.
+    pub fn unpause_contract(env: Env, admin: Address) -> Result<(), StellarSaveError> {
+        crate::pause::set_contract_paused(&env, &admin, false)
+    }
+
+    /// Returns true while the contract-wide pause is set.
+    pub fn is_contract_paused(env: Env) -> bool {
+        crate::pause::is_contract_paused(&env)
     }
 
     /// Updates the global contribution amount limits.
@@ -385,7 +407,7 @@ impl StellarSaveContract {
         min_contribution: i128,
         max_contribution: i128,
     ) -> Result<(), StellarSaveError> {
-        admin.require_auth();
+        auth::require_admin(&env, &admin)?;
 
         if min_contribution <= 0 {
             return Err(StellarSaveError::ContributionTooLow);
@@ -400,10 +422,6 @@ impl StellarSaveContract {
             .persistent()
             .get::<_, ContractConfig>(&key)
             .ok_or(StellarSaveError::Unauthorized)?;
-
-        if config.admin != admin {
-            return Err(StellarSaveError::Unauthorized);
-        }
 
         config.min_contribution = min_contribution;
         config.max_contribution = max_contribution;
@@ -656,16 +674,7 @@ impl StellarSaveContract {
         admin: Address,
         token_address: Address,
     ) -> Result<(), StellarSaveError> {
-        admin.require_auth();
-        let config_key = StorageKeyBuilder::contract_config();
-        let config = env
-            .storage()
-            .persistent()
-            .get::<_, ContractConfig>(&config_key)
-            .ok_or(StellarSaveError::Unauthorized)?;
-        if config.admin != admin {
-            return Err(StellarSaveError::Unauthorized);
-        }
+        auth::require_admin(&env, &admin)?;
         let list_key = StorageKeyBuilder::allowed_tokens();
         let mut list: Vec<Address> = env
             .storage()
@@ -685,16 +694,7 @@ impl StellarSaveContract {
         admin: Address,
         token_address: Address,
     ) -> Result<(), StellarSaveError> {
-        admin.require_auth();
-        let config_key = StorageKeyBuilder::contract_config();
-        let config = env
-            .storage()
-            .persistent()
-            .get::<_, ContractConfig>(&config_key)
-            .ok_or(StellarSaveError::Unauthorized)?;
-        if config.admin != admin {
-            return Err(StellarSaveError::Unauthorized);
-        }
+        auth::require_admin(&env, &admin)?;
         let list_key = StorageKeyBuilder::allowed_tokens();
         let list: Vec<Address> = env
             .storage()
@@ -1491,6 +1491,7 @@ impl StellarSaveContract {
                 let position_order = Self::randomize_payout_order(env.clone(), group_id, seed)?;
                 let mut pos = Vec::new(&env);
                 for i in 0..position_order.len() {
+                    // INVARIANT: i < position_order.len() — loop bound
                     pos.push_back(position_order.get(i).unwrap());
                 }
                 pos
@@ -1505,6 +1506,7 @@ impl StellarSaveContract {
 
         let mut loop_idx: u32 = 0;
         for (_, member) in members.iter() {
+            // INVARIANT: loop_idx < positions.len() — positions has same length as members
             let position = positions.get(loop_idx).unwrap();
             let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
             let mut profile: MemberProfile = env
@@ -1604,8 +1606,11 @@ impl StellarSaveContract {
 
         let mut sequence = Vec::new(&env);
         for i in 0..positions.len() {
+            // INVARIANT: i < positions.len() — loop bound guarantees valid index
             let position = positions.get(i).unwrap();
-            sequence.push_back(member_vec.get(position).unwrap().clone());
+            // `Vec::get` already returns an owned value; no extra clone needed (issue #1716).
+            // INVARIANT: position values are indices into member_vec (0..member_vec.len()), set by shuffle
+            sequence.push_back(member_vec.get(position).unwrap());
         }
 
         env.storage().persistent().set(&sequence_key, &sequence);
@@ -1617,6 +1622,7 @@ impl StellarSaveContract {
         let len = vec.len();
         for i in (1..len).rev() {
             let j = (seed.wrapping_mul(i as u64 + 1) % (i as u64 + 1)) as u32;
+            // INVARIANT: i/j < vec.len() — Fisher-Yates bounds guarantee valid indices
             let temp = vec.get(i).unwrap();
             let swap = vec.get(j).unwrap();
             vec.set(i, swap);
@@ -1654,6 +1660,7 @@ impl StellarSaveContract {
     /// - `PayoutFailed` - Transfer failed or insufficient balance
     /// - `InvalidRecipient` - Recipient not eligible for payout
     pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
+        crate::pause::require_not_paused(&env)?;
         payout_executor::execute_payout(env, group_id)
     }
 
@@ -1703,7 +1710,11 @@ impl StellarSaveContract {
         let mut defaulted = false;
 
         // 5. Check if cycle is complete (all contributions received)
-        let cycle_complete = Self::is_cycle_complete(env.clone(), group_id, group.current_cycle)?;
+        // Gas opt: check against already-loaded group.member_count to avoid
+        // re-loading group storage or deserializing the entire group_members map.
+        let count_key = StorageKeyBuilder::contribution_cycle_count(group_id, group.current_cycle);
+        let contributed_count: u32 = env.storage().persistent().get(&count_key).unwrap_or(0);
+        let cycle_complete = contributed_count >= group.member_count;
 
         if cycle_complete {
             // 5a. Execute payout if cycle is complete
@@ -1841,14 +1852,10 @@ impl StellarSaveContract {
     /// - `Unauthorized` - Caller is not the group creator
     /// - `InvalidState` - Group not in Active status
     pub fn pause_group(env: Env, group_id: u64, caller: Address) -> Result<(), StellarSaveError> {
-        caller.require_auth();
         use crate::repository::GroupRepository;
 
         let mut group = GroupRepository::get_group(&env, group_id)?;
-
-        if group.creator != caller {
-            return Err(StellarSaveError::Unauthorized);
-        }
+        auth::require_creator(&caller, &group)?;
 
         let status_key = StorageKeyBuilder::group_status(group_id);
         let current_status: GroupStatus = env
@@ -1891,14 +1898,10 @@ impl StellarSaveContract {
     /// - `Unauthorized` - Caller is not the group creator
     /// - `InvalidState` - Group not in Paused status
     pub fn resume_group(env: Env, group_id: u64, caller: Address) -> Result<(), StellarSaveError> {
-        caller.require_auth();
         use crate::repository::GroupRepository;
 
         let mut group = GroupRepository::get_group(&env, group_id)?;
-
-        if group.creator != caller {
-            return Err(StellarSaveError::Unauthorized);
-        }
+        auth::require_creator(&caller, &group)?;
 
         let status_key = StorageKeyBuilder::group_status(group_id);
         let current_status: GroupStatus = env
@@ -2109,8 +2112,6 @@ impl StellarSaveContract {
     /// - `Unauthorized` - Caller is not the group creator
     /// - `InvalidState` - Group is already in terminal state
     pub fn cancel_group(env: Env, group_id: u64, caller: Address) -> Result<(), StellarSaveError> {
-        caller.require_auth();
-
         let group_key = StorageKeyBuilder::group_data(group_id);
         let group = env
             .storage()
@@ -2118,9 +2119,7 @@ impl StellarSaveContract {
             .get::<_, Group>(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        if group.creator != caller {
-            return Err(StellarSaveError::Unauthorized);
-        }
+        auth::require_creator(&caller, &group)?;
 
         let status_key = StorageKeyBuilder::group_status(group_id);
         let current_status: GroupStatus = env
@@ -3260,17 +3259,17 @@ impl StellarSaveContract {
         group_id: u64,
         cycle_number: u32,
     ) -> Result<bool, StellarSaveError> {
-        let members_key = StorageKeyBuilder::group_members(group_id);
-        let members: Map<u32, Address> = env
+        let group_key = StorageKeyBuilder::group_data(group_id);
+        let group: Group = env
             .storage()
             .persistent()
-            .get(&members_key)
+            .get(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
         let count_key = StorageKeyBuilder::contribution_cycle_count(group_id, cycle_number);
         let contributed_count: u32 = env.storage().persistent().get(&count_key).unwrap_or(0);
 
-        Ok(contributed_count >= members.len())
+        Ok(contributed_count >= group.member_count)
     }
 
     /// Identifies members who haven't contributed in the specified cycle.
@@ -3956,7 +3955,7 @@ impl StellarSaveContract {
         let withdrawal_amount = if has_received { 0 } else { total_contributed };
 
         if withdrawal_amount > 0 {
-            // Load token config and execute the actual transfer
+            // Load token config
             let token_config_key = StorageKeyBuilder::group_token_config(group_id);
             let token_config: crate::group::TokenConfig = env
                 .storage()
@@ -3964,11 +3963,8 @@ impl StellarSaveContract {
                 .get(&token_config_key)
                 .ok_or(StellarSaveError::GroupNotFound)?;
 
-            let token_client =
-                soroban_sdk::token::TokenClient::new(&env, &token_config.token_address);
-            token_client.transfer(&env.current_contract_address(), &member, &withdrawal_amount);
-
-            // Update the group balance counter
+            // ── Effects ───────────────────────────────────────────────────────
+            // Checks-effects-interactions: update state before external transfer
             let balance_key = StorageKeyBuilder::group_balance(group_id);
             let current_balance: i128 = env.storage().persistent().get(&balance_key).unwrap_or(0);
             let new_balance = current_balance
@@ -3976,15 +3972,24 @@ impl StellarSaveContract {
                 .ok_or(StellarSaveError::Overflow)?;
             env.storage().persistent().set(&balance_key, &new_balance);
 
+            // Remove member profile before transfer so reentrant calls fail NotMember
+            let withdrawal_key = StorageKeyBuilder::member_profile(group_id, member.clone());
+            env.storage().persistent().remove(&withdrawal_key);
+
+            // ── Interaction ───────────────────────────────────────────────────
+            let token_client =
+                soroban_sdk::token::TokenClient::new(&env, &token_config.token_address);
+            token_client.transfer(&env.current_contract_address(), &member, &withdrawal_amount);
+
             env.events().publish(
                 (Symbol::new(&env, "emergency_withdrawal"),),
                 (group_id, member.clone(), withdrawal_amount),
             );
+        } else {
+            // Member profile removed even if no funds to withdraw (already received payout)
+            let withdrawal_key = StorageKeyBuilder::member_profile(group_id, member.clone());
+            env.storage().persistent().remove(&withdrawal_key);
         }
-
-        // Remove member profile after transfer succeeds (checks-effects-interactions)
-        let withdrawal_key = StorageKeyBuilder::member_profile(group_id, member.clone());
-        env.storage().persistent().remove(&withdrawal_key);
 
         Ok(())
     }
@@ -4357,6 +4362,7 @@ impl StellarSaveContract {
         member: Address,
         amount: i128,
     ) -> Result<(), StellarSaveError> {
+        crate::pause::require_not_paused(&env)?;
         // Require authorization from the member
         member.require_auth();
 
@@ -4515,6 +4521,7 @@ impl StellarSaveContract {
         member: Address,
         cycles: Vec<u32>,
     ) -> Result<(), StellarSaveError> {
+        crate::pause::require_not_paused(&env)?;
         member.require_auth();
 
         // Reject empty input early
@@ -4585,10 +4592,12 @@ impl StellarSaveContract {
         // malicious implementation can call back during `transfer_from`; with the
         // contribution keys already written, the `has(&contrib_key)` validation
         // above rejects a reentrant batch with AlreadyContributed.
+        // Gas opt: record_contribution_unchecked bypasses repeating the has() SLOAD
+        // for each cycle because it was already validated above.
         let mut cycle_totals: Vec<i128> = Vec::new(&env);
         for i in 0..cycles.len() {
             let cycle = cycles.get(i).unwrap();
-            cycle_totals.push_back(Self::record_contribution(
+            cycle_totals.push_back(Self::record_contribution_unchecked(
                 &env,
                 group_id,
                 cycle,
@@ -4885,7 +4894,9 @@ impl StellarSaveContract {
             // Checks-effects-interactions: writing the contribution key first
             // means a token that calls back during `transfer_from` hits the
             // "already contributed" skip at 4b instead of being charged twice.
-            let cycle_total = Self::record_contribution(
+            // Gas opt: record_contribution_unchecked avoids repeating the has() SLOAD
+            // already checked in step 4b.
+            let cycle_total = Self::record_contribution_unchecked(
                 &env,
                 group_id,
                 current_cycle,
@@ -4954,9 +4965,11 @@ pub fn validate_amount_range(env: &Env, amount: i128) -> Result<(), StellarSaveE
     Ok(())
 }
 
+#[contractimpl]
 impl StellarSaveContract {
     // =========================================================================
     // ISSUE #479: Contribution Proof Verification
+    // ISSUE #1740: Wired to real zk proof verification (see `zk_proof` module)
     // =========================================================================
 
     /// Enables or disables contribution proof requirement for a group.
@@ -4982,12 +4995,20 @@ impl StellarSaveContract {
 
     /// Verifies a contribution proof for a member in a cycle.
     ///
+    /// `proof` is the zk-proof blob generated off-chain (see `zk/client` and
+    /// `zk/server` for the Phase-1 Ed25519 proof-of-concept scheme, documented
+    /// in `zk/CIRCUIT_AUDIT.md`). The proof is bound to `group_id` and `cycle`;
+    /// a proof that fails cryptographic verification is rejected with
+    /// `StellarSaveError::InvalidProof` (malformed length) or causes the host
+    /// to trap (invalid signature) — see `zk_proof::verify_contribution_proof`.
+    ///
     /// Must be called before `contribute_with_proof` when the group requires proof.
     pub fn verify_contribution_proof(
         env: Env,
         group_id: u64,
         member: Address,
         cycle: u32,
+        proof: Bytes,
     ) -> Result<(), StellarSaveError> {
         let group_key = StorageKeyBuilder::group_data(group_id);
         let group = env
@@ -5004,6 +5025,19 @@ impl StellarSaveContract {
         let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
         if !env.storage().persistent().has(&member_key) {
             return Err(StellarSaveError::NotMember);
+        }
+
+        // zk_proof module is only compiled when the `zk` feature is active.
+        // Without it, the entrypoint returns InvalidState so callers know the
+        // feature is not available in this build.
+        #[cfg(feature = "zk")]
+        if !crate::zk_proof::verify_contribution_proof(&env, &proof, group_id, cycle) {
+            return Err(StellarSaveError::InvalidProof);
+        }
+        #[cfg(not(feature = "zk"))]
+        {
+            let _ = proof; // suppress unused-variable warning
+            return Err(StellarSaveError::InvalidState);
         }
 
         let proof_key =
@@ -5026,6 +5060,7 @@ impl StellarSaveContract {
         member: Address,
         amount: i128,
     ) -> Result<(), StellarSaveError> {
+        crate::pause::require_not_paused(&env)?;
         member.require_auth();
 
         let group_key = StorageKeyBuilder::group_data(group_id);
@@ -5249,7 +5284,9 @@ impl StellarSaveContract {
 
         // On-time rate: contributed cycles / total cycles so far * 100
         let on_time_rate = if group.current_cycle > 0 {
-            (cycles_contributed * 100) / group.current_cycle
+            // Widen to u64 so `* 100` cannot overflow u32 (issue #1718);
+            // the quotient is always <= 100 so narrowing back is lossless.
+            ((cycles_contributed as u64 * 100) / group.current_cycle as u64) as u32
         } else {
             100 // No cycles yet — considered 100%
         };
@@ -5376,8 +5413,6 @@ impl StellarSaveContract {
         caller: Address,
         config: penalty::PenaltyConfig,
     ) -> Result<(), StellarSaveError> {
-        caller.require_auth();
-
         let group_key = StorageKeyBuilder::group_data(group_id);
         let group = env
             .storage()
@@ -5385,9 +5420,7 @@ impl StellarSaveContract {
             .get::<_, Group>(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        if group.creator != caller {
-            return Err(StellarSaveError::Unauthorized);
-        }
+        auth::require_creator(&caller, &group)?;
 
         penalty::set_penalty_config(&env, group_id, config);
         Ok(())

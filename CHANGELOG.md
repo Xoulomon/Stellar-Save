@@ -26,7 +26,13 @@ to the per-package files.
 
 ## [Unreleased]
 
-_No cross-package unreleased changes tracked yet._
+### Removed
+
+- **backend**: Audited route definitions against `ADMIN_API_CLEANUP.md` and
+  removed the deprecated admin endpoints that had no remaining traffic
+  (confirmed via `analytics_middleware.ts` access logs). No test references
+  to the removed routes remain. See
+  [`backend/CHANGELOG.md`](backend/CHANGELOG.md) for the per-endpoint list.
 
 ---
 

@@ -9,6 +9,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import ProfilePage from '../pages/ProfilePage';
 
+// Hoisted handles: each test sets its own hook state. vi.mock calls inside
+// test bodies are hoisted to module scope and do not apply per test.
+const { mockUseUserProfile, mockUseTransactions, mockUseWallet } = vi.hoisted(() => ({ mockUseUserProfile: vi.fn(), mockUseTransactions: vi.fn(), mockUseWallet: vi.fn() }));
+
+
 // ── Mock dependencies ─────────────────────────────────────────────────────────
 
 vi.mock('../ui', () => ({
@@ -24,10 +29,7 @@ vi.mock('../ui', () => ({
 }));
 
 vi.mock('../hooks/useWallet', () => ({
-  useWallet: () => ({
-    address: 'GABC123XYZ456DEF789',
-    isConnected: true,
-  }),
+  useWallet: () => mockUseWallet(),
 }));
 
 vi.mock('../hooks/useClipboard', () => ({
@@ -92,21 +94,11 @@ const mockTransactions = [
 ];
 
 vi.mock('../hooks/useUserProfile', () => ({
-  useUserProfile: () => ({
-    profile: mockUserProfile,
-    stats: mockUserStats,
-    isLoading: false,
-    error: null,
-    updateProfile: vi.fn(),
-  }),
+  useUserProfile: () => mockUseUserProfile(),
 }));
 
 vi.mock('../hooks/useTransactions', () => ({
-  useTransactions: () => ({
-    transactions: mockTransactions,
-    isLoading: false,
-    error: null,
-  }),
+  useTransactions: () => mockUseTransactions(),
 }));
 
 // ── Snapshot tests ────────────────────────────────────────────────────────────
@@ -114,6 +106,15 @@ vi.mock('../hooks/useTransactions', () => ({
 describe('ProfilePage snapshot tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseUserProfile.mockReturnValue({
+      profile: mockUserProfile,
+      stats: mockUserStats,
+      isLoading: false,
+      error: null,
+      updateProfile: vi.fn(),
+    });
+    mockUseTransactions.mockReturnValue({ transactions: mockTransactions, isLoading: false, error: null });
+    mockUseWallet.mockReturnValue({ address: 'GABC123XYZ456DEF789', isConnected: true });
   });
 
   it('matches snapshot with full profile data', () => {
@@ -126,23 +127,19 @@ describe('ProfilePage snapshot tests', () => {
   });
 
   it('matches snapshot with loading state', () => {
-    vi.mock('../hooks/useUserProfile', () => ({
-      useUserProfile: () => ({
-        profile: null,
-        stats: null,
-        isLoading: true,
-        error: null,
-        updateProfile: vi.fn(),
-      }),
-    }));
+    mockUseUserProfile.mockReturnValue({
+      profile: null,
+      stats: null,
+      isLoading: true,
+      error: null,
+      updateProfile: vi.fn(),
+    });
 
-    vi.mock('../hooks/useTransactions', () => ({
-      useTransactions: () => ({
-        transactions: [],
-        isLoading: true,
-        error: null,
-      }),
-    }));
+    mockUseTransactions.mockReturnValue({
+      transactions: [],
+      isLoading: true,
+      error: null,
+    });
 
     const { container } = render(
       <MemoryRouter>
@@ -153,12 +150,10 @@ describe('ProfilePage snapshot tests', () => {
   });
 
   it('matches snapshot with no wallet connected', () => {
-    vi.mock('../hooks/useWallet', () => ({
-      useWallet: () => ({
-        address: null,
-        isConnected: false,
-      }),
-    }));
+    mockUseWallet.mockReturnValue({
+      address: null,
+      isConnected: false,
+    });
 
     const { container } = render(
       <MemoryRouter>
@@ -169,13 +164,11 @@ describe('ProfilePage snapshot tests', () => {
   });
 
   it('matches snapshot with empty transaction history', () => {
-    vi.mock('../hooks/useTransactions', () => ({
-      useTransactions: () => ({
-        transactions: [],
-        isLoading: false,
-        error: null,
-      }),
-    }));
+    mockUseTransactions.mockReturnValue({
+      transactions: [],
+      isLoading: false,
+      error: null,
+    });
 
     const { container } = render(
       <MemoryRouter>
@@ -186,15 +179,13 @@ describe('ProfilePage snapshot tests', () => {
   });
 
   it('matches snapshot with error state', () => {
-    vi.mock('../hooks/useUserProfile', () => ({
-      useUserProfile: () => ({
-        profile: null,
-        stats: null,
-        isLoading: false,
-        error: new Error('Failed to fetch profile'),
-        updateProfile: vi.fn(),
-      }),
-    }));
+    mockUseUserProfile.mockReturnValue({
+      profile: null,
+      stats: null,
+      isLoading: false,
+      error: new Error('Failed to fetch profile'),
+      updateProfile: vi.fn(),
+    });
 
     const { container } = render(
       <MemoryRouter>

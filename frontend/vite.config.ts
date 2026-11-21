@@ -23,6 +23,13 @@ const visualGalleryInput = fileURLToPath(new URL('./visual-gallery.html', import
 
 // https://vite.dev/config/
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // Allow imports like: import { formatAmount } from '@shared-utils/formatting'
+      '@shared-utils': fileURLToPath(new URL('../packages/shared-utils/src', import.meta.url)),
+    },
+  },
   plugins: [
     react(),
     imagetools(),

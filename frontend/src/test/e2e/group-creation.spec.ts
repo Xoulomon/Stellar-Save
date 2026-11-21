@@ -1,6 +1,4 @@
-import { test, expect } from '@playwright/test';
-
-import type { Page } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const PUBLIC_KEY = 'GTEST1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ABCDE';
 
@@ -48,7 +46,7 @@ async function fillRequiredSteps(page: Page) {
   await expect(page.getByRole('heading', { name: /review & confirm/i })).toBeVisible();
 }
 
-test.describe('Group creation flow', () => {
+test.describe('@journey Group creation flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => localStorage.removeItem('create-group-draft'));
   });

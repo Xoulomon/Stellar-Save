@@ -1,25 +1,30 @@
 /**
- * Locale completeness test — issue #1547
+ * Locale completeness test — issue #1547, retargeted by #1662.
  *
- * Asserts that every locale file under src/i18n/locales/ has exactly the same
- * set of translation keys as the reference locale (en.json).  Missing or extra
- * keys in any locale are caught here before they surface as runtime fallbacks.
+ * Asserts that every locale file under `src/locales/` has exactly the same set
+ * of translation keys as the reference locale (en.json). Missing or extra keys
+ * in any locale are caught here before they surface as runtime fallbacks.
+ *
+ * Scope note: these are the locales the app actually loads. `src/i18n.ts`
+ * shadows any `src/i18n/` directory during module resolution, so the previous
+ * six-language tree under `src/i18n/locales/` was unreachable at runtime and
+ * has been removed.
  *
  * Key conventions:
- *   - Keys are compared as flattened dot-separated paths (e.g. "nav.dashboard").
+ *   - Keys are compared as flattened dot-separated paths (e.g. "settings.title").
  *   - Nested objects are recursed; leaf values are not checked (translation
  *     quality is out of scope for this test).
  *   - The test uses static imports so the same module resolution applies as in
  *     production — no filesystem-specific logic needed.
+ *
+ * To audit which keys are actually referenced in code (and which are dead
+ * weight), run: `npm run audit:i18n`.
  */
 import { describe, it, expect } from 'vitest';
 
-import en from '../i18n/locales/en.json';
-import fr from '../i18n/locales/fr.json';
-import yo from '../i18n/locales/yo.json';
-import ar from '../i18n/locales/ar.json';
-import fa from '../i18n/locales/fa.json';
-import sw from '../i18n/locales/sw.json';
+import en from '../locales/en.json';
+import fr from '../locales/fr.json';
+import yo from '../locales/yo.json';
 
 // ── Key extraction ────────────────────────────────────────────────────────────
 
@@ -32,8 +37,7 @@ type JsonValue = string | number | boolean | null | JsonObject | JsonValue[];
  * Given { "a": { "b": "value", "c": { "d": "x" } } }
  * returns ["a.b", "a.c.d"]
  *
- * Array values (if any) are treated as leaves and their index paths are NOT
- * expanded — only object keys are traversed.
+ * Array values are treated as leaves; their index paths are not expanded.
  */
 function flattenKeys(obj: JsonObject, prefix = ''): string[] {
   const keys: string[] = [];
@@ -45,83 +49,127 @@ function flattenKeys(obj: JsonObject, prefix = ''): string[] {
       keys.push(path);
     }
   }
-  return keys.sort();
+  return keys;
 }
 
-// ── Reference key set ─────────────────────────────────────────────────────────
-
-const referenceKeys = flattenKeys(en as JsonObject);
-
-// ── Locales under test ────────────────────────────────────────────────────────
-
-const locales: Array<{ code: string; data: JsonObject }> = [
+const locales = [
+  { code: 'en', data: en as JsonObject },
   { code: 'fr', data: fr as JsonObject },
   { code: 'yo', data: yo as JsonObject },
-  { code: 'ar', data: ar as JsonObject },
-  { code: 'fa', data: fa as JsonObject },
-  { code: 'sw', data: sw as JsonObject },
+];
+
+const reference = locales[0];
+const referenceKeys = flattenKeys(reference.data).sort();
+
+/**
+ * Keys that production code actually looks up via `t(...)`.
+ *
+ * Keep in sync with `npm run audit:i18n`, which fails if a key is referenced
+ * but not defined. Keys listed here must exist in every locale.
+ */
+const requiredPaths = [
+  'settings.title',
+  'settings.subtitle',
+  'settings.footerText',
+  'settings.appearance',
+  'settings.appearanceDesc',
+  'settings.language',
+  'settings.languageDesc',
+  'memberDirectory.title',
+  'memberDirectory.copyAddress',
+  'memberDirectory.copied',
+  'memberDirectory.you',
+  'memberDirectory.paidOut',
+  'memberDirectory.contributions',
+  'memberDirectory.totalPaid',
+  'memberDirectory.received',
+  'memberDirectory.ofMembers',
+  'memberDirectory.payoutQueue',
+  'memberDirectory.cycleStreak',
+  'memberDirectory.searchPlaceholder',
+  'memberDirectory.searchLabel',
+  'memberDirectory.status',
+  'memberDirectory.all',
+  'memberDirectory.active',
+  'memberDirectory.inactive',
+  'memberDirectory.pending',
+  'memberDirectory.removed',
+  'memberDirectory.payout',
+  'memberDirectory.receivedFilter',
+  'memberDirectory.pendingFilter',
+  'memberDirectory.sortBy',
+  'memberDirectory.mostContributions',
+  'memberDirectory.fewestContributions',
+  'memberDirectory.newestMembers',
+  'memberDirectory.oldestMembers',
+  'memberDirectory.nameAscending',
+  'memberDirectory.nameDescending',
+  'memberDirectory.payoutPositionAscending',
+  'memberDirectory.payoutPositionDescending',
+  'memberDirectory.oneMember',
+  'memberDirectory.manyMembers',
+  'memberDirectory.filteredCount',
+  'memberDirectory.clearFilters',
+  'memberDirectory.noMatches',
+  'memberDirectory.noMembers',
+  'leaderboard.thisWeek',
+  'leaderboard.thisMonth',
+  'leaderboard.allTime',
+  'leaderboard.timePeriod',
+  'leaderboard.rank',
+  'leaderboard.trendingUp',
+  'leaderboard.trendingDown',
+  'leaderboard.stable',
+  'leaderboard.memberCycleSummary',
+  'leaderboard.completion',
+  'leaderboard.onTime',
+  'leaderboard.volume',
+  'leaderboard.contributed',
+  'leaderboard.streak',
+  'leaderboard.groupHeader',
+  'leaderboard.memberHeader',
+  'leaderboard.streakHeader',
+  'leaderboard.topGroups',
+  'leaderboard.topContributors',
+  'leaderboard.noData',
+  'leaderboard.updated',
 ];
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('Locale completeness (issue #1547)', () => {
-  it('reference locale (en) has at least one key', () => {
+describe('locale completeness', () => {
+  it('reference (en) is not empty', () => {
     expect(referenceKeys.length).toBeGreaterThan(0);
   });
 
   for (const { code, data } of locales) {
-    describe(`locale: ${code}`, () => {
-      const localeKeys = flattenKeys(data);
-
-      it('has exactly the same number of keys as en', () => {
-        expect(localeKeys.length).toBe(referenceKeys.length);
+    describe(code, () => {
+      it('has the same number of keys as en', () => {
+        expect(flattenKeys(data).length).toBe(referenceKeys.length);
       });
 
-      it('contains no keys missing from en (no extra keys)', () => {
-        const extraKeys = localeKeys.filter((k) => !referenceKeys.includes(k));
-        expect(extraKeys).toEqual([]);
+      it('has no keys missing relative to en', () => {
+        const localeKeys = flattenKeys(data);
+        expect(localeKeys.filter((k) => !referenceKeys.includes(k))).toEqual([]);
       });
 
-      it('is missing no keys that exist in en (no missing keys)', () => {
-        const missingKeys = referenceKeys.filter((k) => !localeKeys.includes(k));
-        expect(missingKeys).toEqual([]);
+      it('has no extra keys relative to en', () => {
+        const localeKeys = flattenKeys(data);
+        expect(referenceKeys.filter((k) => !localeKeys.includes(k))).toEqual([]);
       });
 
-      it('has the same sorted key list as en', () => {
-        // Single assertion that gives the clearest diff output when it fails.
-        expect(localeKeys).toEqual(referenceKeys);
+      it('declares exactly the same key set as en', () => {
+        expect([...flattenKeys(data)].sort()).toEqual(referenceKeys);
+      });
+
+      it('contains all keys required by production code', () => {
+        const localeKeys = flattenKeys(data);
+        for (const path of requiredPaths) {
+          expect(localeKeys, `${code} is missing ${path}`).toContain(path);
+        }
       });
     });
   }
-});
-
-// ── Structural smoke test ─────────────────────────────────────────────────────
-
-describe('Key path coverage spot-checks', () => {
-  const requiredPaths = [
-    'nav.dashboard',
-    'nav.groups',
-    'nav.profile',
-    'nav.settings',
-    'nav.leaderboard',
-    'settings.title',
-    'settings.subtitle',
-    'settings.appearance',
-    'settings.language',
-    'settings.theme.light',
-    'settings.theme.dark',
-    'settings.theme.system',
-    'scheduler.title',
-    'scheduler.amount',
-    'scheduler.validation.positiveAmount',
-    'scheduler.validation.selectDate',
-    'scheduler.validation.futureDate',
-    'common.loading',
-    'common.error',
-    'common.save',
-    'common.cancel',
-    'common.confirm',
-  ];
 
   it('reference (en) contains all required key paths', () => {
     for (const path of requiredPaths) {
@@ -129,12 +177,8 @@ describe('Key path coverage spot-checks', () => {
     }
   });
 
-  for (const { code, data } of locales) {
-    it(`${code} contains all required key paths`, () => {
-      const localeKeys = flattenKeys(data);
-      for (const path of requiredPaths) {
-        expect(localeKeys).toContain(path);
-      }
-    });
-  }
+  it('defines no keys beyond those required by production code', () => {
+    // Guards against locale files re-accumulating dead keys.
+    expect(referenceKeys).toEqual([...requiredPaths].sort());
+  });
 });

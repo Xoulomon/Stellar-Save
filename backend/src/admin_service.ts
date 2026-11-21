@@ -2,11 +2,33 @@ import { mockMembers, mockGroups, mockTransactions, mockAuditLogs } from './mock
 
 import type { AuditLog, Member, Group, Transaction } from './models';
 
+/**
+ * Admin service providing platform management capabilities.
+ *
+ * Refactored for dependency injection (Issue #1701):
+ * - Data sources are accepted via constructor deps
+ * - Tests can provide custom datasets without touching mock_data
+ */
+
+export interface AdminServiceDeps {
+  members?: Member[];
+  groups?: Group[];
+  transactions?: Transaction[];
+  auditLogs?: AuditLog[];
+}
+
 export class AdminService {
-  private auditLogs: AuditLog[] = [...mockAuditLogs];
-  private members: Member[] = [...mockMembers];
-  private groups: Group[] = [...mockGroups];
-  private transactions: Transaction[] = [...mockTransactions];
+  private auditLogs: AuditLog[];
+  private members: Member[];
+  private groups: Group[];
+  private transactions: Transaction[];
+
+  constructor(deps?: AdminServiceDeps) {
+    this.members = [...(deps?.members ?? mockMembers)];
+    this.groups = [...(deps?.groups ?? mockGroups)];
+    this.transactions = [...(deps?.transactions ?? mockTransactions)];
+    this.auditLogs = [...(deps?.auditLogs ?? mockAuditLogs)];
+  }
 
   getPlatformStats() {
     return {
@@ -54,7 +76,8 @@ export class AdminService {
     action: string,
     targetId?: string,
     targetType?: string,
-    metadata?: any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AuditLog.metadata is an open-ended JSON bag; tightening requires a schema migration
+    metadata?: Record<string, unknown>
   ) {
     const log: AuditLog = {
       id: `log_${Date.now()}`,

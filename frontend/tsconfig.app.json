@@ -11,6 +11,10 @@
 
     /* Bundler mode */
     "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
@@ -23,7 +27,13 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    /* Shared package aliases */
+    "paths": {
+      "@shared-utils/*": ["../packages/shared-utils/src/*"],
+      "@shared-utils": ["../packages/shared-utils/src/formatting"]
+    }
   },
   "include": ["src"]
 }

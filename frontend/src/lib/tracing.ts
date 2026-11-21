@@ -27,6 +27,7 @@
  *                                                             to attach traceparent to)
  */
 
+import { logger } from '../utils/logger';
 import { env } from './env';
 
 let started = false;
@@ -107,8 +108,7 @@ export async function startTracing(): Promise<void> {
       ],
     });
 
-    // eslint-disable-next-line no-console
-    console.info(`[tracing] OpenTelemetry web tracing enabled (sampler ratio=${ratio})`);
+    logger.info(`[tracing] OpenTelemetry web tracing enabled (sampler ratio=${ratio})`);
   } catch (err) {
     started = false;
 

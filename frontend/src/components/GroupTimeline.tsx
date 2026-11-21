@@ -24,6 +24,11 @@ export interface GroupTimelineProps {
   className?: string;
 }
 
+/** Keys that activate a focusable timeline item, matching native button behaviour. */
+function isActivationKey(key: string): boolean {
+  return key === 'Enter' || key === ' ';
+}
+
 export function GroupTimeline({
   events,
   maxHeight = '600px',
@@ -117,6 +122,13 @@ export function GroupTimeline({
     }
   };
 
+  const handleEventKeyDown = (e: KeyboardEvent<HTMLDivElement>, event: TimelineEvent) => {
+    if (onEventClick && isActivationKey(e.key)) {
+      e.preventDefault();
+      onEventClick(event);
+    }
+  };
+
   return (
     <div className={`group-timeline ${className}`}>
       <div className="timeline-header">
@@ -144,12 +156,7 @@ export function GroupTimeline({
                 onClick={() => onEventClick?.(event)}
                 role={onEventClick ? 'button' : undefined}
                 tabIndex={onEventClick ? 0 : undefined}
-                onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
-                  if (onEventClick && (e.key === 'Enter' || e.key === ' ')) {
-                    e.preventDefault();
-                    onEventClick(event);
-                  }
-                }}
+                onKeyDown={(e) => handleEventKeyDown(e, event)}
               >
                 <div className="timeline-item-dot">{getEventIcon(event.type)}</div>
 

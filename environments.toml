@@ -1,3 +1,7 @@
+# environments.toml — Soroban network endpoint registry read by deploy/test scripts
+# (scripts/deploy_testnet.sh, scripts/deploy_mainnet.sh, scripts/verify_contract.sh).
+# Each table key maps to a network name accepted by the --network flag.
+
 # Soroban Network Configurations
 
 [testnet]

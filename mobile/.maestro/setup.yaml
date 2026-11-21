@@ -1,0 +1,10 @@
+# Shared clean-state setup for all Maestro suites.
+# Build the app with EXPO_PUBLIC_MAESTRO_TESTING=true to enable local fixtures.
+appId: com.stellarsave.mobile
+---
+- launchApp:
+    clearState: true
+    env:
+      MAESTRO_TESTING: "true"
+      MAESTRO_TEST_PIN: "1234"
+      MAESTRO_KYC_STATUS: "pending"

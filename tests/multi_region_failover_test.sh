@@ -18,7 +18,7 @@
 #   POLL_INTERVAL_SECONDS    — polling cadence during failover (default: 10)
 #   DRY_RUN                  — 1=simulate without real AWS calls (default: 1)
 #   AWS_PROFILE              — optional AWS CLI profile
-#   RESULTS_DIR              — directory for results JSON (default: tests)
+#   RESULTS_DIR              — directory for results JSON (default: docs/releases)
 set -euo pipefail
 
 PRIMARY_HEALTH_CHECK_ID="${PRIMARY_HEALTH_CHECK_ID:-}"
@@ -29,7 +29,8 @@ RTO_SECONDS="${RTO_SECONDS:-150}"
 POLL_INTERVAL_SECONDS="${POLL_INTERVAL_SECONDS:-10}"
 DRY_RUN="${DRY_RUN:-1}"
 AWS_PROFILE="${AWS_PROFILE:-}"
-RESULTS_DIR="${RESULTS_DIR:-$(dirname "$0")}"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+RESULTS_DIR="${RESULTS_DIR:-${REPO_ROOT}/docs/releases}"
 RESULTS_FILE="${RESULTS_DIR}/failover-results.json"
 
 PASS=0
@@ -144,7 +145,7 @@ _health_check_ok() {
 _write_results() {
   local elapsed=$(( $(date +%s) - TEST_START_EPOCH ))
   python3 - <<PYEOF
-import json, datetime
+import json, datetime, os
 
 results = {
     "timestamp":                  datetime.datetime.utcnow().isoformat() + "Z",
@@ -160,6 +161,7 @@ results = {
     "tests_passed":               int("$PASS"),
     "tests_failed":               int("$FAIL"),
 }
+os.makedirs(os.path.dirname("$RESULTS_FILE") or ".", exist_ok=True)
 with open("$RESULTS_FILE", "w") as f:
     json.dump(results, f, indent=2)
 print(f"Results written to $RESULTS_FILE")

@@ -8,7 +8,7 @@
  */
 import { check, sleep, group } from 'k6';
 import http from 'k6/http';
-import { Trend, Rate } from 'k6/metrics';
+import { Counter, Trend, Rate } from 'k6/metrics';
 
 import { BASE_URL, loadOptions } from '../../tests/load/config.js';
 
@@ -16,9 +16,16 @@ import { BASE_URL, loadOptions } from '../../tests/load/config.js';
 const challengeDuration = new Trend('challenge_duration', true);
 const verifyDuration = new Trend('verify_duration', true);
 const errorRate = new Rate('auth_errors');
+const authRequestOps = new Counter('auth_request_ops');
 
 // ── Options ───────────────────────────────────────────────────────────────────
-export const options = loadOptions;
+export const options = {
+  ...loadOptions,
+  thresholds: {
+    ...loadOptions.thresholds,
+    auth_request_ops: ['rate>5'],
+  },
+};
 
 const HEADERS = { 'Content-Type': 'application/json' };
 
@@ -39,6 +46,7 @@ export default function () {
   group('request challenge', () => {
     const payload = JSON.stringify({ walletAddress });
     const res = http.post(`${BASE_URL}/api/auth/challenge`, payload, { headers: HEADERS });
+    authRequestOps.add(1);
     challengeDuration.add(res.timings.duration);
     
     const ok = check(res, {
@@ -62,6 +70,7 @@ export default function () {
           signature: 'invalid_signature_' + Math.random().toString(36),
         });
         const verifyRes = http.post(`${BASE_URL}/api/auth/verify`, verifyPayload, { headers: HEADERS });
+        authRequestOps.add(1);
         verifyDuration.add(verifyRes.timings.duration);
         
         const verifyOk = check(verifyRes, {

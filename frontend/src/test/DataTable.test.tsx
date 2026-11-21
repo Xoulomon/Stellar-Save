@@ -1,8 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import { DataTable } from '../components/DataTable/DataTable';
 import type { DataTableColumn } from '../components/DataTable/DataTable';
+
+expect.extend(toHaveNoViolations);
 
 // ── Sample data ───────────────────────────────────────────────────────────────
 
@@ -63,6 +66,16 @@ describe('DataTable — rendering', () => {
     expect(screen.getByText('No data found')).toBeInTheDocument();
   });
 
+  it('has no axe violations with rows', async () => {
+    const { container } = renderTable(sampleRows);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('has no axe violations in the empty state', async () => {
+    const { container } = renderTable([]);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
   it('renders custom empty message', () => {
     renderTable([], { emptyMessage: 'Nothing here yet' });
     expect(screen.getByText('Nothing here yet')).toBeInTheDocument();
@@ -106,6 +119,7 @@ describe('DataTable — rendering', () => {
     renderTable();
     const nameTh = screen.getByRole('columnheader', { name: /name/i });
     expect(nameTh).toHaveAttribute('aria-sort', 'none');
+    expect(screen.getByRole('button', { name: 'Sort by Name' })).toBeInTheDocument();
   });
 });
 
@@ -233,7 +247,7 @@ describe('DataTable — sorting', () => {
     renderTable();
 
     const nameTh = screen.getByRole('columnheader', { name: /name/i });
-    nameTh.focus();
+    screen.getByRole('button', { name: 'Sort by Name' }).focus();
     await user.keyboard('{Enter}');
 
     expect(nameTh).toHaveAttribute('aria-sort', 'ascending');
@@ -244,7 +258,7 @@ describe('DataTable — sorting', () => {
     renderTable();
 
     const nameTh = screen.getByRole('columnheader', { name: /name/i });
-    nameTh.focus();
+    screen.getByRole('button', { name: 'Sort by Name' }).focus();
     await user.keyboard(' ');
 
     expect(nameTh).toHaveAttribute('aria-sort', 'ascending');
@@ -448,8 +462,8 @@ describe('DataTable — row interactions', () => {
     const handler = vi.fn();
     renderTable(sampleRows, { onRowClick: handler });
 
-    const rows = screen.getAllByRole('button');
-    await user.click(rows[0]);
+    const row = screen.getAllByRole('row')[1];
+    await user.click(row);
 
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler).toHaveBeenCalledWith(expect.objectContaining({ id: '1' }));
@@ -460,11 +474,23 @@ describe('DataTable — row interactions', () => {
     const handler = vi.fn();
     renderTable(sampleRows, { onRowClick: handler });
 
-    const rows = screen.getAllByRole('button');
-    rows[0].focus();
+    const firstCell = screen.getAllByRole('row')[1].querySelector('td');
+    firstCell?.focus();
     await user.keyboard('{Enter}');
 
     expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it('moves focus between interactive cells with arrow keys', async () => {
+    const user = userEvent.setup();
+    renderTable(sampleRows, { onRowClick: vi.fn() });
+
+    const firstRowCells = screen.getAllByRole('row')[1].querySelectorAll('td');
+    firstRowCells[0].focus();
+    await user.keyboard('{ArrowRight}');
+    expect(document.activeElement).toBe(firstRowCells[1]);
+    await user.keyboard('{ArrowDown}');
+    expect(document.activeElement).toBe(screen.getAllByRole('row')[2].querySelectorAll('td')[1]);
   });
 
   it('does not add role=button when no onRowClick', () => {

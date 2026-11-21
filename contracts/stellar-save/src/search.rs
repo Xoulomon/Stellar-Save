@@ -239,9 +239,11 @@ fn sort_by_member_count(env: &Env, groups: &Vec<Group>, descending: bool) -> Sea
 
     // Insertion sort
     for i in 0..len {
+        // INVARIANT: i < groups.len() — loop bound guarantees valid index
         let item = groups.get(i).unwrap();
         let mut pos = sorted.len();
         for j in 0..sorted.len() {
+            // INVARIANT: j < sorted.len() — loop bound guarantees valid index
             let cmp = sorted.get(j).unwrap();
             let should_insert_before = if descending {
                 item.member_count > cmp.member_count
@@ -259,10 +261,12 @@ fn sort_by_member_count(env: &Env, groups: &Vec<Group>, descending: bool) -> Sea
         } else {
             let mut new_vec: Vec<Group> = Vec::new(env);
             for k in 0..pos {
+                // INVARIANT: k < pos <= sorted.len() — loop bound guarantees valid index
                 new_vec.push_back(sorted.get(k).unwrap());
             }
             new_vec.push_back(item);
             for k in pos..sorted.len() {
+                // INVARIANT: k < sorted.len() — loop bound guarantees valid index
                 new_vec.push_back(sorted.get(k).unwrap());
             }
             sorted = new_vec;

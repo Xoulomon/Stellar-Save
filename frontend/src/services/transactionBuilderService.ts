@@ -14,8 +14,7 @@ import type {
   TransactionTemplate,
 } from '../types/transactionBuilder';
 import { env } from '../lib/env';
-
-const RPC_URL = env.VITE_STELLAR_RPC_URL;
+import { rpcServer } from '../lib/rpcClient';
 
 const NETWORK_PASSPHRASE =
   env.VITE_STELLAR_NETWORK === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
@@ -91,7 +90,7 @@ export async function simulateTransaction(
       };
     }
 
-    const server = new SorobanRpc.Server(RPC_URL, { allowHttp: false });
+    const server = rpcServer;
     const address = sourceAddress || DUMMY_ADDRESS;
     const account = await server.getAccount(address).catch(() => ({
       accountId: () => address,

@@ -6,6 +6,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { MemberDirectory } from '../components/MemberDirectory';
 
 import type { MemberProfile } from '../types/member';
+import { makeMember } from './factories';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -14,7 +15,7 @@ function renderWithRouter(ui: React.ReactElement) {
 }
 
 const MEMBERS: MemberProfile[] = [
-  {
+  makeMember({
     address: 'GABC1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ABCDEFGHIJ',
     name: 'Alice Okonkwo',
     joinDate: new Date('2026-01-10'),
@@ -25,8 +26,8 @@ const MEMBERS: MemberProfile[] = [
     hasReceivedPayout: true,
     status: 'active',
     streak: 6,
-  },
-  {
+  }),
+  makeMember({
     address: 'GDEF0987654321FEDCBAZYXWVUTSRQPONMLKJIHGFEDCBA0987654321FED',
     name: 'Bob Mensah',
     joinDate: new Date('2026-02-01'),
@@ -37,8 +38,8 @@ const MEMBERS: MemberProfile[] = [
     hasReceivedPayout: false,
     status: 'active',
     streak: 3,
-  },
-  {
+  }),
+  makeMember({
     address: 'GXYZ1111222233334444555566667777888899990000AAAABBBBCCCCDDDD',
     name: 'Carol Adeyemi',
     joinDate: new Date('2026-03-01'),
@@ -49,9 +50,10 @@ const MEMBERS: MemberProfile[] = [
     hasReceivedPayout: false,
     status: 'inactive',
     streak: 0,
-  },
-  {
+  }),
+  makeMember({
     address: 'GAAA5555666677778888999900001111222233334444555566667777AAAA',
+    name: undefined,
     joinDate: new Date('2026-03-15'),
     contributionCount: 1,
     totalContributed: 250,
@@ -59,7 +61,7 @@ const MEMBERS: MemberProfile[] = [
     totalMembers: 4,
     hasReceivedPayout: false,
     status: 'pending',
-  },
+  }),
 ];
 
 // ── Rendering ─────────────────────────────────────────────────────────────────

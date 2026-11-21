@@ -4,10 +4,27 @@
 // NOTE: The GraphQL API uses separate Group / Member types — see the generated
 // types in `src/generated/graphql.ts` (Group, Member, GetGroupQuery, etc.).
 // The types below are the REST API / UI-layer shapes used by the frontend.
+//
+// The repository contract (`GroupRepository` and its data shapes) lives in
+// `src/lib/groupRepository.ts` and is the single source of truth for the group
+// data shapes consumed by the app. The types below are re-exported from there
+// so callers can keep importing from `types/group` without duplicating shapes.
 export type { GroupStatus, PaginationMeta } from '@stellar-save/sdk';
 
 import type { FilterState, SortOption } from '../components/GroupFilters';
 import type { GroupStatus, PaginationMeta } from '@stellar-save/sdk';
+
+// Re-export the repository contract and its data shapes so that the repository
+// interface remains the single source of truth for group data shapes.
+export type {
+  GroupRepository,
+  GroupRepositoryError,
+  GroupRepositoryErrorCode,
+  DetailedGroup,
+  GroupMember,
+  Contribution,
+  Cycle,
+} from '../lib/groupRepository';
 
 export interface PublicGroup {
   id: string;
@@ -75,7 +92,8 @@ export interface GroupDetail extends PublicGroup {
 
 // Note: the `useGroup()` hook's return type (`UseGroupReturn`) lives in
 // `hooks/useGroup.ts` since it wraps `DetailedGroup` (members/contributions/
-// cycles) from `utils/groupApi`, not the lighter-weight `GroupDetail` above.
+// cycles) from the `GroupRepository` contract, not the lighter-weight
+// `GroupDetail` above.
 
 // ─── Hook return type ─────────────────────────────────────────────────────────
 

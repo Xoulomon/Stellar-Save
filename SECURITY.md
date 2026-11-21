@@ -3,7 +3,7 @@
 ## Supported Versions
 
 | Version | Supported |
-|---------|-----------|
+| ------- | --------- |
 | main    | ✅        |
 | develop | ✅        |
 | others  | ❌        |
@@ -15,6 +15,7 @@
 Report vulnerabilities via [GitHub Private Security Advisories](https://github.com/Xoulomon/Stellar-Save/security/advisories/new).
 
 Include:
+
 - Description and impact
 - Steps to reproduce
 - Affected component (contract, frontend, backend)
@@ -26,15 +27,15 @@ You will receive an acknowledgment within **48 hours** and a resolution timeline
 
 This repository runs the following checks on every PR and push:
 
-| Tool | Scope | Trigger |
-|------|-------|---------|
-| **Semgrep** | SAST — Rust & TypeScript | Push / PR / Weekly |
-| **CodeQL** | SAST — JavaScript/TypeScript | Push / PR / Weekly |
-| **Snyk** | Dependency CVEs (npm + Cargo) | Push / PR / Weekly |
-| **Dependabot** | Automated dependency updates | Weekly |
-| **cargo-audit** | Rust advisory database | Push / PR |
-| **npm audit** | Node advisory database | Push / PR |
-| **Gitleaks** | Secret detection | Push / PR |
+| Tool            | Scope                         | Trigger            |
+| --------------- | ----------------------------- | ------------------ |
+| **Semgrep**     | SAST — Rust & TypeScript      | Push / PR / Weekly |
+| **CodeQL**      | SAST — JavaScript/TypeScript  | Push / PR / Weekly |
+| **Snyk**        | Dependency CVEs (npm + Cargo) | Push / PR / Weekly |
+| **Dependabot**  | Automated dependency updates  | Weekly             |
+| **cargo-audit** | Rust advisory database        | Push / PR          |
+| **npm audit**   | Node advisory database        | Push / PR          |
+| **Gitleaks**    | Secret detection              | Push / PR          |
 
 ### Security Gate
 
@@ -65,6 +66,7 @@ See [docs/threat-model.md](docs/threat-model.md) for the full threat model.
 - Pin exact versions in `Cargo.toml` and `package.json`
 - Review Dependabot PRs weekly; merge security patches within **48 hours**
 - Run `cargo audit` and `npm audit` locally before releasing
+- Node/JS workspaces: `pnpm audit --audit-level=high` must pass; fixes, overrides and accepted-risk exceptions follow [docs/npm-dependency-audit.md](docs/npm-dependency-audit.md) (the JS counterpart to `deny.toml`)
 
 ## Incident Response
 

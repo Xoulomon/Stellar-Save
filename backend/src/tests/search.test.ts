@@ -23,11 +23,9 @@ class MockClient {
 async function runTests() {
   console.log('🧪 Running Search Service Tests...');
 
-  const searchService = new SearchService();
-  // @ts-expect-error - Injecting mock client
-  searchService['client'] = new MockClient();
-  // @ts-expect-error - Injecting mock client
-  searchService['isConnected'] = true;
+  const mockClient = new MockClient();
+  const searchService = new SearchService({ client: mockClient as any });
+  await searchService.init();
 
   // Test searchGroups
   console.log('Testing group search...');

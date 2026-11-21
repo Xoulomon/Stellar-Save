@@ -3,10 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { server } from '../__mocks__/msw/server';
-import {
-  DEFAULT_PAYMENTS_PAGE,
-  createHorizonHandlers,
-} from '../__mocks__/msw/handlers/horizon';
+import { DEFAULT_PAYMENTS_PAGE } from '../__mocks__/msw/handlers/horizon';
 import { TransactionHistory } from '../components/TransactionHistory';
 import * as useWalletHook from '../hooks/useWallet';
 

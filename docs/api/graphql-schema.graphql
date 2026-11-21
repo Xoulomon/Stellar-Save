@@ -1,0 +1,153 @@
+# GraphQL Schema Reference
+#
+# This file is the published external reference for the backend GraphQL API.
+# It is derived from the schema definitions in `frontend/src/graphql` and the
+# backend GraphQL resolvers. Keep it in sync whenever the schema changes.
+#
+# Versioning & Deprecation Policy
+# ------------------------------
+# - The API is versioned at the schema level. Breaking changes are only made in
+#   a new major version; additive (non-breaking) changes may ship in minor
+#   versions.
+# - Fields and enum values that are being retired are marked with the
+#   `@deprecated(reason: "...")` directive and remain available for at least one
+#   minor release before removal.
+# - Deprecations are announced in the changelog and in this reference before the
+#   field is removed.
+# - Consumers should avoid relying on deprecated fields and should pin to a
+#   documented version when integrating.
+
+"""
+A user of the platform.
+"""
+type User {
+  id: ID!
+  email: String!
+  name: String
+  role: Role!
+  createdAt: String!
+  updatedAt: String!
+}
+
+"""
+Role assigned to a user, controlling access to resources.
+"""
+enum Role {
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+"""
+A project owned by a user.
+"""
+type Project {
+  id: ID!
+  name: String!
+  description: String
+  owner: User!
+  members: [User!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+"""
+A paginated list of projects.
+"""
+type ProjectConnection {
+  nodes: [Project!]!
+  totalCount: Int!
+  pageInfo: PageInfo!
+}
+
+"""
+Pagination metadata for connection types.
+"""
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+"""
+A comment attached to a project.
+"""
+type Comment {
+  id: ID!
+  body: String!
+  author: User!
+  project: Project!
+  createdAt: String!
+}
+
+"""
+Standard error payload returned by mutations.
+"""
+type MutationError {
+  field: String
+  message: String!
+}
+
+"""
+Result of an authentication mutation.
+"""
+type AuthPayload {
+  token: String!
+  user: User!
+  errors: [MutationError!]
+}
+
+"""
+Result of a project mutation.
+"""
+type ProjectPayload {
+  project: Project
+  errors: [MutationError!]
+}
+
+"""
+Root query type.
+"""
+type Query {
+  """Fetch the currently authenticated user."""
+  me: User
+
+  """Fetch a single user by id."""
+  user(id: ID!): User
+
+  """List users with optional pagination."""
+  users(first: Int, after: String): [User!]!
+
+  """Fetch a single project by id."""
+  project(id: ID!): Project
+
+  """List projects with pagination."""
+  projects(first: Int, after: String): ProjectConnection!
+
+  """List comments for a project."""
+  comments(projectId: ID!): [Comment!]!
+}
+
+"""
+Root mutation type.
+"""
+type Mutation {
+  """Register a new user account."""
+  register(email: String!, password: String!, name: String): AuthPayload!
+
+  """Authenticate and receive a token."""
+  login(email: String!, password: String!): AuthPayload!
+
+  """Create a new project."""
+  createProject(name: String!, description: String): ProjectPayload!
+
+  """Update an existing project."""
+  updateProject(id: ID!, name: String, description: String): ProjectPayload!
+
+  """Delete a project."""
+  deleteProject(id: ID!): Boolean!
+
+  """Add a comment to a project."""
+  addComment(projectId: ID!, body: String!): Comment
+}

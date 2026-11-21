@@ -166,20 +166,11 @@ pub enum StorageKey {
     PayStat(u64, u32),
 
     // ── Counters and global metadata ─────────────────────────────────────────
-    /// Next available group id.
-    CntNextG,
-
-    /// Total number of groups ever created.
-    CntTotG,
-
-    /// Number of currently active groups.
-    CntActG,
-
-    /// Global member count across all groups.
-    CntTotM,
-
-    /// Contract version, for upgrade compatibility.
-    CntVer,
+    /// Counter singletons (next-group-id, totals, version).
+    /// The `u32` discriminant selects which counter — see `CNT_*` consts below.
+    /// Consolidated from individual variants to stay within the Soroban
+    /// 50-case enum limit.
+    Counter(u32),
 
     /// Global contract configuration.
     Config,
@@ -218,6 +209,17 @@ pub enum StorageKey {
     /// All group ids a user is a member of.
     UsrGrps(Address),
 }
+
+/// Discriminant values for the `StorageKey::Counter` variant.
+///
+/// Each counter singleton gets a stable `u32` id so it occupies a single enum
+/// case instead of five, keeping `StorageKey` under the Soroban 50-case limit.
+/// These are part of the storage encoding: do not renumber existing values.
+pub const CNT_NEXT_GROUP_ID: u32 = 0;
+pub const CNT_TOTAL_GROUPS: u32 = 1;
+pub const CNT_ACTIVE_GROUPS: u32 = 2;
+pub const CNT_TOTAL_MEMBERS: u32 = 3;
+pub const CNT_CONTRACT_VERSION: u32 = 4;
 
 /// Utility functions for creating storage keys with consistent formatting.
 ///
@@ -432,27 +434,27 @@ impl StorageKeyBuilder {
 
     /// Creates a key for the next group ID counter.
     pub fn next_group_id() -> StorageKey {
-        StorageKey::CntNextG
+        StorageKey::Counter(CNT_NEXT_GROUP_ID)
     }
 
     /// Creates a key for total groups counter.
     pub fn total_groups() -> StorageKey {
-        StorageKey::CntTotG
+        StorageKey::Counter(CNT_TOTAL_GROUPS)
     }
 
     /// Creates a key for active groups counter.
     pub fn active_groups() -> StorageKey {
-        StorageKey::CntActG
+        StorageKey::Counter(CNT_ACTIVE_GROUPS)
     }
 
     /// Creates a key for total members counter.
     pub fn total_members() -> StorageKey {
-        StorageKey::CntTotM
+        StorageKey::Counter(CNT_TOTAL_MEMBERS)
     }
 
     /// Creates a key for contract version.
     pub fn contract_version() -> StorageKey {
-        StorageKey::CntVer
+        StorageKey::Counter(CNT_CONTRACT_VERSION)
     }
 
     /// Creates a key for the global contract configuration.
@@ -787,7 +789,7 @@ mod tests {
 
         // Verify key types
         match next_id_key {
-            StorageKey::CntNextG => {}
+            StorageKey::Counter(CNT_NEXT_GROUP_ID) => {}
             _ => panic!("Wrong key type for next_group_id"),
         }
     }
@@ -984,7 +986,7 @@ mod tests {
     ///
     /// Kept as an explicit list so a newly added variant with an over-long name
     /// fails this test rather than silently costing an extra host object.
-    const VARIANT_NAMES: [&str; 54] = [
+    const VARIANT_NAMES: [&str; 50] = [
         "Grp",
         "GrpMbrs",
         "GrpSeq",
@@ -1022,11 +1024,7 @@ mod tests {
         "Payout",
         "PayRecip",
         "PayStat",
-        "CntNextG",
-        "CntTotG",
-        "CntActG",
-        "CntTotM",
-        "CntVer",
+        "Counter",
         "Config",
         "Guard",
         "GrpBal",
@@ -1099,7 +1097,10 @@ mod tests {
     fn unit_variants_carry_no_payload() {
         // The global singletons encode as a bare discriminant: no group id, no
         // address, nothing to serialise alongside the symbol.
-        assert_eq!(StorageKeyBuilder::next_group_id(), StorageKey::CntNextG);
+        assert_eq!(
+            StorageKeyBuilder::next_group_id(),
+            StorageKey::Counter(CNT_NEXT_GROUP_ID)
+        );
         assert_eq!(StorageKeyBuilder::contract_config(), StorageKey::Config);
         assert_eq!(StorageKeyBuilder::reentrancy_guard(), StorageKey::Guard);
         assert_eq!(StorageKeyBuilder::emergency_pause(), StorageKey::EmrgPause);
