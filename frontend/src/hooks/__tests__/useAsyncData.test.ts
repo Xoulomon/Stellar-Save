@@ -1,6 +1,15 @@
+﻿import { createElement } from 'react';
+import type { ReactNode } from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useAsyncData, useSimulatedLoading, mockDelay } from '../useAsyncData';
+
+function createWrapper() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return ({ children }: { children: ReactNode }) =>
+    createElement(QueryClientProvider, { client }, children);
+}
 
 describe('mockDelay', () => {
   beforeEach(() => {
@@ -21,14 +30,17 @@ describe('mockDelay', () => {
     const promise = mockDelay(() => {
       throw new Error('boom');
     }, 50);
+    const assertion = expect(promise).rejects.toThrow('boom');
     await vi.advanceTimersByTimeAsync(50);
-    await expect(promise).rejects.toThrow('boom');
+    await assertion;
   });
 });
 
 describe('useAsyncData', () => {
   it('starts loading and resolves with data', async () => {
-    const { result } = renderHook(() => useAsyncData(() => Promise.resolve('value'), []));
+    const { result } = renderHook(() => useAsyncData(() => Promise.resolve('value'), []), {
+      wrapper: createWrapper(),
+    });
 
     expect(result.current.isLoading).toBe(true);
     expect(result.current.data).toBeNull();
@@ -42,8 +54,9 @@ describe('useAsyncData', () => {
   });
 
   it('surfaces a rejection as an error message', async () => {
-    const { result } = renderHook(() =>
-      useAsyncData(() => Promise.reject(new Error('failed to load')), [])
+    const { result } = renderHook(
+      () => useAsyncData(() => Promise.reject(new Error('failed to load')), []),
+      { wrapper: createWrapper() }
     );
 
     await waitFor(() => {
@@ -55,8 +68,9 @@ describe('useAsyncData', () => {
   });
 
   it('stringifies non-Error rejections', async () => {
-    const { result } = renderHook(() =>
-      useAsyncData(() => Promise.reject('plain string failure'), [])
+    const { result } = renderHook(
+      () => useAsyncData(() => Promise.reject('plain string failure'), []),
+      { wrapper: createWrapper() }
     );
 
     await waitFor(() => {
@@ -70,7 +84,7 @@ describe('useAsyncData', () => {
     const loader = vi.fn(() => Promise.resolve('loaded'));
     const { result, rerender } = renderHook(
       ({ enabled }) => useAsyncData(loader, [], { enabled }),
-      { initialProps: { enabled: false } }
+      { initialProps: { enabled: false }, wrapper: createWrapper() }
     );
 
     expect(result.current.isLoading).toBe(false);
@@ -87,10 +101,26 @@ describe('useAsyncData', () => {
     expect(loader).toHaveBeenCalledTimes(1);
   });
 
+  it('resets to the empty state when disabled after loading', async () => {
+    const { result, rerender } = renderHook(
+      ({ enabled }) => useAsyncData(() => Promise.resolve('loaded'), [], { enabled }),
+      { initialProps: { enabled: true }, wrapper: createWrapper() }
+    );
+
+    await waitFor(() => expect(result.current.data).toBe('loaded'));
+
+    rerender({ enabled: false });
+
+    expect(result.current.data).toBeNull();
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBeNull();
+  });
+
   it('reloads when a dependency changes', async () => {
     const loader = vi.fn((id: string) => Promise.resolve(`data-${id}`));
     const { result, rerender } = renderHook(({ id }) => useAsyncData(() => loader(id), [id]), {
       initialProps: { id: 'a' },
+      wrapper: createWrapper(),
     });
 
     await waitFor(() => expect(result.current.data).toBe('data-a'));
@@ -102,10 +132,42 @@ describe('useAsyncData', () => {
     expect(loader).toHaveBeenCalledTimes(2);
   });
 
+  it('keeps the previous data visible while a dependency change reloads', async () => {
+    let resolveSecond: (value: string) => void = () => {};
+    const loader = vi
+      .fn()
+      .mockReturnValueOnce(Promise.resolve('first'))
+      .mockReturnValueOnce(
+        new Promise<string>((resolve) => {
+          resolveSecond = resolve;
+        })
+      );
+
+    const { result, rerender } = renderHook(({ id }) => useAsyncData(loader, [id]), {
+      initialProps: { id: 'a' },
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.data).toBe('first'));
+
+    rerender({ id: 'b' });
+
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.data).toBe('first');
+
+    await act(async () => {
+      resolveSecond('second');
+    });
+
+    await waitFor(() => expect(result.current.data).toBe('second'));
+  });
+
   it('refetch() reruns the loader', async () => {
     let call = 0;
     const loader = vi.fn(() => Promise.resolve(`result-${++call}`));
-    const { result } = renderHook(() => useAsyncData(loader, []));
+    const { result } = renderHook(() => useAsyncData(loader, []), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.data).toBe('result-1'));
 
@@ -118,7 +180,27 @@ describe('useAsyncData', () => {
     expect(loader).toHaveBeenCalledTimes(2);
   });
 
-  it('ignores a resolved value if the hook was disabled/changed before it landed', async () => {
+  it('clears a previous error when refetch succeeds', async () => {
+    const loader = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('first failed'))
+      .mockResolvedValueOnce('recovered');
+
+    const { result } = renderHook(() => useAsyncData(loader, []), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.error).toBe('first failed'));
+
+    act(() => {
+      result.current.refetch();
+    });
+
+    await waitFor(() => expect(result.current.data).toBe('recovered'));
+    expect(result.current.error).toBeNull();
+  });
+
+  it('ignores a resolved value if the hook changed before it landed', async () => {
     let resolveFirst: (value: string) => void = () => {};
     const first = new Promise<string>((resolve) => {
       resolveFirst = resolve;
@@ -130,6 +212,7 @@ describe('useAsyncData', () => {
 
     const { result, rerender } = renderHook(({ id }) => useAsyncData(loader, [id]), {
       initialProps: { id: 'a' },
+      wrapper: createWrapper(),
     });
 
     rerender({ id: 'b' });
@@ -154,12 +237,16 @@ describe('useSimulatedLoading', () => {
   });
 
   it('is true immediately and false after the delay elapses', async () => {
-    const { result } = renderHook(() => useSimulatedLoading(500));
+    const { result } = renderHook(() => useSimulatedLoading(500), {
+      wrapper: createWrapper(),
+    });
 
     expect(result.current).toBe(true);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(500);
+      // React Query notifies observers on a 0ms timer; flush it too.
+      await vi.advanceTimersByTimeAsync(1);
     });
 
     expect(result.current).toBe(false);
