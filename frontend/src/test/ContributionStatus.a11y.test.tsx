@@ -19,7 +19,7 @@ vi.mock('../lib/formatters', () => ({
   formatAmount: (n: number) => `${n} XLM`,
 }));
 
-// CycleProgress → ../utils → groupApi → groupRepository.ts (JSX in .ts – pre-existing parse error)
+// CycleProgress → ../utils → groupApi → groupRepository.tsx
 vi.mock('../utils', () => ({
   calculateCycleProgressFromDeadline: (_deadline: Date, contributed: number, total: number) => ({
     contributionProgress: (contributed / total) * 100,

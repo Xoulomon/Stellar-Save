@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- this module also exports repository APIs. */
 import React, { createContext, useContext, useMemo, type ReactNode } from 'react';
 
 // ---------------------------------------------------------------------------
@@ -71,7 +72,10 @@ export const MOCK_GROUPS: Group[] = [
     id: 'group-1',
     name: 'Sunrise Savers',
     description: 'A rotating savings group for early risers.',
-    members: ['GAAAAA1111111111111111111111111111111111111111111111111', 'GBBBBB2222222222222222222222222222222222222222222222222'],
+    members: [
+      'GAAAAA1111111111111111111111111111111111111111111111111',
+      'GBBBBB2222222222222222222222222222222222222222222222222',
+    ],
     createdAt: 1_700_000_000_000,
     creator: 'GAAAAA1111111111111111111111111111111111111111111111111',
     contributionAmount: 50,
@@ -166,11 +170,7 @@ export class StubGroupRepository implements GroupRepository {
       return { ...existing, members: [...existing.members] };
     }
     const updated: Group = { ...existing, members: [...existing.members, member] };
-    this.groups = [
-      ...this.groups.slice(0, index),
-      updated,
-      ...this.groups.slice(index + 1),
-    ];
+    this.groups = [...this.groups.slice(0, index), updated, ...this.groups.slice(index + 1)];
     return { ...updated, members: [...updated.members] };
   }
 
@@ -184,11 +184,7 @@ export class StubGroupRepository implements GroupRepository {
       ...existing,
       members: existing.members.filter((m) => m !== member),
     };
-    this.groups = [
-      ...this.groups.slice(0, index),
-      updated,
-      ...this.groups.slice(index + 1),
-    ];
+    this.groups = [...this.groups.slice(0, index), updated, ...this.groups.slice(index + 1)];
     return { ...updated, members: [...updated.members] };
   }
 }
@@ -198,7 +194,6 @@ export class StubGroupRepository implements GroupRepository {
 // ---------------------------------------------------------------------------
 
 export class SorobanGroupRepository implements GroupRepository {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(_contractId?: string) {}
 
   async createGroup(_input: CreateGroupInput): Promise<Group> {
@@ -239,21 +234,17 @@ export function GroupRepositoryProvider({
 }: GroupRepositoryProviderProps): React.ReactElement {
   const value = useMemo<GroupRepository>(
     () => repository ?? new StubGroupRepository(),
-    [repository],
+    [repository]
   );
   return (
-    <GroupRepositoryContext.Provider value={value}>
-      {children}
-    </GroupRepositoryContext.Provider>
+    <GroupRepositoryContext.Provider value={value}>{children}</GroupRepositoryContext.Provider>
   );
 }
 
 export function useGroupRepository(): GroupRepository {
   const repo = useContext(GroupRepositoryContext);
   if (!repo) {
-    throw new Error(
-      'useGroupRepository must be used within a <GroupRepositoryProvider>',
-    );
+    throw new Error('useGroupRepository must be used within a <GroupRepositoryProvider>');
   }
   return repo;
 }

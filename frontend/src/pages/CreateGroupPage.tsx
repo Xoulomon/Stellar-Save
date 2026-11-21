@@ -3,10 +3,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { CreateGroupForm } from '../components/CreateGroupForm';
-import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
+import { LoadingState } from '../components/LoadingState';
 import { useWallet } from '../hooks/useWallet';
 import { queryKeys } from '../lib/queryKeys';
+import { createGroup } from '../utils/groupApi';
 import { updateInsuranceSettings } from '../utils/insuranceApi';
 
 import type { GroupData } from '../utils/groupApi';
@@ -18,6 +19,7 @@ const CreateGroupPage: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txError, setTxError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleSubmit = async (data: GroupData) => {
     if (!activeAddress) {
@@ -27,14 +29,14 @@ const CreateGroupPage: React.FC = () => {
 
     setIsSubmitting(true);
     setTxError(null);
+    setSuccessMessage(null);
 
     try {
-      // Simulate a group ID returned from the contract
-      const mockGroupId = `group-${Date.now()}`;
+      const groupId = await createGroup(data);
 
       // Persist insurance settings if enabled
       if (data.insuranceEnabled) {
-        await updateInsuranceSettings(mockGroupId, {
+        await updateInsuranceSettings(groupId, {
           enabled: true,
           premiumRate: data.insurancePremiumRate / 100,
         });
@@ -43,10 +45,13 @@ const CreateGroupPage: React.FC = () => {
       // A brand-new group should show up in the shared groups list the
       // next time GroupsPage/BrowseGroupsPage read from the cache.
       void queryClient.invalidateQueries({ queryKey: queryKeys.groups.all() });
-      setTimeout(() => navigate('/dashboard'), 2500);
+      setSuccessMessage('Group created successfully');
+      setTimeout(() => navigate(`/groups/${groupId}`), 2000);
     } catch (error) {
       console.error('Failed to create group:', error);
-      setTxError('Failed to create group. Please try again.');
+      setTxError(
+        error instanceof Error ? error.message : 'Failed to create group. Please try again.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -68,6 +73,12 @@ const CreateGroupPage: React.FC = () => {
       />
 
       {isSubmitting && <LoadingState message="Submitting transaction to Stellar…" />}
+
+      {successMessage && (
+        <div role="status" aria-live="polite">
+          {successMessage}
+        </div>
+      )}
 
       {txError && !isSubmitting && (
         <ErrorState message={txError} onRetry={() => setTxError(null)} retryLabel="Dismiss" />
