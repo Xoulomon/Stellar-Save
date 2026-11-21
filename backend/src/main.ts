@@ -33,6 +33,60 @@ async function bootstrap() {
   const port = config.port;
   await app.listen(port);
 
+  // Register graceful shutdown resources with the coordinator.
+  // Resources are resolved lazily/optionally so missing providers do not
+  // break startup; the coordinator tolerates undefined resources.
+  const coordinator = new ShutdownCoordinator();
+
+  try {
+    const httpServer = app.getHttpServer();
+    if (httpServer) {
+      coordinator.registerHttpServer(httpServer);
+    }
+  } catch (err) {
+    logger.warn('HTTP server not available for shutdown registration', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  try {
+    const wsGateway = app.get('WebSocketGateway', { strict: false });
+    if (wsGateway) {
+      coordinator.registerWebSocketGateway(wsGateway);
+    }
+  } catch {
+    // WebSocket gateway is optional; ignore when not registered.
+  }
+
+  try {
+    const redis = app.get('RedisService', { strict: false });
+    if (redis) {
+      coordinator.registerRedis(redis);
+    }
+  } catch {
+    // Redis is optional; ignore when not registered.
+  }
+
+  try {
+    const prisma = app.get('PrismaService', { strict: false });
+    if (prisma) {
+      coordinator.registerPrisma(prisma);
+    }
+  } catch {
+    // Prisma is optional; ignore when not registered.
+  }
+
+  try {
+    const workers = app.get('WorkersService', { strict: false });
+    if (workers) {
+      coordinator.registerWorkers(workers);
+    }
+  } catch {
+    // Workers are optional; ignore when not registered.
+  }
+
+  registerSignalHandlers(coordinator);
+
   logger.info(`🚀 Stellar Save Backend is running on http://localhost:${port}`, {
     environment: config.nodeEnv,
     network: config.stellar.network,

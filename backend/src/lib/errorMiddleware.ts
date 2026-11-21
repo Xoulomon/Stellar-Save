@@ -48,11 +48,12 @@ export function notFoundMiddleware(req: Request, res: Response): void {
   const correlationId = resolveCorrelationId(req, res);
   applyCorrelationHeaders(res, correlationId);
   res.status(404).json({
-    error: {
-      code: 'NOT_FOUND',
-      message: `Route ${req.method} ${req.path} not found`,
-      correlationId,
-      timestamp: new Date().toISOString(),
-    },
+    error: errorEnvelope(
+      {
+        code: 'NOT_FOUND',
+        message: `Route ${req.method} ${req.path} not found`,
+      },
+      correlationId
+    ),
   });
 }

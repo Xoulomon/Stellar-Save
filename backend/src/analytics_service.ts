@@ -5,6 +5,70 @@ import * as redis from './redis';
 
 import type { PrismaClient } from '@prisma/client';
 
+/**
+ * Narrow an open-ended Prisma JSON blob (e.g. a Soroban contract event `data`
+ * payload) to a plain record. Returns an empty object for null/non-object
+ * inputs so callers can safely read optional fields without extra guards.
+ *
+ * This is the canonical implementation shared by the analytics service,
+ * aggregator, middleware and resync job.
+ */
+export function asRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+/**
+ * Read a numeric field from an open-ended JSON blob, returning 0 when the
+ * value is missing or not a finite number.
+ */
+export function readNumericField(value: unknown, ...keys: string[]): number {
+  const record = asRecord(value);
+  for (const key of keys) {
+    const raw = record[key];
+    if (raw === undefined || raw === null) continue;
+    const num = Number(raw);
+    if (!Number.isNaN(num) && Number.isFinite(num)) return num;
+  }
+  return 0;
+}
+
+/**
+ * Read a string field from an open-ended JSON blob, returning undefined when
+ * the value is missing or not a string.
+ */
+export function readStringField(value: unknown, ...keys: string[]): string | undefined {
+  const record = asRecord(value);
+  for (const key of keys) {
+    const raw = record[key];
+    if (typeof raw === 'string' && raw.length > 0) return raw;
+  }
+  return undefined;
+}
+
+/** Cache key for a group's daily stats snapshot. */
+export function groupStatsCacheKey(groupId: string, dateStr: string): string {
+  return `group_stats:${groupId}:${dateStr}`;
+}
+
+/** Cache key for platform trends over a date range. */
+export function platformTrendsCacheKey(startDate: Date, endDate: Date): string {
+  return `platform_trends:${startDate.getTime()}:${endDate.getTime()}`;
+}
+
+/** Cache key for aggregated event stats. */
+export function eventStatsCacheKey(startDate?: Date): string {
+  return `event_stats:${startDate?.getTime() || 'all'}`;
+}
+
+/** Cache key for the landing-page groups overview. */
+export const GROUPS_OVERVIEW_CACHE_KEY = 'stats:groups:overview';
+
+/** TTL (seconds) for the landing-page groups overview cache entry. */
+export const GROUPS_OVERVIEW_CACHE_TTL_SECONDS = 300;
+
 export interface GroupCycleStats {
   cycleNumber: number;
   cycleDate: Date;
@@ -217,7 +281,7 @@ export class AnalyticsService {
   async getGroupStats(groupId: string, date?: Date): Promise<GroupStats | null> {
     const targetDate = date || new Date();
     const dateStr = targetDate.toISOString().split('T')[0];
-    const cacheKey = `group_stats:${groupId}:${dateStr}`;
+    const cacheKey = groupStatsCacheKey(groupId, dateStr);
 
     // Try to get from cache
     const cached = await this.cacheClient.get(cacheKey);
@@ -311,7 +375,7 @@ export class AnalyticsService {
     endDate: Date,
     options?: AnalyticsOptions
   ): Promise<PlatformStats[]> {
-    const cacheKey = `platform_trends:${startDate.getTime()}:${endDate.getTime()}`;
+    const cacheKey = platformTrendsCacheKey(startDate, endDate);
     const cached = await this.cacheClient.get(cacheKey);
     if (cached) return cached as PlatformStats[];
 
@@ -355,7 +419,7 @@ export class AnalyticsService {
    * Get event statistics
    */
   async getEventStats(options?: AnalyticsOptions): Promise<EventStats[]> {
-    const cacheKey = `event_stats:${options?.startDate?.getTime() || 'all'}`;
+    const cacheKey = eventStatsCacheKey(options?.startDate);
     const cached = await this.cacheClient.get(cacheKey);
     if (cached) return cached as EventStats[];
 
@@ -516,8 +580,7 @@ export class AnalyticsService {
     sessionId?: string;
   } | null {
     const rawType = String(event.eventType || '').toLowerCase();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- contract event data is an open-ended JSON blob from Soroban; shape is unknown at compile time
-    const rawData = (event.data as Record<string, any>) || {};
+    const rawData = asRecord(event.data);
     const topicString = JSON.stringify(event.topics || []).toLowerCase();
     const payloadString = JSON.stringify(rawData).toLowerCase();
     const isContribution =
@@ -533,18 +596,22 @@ export class AnalyticsService {
       return null;
     }
 
-    const amount = Number(
-      rawData.amount ?? rawData.contribution_amount ?? rawData.payout_amount ?? 0
+    const amount = readNumericField(
+      rawData,
+      'amount',
+      'contribution_amount',
+      'payout_amount'
     );
-    const userId = rawData.userId ?? rawData.memberId ?? rawData.member_address ?? event.txHash;
-    const groupId = rawData.groupId ?? rawData.group_id ?? event.contractId;
+    const userId =
+      readStringField(rawData, 'userId', 'memberId', 'member_address') ?? event.txHash;
+    const groupId = readStringField(rawData, 'groupId', 'group_id') ?? event.contractId;
 
     return {
       eventType: 'transaction',
       eventName: `soroban_${isContribution ? 'contribution' : 'payout'}_${event.id}`,
       userId,
       groupId,
-      sessionId: rawData.sessionId ?? undefined,
+      sessionId: readStringField(rawData, 'sessionId'),
       eventData: {
         type: isContribution ? 'contribution' : 'payout',
         amount,
@@ -681,10 +748,8 @@ export class AnalyticsService {
    *   - "member_joined"      → unique member addresses = active members
    */
   async getGroupsOverviewStats(): Promise<GroupsOverviewStats> {
-    const CACHE_KEY = 'stats:groups:overview';
-
     // Return cached value if available
-    const cached = await this.cacheClient.get(CACHE_KEY);
+    const cached = await this.cacheClient.get(GROUPS_OVERVIEW_CACHE_KEY);
     if (cached) return cached as GroupsOverviewStats;
 
     try {
@@ -704,11 +769,7 @@ export class AnalyticsService {
       });
 
       const totalContributed = contributionEvents.reduce(
-        (sum: number, event: { data: unknown }) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma JSON field is typed as unknown; amount shape is an open-ended contract blob
-          const amount = Number((event.data as any)?.amount ?? 0);
-          return sum + (isNaN(amount) ? 0 : amount);
-        },
+        (sum: number, event: { data: unknown }) => sum + readNumericField(event.data, 'amount'),
         0
       );
 
@@ -723,8 +784,8 @@ export class AnalyticsService {
 
       const uniqueAddresses = new Set<string>();
       for (const event of memberEvents) {
-        const address = (event.data as { memberAddress?: unknown } | null)?.memberAddress;
-        if (address && typeof address === 'string') {
+        const address = readStringField(event.data, 'memberAddress');
+        if (address) {
           uniqueAddresses.add(address);
         }
       }
@@ -737,7 +798,11 @@ export class AnalyticsService {
         cachedAt: new Date().toISOString(),
       };
 
-      await this.cacheClient.set(CACHE_KEY, stats, 300); // 5 minutes
+      await this.cacheClient.set(
+        GROUPS_OVERVIEW_CACHE_KEY,
+        stats,
+        GROUPS_OVERVIEW_CACHE_TTL_SECONDS
+      );
       return stats;
     } catch (error) {
       logger.error('Error fetching groups overview stats:', error);
