@@ -368,6 +368,24 @@ impl StellarSaveContract {
         migration::execute_upgrade(&env, caller, new_wasm, new_version)
     }
 
+    /// Pauses the whole contract. Admin only.
+    ///
+    /// While paused, contributions and payouts return `ContractPaused`. Group-level
+    /// pause (`pause_group`) is separate and unchanged.
+    pub fn pause_contract(env: Env, admin: Address) -> Result<(), StellarSaveError> {
+        crate::pause::set_contract_paused(&env, &admin, true)
+    }
+
+    /// Lifts the contract-wide pause. Admin only.
+    pub fn unpause_contract(env: Env, admin: Address) -> Result<(), StellarSaveError> {
+        crate::pause::set_contract_paused(&env, &admin, false)
+    }
+
+    /// Returns true while the contract-wide pause is set.
+    pub fn is_contract_paused(env: Env) -> bool {
+        crate::pause::is_contract_paused(&env)
+    }
+
     /// Updates the global contribution amount limits.
     ///
     /// Only the contract admin can call this function.
@@ -1642,6 +1660,7 @@ impl StellarSaveContract {
     /// - `PayoutFailed` - Transfer failed or insufficient balance
     /// - `InvalidRecipient` - Recipient not eligible for payout
     pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
+        crate::pause::require_not_paused(&env)?;
         payout_executor::execute_payout(env, group_id)
     }
 
@@ -4343,6 +4362,7 @@ impl StellarSaveContract {
         member: Address,
         amount: i128,
     ) -> Result<(), StellarSaveError> {
+        crate::pause::require_not_paused(&env)?;
         // Require authorization from the member
         member.require_auth();
 
@@ -4501,6 +4521,7 @@ impl StellarSaveContract {
         member: Address,
         cycles: Vec<u32>,
     ) -> Result<(), StellarSaveError> {
+        crate::pause::require_not_paused(&env)?;
         member.require_auth();
 
         // Reject empty input early
@@ -5039,6 +5060,7 @@ impl StellarSaveContract {
         member: Address,
         amount: i128,
     ) -> Result<(), StellarSaveError> {
+        crate::pause::require_not_paused(&env)?;
         member.require_auth();
 
         let group_key = StorageKeyBuilder::group_data(group_id);

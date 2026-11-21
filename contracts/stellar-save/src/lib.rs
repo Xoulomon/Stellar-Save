@@ -51,7 +51,7 @@ pub mod governance;
 pub mod group;
 pub mod helpers;
 pub mod migration;
-pub mod migrations;
+pub mod pause;
 pub mod payout;
 pub mod payout_executor;
 pub mod penalty;

@@ -1,6 +1,3 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
 type EventFieldType = 'u64' | 'u32' | 'i128' | 'address' | 'string' | 'bool';
 
 interface EventSchema {
@@ -8,18 +5,35 @@ interface EventSchema {
   fields: Record<string, EventFieldType>;
 }
 
-const repositoryRoot = path.resolve(__dirname, '../../..');
-const eventsSource = fs.readFileSync(
-  path.join(repositoryRoot, 'contracts', 'stellar-save', 'src', 'events.rs'),
-  'utf8',
-);
-const eventSchema = JSON.parse(
-  fs.readFileSync(path.join(repositoryRoot, 'packages', 'events-schema', 'schema.json'), 'utf8'),
-) as { events: Record<string, EventSchema> };
+interface SourceFile {
+  file: string;
+  src: string;
+}
+
+interface TopicDrift {
+  missingFromSchema: string[];
+  missingEmitter: string[];
+  schemaTopicCount: number;
+}
+
+// Shared loaders and drift rules, also used by packages/events-schema/check-rust-drift.js.
+const contractSources = require('../../../packages/events-schema/contract-sources.js') as {
+  loadSchema: () => { events: Record<string, EventSchema> };
+  loadEventsRs: () => string;
+  loadDomainSources: () => SourceFile[];
+  emittedTopicsIn: (src: string) => string[];
+  findMissingSchemaVersionFields: (schema: { events: Record<string, EventSchema> }) => string[];
+  findMissingSchemaVersionConstants: (sources: SourceFile[]) => string[];
+  findTopicDrift: (
+    schema: { events: Record<string, EventSchema> },
+    sources: SourceFile[],
+  ) => TopicDrift;
+};
+
+const eventsSource = contractSources.loadEventsRs();
+const eventSchema = contractSources.loadSchema();
 const emitterSource = eventsSource.split(/#\[cfg\(test\)\]\s*mod tests\s*\{/)[0];
-const emittedTopics = [
-  ...emitterSource.matchAll(/publish\(\s*\(\s*"([a-z0-9_]+)"/g),
-].map(([, topic]) => topic);
+const emittedTopics = contractSources.emittedTopicsIn(emitterSource);
 
 const rustTypes: Record<string, EventFieldType> = {
   u64: 'u64',
@@ -129,5 +143,45 @@ describe('contract event schema contract', () => {
         expect(matchesType(fixture.fields[field], expectedType)).toBe(true);
       }
     }
+  });
+
+  it('requires schema_version on every schema entry', () => {
+    expect(contractSources.findMissingSchemaVersionFields(eventSchema)).toEqual([]);
+  });
+
+  it('requires every domain module to declare a *_SCHEMA_VERSION constant', () => {
+    const sources = contractSources.loadDomainSources();
+    expect(contractSources.findMissingSchemaVersionConstants(sources)).toEqual([]);
+  });
+
+  it('keeps domain-module topics and the shared schema in agreement', () => {
+    const drift = contractSources.findTopicDrift(eventSchema, contractSources.loadDomainSources());
+    expect(drift.missingFromSchema).toEqual([]);
+    expect(drift.missingEmitter).toEqual([]);
+    expect(drift.schemaTopicCount).toBeGreaterThan(0);
+  });
+
+  it('flags a schema entry without schema_version', () => {
+    const schema: { events: Record<string, EventSchema> } = {
+      events: { demo_event: { topic: 'demo_event', fields: { group_id: 'u64' } } },
+    };
+    expect(contractSources.findMissingSchemaVersionFields(schema)).toEqual(['demo_event']);
+  });
+
+  it('flags a domain module without a *_SCHEMA_VERSION constant', () => {
+    const sources = [{ file: 'demo.rs', src: 'pub const DEMO: u32 = 1;' }];
+    expect(contractSources.findMissingSchemaVersionConstants(sources)).toEqual(['demo.rs']);
+  });
+
+  it('reports topics that drift in either direction', () => {
+    const schema: { events: Record<string, EventSchema> } = {
+      events: { a: { topic: 'only_in_schema', fields: {} } },
+    };
+    const sources = [{ file: 'demo.rs', src: 'publish(("only_in_code"), 1);' }];
+    expect(contractSources.findTopicDrift(schema, sources)).toEqual({
+      missingFromSchema: ['only_in_code'],
+      missingEmitter: ['only_in_schema'],
+      schemaTopicCount: 1,
+    });
   });
 });
