@@ -1,11 +1,8 @@
 use crate::{
     error::StellarSaveError,
-    group::Group,
-    status::GroupStatus,
     storage::{StorageKeyBuilder, STORAGE_VERSION},
-    ContractConfig,
 };
-use soroban_sdk::{symbol_short, Address, BytesN, Env, Symbol};
+use soroban_sdk::{symbol_short, Address, Env, Symbol};
 
 /// Migration utilities for handling storage schema upgrades.
 ///
@@ -232,11 +229,17 @@ mod tests {
         let guard_key = StorageKeyBuilder::reentrancy_guard();
 
         assert_eq!(
-            env.storage().persistent().get::<bool>(&pause_key).unwrap(),
+            env.storage()
+                .persistent()
+                .get::<_, bool>(&pause_key)
+                .unwrap(),
             false
         );
         assert_eq!(
-            env.storage().persistent().get::<bool>(&guard_key).unwrap(),
+            env.storage()
+                .persistent()
+                .get::<_, bool>(&guard_key)
+                .unwrap(),
             false
         );
     }
@@ -248,7 +251,17 @@ mod tests {
 
         // Simulate v1 contract with existing groups
         let group_id = 1u64;
-        let group = Group::new(group_id, creator, 100_000_000, 604800, 5, 2, 1234567890);
+        let group = Group::new(
+            &env,
+            group_id,
+            creator,
+            100_000_000,
+            604800,
+            5,
+            2,
+            1234567890,
+            0,
+        );
 
         // Store group in v1 format (without balance tracking)
         let group_key = StorageKeyBuilder::group_data(group_id);
@@ -271,14 +284,14 @@ mod tests {
         assert_eq!(
             env.storage()
                 .persistent()
-                .get::<i128>(&balance_key)
+                .get::<_, i128>(&balance_key)
                 .unwrap(),
             0
         );
         assert_eq!(
             env.storage()
                 .persistent()
-                .get::<i128>(&paid_out_key)
+                .get::<_, i128>(&paid_out_key)
                 .unwrap(),
             0
         );
@@ -302,14 +315,20 @@ mod tests {
 
         // Should preserve existing pause state
         assert_eq!(
-            env.storage().persistent().get::<bool>(&pause_key).unwrap(),
+            env.storage()
+                .persistent()
+                .get::<_, bool>(&pause_key)
+                .unwrap(),
             true
         );
 
         // Should initialize missing guard
         let guard_key = StorageKeyBuilder::reentrancy_guard();
         assert_eq!(
-            env.storage().persistent().get::<bool>(&guard_key).unwrap(),
+            env.storage()
+                .persistent()
+                .get::<_, bool>(&guard_key)
+                .unwrap(),
             false
         );
     }
@@ -536,6 +555,4 @@ pub fn execute_upgrade(
     );
 
     Ok(())
-}
-
 }

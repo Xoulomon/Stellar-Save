@@ -142,13 +142,8 @@ mod tests {
         let env = Env::default();
         let member = Address::generate(&env);
 
-        let contribution = ContributionRecord::new(
-            member,
-            1,
-            0,
-            STROOPS_PER_XLM,
-            ARBITRARY_TEST_TIMESTAMP,
-        );
+        let contribution =
+            ContributionRecord::new(member, 1, 0, STROOPS_PER_XLM, ARBITRARY_TEST_TIMESTAMP);
 
         assert!(contribution.validate());
     }
@@ -158,13 +153,8 @@ mod tests {
         let env = Env::default();
         let member = Address::generate(&env);
 
-        let contribution = ContributionRecord::new(
-            member,
-            1,
-            2,
-            STROOPS_PER_XLM,
-            ARBITRARY_TEST_TIMESTAMP,
-        );
+        let contribution =
+            ContributionRecord::new(member, 1, 2, STROOPS_PER_XLM, ARBITRARY_TEST_TIMESTAMP);
 
         assert!(contribution.matches_group_and_cycle(1, 2));
         assert!(!contribution.matches_group_and_cycle(1, 3));

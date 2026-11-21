@@ -1,4 +1,4 @@
-use soroban_sdk::{Address, Env, Symbol};
+use soroban_sdk::{Address, Env};
 
 use crate::{
     error::StellarSaveError,
@@ -121,9 +121,14 @@ pub fn clone_group(
     EventEmitter::emit_group_cloned(env, group_id, new_id, caller.clone(), now);
 
     // Also emit GroupCreated so existing listeners pick it up
-    env.events().publish(
-        (Symbol::new(env, "GroupCreated"), caller),
-        (new_id, new_token_config.token_address),
+    EventEmitter::emit_group_created(
+        env,
+        new_id,
+        caller,
+        contribution_amount,
+        cycle_duration,
+        max_members,
+        now,
     );
 
     Ok(new_id)

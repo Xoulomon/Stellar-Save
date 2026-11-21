@@ -69,9 +69,10 @@ fn setup() -> (Env, StellarSaveContractClient<'static>, Address, Address) {
             joined_at: env.ledger().timestamp(),
             auto_contribute_enabled: false,
         };
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::member_profile(GROUP_ID, member.clone()), &member_profile);
+        env.storage().persistent().set(
+            &StorageKeyBuilder::member_profile(GROUP_ID, member.clone()),
+            &member_profile,
+        );
     });
 
     (env, client, creator, member)

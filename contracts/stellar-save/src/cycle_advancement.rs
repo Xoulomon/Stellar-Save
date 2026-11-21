@@ -174,6 +174,7 @@ mod tests {
     fn make_group(env: &Env, max_members: u32, cycle_duration: u64, started_at: u64) -> Group {
         let creator = Address::generate(env);
         let mut g = Group::new(
+            env,
             1,
             creator,
             STROOPS_PER_XLM,
@@ -181,6 +182,7 @@ mod tests {
             max_members,
             2,
             started_at,
+            0,
         );
         // Simulate min members joined so activate works
         g.member_count = max_members;
@@ -243,7 +245,10 @@ mod tests {
         let env = Env::default();
         let g = make_group(&env, 4, ONE_WEEK_SECONDS, 0);
         // Deadline for cycle 0 = ONE_WEEK_SECONDS; now = ONE_WEEK_SECONDS - 1
-        assert_eq!(is_cycle_expired(&g, 0, ONE_WEEK_SECONDS - 1, 0).unwrap(), false);
+        assert_eq!(
+            is_cycle_expired(&g, 0, ONE_WEEK_SECONDS - 1, 0).unwrap(),
+            false
+        );
     }
 
     #[test]
@@ -257,7 +262,10 @@ mod tests {
     fn test_is_cycle_expired_true_after_deadline() {
         let env = Env::default();
         let g = make_group(&env, 4, ONE_WEEK_SECONDS, 0);
-        assert_eq!(is_cycle_expired(&g, 0, ONE_WEEK_SECONDS + 1, 0).unwrap(), true);
+        assert_eq!(
+            is_cycle_expired(&g, 0, ONE_WEEK_SECONDS + 1, 0).unwrap(),
+            true
+        );
     }
 
     #[test]

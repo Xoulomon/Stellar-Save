@@ -76,8 +76,7 @@ pub fn get_next_recipient(env: &Env, group_id: u64) -> Result<Address, StellarSa
 
     // O(1) lookup: position → Address via the reverse index written at
     // join_group / assign_payout_positions time.
-    let pos_idx_key =
-        StorageKeyBuilder::group_payout_position_index(group_id, group.current_cycle);
+    let pos_idx_key = StorageKeyBuilder::group_payout_position_index(group_id, group.current_cycle);
     env.storage()
         .persistent()
         .get::<_, Address>(&pos_idx_key)
@@ -98,26 +97,6 @@ pub fn get_next_recipient(env: &Env, group_id: u64) -> Result<Address, StellarSa
 /// * `Ok(Address)` - Address of the member scheduled to receive the next payout
 /// * `Err(StellarSaveError::GroupNotFound)` - Group does not exist
 /// * `Err(StellarSaveError::InvalidState)` - Group is not Active or no recipient found
-pub fn get_next_recipient(env: &Env, group_id: u64) -> Result<Address, StellarSaveError> {
-    let group_key = StorageKeyBuilder::group_data(group_id);
-    let group: Group = env
-        .storage()
-        .persistent()
-        .get(&group_key)
-        .ok_or(StellarSaveError::GroupNotFound)?;
-
-    if group.status != GroupStatus::Active {
-        return Err(StellarSaveError::InvalidState);
-    }
-
-    // O(1) lookup: position → Address via the reverse index written at join/assign time
-    let pos_idx_key = StorageKeyBuilder::group_payout_position_index(group_id, group.current_cycle);
-    env.storage()
-        .persistent()
-        .get::<_, Address>(&pos_idx_key)
-        .ok_or(StellarSaveError::InvalidState)
-}
-
 /// Validates that the current cycle is complete and ready for payout.
 ///
 /// This function verifies that all members have contributed to the current cycle
@@ -540,8 +519,7 @@ fn record_payout(
     // PayoutRecord::new returns Err(InvalidAmount) when amount <= 0;
     // calculate_and_validate_payout_amount already enforces this invariant
     // before record_payout is called, so this ? is purely defensive.
-    let payout_record =
-        PayoutRecord::new(recipient.clone(), group_id, cycle, amount, timestamp)?;
+    let payout_record = PayoutRecord::new(recipient.clone(), group_id, cycle, amount, timestamp)?;
 
     // Validate the record before storage
     // This ensures the record meets all validation constraints
@@ -682,16 +660,7 @@ fn emit_payout_event(
     EventEmitter::emit_payout_executed(env, group_id, recipient.clone(), amount, cycle, timestamp);
 
     // Issue #754: emit structured contribution receipt for indexer
-    env.events().publish(
-        ("contribution_receipt",),
-        crate::events::ContributionEvent {
-            group_id,
-            member: recipient,
-            amount,
-            cycle,
-            timestamp,
-        },
-    );
+    EventEmitter::emit_contribution_receipt(env, group_id, recipient, amount, cycle, timestamp);
 
     // Event emission completed (or failed gracefully)
     // The payout flow continues regardless of event emission status
@@ -1624,6 +1593,7 @@ mod tests {
         let creator = Address::generate(&env);
 
         let mut group = Group::new(
+            &env,
             42, // Specific group ID
             creator,
             10_000_000i128,
@@ -1631,6 +1601,7 @@ mod tests {
             3,
             2,
             1234567890,
+            0,
         );
 
         let result = advance_cycle_or_complete(&env, &mut group);
@@ -1643,7 +1614,6 @@ mod tests {
         assert_eq!(stored_group.unwrap().id, 42);
     }
 
-
     #[test]
     fn test_apply_missed_penalties_adds_to_pool() {
         let env = Env::default();
@@ -1654,14 +1624,14 @@ mod tests {
         let penalty = 500_000i128;
 
         let group = crate::group::Group::new_with_penalty(
-            group_id, creator, 10_000_000, 604800, 2, 2, 1_000_000, true, penalty,
+            &env, group_id, creator, 10_000_000, 604800, 2, 2, 1_000_000, 0, true, penalty,
         );
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
 
-        let mut members = soroban_sdk::Vec::new(&env);
-        members.push_back(member.clone());
+        let mut members: soroban_sdk::Map<u32, soroban_sdk::Address> = soroban_sdk::Map::new(&env);
+        members.set(0u32, member.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -1687,14 +1657,14 @@ mod tests {
 
         // penalty_enabled = false
         let group = crate::group::Group::new_with_penalty(
-            group_id, creator, 10_000_000, 604800, 2, 2, 1_000_000, false, 0,
+            &env, group_id, creator, 10_000_000, 604800, 2, 2, 1_000_000, 0, false, 0,
         );
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_data(group_id), &group);
 
-        let mut members = soroban_sdk::Vec::new(&env);
-        members.push_back(member.clone());
+        let mut members: soroban_sdk::Map<u32, soroban_sdk::Address> = soroban_sdk::Map::new(&env);
+        members.set(0u32, member.clone());
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_members(group_id), &members);
@@ -1714,8 +1684,9 @@ mod tests {
 
         // Create a minimal group with payout_in_progress = true
         let creator = Address::generate(&env);
-        let mut group =
-            Group::new_with_penalty(group_id, creator, 1_000_000, 3600, 2, 2, 0, 0, false, 0);
+        let mut group = Group::new_with_penalty(
+            &env, group_id, creator, 1_000_000, 3600, 2, 2, 0, 0, false, 0,
+        );
         group.payout_in_progress = true;
         env.storage()
             .persistent()

@@ -17,7 +17,10 @@ use soroban_sdk::{
     Address, Env, String,
 };
 
-use crate::{StellarSaveContractClient, StellarSaveContract};
+use crate::group::{Group, GroupStatus, TokenConfig};
+use crate::storage::StorageKeyBuilder;
+use crate::types::ContractConfig;
+use crate::{StellarSaveContract, StellarSaveContractClient};
 
 // ─── Environment & Client Setup ──────────────────────────────────────────────
 
@@ -47,7 +50,12 @@ pub fn create_env() -> Env {
 /// - `client`: The generated StellarSaveContractClient for contract interaction
 /// - `token_address`: The address of the deployed mock token
 /// - `token_client`: StellarAssetClient for token operations
-pub fn setup<'a>() -> (Env, StellarSaveContractClient<'a>, Address, StellarAssetClient<'a>) {
+pub fn setup<'a>() -> (
+    Env,
+    StellarSaveContractClient<'a>,
+    Address,
+    StellarAssetClient<'a>,
+) {
     let env = create_env();
 
     let admin = Address::generate(&env);
@@ -142,19 +150,30 @@ pub fn setup_3_member_group_with_params(
     cycle_duration: u32,
     initial_balance_xlm: i128,
 ) -> (u64, Address, Address, Address) {
-    let group_id = client.create_group(&contribution_amount, &cycle_duration, &3u32);
-
+    let creator = Address::generate(env);
     let alice = Address::generate(env);
     let bob = Address::generate(env);
     let carol = Address::generate(env);
+
+    let token_address = sac.address.clone();
+    let cycle_duration_u64 = u64::from(cycle_duration);
+    let group_id = client.create_group(
+        &creator,
+        &contribution_amount,
+        &cycle_duration_u64,
+        &3u32,
+        &token_address,
+        &0u64,
+        &crate::payout::PayoutOrder::Sequential,
+    );
 
     mint(sac, &alice, initial_balance_xlm);
     mint(sac, &bob, initial_balance_xlm);
     mint(sac, &carol, initial_balance_xlm);
 
-    client.join_group(&group_id, &alice);
-    client.join_group(&group_id, &bob);
-    client.join_group(&group_id, &carol);
+    let _ = crate::StellarSaveContract::join_group(env.clone(), group_id, alice.clone(), None);
+    let _ = crate::StellarSaveContract::join_group(env.clone(), group_id, bob.clone(), None);
+    let _ = crate::StellarSaveContract::join_group(env.clone(), group_id, carol.clone(), None);
 
     (group_id, alice, bob, carol)
 }
@@ -201,10 +220,10 @@ pub fn generate_address(env: &Env) -> Address {
 ///
 /// # Returns
 /// A vector of unique addresses
-pub fn generate_addresses(env: &Env, count: usize) -> Vec<Address> {
-    let mut addresses = Vec::new();
+pub fn generate_addresses(env: &Env, count: usize) -> soroban_sdk::Vec<Address> {
+    let mut addresses = soroban_sdk::Vec::new(env);
     for _ in 0..count {
-        addresses.push(Address::generate(env));
+        addresses.push_back(Address::generate(env));
     }
     addresses
 }

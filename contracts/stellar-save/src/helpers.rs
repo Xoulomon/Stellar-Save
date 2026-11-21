@@ -1,7 +1,7 @@
 //! Helper utilities for formatting and display
 
 use crate::{Group, StellarSaveError, StorageKeyBuilder};
-use soroban_sdk::{Bytes, Env, String};
+use soroban_sdk::{Env, String};
 
 /// Validates a group metadata string (name or description).
 ///
@@ -177,7 +177,7 @@ pub fn calculate_current_cycle(env: &Env, group_id: u64) -> Result<u32, StellarS
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::group::GroupStatus;
+    use soroban_sdk::testutils::{Address as _, Ledger as _};
     use soroban_sdk::{Address, Env};
 
     // ── validate_group_string tests ──────────────────────────────────────────
@@ -300,7 +300,7 @@ mod tests {
     fn test_is_cycle_deadline_passed_not_started() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        let group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000, 0);
+        let group = Group::new(&env, 1, creator, 1000000, 604800, 5, 2, 1000, 0);
 
         assert!(!is_cycle_deadline_passed(&group, 2000));
     }
@@ -309,7 +309,7 @@ mod tests {
     fn test_is_cycle_deadline_passed_before_deadline() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        let mut group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000, 0);
+        let mut group = Group::new(&env, 1, creator, 1000000, 604800, 5, 2, 1000, 0);
         group.activate(1000);
 
         // Current time before deadline (started_at + cycle_duration)
@@ -320,7 +320,7 @@ mod tests {
     fn test_is_cycle_deadline_passed_after_deadline() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        let mut group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000, 0);
+        let mut group = Group::new(&env, 1, creator, 1000000, 604800, 5, 2, 1000, 0);
         group.activate(1000);
 
         // Current time after deadline (no grace period)
@@ -332,7 +332,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
         let grace = 3600u64; // 1 hour grace
-        let mut group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000, grace);
+        let mut group = Group::new(&env, 1, creator, 1000000, 604800, 5, 2, 1000, grace);
         group.activate(1000);
 
         let deadline = 1000 + 604800;
@@ -346,7 +346,7 @@ mod tests {
     fn test_is_cycle_deadline_passed_second_cycle() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        let mut group = Group::new(1, creator, 1000000, 604800, 5, 2, 1000, 0);
+        let mut group = Group::new(&env, 1, creator, 1000000, 604800, 5, 2, 1000, 0);
         group.activate(1000);
         group.advance_cycle(&env);
 
@@ -374,7 +374,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
         // Group with started = false (default)
-        let group = Group::new(1, creator, 1_000_000, 604800, 5, 2, 1000, 0);
+        let group = Group::new(&env, 1, creator, 1_000_000, 604800, 5, 2, 1000, 0);
         store_group(&env, &group);
 
         let result = calculate_current_cycle(&env, 1);
@@ -386,7 +386,7 @@ mod tests {
         let env = Env::default();
         env.ledger().set_timestamp(1000);
         let creator = Address::generate(&env);
-        let mut group = Group::new(1, creator, 1_000_000, 604800, 5, 2, 1000, 0);
+        let mut group = Group::new(&env, 1, creator, 1_000_000, 604800, 5, 2, 1000, 0);
         group.member_count = 2;
         group.activate(1000); // started_at = 1000
         store_group(&env, &group);
@@ -403,7 +403,17 @@ mod tests {
         let cycle_duration: u64 = 604800;
 
         let creator = Address::generate(&env);
-        let mut group = Group::new(1, creator, 1_000_000, cycle_duration, 10, 2, started_at, 0);
+        let mut group = Group::new(
+            &env,
+            1,
+            creator,
+            1_000_000,
+            cycle_duration,
+            10,
+            2,
+            started_at,
+            0,
+        );
         group.member_count = 2;
         group.activate(started_at);
         store_group(&env, &group);
@@ -428,7 +438,17 @@ mod tests {
         let cycle_duration: u64 = 604800;
 
         let creator = Address::generate(&env);
-        let mut group = Group::new(1, creator, 1_000_000, cycle_duration, 10, 2, started_at, 0);
+        let mut group = Group::new(
+            &env,
+            1,
+            creator,
+            1_000_000,
+            cycle_duration,
+            10,
+            2,
+            started_at,
+            0,
+        );
         group.member_count = 2;
         group.activate(started_at);
         store_group(&env, &group);
@@ -449,6 +469,7 @@ mod tests {
 
         let creator = Address::generate(&env);
         let mut group = Group::new(
+            &env,
             1,
             creator,
             1_000_000,
@@ -477,7 +498,17 @@ mod tests {
         let cycle_duration: u64 = 604800;
 
         let creator = Address::generate(&env);
-        let mut group = Group::new(1, creator, 1_000_000, cycle_duration, 5, 2, started_at, 0);
+        let mut group = Group::new(
+            &env,
+            1,
+            creator,
+            1_000_000,
+            cycle_duration,
+            5,
+            2,
+            started_at,
+            0,
+        );
         group.member_count = 2;
         group.activate(started_at);
         store_group(&env, &group);
@@ -496,7 +527,17 @@ mod tests {
         let cycle_duration: u64 = 86400; // 1 day
 
         let creator = Address::generate(&env);
-        let mut group = Group::new(1, creator, 1_000_000, cycle_duration, 5, 2, started_at, 0);
+        let mut group = Group::new(
+            &env,
+            1,
+            creator,
+            1_000_000,
+            cycle_duration,
+            5,
+            2,
+            started_at,
+            0,
+        );
         group.member_count = 2;
         group.activate(started_at);
         store_group(&env, &group);

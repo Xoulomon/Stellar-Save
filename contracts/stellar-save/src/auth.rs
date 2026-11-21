@@ -93,7 +93,7 @@ mod tests {
     }
 
     /// Build a minimal valid MemberProfile for test setup.
-    fn make_profile(env: &Env, address: Address, group_id: u64) -> crate::types::MemberProfile {
+    fn make_profile(_env: &Env, address: Address, group_id: u64) -> crate::types::MemberProfile {
         crate::types::MemberProfile {
             address,
             group_id,
@@ -203,7 +203,13 @@ mod tests {
 
         let config = ContractConfig {
             admin: admin.clone(),
-            treasury: admin.clone(),
+            min_contribution: 1,
+            max_contribution: i128::MAX,
+            min_members: 2,
+            max_members: 20,
+            min_cycle_duration: 1,
+            max_cycle_duration: u64::MAX,
+            treasury: Some(admin.clone()),
             creation_fee: 0,
         };
         env.storage()

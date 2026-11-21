@@ -23,7 +23,7 @@
 mod tests {
     extern crate std;
 
-    use soroban_sdk::{Bytes, BytesN, Env, testutils::Address as _};
+    use soroban_sdk::{testutils::Address as _, Bytes, BytesN, Env};
 
     // ─── Helper: create raw Bytes of given length filled with `val` ──────────
 
