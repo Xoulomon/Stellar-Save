@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:integration": "node tests/helpers/runIntegration.js",
+    "test:indexer": "jest src/tests/contract_event_indexer.integration.test.ts --no-coverage",
     "lint": "eslint .",
     "test:coverage": "jest --coverage",
     "schema:update": "tsx -e \"import { typeDefs } from './src/graphql/schema'; import { buildSchema, printSchema } from 'graphql'; import { mkdirSync, writeFileSync } from 'fs'; mkdirSync('src/graphql/snapshots', { recursive: true }); writeFileSync('src/graphql/snapshots/schema.graphql', printSchema(buildSchema(typeDefs)) + '\\n'); console.log('Schema snapshot updated: src/graphql/snapshots/schema.graphql');\"",
