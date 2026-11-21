@@ -5,9 +5,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { computeReputationScore } from '../hooks/useMemberProfile';
 import MemberProfilePage from '../pages/MemberProfilePage';
 
+import { createQueryWrapper } from './createQueryWrapper';
+
 import type { UserStats } from '../hooks/useUserProfile';
 
-// ── Mocks ─────────────────────────────────────────────────────────────────────
+// Mocks
 
 vi.mock('../ui', () => ({
   AppLayout: ({ children, title }: { children: React.ReactNode; title: string }) => (
@@ -22,7 +24,7 @@ vi.mock('../hooks/useClipboard', () => ({
   useClipboard: () => ({ copy: vi.fn(), copied: false, error: null }),
 }));
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// Helpers
 
 function renderWithAddress(address: string) {
   return render(
@@ -30,13 +32,14 @@ function renderWithAddress(address: string) {
       <Routes>
         <Route path="/members/:address" element={<MemberProfilePage />} />
       </Routes>
-    </MemoryRouter>
+    </MemoryRouter>,
+    { wrapper: createQueryWrapper() }
   );
 }
 
 const TEST_ADDRESS = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
 
-// ── computeReputationScore unit tests ─────────────────────────────────────────
+// computeReputationScore unit tests
 
 describe('computeReputationScore', () => {
   const baseStats: UserStats = {
@@ -82,7 +85,7 @@ describe('computeReputationScore', () => {
   });
 });
 
-// ── MemberProfilePage component tests ────────────────────────────────────────
+// MemberProfilePage component tests
 
 describe('MemberProfilePage', () => {
   beforeEach(() => {
@@ -155,7 +158,8 @@ describe('MemberProfilePage', () => {
         <Routes>
           <Route path="/members/" element={<MemberProfilePage />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
+      { wrapper: createQueryWrapper() }
     );
     await waitFor(() => {
       expect(screen.getByText(/member not found/i)).toBeInTheDocument();
