@@ -1,4 +1,5 @@
 import { AccessTime, PersonAdd, TrendingUp, CreditCard } from '@mui/icons-material';
+import { formatAddress } from '@shared-utils/formatting';
 import { useMemo, type KeyboardEvent } from 'react';
 import './GroupTimeline.css';
 
@@ -75,7 +76,7 @@ export function GroupTimeline({
   // Shorten wallet address
   const shortenAddress = (address: string) => {
     if (!address) return 'Unknown';
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+    return formatAddress(address);
   };
 
   // Get icon component based on event type

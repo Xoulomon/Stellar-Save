@@ -1,3 +1,4 @@
+import { formatAddress } from '@shared-utils/formatting';
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -16,8 +17,6 @@ export const Navbar: React.FC = () => {
       navigate('/dashboard');
     }
   };
-
-  const formatAddress = (key: string) => `${key.slice(0, 6)}...${key.slice(-4)}`;
 
   return (
     <nav className="navbar">
