@@ -9,6 +9,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import DashboardPage from '../pages/DashboardPage';
 
+// Hoisted handles: each test sets its own hook state. vi.mock calls inside
+// test bodies are hoisted to module scope and do not apply per test.
+const { mockUseDashboard } = vi.hoisted(() => ({ mockUseDashboard: vi.fn() }));
+
+
 // ── Mock dependencies ─────────────────────────────────────────────────────────
 
 vi.mock('../ui', () => ({
@@ -108,13 +113,7 @@ const mockTransactions = [
 ];
 
 vi.mock('../hooks/useDashboard', () => ({
-  useDashboard: () => ({
-    stats: mockStats,
-    groups: mockGroups,
-    payouts: mockPayouts,
-    transactions: mockTransactions,
-    isLoading: false,
-  }),
+  useDashboard: () => mockUseDashboard(),
 }));
 
 vi.mock('../hooks/useBalanceWarning', () => ({
@@ -126,6 +125,13 @@ vi.mock('../hooks/useBalanceWarning', () => ({
 describe('DashboardPage snapshot tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseDashboard.mockReturnValue({
+      stats: mockStats,
+      groups: mockGroups,
+      payouts: mockPayouts,
+      transactions: mockTransactions,
+      isLoading: false,
+    });
   });
 
   it('matches snapshot with loaded data', () => {
@@ -138,15 +144,13 @@ describe('DashboardPage snapshot tests', () => {
   });
 
   it('matches snapshot with loading state', () => {
-    vi.mock('../hooks/useDashboard', () => ({
-      useDashboard: () => ({
-        stats: null,
-        groups: [],
-        payouts: [],
-        transactions: [],
-        isLoading: true,
-      }),
-    }));
+    mockUseDashboard.mockReturnValue({
+      stats: null,
+      groups: [],
+      payouts: [],
+      transactions: [],
+      isLoading: true,
+    });
 
     const { container } = render(
       <MemoryRouter>
@@ -157,15 +161,13 @@ describe('DashboardPage snapshot tests', () => {
   });
 
   it('matches snapshot with empty state', () => {
-    vi.mock('../hooks/useDashboard', () => ({
-      useDashboard: () => ({
-        stats: { totalGroups: 0, activeGroups: 0, totalContributions: 0, totalPayouts: 0 },
-        groups: [],
-        payouts: [],
-        transactions: [],
-        isLoading: false,
-      }),
-    }));
+    mockUseDashboard.mockReturnValue({
+      stats: { totalGroups: 0, activeGroups: 0, totalContributions: 0, totalPayouts: 0 },
+      groups: [],
+      payouts: [],
+      transactions: [],
+      isLoading: false,
+    });
 
     const { container } = render(
       <MemoryRouter>
