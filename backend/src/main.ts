@@ -4,10 +4,9 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { config } from './config';
 import { logger } from './logger';
-import {
-  ShutdownCoordinator,
-  registerSignalHandlers,
-} from './graceful_shutdown';
+import { requestId } from './middleware/requestId';
+import { errorMiddleware } from './middleware/errorMiddleware';
+import { notFoundMiddleware } from './middleware/notFoundMiddleware';
 
 async function bootstrap() {
   // Validate configuration on startup (fails fast if misconfigured)
@@ -20,8 +19,16 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
+  // Request-ID propagation: assign/propagate a request id for every request
+  // so it can be included in logs and error responses.
+  app.use(requestId);
+
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   app.enableCors();
+
+  // Consolidated error handling middleware (mounted after routes are resolved).
+  app.use(notFoundMiddleware);
+  app.use(errorMiddleware);
 
   const port = config.port;
   await app.listen(port);
@@ -86,24 +93,4 @@ async function bootstrap() {
   });
 }
 
-bootstrap().catch(async (error) => {
-  logger.error('Failed to bootstrap application', {
-    error: error instanceof Error ? error.message : String(error),
-    stack: error instanceof Error ? error.stack : undefined,
-  });
-
-  // Attempt a clean shutdown so partially-initialized resources are released.
-  try {
-    const coordinator = new ShutdownCoordinator();
-    await coordinator.shutdown('bootstrap-failure');
-  } catch (shutdownError) {
-    logger.error('Clean shutdown after bootstrap failure also failed', {
-      error:
-        shutdownError instanceof Error
-          ? shutdownError.message
-          : String(shutdownError),
-    });
-  }
-
-  process.exitCode = 1;
-});
+bootstrap();
