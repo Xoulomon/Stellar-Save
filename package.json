@@ -16,12 +16,17 @@
     "knip": "knip",
     "prepare": "husky"
   },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,md,yml,yaml,css,scss}": "prettier --write",
+    "*.{js,jsx,ts,tsx}": "turbo run lint --filter=[HEAD]"
+  },
   "devDependencies": {
     "@commitlint/cli": "19.8.0",
     "@commitlint/config-conventional": "19.8.0",
     "conventional-changelog-cli": "5.0.0",
     "husky": "9.1.7",
     "knip": "5.61.3",
+    "lint-staged": "15.5.2",
     "prettier": "3.9.6",
     "turbo": "2.5.4"
   },
