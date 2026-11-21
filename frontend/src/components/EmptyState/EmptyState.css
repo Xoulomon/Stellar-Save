@@ -34,6 +34,11 @@
   cursor: pointer;
 }
 
+.empty-state__action:focus-visible {
+  outline: 2px solid var(--color-primary, #1f4fd4);
+  outline-offset: 2px;
+}
+
 .empty-state__action:disabled {
   opacity: 0.6;
   cursor: not-allowed;

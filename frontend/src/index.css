@@ -24,14 +24,14 @@
   --color-header-nav: #b0bde8;
 
   /* Status */
-  --color-success: #10b981;
+  --color-success: #047857;      /* was #10b981 — darkened to meet WCAG AA (5.11:1 on success-bg, 5.48:1 on white) */
   --color-success-bg: #f0f9f4;
   --color-success-text: #166534;
   --color-danger: #dc2626;
   --color-danger-hover: #b91c1c;
   --color-danger-bg: #fff5f5;
   --color-danger-text: #991b1b;
-  --color-warning: #f59e0b;
+  --color-warning: #b45309;      /* was #f59e0b — darkened to meet WCAG AA (4.84:1 on warning-bg, 5.02:1 on white) */
   --color-warning-bg: #fffbeb;
   --color-warning-text: #92400e;
 
