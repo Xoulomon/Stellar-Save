@@ -40,11 +40,11 @@ jobs:
         with:
           workspaces: ". -> target"
 
-      - name: Run fuzz tests
+      - name: Run property-based tests
         run: |
           cargo test \
             --manifest-path contracts/stellar-save/Cargo.toml \
-            --lib fuzz_tests \
+            --lib auto_contribution_tests \
             -- --nocapture 2>&1 | tee fuzz-output.txt
         env:
           PROPTEST_CASES: ${{ env.PROPTEST_CASES }}
