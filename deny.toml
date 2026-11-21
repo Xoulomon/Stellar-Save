@@ -1,10 +1,11 @@
 # deny.toml — cargo-deny configuration for Rust dependency license and advisory checks.
 # Read by `cargo deny check` and the dependency-scan.yml CI workflow.
 # Enforces license allowlist (MIT/Apache-2.0/BSD etc.) and RustSec advisory policy.
-
-# cargo-deny configuration
+#
 # Policy: allow permissive OSS licenses; deny copyleft and proprietary.
-# To add an exception, add the crate name to the relevant [[licenses.exceptions]] entry.
+# To add a license exception, add the crate name to the relevant
+# [[licenses.exceptions]] entry. To silence an advisory, add an entry to
+# [advisories].ignore with an id and a reason.
 
 [licenses]
 # Confidence threshold for license detection (0.0–1.0)
@@ -26,12 +27,14 @@ allow = [
 # Any license not in `allow` (GPL, LGPL, AGPL, SSPL, proprietary, ...) is rejected.
 # The explicit `deny` list was removed from cargo-deny (EmbarkStudios/cargo-deny#611).
 
-# Crates whose licenses are checked but whose specific license is known and accepted
+# Crates whose licenses are checked but whose specific license is known and accepted.
+# Empty by default; add `{ crate = "name", allow = ["License"] }` entries as needed.
 exceptions = []
 
 [bans]
-# Deny multiple versions of the same crate to keep the dependency tree clean.
+# Warn (do not fail) on multiple versions of the same crate to keep the tree clean.
 multiple-versions = "warn"
+# No crates are outright banned; add `{ crate = "name" }` entries to deny a crate.
 deny = []
 
 [advisories]

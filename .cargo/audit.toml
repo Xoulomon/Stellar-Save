@@ -1,2 +1,10 @@
 [advisories]
+# Only fail CI on critical advisories; lower severities are reported but non-blocking.
 severity_threshold = "critical"
+
+# Explicitly ignore advisories that have been triaged and accepted.
+# Keep this list empty unless a concrete, documented exception is required.
+ignore = []
+
+# Do not warn on unmaintained crates by default; revisit if policy changes.
+# (cargo-audit reports these as informational warnings.)
