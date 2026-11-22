@@ -1,4 +1,3 @@
-
 import { AppError } from '../lib/errors';
 import { validateBody, validateQuery, schemas } from '../lib/validation';
 
@@ -28,7 +27,7 @@ describe('validateBody', () => {
 
     it('passes a valid Stellar address', () => {
       const req = makeReq({
-        walletAddress: 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
+        walletAddress: 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H',
       });
       const { next, calls } = captureNext();
       mw(req, makeRes(), next);
@@ -38,13 +37,13 @@ describe('validateBody', () => {
 
     it('strips whitespace from walletAddress', () => {
       const req = makeReq({
-        walletAddress: '  GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN  ',
+        walletAddress: '  GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H  ',
       });
       const { next, calls } = captureNext();
       mw(req, makeRes(), next);
       expect(calls[0]).toBeUndefined();
       expect((req as any).body.walletAddress).toBe(
-        'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN'
+        'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H'
       );
     });
 
@@ -69,7 +68,7 @@ describe('validateBody', () => {
   describe('schemas.authVerify', () => {
     const mw = validateBody(schemas.authVerify);
     const base = {
-      walletAddress: 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
+      walletAddress: 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H',
       challenge: 'some-challenge',
       signature: 'base64sig==',
     };

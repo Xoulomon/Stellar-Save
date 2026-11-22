@@ -31,6 +31,7 @@ export interface PushProviderLogger {
   info: (...args: unknown[]) => void;
   warn: (...args: unknown[]) => void;
   error: (...args: unknown[]) => void;
+  debug: (...args: unknown[]) => void;
 }
 
 function generateMessageId(prefix: string): string {
@@ -42,7 +43,6 @@ export class FirebasePushProvider implements PushProvider {
 
   constructor(
     private readonly projectId: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- parsed service account JSON varies by SDK version
     private readonly serviceAccount: Record<string, unknown>,
     private readonly log: PushProviderLogger = logger
   ) {}
@@ -96,7 +96,7 @@ export class NoopPushProvider implements PushProvider {
     return 'no-provider';
   }
 
-  async sendBatch(deviceTokens: string[], payload: PushPayload): Promise<string[]> {
+  async sendBatch(deviceTokens: string[], _payload: PushPayload): Promise<string[]> {
     return deviceTokens.map(() => 'no-provider');
   }
 
