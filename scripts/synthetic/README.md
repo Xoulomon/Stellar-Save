@@ -5,41 +5,24 @@ work end-to-end, not just that the service is up.
 
 ## Checks
 
-### `contribution-flow.js` — savings-pool contribution flow
+The checks live in `index.js` and are consumed by the synthetic runner:
 
-Exercises the core savings-pool contribution transaction:
+- `savings-pool:uptime` (`checkUptime`) — the savings-pool API responds to a
+  health probe.
+- `savings-pool:contribution-flow` (`checkContributionFlow`) — exercises a
+  complete savings-pool contribution transaction against testnet/staging:
+  create a contribution, submit it, and confirm the resulting balance
+  reflects the contribution.
 
-1. resolve the target savings pool
-2. open a contribution transaction
-3. submit the contribution
-4. confirm the transaction is accepted and the pool balance advanced
+`runChecks` runs all checks and returns their results
+(`{ name, ok, latencyMs, error? }`).
 
-Run manually against staging/testnet:
-
-```sh
-SYNTHETIC_BASE_URL=https://staging.example.org \
-SYNTHETIC_API_KEY=... \
-SYNTHETIC_POOL_ID=savings-pool-testnet \
-SYNTHETIC_CONTRIBUTION_AMOUNT=1 \
-node scripts/synthetic/contribution-flow.js
-```
-
-Configuration (environment variables):
-
-| Variable | Required | Default | Description |
-| --- | --- | --- | --- |
-| `SYNTHETIC_BASE_URL` | yes | — | Base URL of the target environment |
-| `SYNTHETIC_API_KEY` | no | — | Bearer token for authenticated endpoints |
-| `SYNTHETIC_POOL_ID` | no | `savings-pool-testnet` | Savings pool to contribute to |
-| `SYNTHETIC_CONTRIBUTION_AMOUNT` | no | `1` | Contribution amount |
-| `SYNTHETIC_TIMEOUT_MS` | no | `15000` | Per-request timeout |
-
-The check prints a JSON result (`{ check, ok, durationMs, steps }`) and exits
-non-zero on failure so the surrounding monitoring stack can record the run.
+A read-only API health canary (`check-api-health.mjs`) is run by the
+`synthetic-monitoring` GitHub workflow.
 
 ## Alert thresholds
 
-This check feeds the following thresholds. They are documented here only; no
+These checks feed the following thresholds. They are documented here only; no
 CI job or alerting is wired up by this repository.
 
 | Signal | Warning | Critical |
@@ -47,8 +30,6 @@ CI job or alerting is wired up by this repository.
 | Contribution flow success rate (5 min window) | < 99% | < 95% |
 | Contribution flow end-to-end latency (p95) | > 5s | > 10s |
 | Consecutive failed runs | 2 | 3 |
-| `confirm-contribution` step failures | any | any |
 
-A failure in any step (`resolve-pool`, `open-contribution`, `submit-contribution`,
-`confirm-contribution`) counts as a failed run for the success-rate and
-consecutive-failure thresholds above.
+A failure in the contribution-flow check counts as a failed run for the
+success-rate and consecutive-failure thresholds above.
