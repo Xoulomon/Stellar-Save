@@ -20,7 +20,7 @@
 //! | [`constants`]   | `STROOPS_PER_XLM` and other protocol constants         |
 //! | [`error`]       | Canonical `Error` enum, `CommonResult`, `ErrorCategory`|
 //! | [`fuzz`]        | `FuzzRng` / `FuzzRunner` for deterministic fuzz tests  |
-//! | [`test_support`]| `create_env` / `generate_address` for unit tests       |
+//! | [`test_support`]| `create_env`, `generate_address`, `generate_addresses`, `create_string` for unit tests |
 
 pub mod admin;
 pub mod constants;

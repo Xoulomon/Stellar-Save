@@ -8,13 +8,18 @@
 //! `store_contract_config`, `store_group`, `store_token_config`, `store_test_group`
 //! and `store_test_group_with_status` replace the duplicated local setup code that
 //! previously existed in `admin_actions_tests.rs` and `auto_contribution_tests.rs`.
+//!
+//! ## Consolidated test utils
+//! `create_env` and `generate_address` are imported from `stellar_save_common::test_support`
+//! (the canonical location). `generate_addresses` and `create_string` were removed as
+//! dead code (they were never called from any test).
 
 #![cfg(test)]
 
 use soroban_sdk::{
     testutils::Address as _,
-    token::{StellarAssetClient, TokenClient},
-    Address, Env, String,
+    token::StellarAssetClient,
+    Address, Env,
 };
 
 use crate::group::{Group, GroupStatus, TokenConfig};
@@ -22,19 +27,7 @@ use crate::storage::StorageKeyBuilder;
 use crate::types::ContractConfig;
 use crate::{StellarSaveContract, StellarSaveContractClient};
 
-// ─── Environment & Client Setup ──────────────────────────────────────────────
-
-/// Initialize a test environment with default settings.
-///
-/// Sets up a fresh Soroban environment with all authentications mocked.
-///
-/// # Returns
-/// A new `Env` instance ready for testing.
-pub fn create_env() -> Env {
-    let env = Env::default();
-    env.mock_all_auths();
-    env
-}
+// ─── Environment & Client Setup ──────────────────────────────────────
 
 /// Initialize the StellarSave contract and return all necessary test components.
 ///
@@ -80,11 +73,11 @@ pub fn setup<'a>() -> (
 /// # Returns
 /// The address of the newly deployed token contract
 pub fn deploy_mock_token(env: &Env) -> Address {
-    let admin = Address::generate(env);
+    let admin = generate_address(env);
     env.register_stellar_asset_contract_v2(admin).address()
 }
 
-// ─── Token Utilities ─────────────────────────────────────────────────────────
+// ─── Token Utilities ─────────────────────────────────────────────────
 
 /// Mint tokens to an address.
 ///
@@ -99,18 +92,6 @@ pub fn mint(sac: &StellarAssetClient, address: &Address, xlm: i128) {
     sac.mint(address, &(xlm * crate::xlm::STROOPS_PER_XLM));
 }
 
-/// Get the balance of an address for a token.
-///
-/// # Arguments
-/// * `tc` - TokenClient for the token contract
-/// * `address` - The address to check
-///
-/// # Returns
-/// The balance in stroops
-pub fn get_balance(tc: &TokenClient, address: &Address) -> i128 {
-    tc.balance(address)
-}
-
 /// Convert stroops to XLM (whole units).
 ///
 /// # Arguments
@@ -122,7 +103,7 @@ pub fn stroops_to_xlm(stroops: i128) -> i128 {
     stroops / crate::xlm::STROOPS_PER_XLM
 }
 
-// ─── Group Setup Utilities ───────────────────────────────────────────────────
+// ─── Group Setup Utilities ───────────────────────────────────────────
 
 /// Create a test group with 3 members and return all details.
 ///
