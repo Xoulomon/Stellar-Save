@@ -5,7 +5,7 @@
  * Verifies proper envelope handling and error processing.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
 import {
   getLeaderboard,
   getProfile,
@@ -15,9 +15,6 @@ import {
   type AmbassadorProfile,
   type EvaluationResult,
 } from '../ambassadorService';
-
-// Mock fetch globally
-global.fetch = vi.fn();
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -42,13 +39,15 @@ Object.defineProperty(window, 'localStorage', {
 });
 
 describe('Ambassador Service', () => {
+  let fetchMock: MockInstance<typeof fetch>;
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    fetchMock = vi.spyOn(globalThis, 'fetch');
     localStorage.clear();
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    fetchMock.mockRestore();
   });
 
   describe('getLeaderboard', () => {
@@ -79,10 +78,7 @@ describe('Ambassador Service', () => {
         meta: { count: 2 },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       const result = await getLeaderboard();
 
@@ -97,10 +93,7 @@ describe('Ambassador Service', () => {
         meta: { count: 0 },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       const result = await getLeaderboard();
 
@@ -108,10 +101,9 @@ describe('Ambassador Service', () => {
     });
 
     it('should throw error on API failure', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Internal Server Error',
-      });
+      fetchMock.mockResolvedValueOnce(
+        new Response(null, { status: 500, statusText: 'Internal Server Error' })
+      );
 
       await expect(getLeaderboard()).rejects.toThrow(
         'Failed to fetch leaderboard: Internal Server Error'
@@ -129,10 +121,7 @@ describe('Ambassador Service', () => {
         ],
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       await expect(getLeaderboard()).rejects.toThrow('Database connection failed');
     });
@@ -154,24 +143,17 @@ describe('Ambassador Service', () => {
         data: mockProfile,
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       const result = await getProfile('GBDLJSTEST1');
 
       expect(result).toEqual(mockProfile);
       expect(result?.tier).toBe(AmbassadorTier.Gold);
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/ambassadors/GBDLJSTEST1')
-      );
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/ambassadors/GBDLJSTEST1'));
     });
 
     it('should return null when profile not found (404)', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
-        status: 404,
-      });
+      fetchMock.mockResolvedValueOnce(new Response(null, { status: 404 }));
 
       const result = await getProfile('GBDLJSNOTFOUND');
 
@@ -179,11 +161,9 @@ describe('Ambassador Service', () => {
     });
 
     it('should throw error on API failure', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-      });
+      fetchMock.mockResolvedValueOnce(
+        new Response(null, { status: 500, statusText: 'Internal Server Error' })
+      );
 
       await expect(getProfile('GBDLJSTEST1')).rejects.toThrow(
         'Failed to fetch profile: Internal Server Error'
@@ -201,10 +181,7 @@ describe('Ambassador Service', () => {
         ],
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       await expect(getProfile('GBDLJSTEST1')).rejects.toThrow('Failed to load profile');
     });
@@ -234,10 +211,7 @@ describe('Ambassador Service', () => {
         data: mockResult,
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       const result = await evaluateStatus('GBDLJSTEST1', 0.85, 15, 3);
 
@@ -245,7 +219,7 @@ describe('Ambassador Service', () => {
       expect(result.tier).toBe(AmbassadorTier.Silver);
       expect(result.profile?.address).toBe('GBDLJSTEST1');
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetchMock).toHaveBeenCalledWith(
         expect.stringContaining('/ambassadors/evaluate'),
         expect.objectContaining({
           method: 'POST',
@@ -267,10 +241,7 @@ describe('Ambassador Service', () => {
         data: mockResult,
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       const result = await evaluateStatus('GBDLJSTEST1', 0.5, 2, 0);
 
@@ -286,14 +257,13 @@ describe('Ambassador Service', () => {
         'Authentication required'
       );
 
-      expect(global.fetch).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('should throw error on API failure', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Unauthorized',
-      });
+      fetchMock.mockResolvedValueOnce(
+        new Response(null, { status: 401, statusText: 'Unauthorized' })
+      );
 
       await expect(evaluateStatus('GBDLJSTEST1', 0.85, 15, 3)).rejects.toThrow(
         'Failed to evaluate status: Unauthorized'
@@ -315,17 +285,14 @@ describe('Ambassador Service', () => {
         meta: { action: 'reward_distributed' },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       const result = await distributeReward('GBDLJSTEST1', 1000);
 
       expect(result.rewarded).toBe(true);
       expect(result.amount).toBe(1000);
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetchMock).toHaveBeenCalledWith(
         expect.stringContaining('/ambassadors/GBDLJSTEST1/reward'),
         expect.objectContaining({
           method: 'POST',
@@ -344,14 +311,11 @@ describe('Ambassador Service', () => {
         'Authentication required'
       );
 
-      expect(global.fetch).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('should throw error on API failure', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Not Found',
-      });
+      fetchMock.mockResolvedValueOnce(new Response(null, { status: 404, statusText: 'Not Found' }));
 
       await expect(distributeReward('GBDLJSTEST1', 1000)).rejects.toThrow(
         'Failed to distribute reward: Not Found'
@@ -369,10 +333,7 @@ describe('Ambassador Service', () => {
         ],
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       await expect(distributeReward('GBDLJSTEST1', -100)).rejects.toThrow(
         'Amount must be positive'
