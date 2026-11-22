@@ -29,18 +29,12 @@ const LEVEL_PRIORITY: Record<LogLevel, number> = {
  * running under a non-Vite environment).
  */
 function isProduction(): boolean {
-  try {
-    // Vite exposes import.meta.env.PROD
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const env = (import.meta as any)?.env;
-    if (env && typeof env.PROD === 'boolean') {
-      return env.PROD;
-    }
-    if (env && typeof env.MODE === 'string') {
-      return env.MODE === 'production';
-    }
-  } catch {
-    // ignore
+  const env = import.meta.env;
+  if (typeof env?.PROD === 'boolean') {
+    return env.PROD;
+  }
+  if (typeof env?.MODE === 'string') {
+    return env.MODE === 'production';
   }
   return false;
 }
@@ -54,15 +48,9 @@ function isProduction(): boolean {
 function resolveMinLevel(): LogLevel {
   const prod = isProduction();
 
-  let configured: string | undefined;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    configured = (import.meta as any)?.env?.VITE_LOG_LEVEL;
-  } catch {
-    configured = undefined;
-  }
+  const configured: unknown = import.meta.env?.VITE_LOG_LEVEL;
 
-  if (configured && configured in LEVEL_PRIORITY) {
+  if (typeof configured === 'string' && Object.hasOwn(LEVEL_PRIORITY, configured)) {
     const level = configured as LogLevel;
     // Never allow debug/info below the production floor.
     if (prod && LEVEL_PRIORITY[level] < LEVEL_PRIORITY.warn) {
@@ -95,13 +83,13 @@ export function isLevelEnabled(level: LogLevel): boolean {
 // Redaction
 // ---------------------------------------------------------------------------
 
-const REDACTED = '[REDACTED]';
-
 /** Keys whose values are considered wallet addresses. */
-const ADDRESS_KEY_PATTERN = /(address|wallet|account|pubkey|publickey|owner|from|to|recipient|sender)/i;
+const ADDRESS_KEY_PATTERN =
+  /(address|wallet|account|pubkey|publickey|owner|from|to|recipient|sender)/i;
 
 /** Keys whose values are considered transaction payloads. */
-const PAYLOAD_KEY_PATTERN = /(payload|tx|transaction|rawtx|signedtx|signature|data|body|calldata|input)/i;
+const PAYLOAD_KEY_PATTERN =
+  /(payload|tx|transaction|rawtx|signedtx|signature|data|body|calldata|input)/i;
 
 /** Heuristic: looks like a hex/base58-ish wallet address or hash. */
 const ADDRESS_VALUE_PATTERN = /^(0x)?[0-9a-fA-F]{20,}$|^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -132,7 +120,7 @@ export function redactPayload(payload: unknown): string {
   let serialized: string;
   try {
     serialized =
-      typeof payload === 'string' ? payload : JSON.stringify(payload) ?? String(payload);
+      typeof payload === 'string' ? payload : (JSON.stringify(payload) ?? String(payload));
   } catch {
     return '[Unserializable payload]';
   }

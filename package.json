@@ -10,20 +10,18 @@
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "format:check:frontend": "prettier --check \"frontend/src/**/*.{ts,tsx,css}\"",
     "dev": "turbo run dev",
-    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
-    "changelog:first": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0",
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -o CHANGELOG.md",
+    "changelog:first": "conventional-changelog -p angular -i CHANGELOG.md -o CHANGELOG.md -r 0",
     "knip": "knip",
     "prepare": "husky"
-  },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx,json,md,yml,yaml,css,scss}": "prettier --write",
-    "*.{js,jsx,ts,tsx}": "turbo run lint --filter=[HEAD]"
   },
   "devDependencies": {
     "@commitlint/cli": "19.8.0",
     "@commitlint/config-conventional": "19.8.0",
-    "conventional-changelog-cli": "5.0.0",
+    "conventional-changelog": "7.2.1",
+    "conventional-changelog-angular": "8.3.1",
     "husky": "9.1.7",
     "knip": "5.61.3",
     "lint-staged": "15.5.2",
