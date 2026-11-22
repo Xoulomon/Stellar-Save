@@ -67,6 +67,7 @@ pub mod storage_optimization;
 pub mod time_source;
 pub mod token;
 pub mod types;
+pub mod validation;
 // ZK proof verification (Ed25519 Phase-1 scheme, zk/CIRCUIT_AUDIT.md).
 // Excluded from the default build — enable with `--features zk`.
 // The circuit audit must close (issue #1327) before this ships by default.
@@ -116,4 +117,7 @@ pub use group::{Group, GroupStatus};
 pub use payout::PayoutRecord;
 pub use storage::StorageKeyBuilder;
 pub use types::{ContractConfig, MemberProfile};
-
+pub use validation::{
+    validate_contribution_amount, validate_cycle_duration, validate_group_params,
+    validate_group_params_with_config, validate_member_bounds,
+};

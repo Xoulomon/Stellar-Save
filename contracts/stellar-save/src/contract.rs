@@ -466,19 +466,21 @@ impl StellarSaveContract {
             .persistent()
             .get::<_, ContractConfig>(&config_key)
         {
-            if rounded_amount < config.min_contribution {
-                return Err(StellarSaveError::ContributionTooLow);
-            }
-            if rounded_amount > config.max_contribution {
-                return Err(StellarSaveError::ContributionTooHigh);
-            }
-            if max_members < config.min_members
-                || max_members > config.max_members
-                || cycle_duration < config.min_cycle_duration
-                || cycle_duration > config.max_cycle_duration
-            {
-                return Err(StellarSaveError::InvalidState);
-            }
+            crate::validation::validate_group_params_with_config(
+                rounded_amount,
+                cycle_duration,
+                max_members,
+                grace_period_seconds,
+                &config,
+            )?;
+        } else {
+            crate::validation::validate_group_params(
+                rounded_amount,
+                cycle_duration,
+                crate::constants::MIN_MEMBERS_FLOOR,
+                max_members,
+                grace_period_seconds,
+            )?;
         }
 
         // 4. Token allowlist check: if an allowlist is configured, verify token_address is present
@@ -2648,8 +2650,8 @@ impl StellarSaveContract {
     /// * `Ok(())` - Address is valid
     /// * `Err(StellarSaveError::InvalidState)` - Address is invalid
     pub fn validate_address(address: &Address) -> Result<(), StellarSaveError> {
-        // Addresses in Soroban are always valid if they can be constructed
-        // This is a placeholder for additional validation if needed
+        // Kept as a backward-compatible contract entry point. Soroban addresses
+        // are valid when they can be constructed.
         let _ = address;
         Ok(())
     }
@@ -2663,10 +2665,7 @@ impl StellarSaveContract {
     /// * `Ok(())` - Amount is valid (positive)
     /// * `Err(StellarSaveError::InvalidAmount)` - Amount is invalid
     pub fn validate_amount(amount: i128) -> Result<(), StellarSaveError> {
-        if amount <= 0 {
-            return Err(StellarSaveError::InvalidAmount);
-        }
-        Ok(())
+        crate::validation::validate_contribution_amount(amount)
     }
 
     /// Validates a cycle duration input.
@@ -2678,10 +2677,7 @@ impl StellarSaveContract {
     /// * `Ok(())` - Duration is valid (positive)
     /// * `Err(StellarSaveError::InvalidState)` - Duration is invalid
     pub fn validate_duration(duration: u64) -> Result<(), StellarSaveError> {
-        if duration == 0 {
-            return Err(StellarSaveError::InvalidState);
-        }
-        Ok(())
+        crate::validation::validate_cycle_duration(duration)
     }
 
     /// Validates member count bounds.
@@ -2697,10 +2693,7 @@ impl StellarSaveContract {
         min_members: u32,
         max_members: u32,
     ) -> Result<(), StellarSaveError> {
-        if min_members < 2 || max_members < min_members {
-            return Err(StellarSaveError::InvalidState);
-        }
-        Ok(())
+        crate::validation::validate_member_bounds(min_members, max_members)
     }
 
     /// Deletes a group from storage.

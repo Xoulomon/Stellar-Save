@@ -1,4 +1,16 @@
-use soroban_sdk::{contracttype, Address};
+use soroban_sdk::{contracttype, Address, Env};
+
+use crate::constants::{TTL_EXTEND_TO_LEDGERS, TTL_THRESHOLD_LEDGERS};
+
+/// Standard TTL extension strategy for persistent contract entries.
+///
+/// Keeps the rent-bump threshold and target in one place so repositories do
+/// not duplicate Soroban storage policy.
+pub fn extend_persistent_ttl(env: &Env, key: &StorageKey) {
+    env.storage()
+        .persistent()
+        .extend_ttl(key, TTL_THRESHOLD_LEDGERS, TTL_EXTEND_TO_LEDGERS);
+}
 
 /// Current storage schema version for migration compatibility.
 ///

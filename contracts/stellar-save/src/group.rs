@@ -1,5 +1,10 @@
 use core::fmt;
 use soroban_sdk::{contracttype, Address, Env, Map};
+use crate::constants::{
+    GROUP_STATUS_ACTIVE, GROUP_STATUS_CANCELLED, GROUP_STATUS_COMPLETED,
+    GROUP_STATUS_PAUSED, GROUP_STATUS_PENDING, MAX_GROUP_GRACE_PERIOD_SECONDS,
+    MAX_MEMBERS, MIN_GROUP_MEMBERS,
+};
 
 /// Protocol-level maximum number of members per group.
 /// Prevents unbounded storage growth and gas exhaustion.
@@ -113,11 +118,11 @@ impl GroupStatus {
     /// `Pending=0`, `Active=1`, `Paused=2`, `Completed=3`, `Cancelled=4`.
     pub fn as_u32(&self) -> u32 {
         match self {
-            GroupStatus::Pending => 0,
-            GroupStatus::Active => 1,
-            GroupStatus::Paused => 2,
-            GroupStatus::Completed => 3,
-            GroupStatus::Cancelled => 4,
+            GroupStatus::Pending => GROUP_STATUS_PENDING,
+            GroupStatus::Active => GROUP_STATUS_ACTIVE,
+            GroupStatus::Paused => GROUP_STATUS_PAUSED,
+            GroupStatus::Completed => GROUP_STATUS_COMPLETED,
+            GroupStatus::Cancelled => GROUP_STATUS_CANCELLED,
         }
     }
 
@@ -126,11 +131,11 @@ impl GroupStatus {
     /// Returns `None` for any value outside the range 0–4.
     pub fn from_u32(value: u32) -> Option<Self> {
         match value {
-            0 => Some(GroupStatus::Pending),
-            1 => Some(GroupStatus::Active),
-            2 => Some(GroupStatus::Paused),
-            3 => Some(GroupStatus::Completed),
-            4 => Some(GroupStatus::Cancelled),
+            GROUP_STATUS_PENDING => Some(GroupStatus::Pending),
+            GROUP_STATUS_ACTIVE => Some(GroupStatus::Active),
+            GROUP_STATUS_PAUSED => Some(GroupStatus::Paused),
+            GROUP_STATUS_COMPLETED => Some(GroupStatus::Completed),
+            GROUP_STATUS_CANCELLED => Some(GroupStatus::Cancelled),
             _ => None,
         }
     }
@@ -361,31 +366,34 @@ impl Group {
         penalty_enabled: bool,
         penalty_amount: i128,
     ) -> Self {
-        // Validate contribution amount
         assert!(
             contribution_amount > 0,
             "contribution_amount must be greater than 0"
         );
-
-        // Validate cycle duration
         assert!(cycle_duration > 0, "cycle_duration must be greater than 0");
-
-        // Validate max members (minimum 2 for a meaningful ROSCA)
-        assert!(max_members >= 2, "max_members must be at least 2");
-
-        // Validate min members (minimum 2 for a meaningful ROSCA)
-        assert!(min_members >= 2, "min_members must be at least 2");
-
-        // Validate min_members <= max_members
+        assert!(
+            max_members >= MIN_GROUP_MEMBERS,
+            "max_members must be at least {}",
+            MIN_GROUP_MEMBERS
+        );
+        assert!(
+            min_members >= MIN_GROUP_MEMBERS,
+            "min_members must be at least {}",
+            MIN_GROUP_MEMBERS
+        );
         assert!(
             min_members <= max_members,
             "min_members must be less than or equal to max_members"
         );
-
-        // Validate grace period (max 7 days)
         assert!(
-            grace_period_seconds <= 604800,
-            "grace_period_seconds must not exceed 604800 (7 days)"
+            max_members <= MAX_MEMBERS,
+            "max_members must not exceed {}",
+            MAX_MEMBERS
+        );
+        assert!(
+            grace_period_seconds <= MAX_GROUP_GRACE_PERIOD_SECONDS,
+            "grace_period_seconds must not exceed {} (7 days)",
+            MAX_GROUP_GRACE_PERIOD_SECONDS
         );
 
         Self {
