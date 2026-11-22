@@ -28,9 +28,9 @@ const COPY: Record<KycStatus, { title: string; body: string }> = {
 export function KycStatusScreen({ status }: Props) {
   const copy = COPY[status];
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{copy.title}</Text>
-      <Text style={styles.body}>{copy.body}</Text>
+    <View style={styles.container} testID="kyc-status-screen">
+      <Text style={styles.title} testID="kyc-status-title">{copy.title}</Text>
+      <Text style={styles.body} testID="kyc-status-body">{copy.body}</Text>
     </View>
   );
 }

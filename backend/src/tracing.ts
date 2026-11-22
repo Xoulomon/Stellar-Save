@@ -24,9 +24,21 @@
  *     from the frontend stays sampled across every service.
  *   - For root spans, sample a configurable ratio (default 10%).
  *   Configure with OTEL_TRACES_SAMPLER_ARG (0.0–1.0).
+ *
+ * Request correlation: `getTraceContext()` returns the active trace/span IDs so
+ * the logger can stamp every log line, and `injectTraceHeaders()` forwards the
+ * W3C `traceparent`/`tracestate` headers on outgoing RPC, Horizon and webhook
+ * calls so a single user action can be followed across services.
  */
 
-import { context, trace, SpanStatusCode, type Span } from '@opentelemetry/api';
+import {
+  context,
+  trace,
+  propagation,
+  SpanStatusCode,
+  type Span,
+  type SpanContext,
+} from '@opentelemetry/api';
 
 import { config } from './config';
 import { logger } from './logger';
@@ -78,13 +90,13 @@ export function startTracing(): void {
     // OTLP/HTTP exporter. If only a base endpoint is given, the exporter appends
     // the standard /v1/traces path automatically.
     const endpoint =
-      process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || config.tracing.otlpEndpoint + '/v1/traces';
+      config.tracing.otlpTracesEndpoint || config.tracing.otlpEndpoint + '/v1/traces';
     const exporter = new OTLPTraceExporter({ url: endpoint });
 
     const sdk = new NodeSDK({
       resource: resourceFromAttributes({
         [ATTR_SERVICE_NAME]: SERVICE_NAME,
-        [ATTR_SERVICE_VERSION]: process.env.npm_package_version || '1.0.0',
+        [ATTR_SERVICE_VERSION]: config.serviceVersion,
       }),
       sampler,
       traceExporter: exporter,
@@ -122,6 +134,30 @@ export function startTracing(): void {
 /** Tracer used for manual spans (contract calls, indexer loops, …). */
 export function getTracer() {
   return trace.getTracer(SERVICE_NAME);
+}
+
+/**
+ * Return the active trace/span IDs (if any) so callers — notably the logger —
+ * can stamp every log line with the trace context. Returns `undefined` when no
+ * span is active (tracing disabled or outside a request).
+ */
+export function getTraceContext(): { traceId: string; spanId: string } | undefined {
+  const spanContext: SpanContext | undefined = trace.getSpan(context.active())?.spanContext();
+  if (!spanContext || !spanContext.traceId) return undefined;
+  return { traceId: spanContext.traceId, spanId: spanContext.spanId };
+}
+
+/**
+ * Inject the W3C trace context (`traceparent`/`tracestate`) into an outgoing
+ * header bag. Used to propagate correlation on Soroban RPC, Horizon and webhook
+ * calls. When tracing is disabled this is a no-op and the headers are returned
+ * unchanged, so call sites stay clean.
+ */
+export function injectTraceHeaders(
+  headers: Record<string, string> = {}
+): Record<string, string> {
+  propagation.inject(context.active(), headers);
+  return headers;
 }
 
 /**

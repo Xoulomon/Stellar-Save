@@ -62,10 +62,6 @@ export function createGraphQLHandlers() {
       return HttpResponse.json({ data: { transactions: DEFAULT_GQL_TRANSACTIONS } });
     }),
 
-    graphql.query('GetRecommendations', () => {
-      return HttpResponse.json({ data: { recommendations: DEFAULT_GQL_GROUPS } });
-    }),
-
     // Mutations
     graphql.mutation('SetPreferences', () => {
       return HttpResponse.json({ data: { setPreferences: { success: true } } });

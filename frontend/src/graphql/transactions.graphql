@@ -17,9 +17,3 @@ query GetTransactions($groupId: ID) {
     ...TransactionFields
   }
 }
-
-query GetTransaction($id: ID!) {
-  transaction(id: $id) {
-    ...TransactionFields
-  }
-}

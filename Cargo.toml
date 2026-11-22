@@ -24,6 +24,12 @@ stellar-registry = "0.0.4"
 
 [profile.release]
 opt-level = "z"
+# overflow-checks = true ensures integer arithmetic panics on overflow in WASM
+# release builds, matching debug-build safety guarantees. This is critical for
+# Soroban contracts because the default Rust release profile disables overflow
+# checks; explicit opt-in here prevents silent wrapping on the Soroban WASM
+# runtime. See: https://doc.rust-lang.org/cargo/reference/profiles.html
+# Verified for issue #1718 — do NOT remove without a security review.
 overflow-checks = true
 debug = 0
 strip = "symbols"

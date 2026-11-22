@@ -5,13 +5,7 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch as any;
 
 jest.mock('../prisma_client', () => ({
-  prisma: {
-    crossBorderPayment: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-    },
-  },
+  prisma: require('../../tests/helpers/prismaMock').createPrismaMock(),
 }));
 
 const TOML = `DIRECT_PAYMENT_SERVER = "https://anchor.example.com/sep31"\n`;

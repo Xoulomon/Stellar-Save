@@ -1,0 +1,74 @@
+# Onboarding flow — wallet setup step
+# Covers: WalletSetupScreen (create + import paths)
+# Prereq: app launched fresh (clearState: true)
+appId: com.stellarsave.app
+---
+# ── Arrive at WalletSetupScreen ───────────────────────────────────────────────
+- launchApp:
+    clearState: true
+
+- assertVisible:
+    id: "welcome-screen"
+
+- tapOn:
+    id: "get-started-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "wallet-setup-screen"
+    timeout: 10000
+
+- assertVisible:
+    text: "Set up your wallet"
+
+# ── Create new wallet path ────────────────────────────────────────────────────
+- assertVisible:
+    id: "create-wallet-button"
+
+- assertVisible:
+    id: "import-wallet-button"
+
+- tapOn:
+    id: "create-wallet-button"
+
+# Wallet creation is async (key derivation) — wait for success indicator
+- extendedWaitUntil:
+    visible:
+      id: "wallet-setup-done"
+    timeout: 15000
+
+# ── Import existing wallet path ───────────────────────────────────────────────
+- launchApp:
+    clearState: true
+
+- tapOn:
+    id: "get-started-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "wallet-setup-screen"
+    timeout: 10000
+
+- tapOn:
+    id: "import-wallet-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "import-wallet-screen"
+    timeout: 10000
+
+- assertVisible:
+    id: "secret-key-input"
+
+# Enter a test secret key (fixture value — see mobile/docs/E2E_FIXTURES.md)
+- tapOn:
+    id: "secret-key-input"
+- inputText: "SCZANGBA5RLMQ7OXHD68DROGQUMASY7JX7WBWZAJZCCPVXZJHM7AYFN"
+
+- tapOn:
+    id: "import-wallet-confirm-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "wallet-setup-done"
+    timeout: 15000

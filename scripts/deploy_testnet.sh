@@ -19,8 +19,18 @@ echo "RPC URL: $STELLAR_RPC_URL"
 ./scripts/build.sh
 
 # Deploy each contract
+# NOTE: guess-the-number is an example/demo contract and is intentionally
+# excluded from all production and testnet deployments.  See
+# contracts/guess-the-number/README.md for details.
 for contract in contracts/*/; do
   contract_name=$(basename "$contract")
+
+  # Skip the demo example contract
+  if [ "$contract_name" = "guess-the-number" ]; then
+    echo "Skipping $contract_name (demo/example — not for deployment)"
+    continue
+  fi
+
   wasm_file="target/wasm32-unknown-unknown/release/${contract_name//-/_}.wasm"
   
   if [ -f "$wasm_file" ]; then

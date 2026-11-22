@@ -1,0 +1,12 @@
+# Confirms the dev-only Maestro build opens the app without a biometric prompt.
+appId: com.stellarsave.mobile
+---
+- runFlow: setup.yaml
+- assertVisible:
+    id: "dashboard-screen"
+- assertVisible:
+    id: "groups-tab"
+- tapOn:
+    id: "groups-tab"
+- assertVisible:
+    id: "groups-screen"

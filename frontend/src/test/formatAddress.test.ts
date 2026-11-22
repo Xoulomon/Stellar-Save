@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-
-import { formatAddress } from '../utils/formatAddress';
+import { formatAddress } from '@shared-utils/formatting';
 
 const ADDR = 'GAAZI4TCR3TY5OJHCTJC2A4QSY5MGZTPVAJFO3T55V3L7RPLM3U6VJ6Q';
 

@@ -7,6 +7,7 @@ export interface FeedbackInput {
 }
 
 export class FeedbackService {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- feedback model is pending Prisma migration; not yet in generated client
   constructor(private prisma: any) {}
 
   async submit(input: FeedbackInput) {

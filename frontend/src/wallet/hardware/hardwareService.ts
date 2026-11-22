@@ -127,7 +127,7 @@ export async function fetchAccounts(_device: HardwareDeviceInfo): Promise<Hardwa
 
 export async function signWithHardwareWallet(
   request: TxApprovalRequest,
-  device: HardwareDeviceInfo,
+  _device: HardwareDeviceInfo,
   onStatusChange?: (status: TxApprovalStatus) => void
 ): Promise<string> {
   onStatusChange?.('pending_device');

@@ -113,19 +113,8 @@ pub fn try_advance_cycle(
         return Ok(false);
     }
 
-    // Prevent skipping more than one cycle at a time
-    let next_cycle = group.current_cycle + 1;
-
-    // Emit CycleEnded for the cycle we're leaving
-    EventEmitter::emit_cycle_advanced(
-        env,
-        group_id,
-        group.current_cycle,
-        next_cycle,
-        true,
-        false,
-        now,
-    );
+    // Record old cycle before advancing
+    let old_cycle = group.current_cycle;
 
     // Advance the cycle counter (group.advance_cycle also handles completion)
     group.advance_cycle(env);
@@ -133,12 +122,12 @@ pub fn try_advance_cycle(
     // Persist updated group
     env.storage().persistent().set(&group_key, &group);
 
-    // Emit CycleStarted for the new cycle (only if group is still running)
+    // Emit CycleAdvanced for the new cycle (only if group is still running)
     if !group.is_complete() {
         EventEmitter::emit_cycle_advanced(
             env,
             group_id,
-            group.current_cycle.saturating_sub(1),
+            old_cycle,
             group.current_cycle,
             true,
             false,
@@ -176,6 +165,10 @@ pub fn advance_group_cycle_logic(env: &Env, group: &mut Group) -> Result<(), Ste
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::constants::{
+        DEFAULT_GRACE_PERIOD_SECONDS, DEFAULT_TEST_TIMESTAMP, MID_CYCLE_OFFSET_SECONDS,
+        ONE_WEEK_SECONDS, STROOPS_PER_XLM,
+    };
     use soroban_sdk::{testutils::Address as _, Env};
 
     fn make_group(env: &Env, max_members: u32, cycle_duration: u64, started_at: u64) -> Group {
@@ -183,7 +176,7 @@ mod tests {
         let mut g = Group::new(
             1,
             creator,
-            10_000_000,
+            STROOPS_PER_XLM,
             cycle_duration,
             max_members,
             2,
@@ -200,47 +193,47 @@ mod tests {
     #[test]
     fn test_get_current_cycle_before_start() {
         let env = Env::default();
-        let g = make_group(&env, 4, 604800, 1_000_000);
+        let g = make_group(&env, 4, ONE_WEEK_SECONDS, DEFAULT_TEST_TIMESTAMP);
         // now < started_at
-        assert_eq!(get_current_cycle(&g, 999_999), 0);
+        assert_eq!(get_current_cycle(&g, DEFAULT_TEST_TIMESTAMP - 1), 0);
     }
 
     #[test]
     fn test_get_current_cycle_at_start() {
         let env = Env::default();
-        let g = make_group(&env, 4, 604800, 1_000_000);
-        assert_eq!(get_current_cycle(&g, 1_000_000), 0);
+        let g = make_group(&env, 4, ONE_WEEK_SECONDS, DEFAULT_TEST_TIMESTAMP);
+        assert_eq!(get_current_cycle(&g, DEFAULT_TEST_TIMESTAMP), 0);
     }
 
     #[test]
     fn test_get_current_cycle_mid_first_cycle() {
         let env = Env::default();
-        let g = make_group(&env, 4, 604800, 0);
-        assert_eq!(get_current_cycle(&g, 300_000), 0);
+        let g = make_group(&env, 4, ONE_WEEK_SECONDS, 0);
+        assert_eq!(get_current_cycle(&g, MID_CYCLE_OFFSET_SECONDS), 0);
     }
 
     #[test]
     fn test_get_current_cycle_exact_boundary() {
         let env = Env::default();
-        let g = make_group(&env, 4, 604800, 0);
+        let g = make_group(&env, 4, ONE_WEEK_SECONDS, 0);
         // Exactly at the start of cycle 1
-        assert_eq!(get_current_cycle(&g, 604800), 1);
+        assert_eq!(get_current_cycle(&g, ONE_WEEK_SECONDS), 1);
     }
 
     #[test]
     fn test_get_current_cycle_multiple_cycles() {
         let env = Env::default();
-        let g = make_group(&env, 4, 604800, 0);
-        assert_eq!(get_current_cycle(&g, 604800 * 2 + 1), 2);
-        assert_eq!(get_current_cycle(&g, 604800 * 3), 3);
+        let g = make_group(&env, 4, ONE_WEEK_SECONDS, 0);
+        assert_eq!(get_current_cycle(&g, ONE_WEEK_SECONDS * 2 + 1), 2);
+        assert_eq!(get_current_cycle(&g, ONE_WEEK_SECONDS * 3), 3);
     }
 
     #[test]
     fn test_get_current_cycle_capped_at_max_members() {
         let env = Env::default();
-        let g = make_group(&env, 3, 604800, 0);
+        let g = make_group(&env, 3, ONE_WEEK_SECONDS, 0);
         // Way past all cycles
-        assert_eq!(get_current_cycle(&g, 604800 * 100), 3);
+        assert_eq!(get_current_cycle(&g, ONE_WEEK_SECONDS * 100), 3);
     }
 
     // ── is_cycle_expired ──────────────────────────────────────────────────
@@ -248,33 +241,51 @@ mod tests {
     #[test]
     fn test_is_cycle_expired_false_before_deadline() {
         let env = Env::default();
-        let g = make_group(&env, 4, 604800, 0);
-        // Deadline for cycle 0 = 604800; now = 604799
-        assert_eq!(is_cycle_expired(&g, 0, 604799, 0).unwrap(), false);
+        let g = make_group(&env, 4, ONE_WEEK_SECONDS, 0);
+        // Deadline for cycle 0 = ONE_WEEK_SECONDS; now = ONE_WEEK_SECONDS - 1
+        assert_eq!(is_cycle_expired(&g, 0, ONE_WEEK_SECONDS - 1, 0).unwrap(), false);
     }
 
     #[test]
     fn test_is_cycle_expired_false_at_deadline() {
         let env = Env::default();
-        let g = make_group(&env, 4, 604800, 0);
-        assert_eq!(is_cycle_expired(&g, 0, 604800, 0).unwrap(), false);
+        let g = make_group(&env, 4, ONE_WEEK_SECONDS, 0);
+        assert_eq!(is_cycle_expired(&g, 0, ONE_WEEK_SECONDS, 0).unwrap(), false);
     }
 
     #[test]
     fn test_is_cycle_expired_true_after_deadline() {
         let env = Env::default();
-        let g = make_group(&env, 4, 604800, 0);
-        assert_eq!(is_cycle_expired(&g, 0, 604801, 0).unwrap(), true);
+        let g = make_group(&env, 4, ONE_WEEK_SECONDS, 0);
+        assert_eq!(is_cycle_expired(&g, 0, ONE_WEEK_SECONDS + 1, 0).unwrap(), true);
     }
 
     #[test]
     fn test_is_cycle_expired_grace_period() {
         let env = Env::default();
-        let g = make_group(&env, 4, 604800, 0);
-        // 60-second grace: deadline + 60 = 604860; now = 604850 → still active
-        assert_eq!(is_cycle_expired(&g, 0, 604850, 60).unwrap(), false);
-        // now = 604861 → expired
-        assert_eq!(is_cycle_expired(&g, 0, 604861, 60).unwrap(), true);
+        let g = make_group(&env, 4, ONE_WEEK_SECONDS, 0);
+        // 60-second grace: deadline + 60; now within grace period → still active
+        assert_eq!(
+            is_cycle_expired(
+                &g,
+                0,
+                ONE_WEEK_SECONDS + DEFAULT_GRACE_PERIOD_SECONDS - 10,
+                DEFAULT_GRACE_PERIOD_SECONDS
+            )
+            .unwrap(),
+            false
+        );
+        // now past deadline + grace_period → expired
+        assert_eq!(
+            is_cycle_expired(
+                &g,
+                0,
+                ONE_WEEK_SECONDS + DEFAULT_GRACE_PERIOD_SECONDS + 1,
+                DEFAULT_GRACE_PERIOD_SECONDS
+            )
+            .unwrap(),
+            true
+        );
     }
 
     // ── advance_group_cycle_logic ─────────────────────────────────────────
@@ -282,7 +293,7 @@ mod tests {
     #[test]
     fn test_advance_cycle_logic_success() {
         let env = Env::default();
-        let mut g = make_group(&env, 3, 604800, 0);
+        let mut g = make_group(&env, 3, ONE_WEEK_SECONDS, 0);
         assert_eq!(g.current_cycle, 0);
         advance_group_cycle_logic(&env, &mut g).unwrap();
         assert_eq!(g.current_cycle, 1);
@@ -292,7 +303,7 @@ mod tests {
     #[test]
     fn test_advance_cycle_logic_to_completion() {
         let env = Env::default();
-        let mut g = make_group(&env, 2, 604800, 0);
+        let mut g = make_group(&env, 2, ONE_WEEK_SECONDS, 0);
         advance_group_cycle_logic(&env, &mut g).unwrap();
         advance_group_cycle_logic(&env, &mut g).unwrap();
         assert!(g.is_complete());
@@ -302,7 +313,7 @@ mod tests {
     #[test]
     fn test_advance_cycle_logic_error_when_complete() {
         let env = Env::default();
-        let mut g = make_group(&env, 2, 604800, 0);
+        let mut g = make_group(&env, 2, ONE_WEEK_SECONDS, 0);
         g.current_cycle = 2;
         g.is_active = false;
         let err = advance_group_cycle_logic(&env, &mut g).unwrap_err();
@@ -312,7 +323,7 @@ mod tests {
     #[test]
     fn test_advance_cycle_logic_preserves_config() {
         let env = Env::default();
-        let mut g = make_group(&env, 4, 604800, 0);
+        let mut g = make_group(&env, 4, ONE_WEEK_SECONDS, 0);
         let orig_amount = g.contribution_amount;
         let orig_duration = g.cycle_duration;
         advance_group_cycle_logic(&env, &mut g).unwrap();
@@ -323,7 +334,7 @@ mod tests {
     #[test]
     fn test_advance_cycle_logic_full_progression() {
         let env = Env::default();
-        let mut g = make_group(&env, 4, 604800, 0);
+        let mut g = make_group(&env, 4, ONE_WEEK_SECONDS, 0);
         for expected in 1u32..=4 {
             advance_group_cycle_logic(&env, &mut g).unwrap();
             assert_eq!(g.current_cycle, expected);
@@ -336,21 +347,24 @@ mod tests {
     #[test]
     fn test_get_cycle_deadline_cycle_0() {
         let env = Env::default();
-        let g = make_group(&env, 4, 604800, 0);
-        assert_eq!(get_cycle_deadline(&g, 0).unwrap(), 604800);
+        let g = make_group(&env, 4, ONE_WEEK_SECONDS, 0);
+        assert_eq!(get_cycle_deadline(&g, 0).unwrap(), ONE_WEEK_SECONDS);
     }
 
     #[test]
     fn test_get_cycle_deadline_cycle_1() {
         let env = Env::default();
-        let g = make_group(&env, 4, 604800, 0);
-        assert_eq!(get_cycle_deadline(&g, 1).unwrap(), 604800 * 2);
+        let g = make_group(&env, 4, ONE_WEEK_SECONDS, 0);
+        assert_eq!(get_cycle_deadline(&g, 1).unwrap(), ONE_WEEK_SECONDS * 2);
     }
 
     #[test]
     fn test_get_cycle_deadline_with_offset_start() {
         let env = Env::default();
-        let g = make_group(&env, 4, 604800, 1_000_000);
-        assert_eq!(get_cycle_deadline(&g, 0).unwrap(), 1_000_000 + 604800);
+        let g = make_group(&env, 4, ONE_WEEK_SECONDS, DEFAULT_TEST_TIMESTAMP);
+        assert_eq!(
+            get_cycle_deadline(&g, 0).unwrap(),
+            DEFAULT_TEST_TIMESTAMP + ONE_WEEK_SECONDS
+        );
     }
 }

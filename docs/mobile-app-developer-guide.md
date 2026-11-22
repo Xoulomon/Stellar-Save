@@ -1,5 +1,17 @@
 # Mobile App Developer & Contributor Guide
 
+> **⚠️ Architecture update (2026-10-19):** The Expo React Native app described in this
+> guide has been **archived** to `docs/archive/mobile-expo-rn/`. The **active shipped**
+> mobile app is the Capacitor-wrapped web app at `frontend/android/` and `frontend/ios/`.
+> See [ADR-006](adr/ADR-006-mobile-app-ownership.md) for the full decision record.
+>
+> For the active mobile app, see [frontend/MOBILE_README.md](../frontend/MOBILE_README.md).
+
+---
+
+The following documentation describes the **archived** Expo React Native app. It is
+preserved here for reference if the team decides to resume native-first development.
+
 This guide covers local setup, project structure, build/release, and troubleshooting for
 the Stellar-Save **React Native** mobile app (planned for
 [v4.0 on the roadmap](roadmap.md#v40--mobile-app--fiat-onoff-ramps)). It uses

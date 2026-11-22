@@ -22,12 +22,12 @@ export function WalletSetupScreen({ onCreateWallet, onImportWallet, onDone }: Pr
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="wallet-setup-screen">
       <Text style={styles.title}>Set up your wallet</Text>
-      <Pressable style={styles.button} onPress={handleCreate} disabled={creating}>
+      <Pressable style={styles.button} onPress={handleCreate} disabled={creating} testID="create-wallet-button">
         {creating ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Create a new wallet</Text>}
       </Pressable>
-      <Pressable style={styles.secondaryButton} onPress={onImportWallet}>
+      <Pressable style={styles.secondaryButton} onPress={onImportWallet} testID="import-wallet-button">
         <Text style={styles.secondaryButtonText}>Import existing wallet</Text>
       </Pressable>
     </View>

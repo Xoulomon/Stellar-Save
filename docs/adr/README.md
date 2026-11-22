@@ -1,61 +1,43 @@
 # Architecture Decision Records (ADRs)
 
-This directory contains Architecture Decision Records (ADRs) that document key architectural decisions made during Stellar-Save development. ADRs preserve institutional knowledge and provide context for future maintainers.
+This directory contains the Architecture Decision Records (ADRs) for the Stellar Save project. ADRs document significant architectural decisions made during the development of the platform.
 
-## Format
+## What is an ADR?
 
-Each ADR follows the standard format:
-- **Status**: Accepted, Proposed, Deprecated, or Superseded
-- **Date**: When the decision was made
-- **Author**: Who proposed the decision
-- **Deciders**: Who made the final decision
-- **Context**: Problem statement and alternatives considered
-- **Decision**: What was decided
-- **Rationale**: Why this decision was made
-- **Consequences**: Positive and negative impacts
-- **Implementation**: How it was implemented
-- **Related Decisions**: Links to related ADRs
+An Architecture Decision Record captures a single architecture decision, including the context, the decision itself, and the consequences. They serve as a historical record of why certain architectural choices were made.
 
-## ADRs
+## ADR Index
 
-### [ADR-001: Choice of Soroban Over Other Smart Contract Platforms](./ADR-001-soroban-platform-choice.md)
+| ADR | Title | Status | Date |
+|-----|-------|--------|------|
+| [ADR-001](./ADR-001-soroban-platform-choice.md) | Choice of Soroban as Smart Contract Platform | Accepted | 2024-12-15 |
+| [ADR-002](./ADR-002-prisma-orm-selection.md) | Selection of Prisma as ORM | Accepted | 2024-12-20 |
+| [ADR-003](./ADR-003-event-indexing-approach.md) | Event Indexing Strategy | Accepted | 2025-01-05 |
+| [ADR-004](./ADR-004-contract-module-boundaries.md) | Smart Contract Module Boundaries | Accepted | 2025-01-15 |
+| [ADR-005](./ADR-005-frontend-state-management.md) | Frontend State Management Approach | Accepted | 2025-02-01 |
+| [ADR-006](./ADR-006-on-chain-vs-off-chain-source-of-truth.md) | On-Chain vs Off-Chain Source of Truth | Proposed | 2026-10-19 |
+| [ADR-007](./ADR-007-mobile-app-ownership.md) | Mobile App Ownership — Capacitor vs. Expo React Native | Accepted | 2026-10-19 |
 
-**Status**: Accepted
+## ADR Status Lifecycle
 
-Decided to use Soroban (Rust on Stellar) as the smart contract platform instead of Ethereum, Polygon, or Cosmos.
+- **Proposed** — Under discussion, open for feedback
+- **Accepted** — Approved and in effect
+- **Deprecated** — No longer in effect, superseded by a newer ADR
+- **Superseded** — Replaced by another ADR (linked)
 
-**Key Reasons**:
-- Extremely low transaction costs (~$0.000001)
-- Fast finality (3-5 seconds)
-- Built-in support for Stellar assets
-- Strong focus on financial inclusion
-- Memory-safe Rust language
+## Creating a New ADR
 
-### [ADR-002: Sequential Payout Order Default Design Decision](./ADR-002-sequential-payout-order.md)
+1. Copy the template from `ADR-001` as a starting point
+2. Number sequentially (next: ADR-008)
+3. Fill in all sections: Context, Decision, Rationale, Consequences
+4. Submit as a PR for team review
+5. Update this index
 
-**Status**: Accepted
+## Related Documentation
 
-Decided that the default payout order in ROSCAs is sequential based on join order (first in, first out).
-
-**Key Reasons**:
-- Simple and predictable
-- Matches traditional ROSCA practices
-- Gas efficient
-- Easy to audit and verify
-- Aligns with user expectations
-
-### [ADR-003: Backend Event Indexing Approach vs. Pure On-Chain Queries](./ADR-003-event-indexing-approach.md)
-
-**Status**: Accepted
-
-Decided to implement a backend event indexer with PostgreSQL database instead of querying Stellar Horizon API directly.
-
-**Key Reasons**:
-- 10-50x faster queries (50-200ms vs 1-5 seconds)
-- Unlimited query capabilities
-- Better scalability for concurrent users
-- Offline resilience
-- Enables rich analytics and reporting
+- [Contributing Guide](../../CONTRIBUTING.md)
+- [API Reference](../api/README.md)
+- [Backend Architecture](../../backend/README.md)
 
 ## Adding New ADRs
 
@@ -77,5 +59,5 @@ If a decision is reversed or updated:
 
 ## References
 
-- [ADR GitHub](https://adr.github.io/)
-- [Documenting Architecture Decisions](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)
+- [ADR GitHub Organization](https://adr.github.io/)
+- [Michael Nygard's article on ADRs](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)

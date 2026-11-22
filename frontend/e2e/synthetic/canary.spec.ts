@@ -14,7 +14,7 @@ const apiBaseUrl = process.env['API_BASE_URL'] ?? '';
 
 // ─── Frontend journeys ────────────────────────────────────────────────────────
 
-test.describe('Synthetic: connect-wallet journey', () => {
+test.describe('@smoke Synthetic: connect-wallet journey', () => {
   test('landing page loads and exposes the connect wallet action', async ({ page }) => {
     await page.goto(simulateFailure ? '/__synthetic-simulated-outage__' : '/');
     await expect(page).toHaveTitle(/stellar.save/i);
@@ -23,7 +23,7 @@ test.describe('Synthetic: connect-wallet journey', () => {
   });
 });
 
-test.describe('Synthetic: view-groups journey', () => {
+test.describe('@smoke Synthetic: view-groups journey', () => {
   test('browse groups page loads', async ({ page }) => {
     await page.goto('/groups/browse');
     await expect(page).toHaveTitle(/browse groups/i);
@@ -40,7 +40,7 @@ test.describe('Synthetic: view-groups journey', () => {
  *
  * Canary contract under test: set via CANARY_CONTRACT_ID env var.
  */
-test.describe('Canary gate: API health checks', () => {
+test.describe('@testnet Canary gate: API health checks', () => {
   // Log canary context at suite start
   test.beforeAll(() => {
     console.log(`[canary gate] contract: ${canaryContractId}`);

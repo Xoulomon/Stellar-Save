@@ -1,22 +1,25 @@
+/**
+ * Middleware for caching analytics GET requests
+ */
 import { logger } from './logger';
 import { createRateLimiterMiddleware } from './rate_limiter';
 import * as redis from './redis';
+import { CacheKeyBuilder } from './lib/cache-key-builder';
+import { CACHE_TTL_SECONDS } from './lib/cache-config';
+import { invalidateAnalyticsCacheByDate as invalidateAnalyticsCacheByDateService } from './analytics_service';
 
 import type { RateLimiterOptions } from './rate_limiter';
 import type { Request, Response, NextFunction } from 'express';
 
 
-/**
- * Middleware for caching analytics GET requests
- */
-export function createAnalyticsCacheMiddleware(ttlSeconds: number = 3600) {
+export function createAnalyticsCacheMiddleware(ttlSeconds: number = CACHE_TTL_SECONDS.ANALYTICS_HTTP_RESPONSE) {
   return async (req: Request, res: Response, next: NextFunction) => {
     // Only cache GET requests
     if (req.method !== 'GET') {
       return next();
     }
 
-    const cacheKey = `http_cache:${req.originalUrl || req.url}`;
+    const cacheKey = CacheKeyBuilder.httpResponse(req.originalUrl || req.url);
 
     try {
       // Try to get from cache
@@ -29,7 +32,7 @@ export function createAnalyticsCacheMiddleware(ttlSeconds: number = 3600) {
       // Store original res.json to intercept response
       const originalJson = res.json.bind(res);
 
-      res.json = (data: any) => {
+      res.json = (data: unknown) => {
         // Cache the response
         redis.set(cacheKey, data, ttlSeconds).catch((err) => {
           logger.error('Error caching analytics response:', err);
@@ -89,7 +92,7 @@ export function createAnalyticsWriteRateLimiter() {
  * Middleware stack for analytics endpoints
  */
 export function createAnalyticsMiddlewareStack() {
-  const cacheMiddleware = createAnalyticsCacheMiddleware(3600); // 1 hour cache
+  const cacheMiddleware = createAnalyticsCacheMiddleware(CACHE_TTL_SECONDS.ANALYTICS_HTTP_RESPONSE);
   const readRateLimiter = createAnalyticsRateLimiter();
   const writeRateLimiter = createAnalyticsWriteRateLimiter();
 
@@ -112,21 +115,10 @@ export async function invalidateAnalyticsCache(pattern: string = 'http_cache:/an
 }
 
 /**
- * Invalidate specific analytic cache entries by date
+ * Invalidate specific analytic cache entries by date.
+ * Delegates to the consolidated implementation in analytics_service.ts
+ * so cache-key patterns live in a single place.
  */
 export async function invalidateAnalyticsCacheByDate(date: Date) {
-  const dateStr = date.toISOString().split('T')[0];
-  const patterns = [
-    `http_cache:*/analytics/platform*date=${dateStr}*`,
-    `http_cache:*/analytics/users/*date=${dateStr}*`,
-    `http_cache:*/analytics/groups/*date=${dateStr}*`,
-  ];
-
-  for (const pattern of patterns) {
-    try {
-      await redis.delPattern(pattern);
-    } catch (error) {
-      logger.error(`Error invalidating cache pattern ${pattern}:`, error);
-    }
-  }
+  await invalidateAnalyticsCacheByDateService(date);
 }

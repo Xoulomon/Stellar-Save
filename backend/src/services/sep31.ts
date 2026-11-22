@@ -151,7 +151,18 @@ export async function sendPayment(opts: Sep31SendOpts): Promise<Sep31SendResult>
     stellar_memo_type: string;
   };
 
-  const record = await (prisma as any).crossBorderPayment.create({
+  interface CrossBorderPaymentDelegate {
+    crossBorderPayment: {
+      create: (args: unknown) => Promise<{ id: string }>;
+      findUnique: (
+        args: unknown
+      ) => Promise<{ id: string; anchorTxId?: string | null; status: string } | null>;
+      update: (args: unknown) => Promise<unknown>;
+    };
+  }
+  const db = prisma as unknown as CrossBorderPaymentDelegate;
+
+  const record = await db.crossBorderPayment.create({
     data: {
       anchorDomain,
       sendAssetCode,
@@ -184,7 +195,16 @@ export async function getPaymentStatus(
   anchorDomain: string,
   id: string
 ): Promise<Sep31StatusResult> {
-  const record = await (prisma as any).crossBorderPayment.findUnique({ where: { id } });
+  interface Sep31Db {
+    crossBorderPayment: {
+      findUnique: (
+        args: unknown
+      ) => Promise<{ id: string; anchorTxId?: string | null; status: string } | null>;
+      update: (args: unknown) => Promise<unknown>;
+    };
+  }
+  const db = prisma as unknown as Sep31Db;
+  const record = await db.crossBorderPayment.findUnique({ where: { id } });
   if (!record) throw new Error(`CrossBorderPayment ${id} not found`);
 
   if (!record.anchorTxId) return { id, status: record.status };
@@ -203,7 +223,7 @@ export async function getPaymentStatus(
   const completedAt = body.transaction?.completed_at;
 
   if (anchorStatus !== record.status) {
-    await (prisma as any).crossBorderPayment.update({
+    await db.crossBorderPayment.update({
       where: { id },
       data: { status: anchorStatus },
     });

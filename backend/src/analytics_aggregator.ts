@@ -1,3 +1,4 @@
+import { eventDataType, eventDataAmount, aggregateGroupMetricsForDate } from './analytics_service';
 import { logger } from './logger';
 import * as redis from './redis';
 
@@ -109,22 +110,22 @@ export class AnalyticsAggregator {
 
       // Count events by type
       const contributions = events.filter(
-        (e) => e.eventType === 'transaction' && (e.eventData as any)?.type === 'contribution'
+        (e) => e.eventType === 'transaction' && eventDataType(e.eventData) === 'contribution'
       ).length;
       const payouts = events.filter(
-        (e) => e.eventType === 'transaction' && (e.eventData as any)?.type === 'payout'
+        (e) => e.eventType === 'transaction' && eventDataType(e.eventData) === 'payout'
       ).length;
 
       // Calculate totals from transactions
       const contributionTotal = events
         .filter(
-          (e) => e.eventType === 'transaction' && (e.eventData as any)?.type === 'contribution'
+          (e) => e.eventType === 'transaction' && eventDataType(e.eventData) === 'contribution'
         )
-        .reduce((sum, e) => sum + ((e.eventData as any)?.amount || 0), 0);
+        .reduce((sum, e) => sum + eventDataAmount(e.eventData), 0);
 
       const payoutTotal = events
-        .filter((e) => e.eventType === 'transaction' && (e.eventData as any)?.type === 'payout')
-        .reduce((sum, e) => sum + ((e.eventData as any)?.amount || 0), 0);
+        .filter((e) => e.eventType === 'transaction' && eventDataType(e.eventData) === 'payout')
+        .reduce((sum, e) => sum + eventDataAmount(e.eventData), 0);
 
       // Calculate success rate (groups that completed payouts)
       const completedGroups = events.filter((e) => e.eventType === 'group_completed').length;
@@ -215,7 +216,7 @@ export class AnalyticsAggregator {
       })) as AnalyticsEventRow[];
 
       // Group events by userId
-      const userEvents = new Map<string, any[]>();
+      const userEvents = new Map<string, typeof events>();
       events.forEach((event) => {
         if (event.userId) {
           if (!userEvents.has(event.userId)) {
@@ -233,17 +234,17 @@ export class AnalyticsAggregator {
           (e) => e.eventType === 'group_completed'
         ).length;
         const contributions = userEventList.filter(
-          (e) => e.eventType === 'transaction' && (e.eventData as any)?.type === 'contribution'
+          (e) => e.eventType === 'transaction' && eventDataType(e.eventData) === 'contribution'
         ).length;
         const contributionAmount = userEventList
           .filter(
-            (e) => e.eventType === 'transaction' && (e.eventData as any)?.type === 'contribution'
+            (e) => e.eventType === 'transaction' && eventDataType(e.eventData) === 'contribution'
           )
-          .reduce((sum, e) => sum + ((e.eventData as any)?.amount || 0), 0);
+          .reduce((sum, e) => sum + eventDataAmount(e.eventData), 0);
 
         const payoutsReceived = userEventList
-          .filter((e) => e.eventType === 'transaction' && (e.eventData as any)?.type === 'payout')
-          .reduce((sum, e) => sum + ((e.eventData as any)?.amount || 0), 0);
+          .filter((e) => e.eventType === 'transaction' && eventDataType(e.eventData) === 'payout')
+          .reduce((sum, e) => sum + eventDataAmount(e.eventData), 0);
 
         const sessions = new Set(userEventList.map((e) => e.sessionId).filter(Boolean)).size;
         const pageViews = userEventList.filter((e) => e.eventType === 'page_view').length;
@@ -304,105 +305,14 @@ export class AnalyticsAggregator {
   }
 
   /**
-   * Aggregate group-specific metrics
+   * Aggregate group-specific metrics.
+   *
+   * Delegates to the canonical implementation in `analytics_service` so the
+   * aggregation logic lives in exactly one place.
    */
   private async aggregateGroupMetrics(date: Date): Promise<void> {
     try {
-      const nextDay = new Date(date);
-      nextDay.setDate(nextDay.getDate() + 1);
-
-      // Get all events for the day
-      const events = await this.prisma.analyticsEvent.findMany({
-        where: {
-          groupId: { not: null },
-          createdAt: {
-            gte: date,
-            lt: nextDay,
-          },
-        },
-      });
-
-      // Group events by groupId
-      const groupEvents = new Map<string, any[]>();
-      events.forEach((event) => {
-        if (event.groupId) {
-          if (!groupEvents.has(event.groupId)) {
-            groupEvents.set(event.groupId, []);
-          }
-          groupEvents.get(event.groupId)!.push(event);
-        }
-      });
-
-      // Aggregate for each group
-      for (const [groupId, groupEventList] of groupEvents.entries()) {
-        const members = new Set(groupEventList.map((e) => e.userId).filter(Boolean)).size;
-        const contributions = groupEventList.filter(
-          (e) => e.eventType === 'transaction' && (e.eventData as any)?.type === 'contribution'
-        ).length;
-        const contributionAmount = groupEventList
-          .filter(
-            (e) => e.eventType === 'transaction' && (e.eventData as any)?.type === 'contribution'
-          )
-          .reduce((sum, e) => sum + ((e.eventData as any)?.amount || 0), 0);
-
-        const payoutsDistributed = groupEventList
-          .filter((e) => e.eventType === 'transaction' && (e.eventData as any)?.type === 'payout')
-          .reduce((sum, e) => sum + ((e.eventData as any)?.amount || 0), 0);
-
-        const completed = groupEventList.filter((e) => e.eventType === 'group_completed').length;
-
-        const successRate = completed > 0 ? 100 : 0;
-        const avgContribution = contributions > 0 ? contributionAmount / contributions : 0;
-        const newMembers = groupEventList.filter((e) => e.eventType === 'member_joined').length;
-        const churn = groupEventList.filter((e) => e.eventType === 'member_left').length;
-
-        // Upsert group metrics
-        const existingMetrics = await this.prisma.groupMetrics.findFirst({
-          where: {
-            groupId,
-            date: {
-              gte: date,
-              lt: nextDay,
-            },
-          },
-        });
-
-        if (existingMetrics) {
-          await this.prisma.groupMetrics.update({
-            where: { id: existingMetrics.id },
-            data: {
-              memberCount: members,
-              totalContributions: contributions,
-              totalContributionAmount: contributionAmount,
-              totalPayoutsDistributed: payoutsDistributed,
-              successRate,
-              averageContributionSize: avgContribution,
-              newMembersCount: newMembers,
-              churnCount: churn,
-              updatedAt: new Date(),
-            },
-          });
-        } else {
-          await this.prisma.groupMetrics.create({
-            data: {
-              groupId,
-              date,
-              memberCount: members,
-              totalContributions: contributions,
-              totalContributionAmount: contributionAmount,
-              totalPayoutsDistributed: payoutsDistributed,
-              successRate,
-              averageContributionSize: avgContribution,
-              newMembersCount: newMembers,
-              churnCount: churn,
-            },
-          });
-        }
-      }
-
-      logger.info(
-        `Group metrics aggregated for ${groupEvents.size} groups on ${date.toISOString().split('T')[0]}`
-      );
+      await aggregateGroupMetricsForDate(this.prisma, date);
     } catch (error) {
       logger.error('Error aggregating group metrics:', error);
     }

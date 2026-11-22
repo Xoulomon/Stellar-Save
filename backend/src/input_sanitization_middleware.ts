@@ -9,7 +9,6 @@ import { logger } from './logger';
 
 import type { Request, Response, NextFunction } from 'express';
 
-
 // HTML entity encoding map
 const HTML_ENTITIES: Record<string, string> = {
   '&': '&amp;',
@@ -118,7 +117,7 @@ export class InputSanitizer {
   /**
    * Sanitize an entire object recursively
    */
-  static sanitizeObject(obj: any, options: SanitizationOptions = {}): any {
+  static sanitizeObject(obj: unknown, options: SanitizationOptions = {}): unknown {
     if (obj === null || obj === undefined) {
       return obj;
     }
@@ -136,7 +135,7 @@ export class InputSanitizer {
     }
 
     if (typeof obj === 'object') {
-      const sanitized: any = {};
+      const sanitized: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(obj)) {
         // Sanitize the key as well
         const sanitizedKey = this.sanitizeString(key, { ...options, maxLength: 100 });
@@ -154,7 +153,7 @@ export class InputSanitizer {
   /**
    * Validate and sanitize common field types
    */
-  static sanitizeGroupMetadata(metadata: any): any {
+  static sanitizeGroupMetadata(metadata: unknown): unknown {
     return this.sanitizeObject(metadata, {
       allowHtml: false,
       maxLength: 500,
@@ -162,7 +161,7 @@ export class InputSanitizer {
     });
   }
 
-  static sanitizeProfileData(profile: any): any {
+  static sanitizeProfileData(profile: unknown): unknown {
     return this.sanitizeObject(profile, {
       allowHtml: false,
       maxLength: 1000,

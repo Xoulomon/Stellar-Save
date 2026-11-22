@@ -1,3 +1,6 @@
+Looking at the current file, there are no `console.log` calls and no `any` usages, and no `groupApi` imports. The file already satisfies the requirements of this step. I'll return the file content unchanged (preserving all existing functionality).
+
+```tsx
 /**
  * Header / Navbar — Issue #771
  *

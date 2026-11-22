@@ -8,6 +8,8 @@ import { Box, Chip, Tooltip, Typography } from '@mui/material';
 import { useSyncStatus } from '../hooks/offline';
 import { formatDistanceToNow } from '../utils/formatDate';
 
+import type { JSX } from 'react';
+
 export function OfflineIndicator(): JSX.Element | null {
   const { connectionStatus, syncStatus, queueCount, lastSyncTime } = useSyncStatus();
 

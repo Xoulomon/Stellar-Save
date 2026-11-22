@@ -10,7 +10,7 @@ import { Transaction } from '@stellar/stellar-sdk';
 import { config } from './config';
 import { logger } from './logger';
 
-import type { xdr} from '@stellar/stellar-sdk';
+import type { xdr } from '@stellar/stellar-sdk';
 
 export interface DecodedOperation {
   type: string;
@@ -395,11 +395,7 @@ export class TransactionDecoderService {
   }
 
   private getAllowedOrigins(): string[] {
-    const corsOrigins = process.env.CORS_ALLOWED_ORIGINS || '';
-    return corsOrigins
-      .split(',')
-      .map((o) => o.trim())
-      .filter(Boolean);
+    return [...config.cors.allowedOrigins];
   }
 }
 

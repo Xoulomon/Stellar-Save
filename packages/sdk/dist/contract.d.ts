@@ -1,16 +1,9 @@
 /**
- * Soroban contract error codes and utilities.
- * Generated from the StellarSaveError enum in contracts/stellar-save/src/errors.rs.
- * DO NOT edit manually — regenerate from the contract when adding new codes.
+ * Contract function names, kept in sync with contracts/stellar-save/src/lib.rs.
+ *
+ * @internal Not part of the public API (not re-exported from index.ts). Kept
+ * only so `pnpm check:abi` (src/abi-drift.test.ts) can detect ABI drift.
  */
-export declare const CONTRACT_ERROR_MESSAGES: Readonly<Record<number, string>>;
-export declare class ContractError extends Error {
-    readonly code: number | null;
-    constructor(code: number | null, message: string);
-}
-/** Parse a raw Soroban invocation error into a typed ContractError. */
-export declare function parseContractError(err: unknown): ContractError;
-/** Contract function names, kept in sync with contracts/stellar-save/src/lib.rs. */
 export declare const CONTRACT_FUNCTIONS: {
     readonly CREATE_GROUP: "create_group";
     readonly GET_GROUP: "get_group";
@@ -23,6 +16,8 @@ export declare const CONTRACT_FUNCTIONS: {
     readonly IS_COMPLETE: "is_complete";
     readonly PAUSE_GROUP: "pause_group";
     readonly UNPAUSE_GROUP: "unpause_group";
+    readonly ACTIVATE_GROUP: "activate_group";
+    readonly GET_NEXT_RECIPIENT: "get_next_recipient";
+    readonly GET_GROUP_BALANCE: "get_group_balance";
 };
-export type ContractFunction = typeof CONTRACT_FUNCTIONS[keyof typeof CONTRACT_FUNCTIONS];
 //# sourceMappingURL=contract.d.ts.map

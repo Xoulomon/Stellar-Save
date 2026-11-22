@@ -25,6 +25,18 @@ use crate::{
 ///
 /// # Errors
 /// * `GroupNotFound` - Source group does not exist
+///
+/// # Clone audit (issue #1716)
+///
+/// No whole-struct clones happen here:
+/// - `src: Group` is loaded once and only its scalar fields are copied.
+/// - `token_config` is moved into `new_token_config` when no override is given.
+/// - `caller` is cloned twice (for `Group::new` and `emit_group_cloned`) and
+///   moved into the final `GroupCreated` publish. `Address` clones are host
+///   handle copies, not deep copies.
+///
+/// Storage I/O: 2 reads (source group, token config), 1 read + 1 write for the
+/// ID counter, and 3 writes (new group, status, token config).
 pub fn clone_group(
     env: &Env,
     caller: Address,
@@ -381,5 +393,55 @@ mod tests {
             .unwrap();
 
         assert_eq!(src_before, src_after);
+    }
+
+    // ── Clone audit regression tests (issue #1716) ───────────────────────────
+
+    /// Cloning succeeds and leaves the source group in storage.
+    #[test]
+    fn test_clone_group_preserves_source() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let creator = Address::generate(&env);
+        let src_id = setup_source_group(&env, &creator);
+
+        let new_id = clone_group(&env, creator, src_id, CloneOverrides::none())
+            .expect("clone_group must succeed");
+
+        // Sanity-check: a new group was created
+        assert!(new_id > src_id);
+
+        // Verify source group data is still in storage (no unintended mutations)
+        assert!(env
+            .storage()
+            .persistent()
+            .has(&StorageKeyBuilder::group_data(src_id)));
+    }
+
+    /// Cloning repeatedly from the same source should not accumulate state on
+    /// the source group — each clone is independent.
+    #[test]
+    fn test_repeated_clones_no_state_accumulation() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let creator = Address::generate(&env);
+        let src_id = setup_source_group(&env, &creator);
+
+        let id_1 = clone_group(&env, creator.clone(), src_id, CloneOverrides::none()).unwrap();
+        let id_2 = clone_group(&env, creator.clone(), src_id, CloneOverrides::none()).unwrap();
+        let id_3 = clone_group(&env, creator.clone(), src_id, CloneOverrides::none()).unwrap();
+
+        // IDs must be monotonically increasing
+        assert!(id_1 < id_2);
+        assert!(id_2 < id_3);
+
+        // Source group must be unchanged throughout
+        let src: Group = env
+            .storage()
+            .persistent()
+            .get(&StorageKeyBuilder::group_data(src_id))
+            .unwrap();
+        // member_count stays 0 on source — clones start fresh
+        assert_eq!(src.member_count, 0);
     }
 }

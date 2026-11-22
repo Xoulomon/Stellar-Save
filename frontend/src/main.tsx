@@ -7,6 +7,8 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
 import { ToastProvider } from './components/Toast';
+import { GroupRepositoryProvider } from './lib/groupRepository/GroupRepositoryContext';
+import { logger } from './lib/logger';
 import { queryClient } from './lib/queryClient';
 import { registerServiceWorker } from './notifications/serviceWorkerRegistration';
 import { env } from './lib/env';
@@ -17,8 +19,9 @@ import './index.css';
 if (env.VITE_OTEL_ENABLED) {
   import('./lib/tracing')
     .then((m) => m.startTracing())
-    .catch(() => {
+    .catch((error: unknown) => {
       // Tracing must never break app startup.
+      logger.warn('Failed to initialise tracing', error);
     });
 }
 
@@ -36,15 +39,17 @@ createRoot(document.getElementById('root')!).render(
       sentryDsn={env.VITE_SENTRY_DSN}
     >
       <QueryClientProvider client={queryClient}>
-        <AppThemeProvider>
-          <WalletProvider>
-            <ToastProvider>
-              <BrowserRouter>
-                <App />
-              </BrowserRouter>
-            </ToastProvider>
-          </WalletProvider>
-        </AppThemeProvider>
+        <GroupRepositoryProvider>
+          <AppThemeProvider>
+            <WalletProvider>
+              <ToastProvider>
+                <BrowserRouter>
+                  <App />
+                </BrowserRouter>
+              </ToastProvider>
+            </WalletProvider>
+          </AppThemeProvider>
+        </GroupRepositoryProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   </StrictMode>

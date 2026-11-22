@@ -1,4 +1,5 @@
 import { KeeperJob } from '../jobs/keeper_job';
+import { createPrismaMock } from '../../tests/helpers/prismaMock';
 
 import type { IStellarClient } from '../lib/stellar_client';
 
@@ -18,17 +19,13 @@ function makeContributionEvent(groupId: string, cycleNumber: number, member: str
 
 describe('KeeperJob.runOnce (with Dependency Injection)', () => {
   let mockStellarClient: jest.Mocked<IStellarClient>;
-  let mockDb: any;
+  let mockDb: ReturnType<typeof createPrismaMock>;
 
   beforeEach(() => {
     mockStellarClient = {
       executePayoutsBatch: jest.fn(),
     };
-    mockDb = {
-      contractEvent: {
-        findMany: jest.fn(),
-      },
-    };
+    mockDb = createPrismaMock();
   });
 
   it('does nothing when no groups are due', async () => {

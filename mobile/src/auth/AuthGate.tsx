@@ -28,6 +28,7 @@ import {
   type AuthResult,
 } from './biometricAuth';
 import { PinScreen } from './PinScreen';
+import { MAESTRO_TEST_MODE } from '../lib/maestroTestMode';
 
 // ─── Idle timeout (configurable) ─────────────────────────────────────────────
 
@@ -60,7 +61,9 @@ interface AuthGateProps {
 }
 
 export function AuthGate({ children }: AuthGateProps) {
-  const [gateState, setGateState] = useState<GateState>('checking');
+  const [gateState, setGateState] = useState<GateState>(
+    MAESTRO_TEST_MODE ? 'unlocked' : 'checking',
+  );
   const [pinError, setPinError] = useState<string | null>(null);
   // Stores the resolve callback for in-flight `requireAuth` calls
   const pendingResolveRef = useRef<((ok: boolean) => void) | null>(null);
@@ -82,6 +85,8 @@ export function AuthGate({ children }: AuthGateProps) {
   // ── Initial unlock on mount ────────────────────────────────────────────────
 
   useEffect(() => {
+    if (MAESTRO_TEST_MODE) return;
+
     async function init() {
       const ok = await attemptBiometric();
       if (ok) {
@@ -141,6 +146,8 @@ export function AuthGate({ children }: AuthGateProps) {
 
   const requireAuth = useCallback(
     async (promptMessage?: string): Promise<boolean> => {
+      if (MAESTRO_TEST_MODE) return true;
+
       // Try biometric first
       const ok = await attemptBiometric(promptMessage ?? 'Confirm transaction');
       if (ok) return true;

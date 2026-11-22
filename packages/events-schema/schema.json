@@ -7,6 +7,7 @@
     "group_created": {
       "topic": "group_created",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "creator": "address",
         "contribution_amount": "i128",
@@ -18,6 +19,7 @@
     "member_joined": {
       "topic": "member_joined",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "member": "address",
         "member_count": "u32",
@@ -27,6 +29,7 @@
     "member_left": {
       "topic": "member_left",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "member": "address",
         "member_count": "u32",
@@ -36,6 +39,7 @@
     "member_removed": {
       "topic": "member_removed",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "member": "address",
         "removed_by": "address",
@@ -46,6 +50,7 @@
     "contribution_made": {
       "topic": "contribution_made",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "contributor": "address",
         "amount": "i128",
@@ -54,9 +59,21 @@
         "contributed_at": "u64"
       }
     },
+    "contribution_due": {
+      "topic": "contribution_due",
+      "fields": {
+        "schema_version": "u32",
+        "group_id": "u64",
+        "member": "address",
+        "cycle": "u32",
+        "deadline": "u64",
+        "emitted_at": "u64"
+      }
+    },
     "payout_executed": {
       "topic": "payout_executed",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "recipient": "address",
         "amount": "i128",
@@ -67,6 +84,7 @@
     "contribution_missed": {
       "topic": "contribution_missed",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "member": "address",
         "cycle": "u32",
@@ -77,6 +95,7 @@
     "group_completed": {
       "topic": "group_completed",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "creator": "address",
         "total_cycles": "u32",
@@ -87,6 +106,7 @@
     "group_status_changed": {
       "topic": "group_status_changed",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "old_status": "u32",
         "new_status": "u32",
@@ -97,6 +117,7 @@
     "grace_period_contribution": {
       "topic": "grace_period_contribution",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "contributor": "address",
         "amount": "i128",
@@ -108,6 +129,7 @@
     "group_metadata_updated": {
       "topic": "group_metadata_updated",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "updated_by": "address",
         "name": "string",
@@ -119,6 +141,7 @@
     "contract_paused": {
       "topic": "contract_paused",
       "fields": {
+        "schema_version": "u32",
         "admin": "address",
         "timestamp": "u64"
       }
@@ -126,6 +149,7 @@
     "contract_unpaused": {
       "topic": "contract_unpaused",
       "fields": {
+        "schema_version": "u32",
         "admin": "address",
         "timestamp": "u64"
       }
@@ -133,6 +157,7 @@
     "cycle_advanced": {
       "topic": "cycle_advanced",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "old_cycle": "u32",
         "new_cycle": "u32",
@@ -144,6 +169,7 @@
     "group_paused": {
       "topic": "group_paused",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "paused_by": "address",
         "paused_at": "u64"
@@ -152,6 +178,7 @@
     "group_unpaused": {
       "topic": "group_unpaused",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "unpaused_by": "address",
         "unpaused_at": "u64"
@@ -160,6 +187,7 @@
     "contribution_verified": {
       "topic": "contribution_verified",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "contributor": "address",
         "cycle": "u32",
@@ -169,6 +197,7 @@
     "contribution_amount_proposed": {
       "topic": "contribution_amount_proposed",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "proposed_by": "address",
         "old_amount": "i128",
@@ -179,6 +208,7 @@
     "contribution_amount_changed": {
       "topic": "contribution_amount_changed",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "old_amount": "i128",
         "new_amount": "i128",
@@ -189,6 +219,7 @@
     "penalty_applied": {
       "topic": "penalty_applied",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "member": "address",
         "amount": "i128",
@@ -199,6 +230,7 @@
     "penalty_recovered": {
       "topic": "penalty_recovered",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "member": "address",
         "cycle_id": "u32",
@@ -208,6 +240,7 @@
     "milestone_reached": {
       "topic": "milestone_reached",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "member": "address",
         "threshold": "u32",
@@ -217,6 +250,7 @@
     "member_invited": {
       "topic": "member_invited",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "invited": "address",
         "invited_by": "address",
@@ -226,6 +260,7 @@
     "invitation_revoked": {
       "topic": "invitation_revoked",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "revoked": "address",
         "revoked_by": "address",
@@ -235,6 +270,7 @@
     "groups_merged": {
       "topic": "groups_merged",
       "fields": {
+        "schema_version": "u32",
         "merged_group_id": "u64",
         "source_group_id_1": "u64",
         "source_group_id_2": "u64",
@@ -246,6 +282,7 @@
     "reward_claimed": {
       "topic": "reward_claimed",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "member": "address",
         "amount": "i128",
@@ -255,6 +292,7 @@
     "group_archived": {
       "topic": "group_archived",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "archived_by": "address",
         "archived_at": "u64"
@@ -263,6 +301,7 @@
     "auto_contribution_executed": {
       "topic": "auto_contribution_executed",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "member": "address",
         "amount": "i128",
@@ -273,6 +312,7 @@
     "auto_contribution_failed": {
       "topic": "auto_contribution_failed",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "member": "address",
         "cycle": "u32",
@@ -282,6 +322,7 @@
     "group_rated": {
       "topic": "group_rated",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "member": "address",
         "stars": "u32",
@@ -292,6 +333,7 @@
     "fee_paid": {
       "topic": "fee_paid",
       "fields": {
+        "schema_version": "u32",
         "creator": "address",
         "treasury": "address",
         "amount": "i128",
@@ -301,6 +343,7 @@
     "refund_issued": {
       "topic": "refund_issued",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "member": "address",
         "amount": "i128",
@@ -311,10 +354,88 @@
     "member_referred": {
       "topic": "member_referred",
       "fields": {
+        "schema_version": "u32",
         "group_id": "u64",
         "invitee": "address",
         "referrer": "address",
         "referred_at": "u64"
+      }
+    },
+    "group_dissolved": {
+      "topic": "group_dissolved",
+      "fields": {
+        "schema_version": "u32",
+        "group_id": "u64",
+        "dissolved_at": "u64",
+        "total_refunded": "i128"
+      }
+    },
+    "group_cloned": {
+      "topic": "group_cloned",
+      "fields": {
+        "schema_version": "u32",
+        "original_group_id": "u64",
+        "new_group_id": "u64",
+        "creator": "address",
+        "cloned_at": "u64"
+      }
+    },
+    "cycle_deadline_extended": {
+      "topic": "cycle_deadline_extended",
+      "fields": {
+        "schema_version": "u32",
+        "group_id": "u64",
+        "cycle": "u32",
+        "extension_seconds": "u64",
+        "new_deadline": "u64",
+        "extended_by": "address",
+        "extended_at": "u64"
+      }
+    },
+    "contract_upgraded": {
+      "topic": "contract_upgraded",
+      "fields": {
+        "schema_version": "u32",
+        "upgraded_by": "address",
+        "old_version": "u32",
+        "new_version": "u32",
+        "upgraded_at": "u64"
+      }
+    },
+    "contribution_receipt": {
+      "topic": "contribution_receipt",
+      "fields": {
+        "schema_version": "u32",
+        "group_id": "u64",
+        "member": "address",
+        "amount": "i128",
+        "cycle": "u32",
+        "timestamp": "u64"
+      }
+    },
+    "dispute_raised": {
+      "topic": "dispute_raised",
+      "description": "Emitted as a positional tuple in field order.",
+      "fields": {
+        "schema_version": "u32",
+        "group_id": "u64",
+        "raised_by": "address",
+        "reason": "string",
+        "vote_count": "u32",
+        "threshold": "u32",
+        "auto_paused": "bool",
+        "raised_at": "u64"
+      }
+    },
+    "dispute_resolved": {
+      "topic": "dispute_resolved",
+      "description": "Emitted as a positional tuple in field order.",
+      "fields": {
+        "schema_version": "u32",
+        "group_id": "u64",
+        "resolved_by": "address",
+        "resolution": "string",
+        "resolved_at": "u64"
       }
     }
   }

@@ -1,4 +1,5 @@
 import { AccessTime, PersonAdd, TrendingUp, CreditCard } from '@mui/icons-material';
+import { formatAddress } from '@shared-utils/formatting';
 import { useMemo, type KeyboardEvent } from 'react';
 import './GroupTimeline.css';
 
@@ -22,6 +23,11 @@ export interface GroupTimelineProps {
   onEventClick?: (event: TimelineEvent) => void;
   emptyStateMessage?: string;
   className?: string;
+}
+
+/** Keys that activate a focusable timeline item, matching native button behaviour. */
+function isActivationKey(key: string): boolean {
+  return key === 'Enter' || key === ' ';
 }
 
 export function GroupTimeline({
@@ -70,7 +76,7 @@ export function GroupTimeline({
   // Shorten wallet address
   const shortenAddress = (address: string) => {
     if (!address) return 'Unknown';
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+    return formatAddress(address);
   };
 
   // Get icon component based on event type
@@ -117,6 +123,13 @@ export function GroupTimeline({
     }
   };
 
+  const handleEventKeyDown = (e: KeyboardEvent<HTMLDivElement>, event: TimelineEvent) => {
+    if (onEventClick && isActivationKey(e.key)) {
+      e.preventDefault();
+      onEventClick(event);
+    }
+  };
+
   return (
     <div className={`group-timeline ${className}`}>
       <div className="timeline-header">
@@ -144,12 +157,7 @@ export function GroupTimeline({
                 onClick={() => onEventClick?.(event)}
                 role={onEventClick ? 'button' : undefined}
                 tabIndex={onEventClick ? 0 : undefined}
-                onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
-                  if (onEventClick && (e.key === 'Enter' || e.key === ' ')) {
-                    e.preventDefault();
-                    onEventClick(event);
-                  }
-                }}
+                onKeyDown={(e) => handleEventKeyDown(e, event)}
               >
                 <div className="timeline-item-dot">{getEventIcon(event.type)}</div>
 

@@ -12,15 +12,11 @@
 
 #![cfg(test)]
 
-use soroban_sdk::{
-    testutils::Address as _,
-    token::TokenClient,
-    Address, Env, Vec,
-};
+use soroban_sdk::{testutils::Address as _, token::TokenClient, Address, Env, Vec};
 
 use crate::{
-    group::{Group, GroupStatus, TokenConfig},
-    test_utils::deploy_mock_token,
+    group::{Group, GroupStatus},
+    test_utils::{deploy_mock_token, store_group, store_token_config},
     MemberProfile, StellarSaveContract, StellarSaveError, StorageKeyBuilder,
 };
 
@@ -32,6 +28,21 @@ const CONTRIBUTION_AMOUNT: i128 = 1_000_000;
 const CYCLE_DURATION: u64 = 3600;
 const MAX_MEMBERS: u32 = 2;
 const GRACE_PERIOD: u64 = 0;
+
+/// Build a `Group` with this suite's standard parameters.
+fn new_group(env: &Env, group_id: u64, creator: &Address) -> Group {
+    Group::new(
+        env,
+        group_id,
+        creator.clone(),
+        CONTRIBUTION_AMOUNT,
+        CYCLE_DURATION,
+        MAX_MEMBERS,
+        2,
+        env.ledger().timestamp(),
+        GRACE_PERIOD,
+    )
+}
 
 /// Set up an active group with two members in storage.
 /// Returns (group_id, token_address, creator, member).
@@ -47,37 +58,12 @@ fn setup_active_group(env: &Env) -> (u64, Address, Address, Address) {
     sac.mint(&member, &10_000_000i128);
 
     // Store group
-    let group = Group::new(
-        group_id,
-        creator.clone(),
-        CONTRIBUTION_AMOUNT,
-        CYCLE_DURATION,
-        MAX_MEMBERS,
-        2,
-        env.ledger().timestamp(),
-        GRACE_PERIOD,
-    );
-    let mut active_group = group;
+    let mut active_group = new_group(env, group_id, &creator);
     active_group.status = GroupStatus::Active;
     active_group.started = true;
     active_group.member_count = 2;
-    env.storage()
-        .persistent()
-        .set(&StorageKeyBuilder::group_data(group_id), &active_group);
-    env.storage().persistent().set(
-        &StorageKeyBuilder::group_status(group_id),
-        &GroupStatus::Active,
-    );
-
-    // Store token config
-    let token_config = TokenConfig {
-        token_address: token.clone(),
-        token_decimals: 7,
-    };
-    env.storage().persistent().set(
-        &StorageKeyBuilder::group_token_config(group_id),
-        &token_config,
-    );
+    store_group(env, &active_group, GroupStatus::Active);
+    store_token_config(env, group_id, &token);
 
     // Store member profiles
     let creator_profile = MemberProfile {
@@ -191,31 +177,12 @@ fn test_enable_auto_contribute_group_not_active() {
     let group_id = 1u64;
 
     // Create group in Pending state
-    let group = Group::new(
-        group_id,
-        creator.clone(),
-        CONTRIBUTION_AMOUNT,
-        CYCLE_DURATION,
-        MAX_MEMBERS,
-        2,
-        env.ledger().timestamp(),
-        GRACE_PERIOD,
+    store_group(
+        &env,
+        &new_group(&env, group_id, &creator),
+        GroupStatus::Pending,
     );
-    env.storage()
-        .persistent()
-        .set(&StorageKeyBuilder::group_data(group_id), &group);
-    env.storage().persistent().set(
-        &StorageKeyBuilder::group_status(group_id),
-        &GroupStatus::Pending,
-    );
-    let token_config = TokenConfig {
-        token_address: token,
-        token_decimals: 7,
-    };
-    env.storage().persistent().set(
-        &StorageKeyBuilder::group_token_config(group_id),
-        &token_config,
-    );
+    store_token_config(&env, group_id, &token);
 
     // Store member profile
     let profile = MemberProfile {
@@ -519,31 +486,12 @@ fn test_execute_auto_contributions_group_not_active() {
     let group_id = 1u64;
 
     // Create group in Pending state
-    let group = Group::new(
-        group_id,
-        creator.clone(),
-        CONTRIBUTION_AMOUNT,
-        CYCLE_DURATION,
-        MAX_MEMBERS,
-        2,
-        env.ledger().timestamp(),
-        GRACE_PERIOD,
+    store_group(
+        &env,
+        &new_group(&env, group_id, &creator),
+        GroupStatus::Pending,
     );
-    env.storage()
-        .persistent()
-        .set(&StorageKeyBuilder::group_data(group_id), &group);
-    env.storage().persistent().set(
-        &StorageKeyBuilder::group_status(group_id),
-        &GroupStatus::Pending,
-    );
-    let token_config = TokenConfig {
-        token_address: token,
-        token_decimals: 7,
-    };
-    env.storage().persistent().set(
-        &StorageKeyBuilder::group_token_config(group_id),
-        &token_config,
-    );
+    store_token_config(&env, group_id, &token);
 
     let result = StellarSaveContract::execute_auto_contributions(env.clone(), group_id);
     assert_eq!(result, Err(StellarSaveError::InvalidState));

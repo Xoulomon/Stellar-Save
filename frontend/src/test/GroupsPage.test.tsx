@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import GroupsPage from '../pages/GroupsPage';
+import { makePublicGroup } from './factories';
 
 // WalletStatusIndicator imports @mui/icons-material which isn't installed — mock it
 vi.mock('../components/WalletStatusIndicator', () => ({

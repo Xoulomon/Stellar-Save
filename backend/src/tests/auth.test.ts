@@ -1,6 +1,6 @@
 import { Keypair } from '@stellar/stellar-sdk';
 
-import { generateChallenge, verifySignature, issueJwt, verifyJwt } from '../auth_service';
+import { generateChallenge, verifySignature, issueJwt, verifyJwt } from '../modules/auth/auth_service';
 import * as redisClient from '../redis';
 
 // Mock Redis so tests don't need a live Redis instance

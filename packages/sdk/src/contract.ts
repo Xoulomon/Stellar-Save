@@ -1,7 +1,8 @@
 /**
- * Soroban contract error codes and utilities.
- * Generated from the StellarSaveError enum in contracts/stellar-save/src/errors.rs.
- * DO NOT edit manually — regenerate from the contract when adding new codes.
+ * Contract function names, kept in sync with contracts/stellar-save/src/lib.rs.
+ *
+ * @internal Not part of the public API (not re-exported from index.ts). Kept
+ * only so `pnpm check:abi` (src/abi-drift.test.ts) can detect ABI drift.
  */
 
 export const CONTRACT_ERROR_MESSAGES: Readonly<Record<number, string>> = {
@@ -48,7 +49,8 @@ export function parseContractError(err: unknown): ContractError {
     if (msg) {
       const match = msg.match(/Error\(Contract, #(\d+)\)/);
       if (match) {
-        const code = parseInt(match[1], 10);
+        // noUncheckedIndexedAccess: match[1] is always a string when the regex matched
+        const code = parseInt(match[1] ?? '0', 10);
         return new ContractError(code, CONTRACT_ERROR_MESSAGES[code] ?? `Contract error #${code}`);
       }
       return new ContractError(null, msg);
@@ -71,6 +73,7 @@ export const CONTRACT_FUNCTIONS = {
   IS_COMPLETE: 'is_complete',
   PAUSE_GROUP: 'pause_group',
   UNPAUSE_GROUP: 'unpause_group',
+  ACTIVATE_GROUP: 'activate_group',
+  GET_NEXT_RECIPIENT: 'get_next_recipient',
+  GET_GROUP_BALANCE: 'get_group_balance',
 } as const;
-
-export type ContractFunction = typeof CONTRACT_FUNCTIONS[keyof typeof CONTRACT_FUNCTIONS];

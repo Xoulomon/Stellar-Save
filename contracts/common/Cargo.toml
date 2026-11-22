@@ -16,3 +16,8 @@ soroban-sdk = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
+
+[features]
+# Enable test-support utilities (create_env, generate_address).
+# Sibling contracts activate this via their dev-dependencies entry.
+testutils = ["soroban-sdk/testutils"]

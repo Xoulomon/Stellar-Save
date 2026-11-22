@@ -30,7 +30,10 @@ interface ThemeContextValue {
 
 // ── Context ───────────────────────────────────────────────────────────────────
 
-const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
+// Split by concern: `mode` changes on toggle, while `toggleTheme` is stable, so
+// components that only toggle don't re-render when the mode changes.
+const ThemeModeContext = createContext<ThemeMode | undefined>(undefined);
+const ThemeToggleContext = createContext<(() => void) | undefined>(undefined);
 
 const STORAGE_KEY = 'stellar-save:theme-mode';
 
@@ -62,15 +65,15 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
 
   const theme = useMemo(() => (mode === 'dark' ? darkTheme : lightTheme), [mode]);
 
-  const value = useMemo<ThemeContextValue>(() => ({ mode, toggleTheme }), [mode, toggleTheme]);
-
   return (
-    <ThemeContext.Provider value={value}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        {children}
-      </ThemeProvider>
-    </ThemeContext.Provider>
+    <ThemeToggleContext.Provider value={toggleTheme}>
+      <ThemeModeContext.Provider value={mode}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          {children}
+        </ThemeProvider>
+      </ThemeModeContext.Provider>
+    </ThemeToggleContext.Provider>
   );
 }
 
@@ -81,9 +84,26 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
  * Must be used inside `<AppThemeProvider>`.
  */
 export function useThemeMode(): ThemeContextValue {
-  const ctx = useContext(ThemeContext);
-  if (!ctx) {
+  const mode = useContext(ThemeModeContext);
+  const toggleTheme = useContext(ThemeToggleContext);
+  const value = useMemo(
+    () => (mode && toggleTheme ? { mode, toggleTheme } : undefined),
+    [mode, toggleTheme]
+  );
+  if (!value) {
     throw new Error('useThemeMode must be used inside <AppThemeProvider>.');
   }
-  return ctx;
+  return value;
+}
+
+/**
+ * Access only the stable toggle function. Consumers of this hook do not
+ * re-render when the theme mode changes.
+ */
+export function useToggleTheme(): () => void {
+  const toggleTheme = useContext(ThemeToggleContext);
+  if (!toggleTheme) {
+    throw new Error('useToggleTheme must be used inside <AppThemeProvider>.');
+  }
+  return toggleTheme;
 }

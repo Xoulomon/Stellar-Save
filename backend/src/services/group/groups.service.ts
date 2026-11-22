@@ -1,7 +1,7 @@
-import { AppError } from '../../lib/errors';
+import { AppError } from '@app/backend/lib/errors';
 
 import type { GroupsRepository } from './groups.repository';
-import type { Group } from '../../models';
+import type { Group } from '@app/backend/models';
 
 
 /**

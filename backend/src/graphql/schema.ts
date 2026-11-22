@@ -1,3 +1,10 @@
+import { makeExecutableSchema } from '@graphql-tools/schema';
+
+import { validationRules } from './complexity';
+import { resolvers } from './resolvers';
+
+export { validationRules as complexityRules };
+
 export const typeDefs = `#graphql
   type PaginationInfo {
     limit: Int!
@@ -68,25 +75,14 @@ export const typeDefs = `#graphql
   }
 
   type Query {
-    # Groups
     groups(limit: Int, offset: Int): [Group!]!
     group(id: ID!): Group
-
-    # Members
     members(limit: Int, offset: Int): [Member!]!
     member(id: ID!): Member
-
-    # Transactions
     transactions(groupId: ID, limit: Int, offset: Int): [Transaction!]!
     transaction(id: ID!): Transaction
-
-    # Recommendations
     recommendations(userId: ID!): RecommendationResult!
-
-    # Search
     search(query: String!): SearchResult!
-
-    # Health
     health: String!
   }
 
@@ -100,3 +96,5 @@ export const typeDefs = `#graphql
     ): Boolean!
   }
 `;
+
+export const schema = makeExecutableSchema({ typeDefs, resolvers });

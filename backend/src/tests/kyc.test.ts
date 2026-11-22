@@ -7,27 +7,24 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch as any;
 
 jest.mock('../prisma_client', () => ({
-  prisma: {
-    kycRecord: {
-      upsert: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-    },
-    kycStatusEvent: {
-      create: jest.fn(),
-    },
-  },
+  prisma: require('../../tests/helpers/prismaMock').createPrismaMock(),
 }));
 
-const baseRecord = {
-  userId: 'user1',
-  walletAddress: 'GABC',
-  status: 'pending',
-  kycProviderId: 'prov-1',
-  submittedAt: new Date(),
-  updatedAt: new Date(),
-  reviewedAt: null,
-};
+// KYC record fixture — built with explicit overrides matching the DB shape
+function buildKycRecord(overrides: Record<string, unknown> = {}) {
+  return {
+    userId: 'user1',
+    walletAddress: 'GABC',
+    status: 'pending',
+    kycProviderId: 'prov-1',
+    submittedAt: new Date(),
+    updatedAt: new Date(),
+    reviewedAt: null,
+    ...overrides,
+  };
+}
+
+const baseRecord = buildKycRecord();
 
 beforeEach(() => {
   mockFetch.mockReset();
@@ -39,7 +36,7 @@ beforeEach(() => {
 describe('submitKyc', () => {
   it('creates a pending KYC record', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ id: 'prov-1' }) } as any);
-    prisma.kycRecord.upsert.mockResolvedValue(baseRecord);
+    prisma.kycRecord.upsert.mockResolvedValue(buildKycRecord());
     const result = await submitKyc({
       userId: 'user1',
       walletAddress: 'GABC',
@@ -52,7 +49,7 @@ describe('submitKyc', () => {
 
   it('still creates record even when provider is unavailable', async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 503 } as any);
-    prisma.kycRecord.upsert.mockResolvedValue(baseRecord);
+    prisma.kycRecord.upsert.mockResolvedValue(buildKycRecord());
     const result = await submitKyc({ userId: 'user1', walletAddress: 'GABC', fields: {} });
     expect(result.status).toBe('pending');
   });
@@ -66,11 +63,9 @@ describe('getKycStatus', () => {
   });
 
   it('returns existing record status', async () => {
-    prisma.kycRecord.findUnique.mockResolvedValue({
-      ...baseRecord,
-      status: 'approved',
-      reviewedAt: new Date(),
-    });
+    prisma.kycRecord.findUnique.mockResolvedValue(
+      buildKycRecord({ status: 'approved', reviewedAt: new Date() })
+    );
     const result = await getKycStatus('user1');
     expect(result.status).toBe('approved');
   });
@@ -79,9 +74,9 @@ describe('getKycStatus', () => {
 describe('pollAndUpdateStatus', () => {
   it('transitions pending to approved and emits event', async () => {
     prisma.kycRecord.findUnique
-      .mockResolvedValueOnce(baseRecord) // first call in pollAndUpdateStatus
-      .mockResolvedValueOnce({ ...baseRecord, status: 'approved', reviewedAt: new Date() }); // getKycStatus at end
-    prisma.kycRecord.update.mockResolvedValue({ ...baseRecord, status: 'approved' });
+      .mockResolvedValueOnce(buildKycRecord()) // first call in pollAndUpdateStatus
+      .mockResolvedValueOnce(buildKycRecord({ status: 'approved', reviewedAt: new Date() })); // getKycStatus at end
+    prisma.kycRecord.update.mockResolvedValue(buildKycRecord({ status: 'approved' }));
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ status: 'approved' }),
@@ -96,9 +91,9 @@ describe('pollAndUpdateStatus', () => {
   });
 
   it('does not emit event when status unchanged', async () => {
-    prisma.kycRecord.findUnique.mockResolvedValue(baseRecord);
+    prisma.kycRecord.findUnique.mockResolvedValue(buildKycRecord());
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'pending' }) } as any);
-    prisma.kycRecord.findUnique.mockResolvedValue(baseRecord); // for final getKycStatus
+    prisma.kycRecord.findUnique.mockResolvedValue(buildKycRecord()); // for final getKycStatus
     await pollAndUpdateStatus('user1');
     expect(prisma.kycStatusEvent.create).not.toHaveBeenCalled();
   });

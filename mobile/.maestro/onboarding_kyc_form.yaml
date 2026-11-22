@@ -1,0 +1,16 @@
+# Create-group form validation flow; the current mobile app has no KYC screen.
+appId: com.stellarsave.mobile
+---
+- runFlow: setup.yaml
+- tapOn:
+    id: "create-group-button"
+- assertVisible:
+    id: "create-group-screen"
+- tapOn:
+    id: "create-group-submit-button"
+- assertVisible:
+    text: "Enter a contribution amount greater than 0."
+- assertVisible:
+    text: "Cycle duration must be at least 1 day."
+- assertVisible:
+    text: "Groups require at least 2 members."

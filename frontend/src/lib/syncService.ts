@@ -196,27 +196,22 @@ async function replayQueue(): Promise<void> {
 }
 
 /**
+ * Stub contract invoker — replaced once Soroban integration is complete.
+ * Tracking issue: #13, #36
+ * Methods awaiting implementation: contribution, join_group, create_group, update_group
+ */
+export async function contractInvoker(method: SyncQueueItem['type'], _args: unknown): Promise<void> {
+  // TODO: Replace with real Soroban contract call per method when integrated.
+  // Each method below maps to a contract entrypoint; keep this single location
+  // for the stub so integration happens in one place.
+  throw new Error(`Contract method not yet implemented: ${method}`);
+}
+
+/**
  * Execute a queued action
  */
-async function executeQueuedAction(item: SyncQueueItem): Promise<void> {
-  switch (item.type) {
-    case 'contribution':
-      // TODO: Call actual contract method when integrated
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      break;
-    case 'join_group':
-      // TODO: Call actual contract method when integrated
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      break;
-    case 'create_group':
-      // TODO: Call actual contract method when integrated
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      break;
-    case 'update_group':
-      // TODO: Call actual contract method when integrated
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      break;
-  }
+export async function executeQueuedAction(item: SyncQueueItem): Promise<void> {
+  await contractInvoker(item.type, item.payload);
 }
 
 /**

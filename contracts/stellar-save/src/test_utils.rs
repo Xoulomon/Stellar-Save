@@ -3,6 +3,11 @@
 //! This module provides common test helpers to avoid duplication across multiple
 //! test files: environment setup, client initialization, token utilities, and
 //! common test scenario builders.
+//!
+//! ## Shared Storage Fixtures (issue #1717)
+//! `store_contract_config`, `store_group`, `store_token_config`, `store_test_group`
+//! and `store_test_group_with_status` replace the duplicated local setup code that
+//! previously existed in `admin_actions_tests.rs` and `auto_contribution_tests.rs`.
 
 #![cfg(test)]
 
@@ -12,7 +17,7 @@ use soroban_sdk::{
     Address, Env, String,
 };
 
-use crate::{StellarSaveClient, StellarSaveContract};
+use crate::{StellarSaveContractClient, StellarSaveContract};
 
 // ─── Environment & Client Setup ──────────────────────────────────────────────
 
@@ -39,10 +44,10 @@ pub fn create_env() -> Env {
 /// # Returns
 /// A tuple of `(env, client, token_address, token_client)` where:
 /// - `env`: The Soroban test environment
-/// - `client`: The generated StellarSaveClient for contract interaction
+/// - `client`: The generated StellarSaveContractClient for contract interaction
 /// - `token_address`: The address of the deployed mock token
 /// - `token_client`: StellarAssetClient for token operations
-pub fn setup<'a>() -> (Env, StellarSaveClient<'a>, Address, StellarAssetClient<'a>) {
+pub fn setup<'a>() -> (Env, StellarSaveContractClient<'a>, Address, StellarAssetClient<'a>) {
     let env = create_env();
 
     let admin = Address::generate(&env);
@@ -51,7 +56,7 @@ pub fn setup<'a>() -> (Env, StellarSaveClient<'a>, Address, StellarAssetClient<'
     let sac_client = StellarAssetClient::new(&env, &token);
 
     let contract_id = env.register(StellarSaveContract, ());
-    let client = StellarSaveClient::new(&env, &contract_id);
+    let client = StellarSaveContractClient::new(&env, &contract_id);
 
     (env, client, token, sac_client)
 }
@@ -121,7 +126,7 @@ pub fn stroops_to_xlm(stroops: i128) -> i128 {
 ///
 /// # Arguments
 /// * `env` - The Soroban environment
-/// * `client` - The StellarSaveClient
+/// * `client` - The StellarSaveContractClient
 /// * `sac` - StellarAssetClient for minting tokens
 /// * `contribution_amount` - Required contribution per cycle (in stroops)
 /// * `cycle_duration` - Duration of each cycle (in seconds)
@@ -131,7 +136,7 @@ pub fn stroops_to_xlm(stroops: i128) -> i128 {
 /// A tuple of `(group_id, alice_address, bob_address, carol_address)`
 pub fn setup_3_member_group_with_params(
     env: &Env,
-    client: &StellarSaveClient,
+    client: &StellarSaveContractClient,
     sac: &StellarAssetClient,
     contribution_amount: i128,
     cycle_duration: u32,
@@ -163,14 +168,14 @@ pub fn setup_3_member_group_with_params(
 ///
 /// # Arguments
 /// * `env` - The Soroban environment
-/// * `client` - The StellarSaveClient
+/// * `client` - The StellarSaveContractClient
 /// * `sac` - StellarAssetClient for minting tokens
 ///
 /// # Returns
 /// A tuple of `(group_id, alice_address, bob_address, carol_address)`
 pub fn setup_3_member_group(
     env: &Env,
-    client: &StellarSaveClient,
+    client: &StellarSaveContractClient,
     sac: &StellarAssetClient,
 ) -> (u64, Address, Address, Address) {
     let contribution = 10 * crate::xlm::STROOPS_PER_XLM;
@@ -216,4 +221,121 @@ pub fn generate_addresses(env: &Env, count: usize) -> Vec<Address> {
 /// A Soroban String instance
 pub fn create_string(env: &Env, content: &str) -> String {
     String::from_str(env, content)
+}
+
+// ─── Shared Storage Fixtures (issue #1717) ───────────────────────────────────
+//
+// The following helpers centralise test-setup code that was previously
+// duplicated between admin_actions_tests.rs and auto_contribution_tests.rs
+// (and any future test module that needs the same state seeded).
+
+/// Build a minimal ContractConfig with the given admin address.
+///
+/// All limits are set to permissive defaults so tests focus on the
+/// feature under test rather than limit validation.
+///
+/// # Arguments
+/// * `admin` - The address that will act as protocol admin
+pub fn make_contract_config(admin: &Address) -> ContractConfig {
+    ContractConfig {
+        admin: admin.clone(),
+        min_contribution: 1_000_000,
+        max_contribution: 1_000_000_000_000,
+        min_members: 2,
+        max_members: 20,
+        min_cycle_duration: 86_400,
+        max_cycle_duration: 2_592_000,
+        treasury: None,
+        creation_fee: 0,
+    }
+}
+
+/// Persist a ContractConfig built with `make_contract_config` into test storage.
+///
+/// # Arguments
+/// * `env`   - The Soroban environment
+/// * `admin` - The address that will act as protocol admin
+pub fn store_contract_config(env: &Env, admin: &Address) {
+    env.storage().persistent().set(
+        &StorageKeyBuilder::contract_config(),
+        &make_contract_config(admin),
+    );
+}
+
+/// Persist a `Group` record and its `GroupStatus` into test storage.
+///
+/// Writes both the group data key and the separate status key so callers do
+/// not have to remember to set both records.
+pub fn store_group(env: &Env, group: &Group, status: GroupStatus) {
+    env.storage()
+        .persistent()
+        .set(&StorageKeyBuilder::group_data(group.id), group);
+    env.storage()
+        .persistent()
+        .set(&StorageKeyBuilder::group_status(group.id), &status);
+}
+
+/// Persist a 7-decimal `TokenConfig` for `group_id` into test storage.
+pub fn store_token_config(env: &Env, group_id: u64, token: &Address) {
+    env.storage().persistent().set(
+        &StorageKeyBuilder::group_token_config(group_id),
+        &TokenConfig {
+            token_address: token.clone(),
+            token_decimals: 7,
+        },
+    );
+}
+
+/// Persist a minimal `Group` record into test storage.
+///
+/// Only the bare-minimum fields needed for most admin / non-contribution tests
+/// are seeded here. The group starts with default parameters and no members.
+///
+/// # Arguments
+/// * `env`      - The Soroban environment
+/// * `group_id` - Numeric identifier for the group
+/// * `creator`  - Address of the group creator / owner
+pub fn store_test_group(env: &Env, group_id: u64, creator: &Address) {
+    let g = Group::new(
+        env,
+        group_id,
+        creator.clone(),
+        1_000_000,
+        604_800,
+        5,
+        2,
+        1000,
+        0,
+    );
+    env.storage()
+        .persistent()
+        .set(&StorageKeyBuilder::group_data(group_id), &g);
+}
+
+/// Persist a minimal `Group` (see `store_test_group`) together with the given
+/// `GroupStatus` into test storage.
+///
+/// # Arguments
+/// * `env`      - The Soroban environment
+/// * `group_id` - Numeric identifier for the group
+/// * `creator`  - Address of the group creator / owner
+/// * `status`   - The initial `GroupStatus` to assign
+pub fn store_test_group_with_status(
+    env: &Env,
+    group_id: u64,
+    creator: &Address,
+    status: GroupStatus,
+) {
+    let g = Group::new(
+        env,
+        group_id,
+        creator.clone(),
+        1_000_000,
+        604_800,
+        5,
+        2,
+        1000,
+        0,
+    );
+    store_group(env, &g, status);
 }

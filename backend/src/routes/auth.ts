@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { jwtAuthMiddleware } from '../auth_middleware';
+import { jwtAuthMiddleware } from '../modules/auth/auth_middleware';
 import {
   generateChallenge,
   verifySignature,
@@ -9,12 +9,12 @@ import {
   rotateRefreshToken,
   revokeSession,
   revokeAllSessions,
-} from '../auth_service';
+} from '../modules/auth/auth_service';
 import { AppError } from '../lib/errors';
 import { validateBody, schemas } from '../lib/validation';
 import { logger } from '../logger';
 
-import type { AuthenticatedRequest } from '../auth_middleware';
+import type { AuthenticatedRequest } from '../modules/auth/auth_middleware';
 import type { Request, Response, NextFunction } from 'express';
 
 /**

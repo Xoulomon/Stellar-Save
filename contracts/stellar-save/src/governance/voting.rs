@@ -1,5 +1,12 @@
+//! Governance voting logic.
+//!
+//! This module is responsible for **validating and recording member votes**.
+//! It deliberately does not contain raw `env.storage()` calls — those live in
+//! [`super::storage`].  Actual group-state mutations triggered when a vote
+//! threshold is met are delegated to [`super::execution`].
+
 use crate::error::StellarSaveError;
-use crate::governance::execution;
+use crate::governance::{execution, storage as gov_storage};
 use crate::group::{Group, GroupStatus};
 use crate::storage::StorageKeyBuilder;
 use soroban_sdk::{Address, Env};
@@ -11,14 +18,16 @@ use soroban_sdk::{Address, Env};
 /// refunded their contributions for the current cycle.
 ///
 /// # Errors
-/// - `GroupNotFound` - Group doesn't exist
-/// - `InvalidState` - Group is not Active or Paused
-/// - `NotMember` - Caller is not a member of the group
-/// - `AlreadyVotedDissolve` - Caller has already voted
-/// - `GroupAlreadyDissolved` - Group is already in a terminal state
+/// - `GroupNotFound`          - Group doesn't exist
+/// - `InvalidState`           - Group is not Active or Paused
+/// - `NotMember`              - Caller is not a member of the group
+/// - `AlreadyVotedDissolve`   - Caller has already voted
+/// - `GroupAlreadyDissolved`  - Group is already in a terminal state
+/// - `Overflow`               - Vote count overflow (should not occur in practice)
 pub fn vote_dissolve(env: Env, group_id: u64, caller: Address) -> Result<(), StellarSaveError> {
     caller.require_auth();
 
+    // ── Load group ────────────────────────────────────────────────────────────
     let group_key = StorageKeyBuilder::group_data(group_id);
     let mut group = env
         .storage()
@@ -26,6 +35,7 @@ pub fn vote_dissolve(env: Env, group_id: u64, caller: Address) -> Result<(), Ste
         .get::<_, Group>(&group_key)
         .ok_or(StellarSaveError::GroupNotFound)?;
 
+    // ── Validate group status ─────────────────────────────────────────────────
     let status_key = StorageKeyBuilder::group_status(group_id);
     let status: GroupStatus = env
         .storage()
@@ -41,34 +51,47 @@ pub fn vote_dissolve(env: Env, group_id: u64, caller: Address) -> Result<(), Ste
         GroupStatus::Pending => return Err(StellarSaveError::InvalidState),
     }
 
+    // ── Validate membership ───────────────────────────────────────────────────
     let member_key = StorageKeyBuilder::member_profile(group_id, caller.clone());
     if !env.storage().persistent().has(&member_key) {
         return Err(StellarSaveError::NotMember);
     }
 
-    let vote_key = StorageKeyBuilder::dissolve_vote(group_id, caller.clone());
-    if env.storage().persistent().has(&vote_key) {
+    // ── Check and record vote (idempotency guard) ─────────────────────────────
+    if gov_storage::has_voted_dissolve(&env, group_id, &caller) {
         return Err(StellarSaveError::AlreadyVotedDissolve);
     }
-    env.storage().persistent().set(&vote_key, &true);
+    gov_storage::record_dissolve_vote(&env, group_id, &caller);
 
-    let count_key = StorageKeyBuilder::dissolve_vote_count(group_id);
-    let vote_count: u32 = env.storage().persistent().get(&count_key).unwrap_or(0);
+    // ── Tally ─────────────────────────────────────────────────────────────────
+    let vote_count = gov_storage::dissolve_vote_count(&env, group_id);
     let new_count = vote_count
         .checked_add(1)
         .ok_or(StellarSaveError::Overflow)?;
-    env.storage().persistent().set(&count_key, &new_count);
+    gov_storage::set_dissolve_vote_count(&env, group_id, new_count);
 
-    // Not unanimous yet — nothing more to do
+    // Not unanimous yet — nothing more to do.
+    // Dissolution requires unanimity: every member must vote.
+    // See `crate::constants::GOVERNANCE_DISSOLUTION_REQUIRES_UNANIMITY`.
     if new_count < group.member_count {
         return Ok(());
     }
 
+    // ── Threshold reached: delegate to execution ──────────────────────────────
     execution::execute_dissolution(&env, group_id, &mut group)
 }
 
-/// Casts a member's vote to approve the pending contribution amount change.
-/// When a majority (> 50%) of members approve, the change is applied immediately.
+/// Casts a member's vote to approve the pending contribution-amount change.
+///
+/// When a majority (> 50 %) of members approve, the change is applied
+/// immediately by [`execution::execute_contribution_change`].
+///
+/// # Errors
+/// - `GroupNotFound`       - Group doesn't exist
+/// - `InvalidState`        - Dynamic contributions are disabled or no proposal is open
+/// - `NotMember`           - Caller is not a member of the group
+/// - `AlreadyContributed`  - Caller has already voted on this proposal
+/// - `Overflow`            - Vote count overflow
 pub fn vote_contribution_change(
     env: Env,
     group_id: u64,
@@ -76,6 +99,7 @@ pub fn vote_contribution_change(
 ) -> Result<(), StellarSaveError> {
     member.require_auth();
 
+    // ── Load group ────────────────────────────────────────────────────────────
     let group_key = StorageKeyBuilder::group_data(group_id);
     let mut group = env
         .storage()
@@ -87,37 +111,31 @@ pub fn vote_contribution_change(
         return Err(StellarSaveError::InvalidState);
     }
 
-    // Verify member belongs to the group
+    // ── Validate membership ───────────────────────────────────────────────────
     let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
     if !env.storage().persistent().has(&member_key) {
         return Err(StellarSaveError::NotMember);
     }
 
-    // Check there is a pending proposal
-    let proposal_key = StorageKeyBuilder::contribution_pending_amount(group_id);
-    let new_amount: i128 = env
-        .storage()
-        .persistent()
-        .get(&proposal_key)
+    // ── Require an open proposal ──────────────────────────────────────────────
+    let new_amount = gov_storage::pending_contribution_amount(&env, group_id)
         .ok_or(StellarSaveError::InvalidState)?;
 
-    // Prevent double voting
-    let member_vote_key = StorageKeyBuilder::contribution_member_vote(group_id, member.clone());
-    if env.storage().persistent().has(&member_vote_key) {
+    // ── Check and record vote (idempotency guard) ─────────────────────────────
+    if gov_storage::has_voted_contribution_change(&env, group_id, &member) {
         return Err(StellarSaveError::AlreadyContributed);
     }
-    env.storage().persistent().set(&member_vote_key, &true);
+    gov_storage::record_contribution_vote(&env, group_id, &member);
 
-    // Increment vote count
-    let vote_key = StorageKeyBuilder::contribution_amount_vote_count(group_id);
-    let vote_count: u32 = env.storage().persistent().get(&vote_key).unwrap_or(0);
+    // ── Tally ─────────────────────────────────────────────────────────────────
+    let vote_count = gov_storage::contribution_vote_count(&env, group_id);
     let new_vote_count = vote_count
         .checked_add(1)
         .ok_or(StellarSaveError::Overflow)?;
-    env.storage().persistent().set(&vote_key, &new_vote_count);
+    gov_storage::set_contribution_vote_count(&env, group_id, new_vote_count);
 
-    // Apply change if majority reached (> 50% of members)
-    let majority = group.member_count / 2 + 1;
+    // ── Apply if majority reached (> 50 % of members) ────────────────────────
+    let majority = super::majority_threshold(group.member_count);
     if new_vote_count >= majority {
         execution::execute_contribution_change(&env, group_id, &mut group, new_amount)?;
     }

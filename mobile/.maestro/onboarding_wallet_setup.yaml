@@ -1,0 +1,10 @@
+# Wallet tab entry flow; wallet setup screens are not part of the current app.
+appId: com.stellarsave.mobile
+---
+- runFlow: setup.yaml
+- tapOn:
+    id: "wallet-tab"
+- assertVisible:
+    id: "wallet-screen"
+- assertVisible:
+    text: "Placeholder wallet tab"

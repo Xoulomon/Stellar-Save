@@ -1,1 +1,12 @@
 npx lint-staged
+
+# Secret scan — requires gitleaks (see docs/secret-scanning.md for install instructions).
+# Scans only staged files against .gitleaks.toml.
+# To bypass in an emergency: git commit --no-verify  (see docs/bypass-policy.md for rules)
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --config .gitleaks.toml --redact --no-banner
+else
+  echo "⚠️  gitleaks not found — skipping local secret scan." >&2
+  echo "   Install it so secrets are caught before they reach the remote:" >&2
+  echo "   https://github.com/gitleaks/gitleaks#installing" >&2
+fi

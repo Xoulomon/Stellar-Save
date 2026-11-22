@@ -240,22 +240,6 @@ export type MemberFieldsFragment = {
   groupIds: Array<string>;
 };
 
-export type MemberWithGroupsFragment = {
-  __typename?: 'Member';
-  id: string;
-  address: string;
-  name: string;
-  joinedAt: number;
-  groupIds: Array<string>;
-  groups: Array<{
-    __typename?: 'Group';
-    id: string;
-    name: string;
-    contributionAmount: number;
-    status: string;
-  }>;
-};
-
 export type GetMembersQueryVariables = Exact<{ [key: string]: never }>;
 
 export type GetMembersQuery = {
@@ -270,32 +254,6 @@ export type GetMembersQuery = {
   }>;
 };
 
-export type GetMemberQueryVariables = Exact<{
-  id: Scalars['ID']['input'];
-}>;
-
-export type GetMemberQuery = {
-  __typename?: 'Query';
-  member?:
-    | {
-        __typename?: 'Member';
-        id: string;
-        address: string;
-        name: string;
-        joinedAt: number;
-        groupIds: Array<string>;
-        groups: Array<{
-          __typename?: 'Group';
-          id: string;
-          name: string;
-          contributionAmount: number;
-          status: string;
-        }>;
-      }
-    | null
-    | undefined;
-};
-
 export type SetPreferencesMutationVariables = Exact<{
   userId: Scalars['ID']['input'];
   minContribution?: InputMaybe<Scalars['Float']['input']>;
@@ -305,95 +263,6 @@ export type SetPreferencesMutationVariables = Exact<{
 }>;
 
 export type SetPreferencesMutation = { __typename?: 'Mutation'; setPreferences: boolean };
-
-export type RecommendationFieldsFragment = {
-  __typename?: 'Recommendation';
-  groupId: string;
-  score: number;
-  algorithm: string;
-  group?:
-    | {
-        __typename?: 'Group';
-        id: string;
-        name: string;
-        contributionAmount: number;
-        cycleDuration: number;
-        maxMembers: number;
-        currentMembers: number;
-        status: string;
-        tags: Array<string>;
-      }
-    | null
-    | undefined;
-};
-
-export type GetRecommendationsQueryVariables = Exact<{
-  userId: Scalars['ID']['input'];
-}>;
-
-export type GetRecommendationsQuery = {
-  __typename?: 'Query';
-  recommendations: {
-    __typename?: 'RecommendationResult';
-    userId: string;
-    bucket: string;
-    algorithm: string;
-    recommendations: Array<{
-      __typename?: 'Recommendation';
-      groupId: string;
-      score: number;
-      algorithm: string;
-      group?:
-        | {
-            __typename?: 'Group';
-            id: string;
-            name: string;
-            contributionAmount: number;
-            cycleDuration: number;
-            maxMembers: number;
-            currentMembers: number;
-            status: string;
-            tags: Array<string>;
-          }
-        | null
-        | undefined;
-    }>;
-  };
-};
-
-export type SearchQueryVariables = Exact<{
-  query: Scalars['String']['input'];
-}>;
-
-export type SearchQuery = {
-  __typename?: 'Query';
-  search: {
-    __typename?: 'SearchResult';
-    groups: Array<{
-      __typename?: 'Group';
-      id: string;
-      name: string;
-      contributionAmount: number;
-      status: string;
-      tags: Array<string>;
-    }>;
-    members: Array<{ __typename?: 'Member'; id: string; address: string; name: string }>;
-    transactions: Array<{
-      __typename?: 'Transaction';
-      id: string;
-      groupId: string;
-      memberAddress: string;
-      amount: number;
-      type: TransactionType;
-      timestamp: number;
-      stellarTxHash: string;
-    }>;
-  };
-};
-
-export type HealthCheckQueryVariables = Exact<{ [key: string]: never }>;
-
-export type HealthCheckQuery = { __typename?: 'Query'; health: string };
 
 export type TransactionFieldsFragment = {
   __typename?: 'Transaction';
@@ -422,27 +291,6 @@ export type GetTransactionsQuery = {
     timestamp: number;
     stellarTxHash: string;
   }>;
-};
-
-export type GetTransactionQueryVariables = Exact<{
-  id: Scalars['ID']['input'];
-}>;
-
-export type GetTransactionQuery = {
-  __typename?: 'Query';
-  transaction?:
-    | {
-        __typename?: 'Transaction';
-        id: string;
-        groupId: string;
-        memberAddress: string;
-        amount: number;
-        type: TransactionType;
-        timestamp: number;
-        stellarTxHash: string;
-      }
-    | null
-    | undefined;
 };
 
 export const GroupFieldsFragmentDoc = `
@@ -484,34 +332,6 @@ export const MemberFieldsFragmentDoc = `
   name
   joinedAt
   groupIds
-}
-    `;
-export const MemberWithGroupsFragmentDoc = `
-    fragment MemberWithGroups on Member {
-  ...MemberFields
-  groups {
-    id
-    name
-    contributionAmount
-    status
-  }
-}
-    `;
-export const RecommendationFieldsFragmentDoc = `
-    fragment RecommendationFields on Recommendation {
-  groupId
-  score
-  algorithm
-  group {
-    id
-    name
-    contributionAmount
-    cycleDuration
-    maxMembers
-    currentMembers
-    status
-    tags
-  }
 }
     `;
 export const TransactionFieldsFragmentDoc = `
@@ -610,35 +430,6 @@ useGetMembersQuery.fetcher = (
   options?: RequestInit['headers']
 ) => fetcher<GetMembersQuery, GetMembersQueryVariables>(GetMembersDocument, variables, options);
 
-export const GetMemberDocument = `
-    query GetMember($id: ID!) {
-  member(id: $id) {
-    ...MemberWithGroups
-  }
-}
-    ${MemberWithGroupsFragmentDoc}
-${MemberFieldsFragmentDoc}`;
-
-export const useGetMemberQuery = <TData = GetMemberQuery, TError = unknown>(
-  variables: GetMemberQueryVariables,
-  options?: Omit<UseQueryOptions<GetMemberQuery, TError, TData>, 'queryKey'> & {
-    queryKey?: UseQueryOptions<GetMemberQuery, TError, TData>['queryKey'];
-  }
-) => {
-  return useQuery<GetMemberQuery, TError, TData>({
-    queryKey: ['GetMember', variables],
-    queryFn: fetcher<GetMemberQuery, GetMemberQueryVariables>(GetMemberDocument, variables),
-    ...options,
-  });
-};
-
-useGetMemberQuery.getKey = (variables: GetMemberQueryVariables) => ['GetMember', variables];
-
-useGetMemberQuery.fetcher = (
-  variables: GetMemberQueryVariables,
-  options?: RequestInit['headers']
-) => fetcher<GetMemberQuery, GetMemberQueryVariables>(GetMemberDocument, variables, options);
-
 export const SetPreferencesDocument = `
     mutation SetPreferences($userId: ID!, $minContribution: Float, $maxContribution: Float, $preferredDuration: Int, $tags: [String!]!) {
   setPreferences(
@@ -680,123 +471,6 @@ useSetPreferencesMutation.fetcher = (
     options
   );
 
-export const GetRecommendationsDocument = `
-    query GetRecommendations($userId: ID!) {
-  recommendations(userId: $userId) {
-    userId
-    bucket
-    algorithm
-    recommendations {
-      ...RecommendationFields
-    }
-  }
-}
-    ${RecommendationFieldsFragmentDoc}`;
-
-export const useGetRecommendationsQuery = <TData = GetRecommendationsQuery, TError = unknown>(
-  variables: GetRecommendationsQueryVariables,
-  options?: Omit<UseQueryOptions<GetRecommendationsQuery, TError, TData>, 'queryKey'> & {
-    queryKey?: UseQueryOptions<GetRecommendationsQuery, TError, TData>['queryKey'];
-  }
-) => {
-  return useQuery<GetRecommendationsQuery, TError, TData>({
-    queryKey: ['GetRecommendations', variables],
-    queryFn: fetcher<GetRecommendationsQuery, GetRecommendationsQueryVariables>(
-      GetRecommendationsDocument,
-      variables
-    ),
-    ...options,
-  });
-};
-
-useGetRecommendationsQuery.getKey = (variables: GetRecommendationsQueryVariables) => [
-  'GetRecommendations',
-  variables,
-];
-
-useGetRecommendationsQuery.fetcher = (
-  variables: GetRecommendationsQueryVariables,
-  options?: RequestInit['headers']
-) =>
-  fetcher<GetRecommendationsQuery, GetRecommendationsQueryVariables>(
-    GetRecommendationsDocument,
-    variables,
-    options
-  );
-
-export const SearchDocument = `
-    query Search($query: String!) {
-  search(query: $query) {
-    groups {
-      id
-      name
-      contributionAmount
-      status
-      tags
-    }
-    members {
-      id
-      address
-      name
-    }
-    transactions {
-      id
-      groupId
-      memberAddress
-      amount
-      type
-      timestamp
-      stellarTxHash
-    }
-  }
-}
-    `;
-
-export const useSearchQuery = <TData = SearchQuery, TError = unknown>(
-  variables: SearchQueryVariables,
-  options?: Omit<UseQueryOptions<SearchQuery, TError, TData>, 'queryKey'> & {
-    queryKey?: UseQueryOptions<SearchQuery, TError, TData>['queryKey'];
-  }
-) => {
-  return useQuery<SearchQuery, TError, TData>({
-    queryKey: ['Search', variables],
-    queryFn: fetcher<SearchQuery, SearchQueryVariables>(SearchDocument, variables),
-    ...options,
-  });
-};
-
-useSearchQuery.getKey = (variables: SearchQueryVariables) => ['Search', variables];
-
-useSearchQuery.fetcher = (variables: SearchQueryVariables, options?: RequestInit['headers']) =>
-  fetcher<SearchQuery, SearchQueryVariables>(SearchDocument, variables, options);
-
-export const HealthCheckDocument = `
-    query HealthCheck {
-  health
-}
-    `;
-
-export const useHealthCheckQuery = <TData = HealthCheckQuery, TError = unknown>(
-  variables?: HealthCheckQueryVariables,
-  options?: Omit<UseQueryOptions<HealthCheckQuery, TError, TData>, 'queryKey'> & {
-    queryKey?: UseQueryOptions<HealthCheckQuery, TError, TData>['queryKey'];
-  }
-) => {
-  return useQuery<HealthCheckQuery, TError, TData>({
-    queryKey: variables === undefined ? ['HealthCheck'] : ['HealthCheck', variables],
-    queryFn: fetcher<HealthCheckQuery, HealthCheckQueryVariables>(HealthCheckDocument, variables),
-    ...options,
-  });
-};
-
-useHealthCheckQuery.getKey = (variables?: HealthCheckQueryVariables) =>
-  variables === undefined ? ['HealthCheck'] : ['HealthCheck', variables];
-
-useHealthCheckQuery.fetcher = (
-  variables?: HealthCheckQueryVariables,
-  options?: RequestInit['headers']
-) => fetcher<HealthCheckQuery, HealthCheckQueryVariables>(HealthCheckDocument, variables, options);
-
 export const GetTransactionsDocument = `
     query GetTransactions($groupId: ID) {
   transactions(groupId: $groupId) {
@@ -830,45 +504,6 @@ useGetTransactionsQuery.fetcher = (
 ) =>
   fetcher<GetTransactionsQuery, GetTransactionsQueryVariables>(
     GetTransactionsDocument,
-    variables,
-    options
-  );
-
-export const GetTransactionDocument = `
-    query GetTransaction($id: ID!) {
-  transaction(id: $id) {
-    ...TransactionFields
-  }
-}
-    ${TransactionFieldsFragmentDoc}`;
-
-export const useGetTransactionQuery = <TData = GetTransactionQuery, TError = unknown>(
-  variables: GetTransactionQueryVariables,
-  options?: Omit<UseQueryOptions<GetTransactionQuery, TError, TData>, 'queryKey'> & {
-    queryKey?: UseQueryOptions<GetTransactionQuery, TError, TData>['queryKey'];
-  }
-) => {
-  return useQuery<GetTransactionQuery, TError, TData>({
-    queryKey: ['GetTransaction', variables],
-    queryFn: fetcher<GetTransactionQuery, GetTransactionQueryVariables>(
-      GetTransactionDocument,
-      variables
-    ),
-    ...options,
-  });
-};
-
-useGetTransactionQuery.getKey = (variables: GetTransactionQueryVariables) => [
-  'GetTransaction',
-  variables,
-];
-
-useGetTransactionQuery.fetcher = (
-  variables: GetTransactionQueryVariables,
-  options?: RequestInit['headers']
-) =>
-  fetcher<GetTransactionQuery, GetTransactionQueryVariables>(
-    GetTransactionDocument,
     variables,
     options
   );

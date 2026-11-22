@@ -78,8 +78,6 @@ export class BackupRestoreDrill {
   private readonly recovery: RecoveryService;
   private readonly target = new EphemeralRestoreTarget();
   private readonly config: RestoreDrillConfig;
-  private timer: ReturnType<typeof setInterval> | null = null;
-  private running = false;
   private runs: RestoreDrillRun[] = [];
   private alerts: RestoreDrillAlert[] = [];
 
@@ -87,30 +85,6 @@ export class BackupRestoreDrill {
     this.backupService = backupService;
     this.recovery = new RecoveryService(backupService, s3Client, this.target);
     this.config = config;
-  }
-
-  start(): void {
-    if (this.running) return;
-    this.running = true;
-    void this.runDrill();
-    this.timer = setInterval(() => {
-      void this.runDrill();
-    }, this.config.checkIntervalMs);
-    logger.info('backup restore drill started', {
-      check_interval_ms: this.config.checkIntervalMs,
-      max_restore_duration_ms: this.config.maxRestoreDurationMs,
-    });
-  }
-
-  stop(): void {
-    if (this.timer) clearInterval(this.timer);
-    this.timer = null;
-    this.running = false;
-    logger.info('backup restore drill stopped');
-  }
-
-  isRunning(): boolean {
-    return this.running;
   }
 
   listRuns(): RestoreDrillRun[] {

@@ -41,6 +41,9 @@ Every outbound call in the contract, and its ordering verdict.
 | 5 | `contract.rs::execute_auto_contributions` | `token.transfer_from` per member | transfer, **then** record | record, **then** transfer |
 | 6 | `contract.rs::create_group` | `token.decimals` (via `token::validate_token`) | already compliant | unchanged |
 | 7 | `contract.rs::execute_auto_contributions` | `token.balance`, `token.allowance` | already compliant | unchanged |
+| 8 | `contract.rs::emergency_withdraw` | `token.transfer` | transfer, **then** update balance & remove profile | update balance & remove profile, **then** transfer |
+| 9 | `governance/execution.rs::execute_dissolution` | `token.transfer` | transfer, **then** write `RefundRecord` | write `RefundRecord`, **then** transfer |
+| 10 | `contract.rs::claim_completion_reward` | `token.transfer` | mark claimed, **then** transfer | already compliant |
 
 `penalty.rs` moves no funds of its own: its doc comment states the caller has
 already transferred, and the module only adjusts pool accounting. `token.rs`
@@ -116,6 +119,25 @@ exists yet.
 Steps 4c and 4d read `balance` and `allowance` before any write for that member.
 Both are checks, and they sit in the checks phase.
 
+### 8. `emergency_withdraw` transferred before state mutation (critical)
+
+`token_client.transfer` was called before the group balance was deducted and
+before the member profile was removed. A reentrant call arriving during the
+token transfer saw the member profile still intact, allowing the member to
+drain multiple withdrawals.
+
+**Fix:** `group_balance` is updated and `member_profile` removed before the
+`token.transfer` interaction.
+
+### 9. `execute_dissolution` transferred before persisting refund record (high)
+
+In `governance/execution.rs`, `token_client.transfer` was executed before
+`refund_record` was persisted to storage under `StorageKeyBuilder::refund_record`.
+A reentrant call during dissolution refund would find `refund_key` absent,
+bypassing the `has(&refund_key)` guard.
+
+**Fix:** `refund_record` is stored into persistent storage before the token transfer.
+
 ## Behaviour that did not change
 
 - No error codes were added, removed, or renumbered.
@@ -139,3 +161,4 @@ reentrant call is rejected and exactly one record is written:
 | `a_second_refund_is_rejected_after_the_first_settles` | Finding 1 - the guard still works on the ordinary path |
 | `contribute_records_before_calling_the_token` | Finding 3 - the guard is still held during `transfer_from` |
 | `a_disarmed_token_leaves_the_happy_path_intact` | The reordering did not change ordinary behaviour |
+| `emergency_withdraw_removes_profile_before_calling_the_token` | Finding 8 - reentrant emergency withdraw hits `NotMember` |

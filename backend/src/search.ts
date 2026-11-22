@@ -5,16 +5,34 @@ import { logger } from './logger';
 
 import type { Group, Member, Transaction } from './models';
 
+/**
+ * Search service backed by Elasticsearch.
+ *
+ * Refactored for dependency injection (Issue #1701):
+ * - Elasticsearch Client, config, and logger are injected via constructor
+ * - Tests can pass a lightweight mock client instead of hitting a real ES cluster
+ */
+
+export interface SearchServiceDeps {
+  client?: Client;
+  config?: { elasticsearch: { node: string; username: string; password: string } };
+  logger?: { info: (...a: unknown[]) => void; error: (...a: unknown[]) => void; debug: (...a: unknown[]) => void };
+}
+
 export class SearchService {
   private client: Client;
   private isConnected: boolean = false;
+  private readonly log: NonNullable<SearchServiceDeps['logger']>;
 
-  constructor() {
-    this.client = new Client({
-      node: config.elasticsearch.node,
+  constructor(deps?: SearchServiceDeps) {
+    const resolvedConfig = deps?.config ?? config;
+    this.log = deps?.logger ?? logger;
+
+    this.client = deps?.client ?? new Client({
+      node: resolvedConfig.elasticsearch.node,
       auth: {
-        username: config.elasticsearch.username,
-        password: config.elasticsearch.password,
+        username: resolvedConfig.elasticsearch.username,
+        password: resolvedConfig.elasticsearch.password,
       },
     });
   }
@@ -23,10 +41,10 @@ export class SearchService {
     try {
       await this.client.ping();
       this.isConnected = true;
-      logger.info('Connected to Elasticsearch');
+      this.log.info('Connected to Elasticsearch');
       await this.createIndices();
     } catch (error) {
-      logger.error('Elasticsearch connection failed:', error);
+      this.log.error('Elasticsearch connection failed:', error);
       this.isConnected = false;
     }
   }
@@ -45,32 +63,28 @@ export class SearchService {
                   autocomplete_analyzer: {
                     type: 'custom',
                     tokenizer: 'ngram_tokenizer',
-                    filter: ['lowercase'],
-                  },
+                    filter: ['lowercase']
+                  }
                 },
                 tokenizer: {
                   ngram_tokenizer: {
                     type: 'edge_ngram',
                     min_gram: 2,
                     max_gram: 10,
-                    token_chars: ['letter', 'digit'],
-                  },
-                },
-              },
+                    token_chars: ['letter', 'digit']
+                  }
+                }
+              }
             },
             mappings: {
               properties: {
-                name: {
-                  type: 'text',
-                  analyzer: 'autocomplete_analyzer',
-                  search_analyzer: 'standard',
-                },
+                name: { type: 'text', analyzer: 'autocomplete_analyzer', search_analyzer: 'standard' },
                 tags: { type: 'keyword' },
                 description: { type: 'text' },
-                status: { type: 'keyword' },
-              },
-            },
-          },
+                status: { type: 'keyword' }
+              }
+            }
+          }
         });
       }
     }
@@ -81,7 +95,7 @@ export class SearchService {
     await this.client.index({
       index: 'groups',
       id: group.id,
-      body: group,
+      body: group
     });
   }
 
@@ -90,7 +104,7 @@ export class SearchService {
     await this.client.index({
       index: 'members',
       id: member.id,
-      body: member,
+      body: member
     });
   }
 
@@ -99,7 +113,7 @@ export class SearchService {
     await this.client.index({
       index: 'transactions',
       id: tx.id,
-      body: tx,
+      body: tx
     });
   }
 
@@ -111,12 +125,12 @@ export class SearchService {
         query: {
           multi_match: {
             query,
-            fields: ['name^3', 'tags^2', 'status'],
-          },
-        },
-      },
+            fields: ['name^3', 'tags^2', 'status']
+          }
+        }
+      }
     });
-    return result.hits.hits.map((hit) => hit._source);
+    return result.hits.hits.map(hit => hit._source);
   }
 
   async autocomplete(query: string) {
@@ -128,26 +142,26 @@ export class SearchService {
           match: {
             name: {
               query,
-              analyzer: 'standard',
-            },
-          },
-        },
-      },
+              analyzer: 'standard'
+            }
+          }
+        }
+      }
     });
-    return result.hits.hits.map((hit) => ({
+    return result.hits.hits.map(hit => ({
       id: hit._id,
       index: hit._index,
-      source: hit._source,
+      source: hit._source
     }));
   }
 
   async globalSearch(query: string) {
     if (!this.isConnected) return { groups: [], members: [], transactions: [] };
-
+    
     const [groups, members, transactions] = await Promise.all([
       this.searchGroups(query),
       this.searchMembers(query),
-      this.searchTransactions(query),
+      this.searchTransactions(query)
     ]);
 
     return { groups, members, transactions };
@@ -160,12 +174,12 @@ export class SearchService {
         query: {
           multi_match: {
             query,
-            fields: ['name^2', 'address'],
-          },
-        },
-      },
+            fields: ['name^2', 'address']
+          }
+        }
+      }
     });
-    return result.hits.hits.map((hit) => hit._source);
+    return result.hits.hits.map(hit => hit._source);
   }
 
   private async searchTransactions(query: string) {
@@ -175,11 +189,11 @@ export class SearchService {
         query: {
           multi_match: {
             query,
-            fields: ['stellarTxHash', 'memberAddress', 'type'],
-          },
-        },
-      },
+            fields: ['stellarTxHash', 'memberAddress', 'type']
+          }
+        }
+      }
     });
-    return result.hits.hits.map((hit) => hit._source);
+    return result.hits.hits.map(hit => hit._source);
   }
 }

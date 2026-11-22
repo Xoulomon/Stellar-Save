@@ -15,8 +15,10 @@ import {
 import { useState } from 'react';
 
 import { STEP_TYPE_META } from '../../types/transactionBuilder';
+import { STEP_DEFINITION_LIST, getStepDefinition } from './stepDefinitions';
 
 import type { TransactionBuilderStep, StepOperationType } from '../../types/transactionBuilder';
+import type { StepRendererKey } from './stepDefinitions';
 
 interface TransactionStepCardProps {
   step: TransactionBuilderStep;
@@ -39,6 +41,7 @@ export function TransactionStepCard({
 }: TransactionStepCardProps) {
   const [expanded, setExpanded] = useState(false);
   const meta = STEP_TYPE_META[step.type];
+  const definition = getStepDefinition(step.type);
 
   const updateParam = (key: string, value: string) => {
     onChange({ ...step, params: { ...step.params, [key]: value } });
@@ -85,9 +88,9 @@ export function TransactionStepCard({
               onChange={(e) => handleTypeChange(e.target.value as StepOperationType)}
               sx={{ minWidth: 160, '& .MuiInputBase-root': { fontSize: '0.875rem' } }}
             >
-              {Object.entries(STEP_TYPE_META).map(([key, val]) => (
-                <MenuItem key={key} value={key}>
-                  {val.icon} {val.label}
+              {STEP_DEFINITION_LIST.map((def) => (
+                <MenuItem key={def.id} value={def.id}>
+                  {STEP_TYPE_META[def.id]?.icon} {def.label}
                 </MenuItem>
               ))}
             </TextField>
@@ -157,7 +160,11 @@ export function TransactionStepCard({
           </Box>
 
           <Collapse in={expanded}>
-            <StepParamsEditor step={step} onChange={onChange} updateParam={updateParam} />
+            <StepParamsEditor
+              rendererKey={definition.rendererKey}
+              step={step}
+              updateParam={updateParam}
+            />
           </Collapse>
         </Stack>
       </CardContent>
@@ -166,233 +173,131 @@ export function TransactionStepCard({
 }
 
 interface StepParamsEditorProps {
+  rendererKey: StepRendererKey;
   step: TransactionBuilderStep;
-  onChange: (step: TransactionBuilderStep) => void;
   updateParam: (key: string, value: string) => void;
 }
 
-function StepParamsEditor({ step, updateParam }: StepParamsEditorProps) {
-  const p = step.params as Record<string, string>;
+const STEP_RENDERERS: Record<StepRendererKey, (props: StepParamsEditorProps) => JSX.Element> = {
+  payment: ({ step, updateParam }) => {
+    const p = step.params as Record<string, string>;
+    return (
+      <Stack spacing={1.5} sx={{ pt: 1 }}>
+        <TextField
+          size="small"
+          label="Destination Address"
+          placeholder="G..."
+          value={p.destination || ''}
+          onChange={(e) => updateParam('destination', e.target.value)}
+          fullWidth
+        />
+        <TextField
+          size="small"
+          label="Amount (XLM)"
+          placeholder="0.0"
+          value={p.amount || ''}
+          onChange={(e) => updateParam('amount', e.target.value)}
+          fullWidth
+        />
+        <TextField
+          size="small"
+          label="Memo (optional)"
+          placeholder="memo"
+          value={p.memo || ''}
+          onChange={(e) => updateParam('memo', e.target.value)}
+          fullWidth
+        />
+      </Stack>
+    );
+  },
+  manage_data: ({ step, updateParam }) => {
+    const p = step.params as Record<string, string>;
+    return (
+      <Stack spacing={1.5} sx={{ pt: 1 }}>
+        <TextField
+          size="small"
+          label="Data Key"
+          placeholder="key_name"
+          value={p.key || ''}
+          onChange={(e) => updateParam('key', e.target.value)}
+          fullWidth
+        />
+        <TextField
+          size="small"
+          label="Data Value"
+          placeholder="value"
+          value={p.value || ''}
+          onChange={(e) => updateParam('value', e.target.value)}
+          fullWidth
+        />
+      </Stack>
+    );
+  },
+  manage_sell_offer: ({ step, updateParam }) => {
+    const p = step.params as Record<string, string>;
+    return (
+      <Stack spacing={1.5} sx={{ pt: 1 }}>
+        <TextField
+          size="small"
+          label="Selling Asset"
+          placeholder="XLM"
+          value={p.selling || ''}
+          onChange={(e) => updateParam('selling', e.target.value)}
+          fullWidth
+        />
+        <TextField
+          size="small"
+          label="Buying Asset"
+          placeholder="XLM"
+          value={p.buying || ''}
+          onChange={(e) => updateParam('buying', e.target.value)}
+          fullWidth
+        />
+        <TextField
+          size="small"
+          label="Amount"
+          placeholder="0.0"
+          value={p.amount || ''}
+          onChange={(e) => updateParam('amount', e.target.value)}
+          fullWidth
+        />
+        <TextField
+          size="small"
+          label="Price"
+          placeholder="1.0"
+          value={p.price || ''}
+          onChange={(e) => updateParam('price', e.target.value)}
+          fullWidth
+        />
+      </Stack>
+    );
+  },
+  contract_call: ({ step, updateParam }) => {
+    const p = step.params as Record<string, string>;
+    return (
+      <Stack spacing={1.5} sx={{ pt: 1 }}>
+        <TextField
+          size="small"
+          label="Contract ID"
+          placeholder="C..."
+          value={p.contractId || ''}
+          onChange={(e) => updateParam('contractId', e.target.value)}
+          fullWidth
+        />
+        <TextField
+          size="small"
+          label="Method Name"
+          placeholder="method_name"
+          value={p.method || ''}
+          onChange={(e) => updateParam('method', e.target.value)}
+          fullWidth
+        />
+      </Stack>
+    );
+  },
+};
 
-  switch (step.type) {
-    case 'payment':
-      return (
-        <Stack spacing={1.5} sx={{ pt: 1 }}>
-          <TextField
-            size="small"
-            label="Destination Address"
-            placeholder="G..."
-            value={p.destination || ''}
-            onChange={(e) => updateParam('destination', e.target.value)}
-            fullWidth
-          />
-          <TextField
-            size="small"
-            label="Amount (XLM)"
-            placeholder="0.0"
-            value={p.amount || ''}
-            onChange={(e) => updateParam('amount', e.target.value)}
-            fullWidth
-          />
-          <TextField
-            size="small"
-            label="Memo (optional)"
-            placeholder="memo"
-            value={p.memo || ''}
-            onChange={(e) => updateParam('memo', e.target.value)}
-            fullWidth
-          />
-        </Stack>
-      );
-
-    case 'manage_data':
-      return (
-        <Stack spacing={1.5} sx={{ pt: 1 }}>
-          <TextField
-            size="small"
-            label="Data Key"
-            placeholder="key_name"
-            value={p.key || ''}
-            onChange={(e) => updateParam('key', e.target.value)}
-            fullWidth
-          />
-          <TextField
-            size="small"
-            label="Data Value"
-            placeholder="value"
-            value={p.value || ''}
-            onChange={(e) => updateParam('value', e.target.value)}
-            fullWidth
-          />
-        </Stack>
-      );
-
-    case 'manage_sell_offer':
-      return (
-        <Stack spacing={1.5} sx={{ pt: 1 }}>
-          <TextField
-            size="small"
-            label="Selling Asset"
-            placeholder="XLM"
-            value={p.selling || ''}
-            onChange={(e) => updateParam('selling', e.target.value)}
-            fullWidth
-          />
-          <TextField
-            size="small"
-            label="Buying Asset"
-            placeholder="XLM"
-            value={p.buying || ''}
-            onChange={(e) => updateParam('buying', e.target.value)}
-            fullWidth
-          />
-          <TextField
-            size="small"
-            label="Amount"
-            placeholder="0.0"
-            value={p.amount || ''}
-            onChange={(e) => updateParam('amount', e.target.value)}
-            fullWidth
-          />
-          <TextField
-            size="small"
-            label="Price"
-            placeholder="1.0"
-            value={p.price || ''}
-            onChange={(e) => updateParam('price', e.target.value)}
-            fullWidth
-          />
-        </Stack>
-      );
-
-    case 'contract_call':
-      return (
-        <Stack spacing={1.5} sx={{ pt: 1 }}>
-          <TextField
-            size="small"
-            label="Contract ID"
-            placeholder="C..."
-            value={p.contractId || ''}
-            onChange={(e) => updateParam('contractId', e.target.value)}
-            fullWidth
-          />
-          <TextField
-            size="small"
-            label="Method Name"
-            placeholder="method_name"
-            value={p.method || ''}
-            onChange={(e) => updateParam('method', e.target.value)}
-            fullWidth
-          />
-        </Stack>
-      );
-
-    case 'create_group':
-      return (
-        <Stack spacing={1.5} sx={{ pt: 1 }}>
-          <TextField
-            size="small"
-            label="Contract ID"
-            placeholder="C..."
-            value={p.contractId || ''}
-            onChange={(e) => updateParam('contractId', e.target.value)}
-            fullWidth
-          />
-          <TextField
-            size="small"
-            label="Contribution Amount (stroops)"
-            placeholder="10000000"
-            value={p.amount || ''}
-            onChange={(e) => updateParam('amount', e.target.value)}
-            fullWidth
-          />
-          <TextField
-            size="small"
-            label="Cycle Duration (seconds)"
-            placeholder="604800"
-            value={p.cycleDuration || ''}
-            onChange={(e) => updateParam('cycleDuration', e.target.value)}
-            fullWidth
-          />
-          <TextField
-            size="small"
-            label="Max Members"
-            placeholder="10"
-            value={p.maxMembers || ''}
-            onChange={(e) => updateParam('maxMembers', e.target.value)}
-            fullWidth
-          />
-        </Stack>
-      );
-
-    case 'join_group':
-    case 'contribute':
-      return (
-        <Stack spacing={1.5} sx={{ pt: 1 }}>
-          <TextField
-            size="small"
-            label="Contract ID"
-            placeholder="C..."
-            value={p.contractId || ''}
-            onChange={(e) => updateParam('contractId', e.target.value)}
-            fullWidth
-          />
-          <TextField
-            size="small"
-            label="Group ID"
-            placeholder="1"
-            value={p.groupId || ''}
-            onChange={(e) => updateParam('groupId', e.target.value)}
-            fullWidth
-          />
-          {step.type === 'contribute' && (
-            <TextField
-              size="small"
-              label="Amount (stroops)"
-              placeholder="10000000"
-              value={p.amount || ''}
-              onChange={(e) => updateParam('amount', e.target.value)}
-              fullWidth
-            />
-          )}
-        </Stack>
-      );
-
-    case 'execute_payout':
-      return (
-        <Stack spacing={1.5} sx={{ pt: 1 }}>
-          <TextField
-            size="small"
-            label="Contract ID"
-            placeholder="C..."
-            value={p.contractId || ''}
-            onChange={(e) => updateParam('contractId', e.target.value)}
-            fullWidth
-          />
-          <TextField
-            size="small"
-            label="Group ID"
-            placeholder="1"
-            value={p.groupId || ''}
-            onChange={(e) => updateParam('groupId', e.target.value)}
-            fullWidth
-          />
-          <TextField
-            size="small"
-            label="Recipient Address"
-            placeholder="G..."
-            value={p.recipient || ''}
-            onChange={(e) => updateParam('recipient', e.target.value)}
-            fullWidth
-          />
-        </Stack>
-      );
-
-    default:
-      return (
-        <Typography variant="body2" color="text.secondary" sx={{ pt: 1 }}>
-          No parameters
-        </Typography>
-      );
-  }
+function StepParamsEditor(props: StepParamsEditorProps) {
+  const Renderer = STEP_RENDERERS[props.rendererKey];
+  return <Renderer {...props} />;
 }

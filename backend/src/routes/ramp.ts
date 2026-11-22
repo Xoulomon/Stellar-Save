@@ -1,13 +1,19 @@
 import { Router } from 'express';
 
-import { jwtAuthMiddleware } from '../auth_middleware';
 import { rampProtection } from '../fiat_ramp_protection';
 import { AppError } from '../lib/errors';
 import { logger } from '../logger';
+import { jwtAuthMiddleware } from '../modules/auth/auth_middleware';
 import { getKycStatus } from '../services/kyc';
-import { initiateDeposit, initiateWithdraw, syncTransactionStatus, getTransaction, CircuitBreakerOpenError } from '../services/sep24';
+import {
+  initiateDeposit,
+  initiateWithdraw,
+  syncTransactionStatus,
+  getTransaction,
+  CircuitBreakerOpenError,
+} from '../services/sep24';
 
-import type { AuthenticatedRequest } from '../auth_middleware';
+import type { AuthenticatedRequest } from '../modules/auth/auth_middleware';
 import type { Response, NextFunction } from 'express';
 
 export function createRampRouter(): Router {
@@ -50,20 +56,27 @@ export function createRampRouter(): Router {
           userId: req.walletAddress!,
         });
         return res.status(201).json(result);
-      } catch (err: any) {
-        logger.error('[ramp] deposit initiation failed', { error: err?.message });
-        if (err instanceof CircuitBreakerOpenError || err?.code === 'CIRCUIT_OPEN') {
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        const isCircuit =
+          err instanceof CircuitBreakerOpenError ||
+          (typeof err === 'object' &&
+            err !== null &&
+            'code' in err &&
+            (err as { code: unknown }).code === 'CIRCUIT_OPEN');
+        logger.error('[ramp] deposit initiation failed', { error: errorMsg });
+        if (isCircuit) {
           return next(
             new AppError(
               'RAMP_CIRCUIT_OPEN',
               'Fiat ramp provider is currently unavailable (circuit open)',
               503,
-              err?.message
+              errorMsg
             )
           );
         }
         return next(
-          new AppError('DEPOSIT_INITIATION_FAILED', 'Failed to initiate deposit', 502, err?.message)
+          new AppError('DEPOSIT_INITIATION_FAILED', 'Failed to initiate deposit', 502, errorMsg)
         );
       }
     }
@@ -106,25 +119,27 @@ export function createRampRouter(): Router {
           userId: req.walletAddress!,
         });
         return res.status(201).json(result);
-      } catch (err: any) {
-        logger.error('[ramp] withdraw initiation failed', { error: err?.message });
-        if (err instanceof CircuitBreakerOpenError || err?.code === 'CIRCUIT_OPEN') {
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        const isCircuit =
+          err instanceof CircuitBreakerOpenError ||
+          (typeof err === 'object' &&
+            err !== null &&
+            'code' in err &&
+            (err as { code: unknown }).code === 'CIRCUIT_OPEN');
+        logger.error('[ramp] withdraw initiation failed', { error: errorMsg });
+        if (isCircuit) {
           return next(
             new AppError(
               'RAMP_CIRCUIT_OPEN',
               'Fiat ramp provider is currently unavailable (circuit open)',
               503,
-              err?.message
+              errorMsg
             )
           );
         }
         return next(
-          new AppError(
-            'WITHDRAW_INITIATION_FAILED',
-            'Failed to initiate withdraw',
-            502,
-            err?.message
-          )
+          new AppError('WITHDRAW_INITIATION_FAILED', 'Failed to initiate withdraw', 502, errorMsg)
         );
       }
     }
@@ -139,19 +154,26 @@ export function createRampRouter(): Router {
       try {
         const record = await syncTransactionStatus(req.params.id);
         return res.json(record);
-      } catch (err: any) {
-        logger.error('[ramp] status sync failed', { error: err?.message });
-        if (err instanceof CircuitBreakerOpenError || err?.code === 'CIRCUIT_OPEN') {
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        const isCircuit =
+          err instanceof CircuitBreakerOpenError ||
+          (typeof err === 'object' &&
+            err !== null &&
+            'code' in err &&
+            (err as { code: unknown }).code === 'CIRCUIT_OPEN');
+        logger.error('[ramp] status sync failed', { error: errorMsg });
+        if (isCircuit) {
           return next(
             new AppError(
               'RAMP_CIRCUIT_OPEN',
               'Fiat ramp provider is currently unavailable (circuit open)',
               503,
-              err?.message
+              errorMsg
             )
           );
         }
-        return next(new AppError('RAMP_TRANSACTION_NOT_FOUND', err?.message ?? 'Not found', 404));
+        return next(new AppError('RAMP_TRANSACTION_NOT_FOUND', errorMsg, 404));
       }
     }
   );
@@ -165,8 +187,14 @@ export function createRampRouter(): Router {
       try {
         const record = await getTransaction(req.params.id);
         return res.json(record);
-      } catch (err: any) {
-        return next(new AppError('RAMP_TRANSACTION_NOT_FOUND', err?.message ?? 'Not found', 404));
+      } catch (err: unknown) {
+        return next(
+          new AppError(
+            'RAMP_TRANSACTION_NOT_FOUND',
+            err instanceof Error ? err.message : String(err),
+            404
+          )
+        );
       }
     }
   );

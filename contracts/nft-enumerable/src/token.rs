@@ -4,6 +4,7 @@
 //! and standard non-fungible token trait implementations.
 
 use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String};
+use stellar_save_common::admin::require_owner;
 use stellar_tokens::non_fungible::{
     burnable::NonFungibleBurnable, enumerable::Enumerable, Base, NonFungibleToken,
 };
@@ -24,12 +25,11 @@ impl ExampleContract {
     }
 
     pub fn mint(e: &Env, to: Address) -> u32 {
-        let owner: Address = e
-            .storage()
-            .instance()
-            .get(&DataKey::Owner)
-            .expect("owner should be set");
-        owner.require_auth();
+        // Require auth from the stored owner.
+        // Delegates to stellar_save_common::admin::require_owner so the
+        // instance-storage owner-auth pattern is not duplicated here and in
+        // guess-the-number.
+        require_owner(e, &DataKey::Owner);
         Enumerable::sequential_mint(e, &to)
     }
 }

@@ -5,13 +5,13 @@
  */
 
 // snarkjs is loaded at runtime; import type only to avoid bundler issues.
-// In practice: import snarkjs from "snarkjs" in your bundler config.
-declare const snarkjs: typeof import("snarkjs");
+// In practice: import snarkjs from 'snarkjs' in your bundler config.
+declare const snarkjs: typeof import('snarkjs');
 
 export interface ProofInput {
-  value: bigint;      // private: raw attribute value
-  salt: bigint;       // private: random blinding factor
-  threshold: bigint;  // public: minimum required value
+  value: bigint; // private: raw attribute value
+  salt: bigint; // private: random blinding factor
+  threshold: bigint; // public: minimum required value
   commitment: bigint; // public: Poseidon(value, salt)
 }
 
@@ -20,8 +20,8 @@ export interface ZKProof {
   publicSignals: string[];
 }
 
-const WASM_PATH = "/zk/membership_proof.wasm";
-const ZKEY_PATH = "/zk/membership_proof_final.zkey";
+const WASM_PATH = '/zk/membership_proof.wasm';
+const ZKEY_PATH = '/zk/membership_proof_final.zkey';
 
 /**
  * Generates a Groth16 proof that `value >= threshold` without revealing `value`.
@@ -29,13 +29,13 @@ const ZKEY_PATH = "/zk/membership_proof_final.zkey";
 export async function generateProof(input: ProofInput): Promise<ZKProof> {
   const { proof, publicSignals } = await snarkjs.groth16.fullProve(
     {
-      value:      input.value.toString(),
-      salt:       input.salt.toString(),
-      threshold:  input.threshold.toString(),
+      value: input.value.toString(),
+      salt: input.salt.toString(),
+      threshold: input.threshold.toString(),
       commitment: input.commitment.toString(),
     },
     WASM_PATH,
-    ZKEY_PATH
+    ZKEY_PATH,
   );
   return { proof, publicSignals };
 }

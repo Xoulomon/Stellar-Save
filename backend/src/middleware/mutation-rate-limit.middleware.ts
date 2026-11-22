@@ -24,6 +24,11 @@ import { createAuthRateLimiterMiddleware } from '../rate_limiter';
 import type { NestMiddleware } from '@nestjs/common';
 import type { Request, Response, NextFunction } from 'express';
 
+/** Extend Express Request with optional userId set by upstream JWT middleware. */
+interface RequestWithUser extends Request {
+  userId?: string;
+}
+
 /**
  * Stricter rate limiting for mutation endpoints.
  * - Auth endpoints: 10 req/15min per IP
@@ -39,7 +44,7 @@ export class MutationRateLimitMiddleware implements NestMiddleware {
       method: req.method,
       path: req.path,
       ip: req.ip,
-      userId: (req as any).userId,
+      userId: (req as RequestWithUser).userId,
     });
 
     this.middleware(req, res, next);

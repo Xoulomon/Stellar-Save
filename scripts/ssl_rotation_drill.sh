@@ -278,7 +278,9 @@ fi
 echo "========================================================"
 echo ""
 
-# Copy report to workspace for CI artifact upload
-cp "${REPORT}" "ssl_drill_report.json" 2>/dev/null || true
+# Copy report to its canonical location (docs/releases/) for CI artifact upload
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+mkdir -p "${REPO_ROOT}/docs/releases"
+cp "${REPORT}" "${REPO_ROOT}/docs/releases/ssl_drill_report.json" 2>/dev/null || true
 
 [[ "${PASS}" == "true" ]] || exit 1

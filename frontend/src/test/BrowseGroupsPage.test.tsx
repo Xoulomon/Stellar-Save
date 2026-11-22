@@ -33,6 +33,8 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
+import { makePublicGroup } from './factories';
+
 const mockFetchGroups = vi.mocked(fetchGroups);
 
 const mockGroups: PublicGroup[] = [

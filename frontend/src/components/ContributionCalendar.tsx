@@ -2,7 +2,7 @@ import moment from 'moment';
 import { useMemo, useState } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 
-import type { GroupContribution, GroupCycle } from '../utils/groupApi';
+import type { GroupContribution, GroupCycle } from '../lib/groupRepository';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './ContributionCalendar.css';
 

@@ -179,11 +179,9 @@ mod pool_mutation_tests {
     }
 
     /// Catches: `checked_mul` replaced with `*` (overflow not caught)
-    #[test]
-    fn test_pool_overflow_returns_internal_error() {
-        let result = PoolCalculator::calculate_total_pool(i128::MAX, 2);
-        assert_eq!(result, Err(StellarSaveError::InternalError));
-    }
+    ///
+    /// Seeded boundary case moved to property_tests::pool_size_overflow_at_i128_max_is_detected
+    /// so that all pool-size invariants live in one place.
 
     /// Catches: multiplication replaced with addition
     #[test]

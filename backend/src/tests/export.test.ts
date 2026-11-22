@@ -39,17 +39,17 @@ const expect = (val: any) => ({
 
 import { EmailService } from '../email_service';
 import { ExportService } from '../export_service';
+import { GroupFactory } from '../../test/fixtures/factory';
 
 import type { UserInteraction, UserPreference } from '../models';
 
 describe('ExportService', () => {
   let exportService: ExportService;
   let emailService: EmailService;
-  const mockInteractions: UserInteraction[] = [
-    { userId: 'user123', groupId: 'group1', interactionType: 'join', timestamp: Date.now() },
-  ];
-  const mockPreferences = new Map<string, UserPreference>();
-  mockPreferences.set('user123', { userId: 'user123', tags: ['saving'] });
+  const mockInteractions: UserInteraction[] = GroupFactory.buildUserInteractions(1, 1, 1).map(
+    (i) => ({ ...i, userId: 'user123', groupId: 'group1' })
+  );
+  const mockPreferences = GroupFactory.buildUserPreferenceMap(['user123']);
 
   beforeEach(() => {
     emailService = new EmailService();

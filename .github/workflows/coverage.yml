@@ -53,6 +53,47 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+  # ─── Shared Utils Coverage (vitest + @vitest/coverage-v8) ──────
+  shared-utils:
+    name: Shared Utils Coverage
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/shared-utils
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run tests with coverage
+        run: pnpm test -- --coverage
+
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shared-utils-coverage
+          path: packages/shared-utils/coverage/
+          retention-days: 30
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: packages/shared-utils/coverage/lcov.info
+          flags: shared-utils
+          name: shared-utils-coverage
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
   # ─── Frontend Coverage (vitest + @vitest/coverage-v8) ───────────────────────
   frontend:
     name: Frontend Coverage

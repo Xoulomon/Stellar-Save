@@ -7,21 +7,9 @@ import { MemberList } from '../components/MemberList';
 import type { Member } from '../components/MemberList';
 
 const mockMembers: Member[] = [
-  {
-    address: 'GABC123DEF456GHI789JKL012MNO345PQR678STU901VWX234YZA567BCD890',
-    hasContributed: true,
-    hasPaidOut: false,
-  },
-  {
-    address: 'GXYZ987WVU654TSR321PON098MLK765JIH432GFE109DCB876AZY543XWV210',
-    hasContributed: false,
-    hasPaidOut: true,
-  },
-  {
-    address: 'GDEF456ABC123XYZ789MNO012PQR345STU678VWX901YZA234BCD567EFG890',
-    hasContributed: true,
-    hasPaidOut: true,
-  },
+  makeMember({ address: 'GABC123DEF456GHI789JKL012MNO345PQR678STU901VWX234YZA567BCD890' }) as unknown as Member,
+  makeMember({ address: 'GXYZ987WVU654TSR321PON098MLK765JIH432GFE109DCB876AZY543XWV210' }) as unknown as Member,
+  makeMember({ address: 'GDEF456ABC123XYZ789MNO012PQR345STU678VWX901YZA234BCD567EFG890' }) as unknown as Member,
 ];
 
 describe('MemberList', () => {

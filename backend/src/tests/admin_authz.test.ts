@@ -43,7 +43,7 @@ describe('Admin Endpoints Authorization', () => {
         path: '/admin/users/user_123',
         body: { updates: { name: 'Updated' } }, // Missing adminId
       };
-      expect(req.body.adminId).toBeUndefined();
+      expect((req.body as Record<string, unknown>).adminId).toBeUndefined();
     });
 
     it('should require authentication and adminId to delete user', async () => {
@@ -61,7 +61,7 @@ describe('Admin Endpoints Authorization', () => {
         path: '/admin/users/user_123',
         body: {}, // Missing adminId
       };
-      expect(req.body.adminId).toBeUndefined();
+      expect((req.body as Record<string, unknown>).adminId).toBeUndefined();
     });
   });
 
@@ -96,7 +96,7 @@ describe('Admin Endpoints Authorization', () => {
         path: '/admin/groups/group_123/flag',
         body: { flagged: true }, // Missing adminId
       };
-      expect(req.body.adminId).toBeUndefined();
+      expect((req.body as Record<string, unknown>).adminId).toBeUndefined();
     });
   });
 
@@ -115,41 +115,38 @@ describe('Admin Endpoints Authorization', () => {
   describe('Audit Trail of Admin Actions', () => {
     it('should log user updates to audit trail', async () => {
       const action = {
-        type: 'UPDATE_USER',
+        action: 'UPDATE_USER',
+        userId: 'admin_001',
         targetId: 'user_123',
         targetType: 'Member',
-        adminId: 'admin_001',
-        timestamp: Date.now(),
         metadata: { changes: { name: 'New Name' } },
       };
-      expect(action.type).toBe('UPDATE_USER');
-      expect(action.adminId).toBe('admin_001');
+      expect(action.action).toBe('UPDATE_USER');
+      expect(action.userId).toBe('admin_001');
     });
 
     it('should log user deletions to audit trail', async () => {
       const action = {
-        type: 'DELETE_USER',
+        action: 'DELETE_USER',
+        userId: 'admin_001',
         targetId: 'user_123',
         targetType: 'Member',
-        adminId: 'admin_001',
-        timestamp: Date.now(),
       };
-      expect(action.type).toBe('DELETE_USER');
-      expect(action.adminId).toBe('admin_001');
+      expect(action.action).toBe('DELETE_USER');
+      expect(action.userId).toBe('admin_001');
     });
 
     it('should log group flags to audit trail', async () => {
       const action = {
-        type: 'FLAG_GROUP',
+        action: 'FLAG_GROUP',
+        userId: 'admin_001',
         targetId: 'group_123',
         targetType: 'Group',
-        adminId: 'admin_001',
-        timestamp: Date.now(),
         metadata: { flagged: true },
       };
-      expect(action.type).toBe('FLAG_GROUP');
-      expect(action.adminId).toBe('admin_001');
-      expect(action.metadata.flagged).toBe(true);
+      expect(action.action).toBe('FLAG_GROUP');
+      expect(action.userId).toBe('admin_001');
+      expect((action.metadata as any).flagged).toBe(true);
     });
   });
 

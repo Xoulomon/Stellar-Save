@@ -26,6 +26,12 @@
 //!
 //! Review the diff in `scripts/benchmark_baseline.json` before committing.
 
+
+//! bash scripts/benchmark_regression.sh --update-baseline --contract fungible-allowlist
+//! ```
+//!
+//! Review the diff in `scripts/benchmark_baseline.json` before committing.
+
 extern crate std;
 
 #[cfg(test)]

@@ -15,3 +15,7 @@ mod test;
 mod test_utils;
 #[cfg(test)]
 mod benchmark_tests;
+#[cfg(test)]
+mod fuzz_tests;
+#[cfg(test)]
+mod cross_contract_tests;

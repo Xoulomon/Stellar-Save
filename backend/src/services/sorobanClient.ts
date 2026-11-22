@@ -5,7 +5,9 @@
  * Decouples business logic from network client details.
  */
 
+import { withRetry } from '@stellar-save/shared-utils';
 
+import { rpcRetryPolicy } from '../lib/retry_policies';
 import { getSorobanPool } from '../lib/soroban';
 import { logger } from '../logger';
 
@@ -121,36 +123,43 @@ export class SorobanClient {
   }
 
   /**
-   * Retry logic for RPC calls
+   * Retry logic for RPC calls using shared withRetry utility and rpcRetryPolicy
    */
-  private async withRetry<T>(fn: () => Promise<T>, attempt: number = 1): Promise<T> {
-    try {
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error(`RPC call timed out after ${this.config.timeoutMs}ms`)),
-          this.config.timeoutMs
-        )
-      );
-
-      return await Promise.race([fn(), timeoutPromise]);
-    } catch (error) {
-      if (attempt < this.config.retryAttempts) {
-        logger.warn(
-          `Soroban RPC call failed, retrying (attempt ${attempt}/${this.config.retryAttempts})`,
-          {
-            error: error instanceof Error ? error.message : String(error),
-          }
-        );
-        const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
-        await new Promise((resolve) => setTimeout(resolve, backoffMs));
-        return this.withRetry(fn, attempt + 1);
+  private async withRetry<T>(fn: () => Promise<T>): Promise<T> {
+    return withRetry(
+      async () => {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            timer = setTimeout(
+              () => reject(new Error(`RPC call timed out after ${this.config.timeoutMs}ms`)),
+              this.config.timeoutMs
+            );
+          });
+          return await Promise.race([fn(), timeoutPromise]);
+        } finally {
+          if (timer) clearTimeout(timer);
+        }
+      },
+      {
+        ...rpcRetryPolicy,
+        attempts: this.config.retryAttempts,
+        onRetry: ({ attempt, error }) => {
+          logger.warn(
+            `Soroban RPC call failed, retrying (attempt ${attempt + 1}/${this.config.retryAttempts})`,
+            {
+              error: error instanceof Error ? error.message : String(error),
+            }
+          );
+        },
       }
+    ).catch((error: unknown) => {
       logger.error('Soroban RPC call failed after retries', {
         error: error instanceof Error ? error.message : String(error),
         attempts: this.config.retryAttempts,
       });
       throw error;
-    }
+    });
   }
 }
 

@@ -9,7 +9,7 @@
 
 import { CircuitBreakerOpenError } from './errors';
 
-export interface CircuitBreakerOptions<TResult = any> {
+export interface CircuitBreakerOptions<TResult = unknown> {
   /** Request timeout in ms (default 5000) */
   timeout?: number;
   /** Error percentage threshold (0-100) to trip circuit (default 50) */
@@ -19,7 +19,7 @@ export interface CircuitBreakerOptions<TResult = any> {
   /** Minimum number of total requests before evaluating threshold (default 3) */
   volumeThreshold?: number;
   /** Optional fallback handler invoked on error or open circuit */
-  fallback?: (error: Error, ...args: any[]) => TResult | Promise<TResult>;
+  fallback?: (error: Error, ...args: unknown[]) => TResult | Promise<TResult>;
   /** Identifier used when reporting state changes (default 'circuit') */
   name?: string;
   /** Invoked whenever the circuit moves between states */
@@ -42,7 +42,7 @@ export interface CircuitBreakerStats {
 
 export { CircuitBreakerOpenError };
 
-export class CircuitBreaker<TArgs extends any[] = any[], TResult = any> {
+export class CircuitBreaker<TArgs extends unknown[] = unknown[], TResult = unknown> {
   private state: CircuitState = CircuitState.CLOSED;
   private failureCount = 0;
   private successCount = 0;
@@ -120,7 +120,7 @@ export class CircuitBreaker<TArgs extends any[] = any[], TResult = any> {
       if (timer) clearTimeout(timer);
       this.onSuccess();
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (timer) clearTimeout(timer);
       const error = err instanceof Error ? err : new Error(String(err));
       this.onFailure();

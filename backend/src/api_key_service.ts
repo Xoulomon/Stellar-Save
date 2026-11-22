@@ -19,7 +19,29 @@ export interface ApiKeyInfo {
   createdAt: Date;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- apiKey/apiKeyUsage are pending Prisma migration models; not yet in generated client
+type ApiKeyDb = any;
+
+/**
+ * API Key Service
+ *
+ * Refactored for dependency injection (Issue #1701):
+ * - DB client and logger are accepted via constructor
+ */
+export interface ApiKeyServiceDeps {
+  db?: ApiKeyDb;
+  logger?: { info: (...a: unknown[]) => void; error: (...a: unknown[]) => void; warn: (...a: unknown[]) => void };
+}
+
 export class ApiKeyService {
+  private readonly db: ApiKeyDb;
+  private readonly log: NonNullable<ApiKeyServiceDeps['logger']>;
+
+  constructor(deps?: ApiKeyServiceDeps) {
+    this.db = deps?.db ?? (prisma as ApiKeyDb);
+    this.log = deps?.logger ?? logger;
+  }
+
   async generateKey(
     userId: string,
     name: string,
@@ -32,7 +54,7 @@ export class ApiKeyService {
 
     const rateLimits: Record<string, number> = { free: 100, pro: 1000, enterprise: 10000 };
 
-    const apiKey = await (prisma as any).apiKey.create({
+    const apiKey: ApiKeyInfo = await this.db.apiKey.create({
       data: {
         keyHash,
         keyPrefix,
@@ -44,8 +66,8 @@ export class ApiKeyService {
       },
     });
 
-    logger.info('API key generated', { userId, tier });
-    return { key: fullKey, info: apiKey as any };
+    this.log.info('API key generated', { userId, tier });
+    return { key: fullKey, info: apiKey };
   }
 
   async validateKey(
@@ -53,7 +75,7 @@ export class ApiKeyService {
   ): Promise<{ valid: boolean; keyId?: string; userId?: string; rateLimit?: number }> {
     const keyHash = crypto.createHash(KEY_HASH_ALGORITHM).update(key).digest('hex');
 
-    const apiKey = await (prisma as any).apiKey.findUnique({
+    const apiKey: ApiKeyInfo & { expiresAt?: Date } = await this.db.apiKey.findUnique({
       where: { keyHash },
     });
 
@@ -65,7 +87,7 @@ export class ApiKeyService {
       return { valid: false };
     }
 
-    await (prisma as any).apiKey.update({
+    await this.db.apiKey.update({
       where: { id: apiKey.id },
       data: { lastUsedAt: new Date() },
     });
@@ -74,18 +96,18 @@ export class ApiKeyService {
   }
 
   async getKeysForUser(userId: string): Promise<ApiKeyInfo[]> {
-    return (prisma as any).apiKey.findMany({
+    return this.db.apiKey.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async revokeKey(keyId: string): Promise<void> {
-    await (prisma as any).apiKey.update({
+    await this.db.apiKey.update({
       where: { id: keyId },
       data: { isActive: false },
     });
-    logger.info('API key revoked', { keyId });
+    this.log.info('API key revoked', { keyId });
   }
 
   async recordUsage(
@@ -94,27 +116,36 @@ export class ApiKeyService {
     method: string,
     statusCode: number
   ): Promise<void> {
-    await (prisma as any).apiKeyUsage.create({
+    await this.db.apiKeyUsage.create({
       data: { keyId, endpoint, method, statusCode },
     });
   }
 
-  async getUsageStats(keyId: string, hoursBack = 24): Promise<any> {
+  async getUsageStats(
+    keyId: string,
+    hoursBack = 24
+  ): Promise<{
+    keyId: string;
+    period: { hours: number; since: Date };
+    requestsByMethod: Record<string, number>;
+    totalRequests: number;
+  }> {
     const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
-    const usage = await (prisma as any).apiKeyUsage.groupBy({
-      by: ['method', 'statusCode'],
-      where: { keyId, createdAt: { gte: since } },
-      _count: { id: true },
-    });
+    const usage: Array<{ method: string; statusCode: number; _count: { id: number } }> =
+      await this.db.apiKeyUsage.groupBy({
+        by: ['method', 'statusCode'],
+        where: { keyId, createdAt: { gte: since } },
+        _count: { id: true },
+      });
 
     return {
       keyId,
       period: { hours: hoursBack, since },
-      requestsByMethod: usage.reduce((acc: any, u: any) => {
-        acc[u.method] = (acc[u.method] || 0) + u._count.id;
+      requestsByMethod: usage.reduce<Record<string, number>>((acc, u) => {
+        acc[u.method] = (acc[u.method] ?? 0) + u._count.id;
         return acc;
       }, {}),
-      totalRequests: usage.reduce((s: number, u: any) => s + u._count.id, 0),
+      totalRequests: usage.reduce((s, u) => s + u._count.id, 0),
     };
   }
 }

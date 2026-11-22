@@ -8,7 +8,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "lint": "eslint . --ext .ts,.tsx",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "test:quarantine": "jest --config jest.quarantine.config.js"
   },
   "dependencies": {
     "@stellar-save/sdk": "workspace:*",

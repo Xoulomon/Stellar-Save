@@ -4,6 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { OverviewPanel } from '../components/panels/OverviewPanel';
 
 import type { DetailedGroup, GroupContribution, GroupCycle } from '../utils/groupApi';
+import { makeGroup } from './factories';
 
 const mockGroup: DetailedGroup = {
   id: 'g1',

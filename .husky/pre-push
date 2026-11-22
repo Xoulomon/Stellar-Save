@@ -1,1 +1,7 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
 
+# Run lint-staged on staged files before pushing to catch issues early.
+# This complements the pre-commit hook and keeps the same lint-staged config
+# defined in package.json (no duplicated command lists here).
+npx --no-install lint-staged

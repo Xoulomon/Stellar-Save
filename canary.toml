@@ -1,3 +1,7 @@
+# canary.toml — Canary deployment configuration read by scripts/canary_deploy.sh,
+# scripts/canary_monitor.sh, and scripts/canary_promote.sh.
+# Controls traffic split, bake time, error thresholds, and promotion steps.
+
 # Canary Deployment Configuration
 # Controls how the canary contract is promoted or rolled back.
 

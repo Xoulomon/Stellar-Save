@@ -1,0 +1,14 @@
+# Group list data states come from fixed in-process test fixtures.
+appId: com.stellarsave.mobile
+---
+- runFlow: setup.yaml
+- tapOn:
+    id: "groups-tab"
+- assertVisible:
+    id: "groups-screen"
+- assertVisible:
+    id: "group-card-1"
+- assertVisible:
+    text: "Lagos Ajo Circle"
+- assertVisible:
+    text: "Accra Savings Circle"

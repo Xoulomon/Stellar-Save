@@ -53,6 +53,7 @@ const REJECTED: Symbol = symbol_short!("REJECTED");
 const MODE_OFF: u32 = 0;
 const MODE_REFUND: u32 = 1;
 const MODE_CONTRIBUTE: u32 = 2;
+const MODE_EMERGENCY_WITHDRAW: u32 = 3;
 
 /// A token that calls back into Stellar-Save while a transfer is in flight.
 ///
@@ -116,6 +117,9 @@ impl ReentrantToken {
             MODE_REFUND => client.try_request_refund(&group_id, &0u32, &actor).is_err(),
             MODE_CONTRIBUTE => client
                 .try_contribute(&group_id, &actor, &CONTRIBUTION)
+                .is_err(),
+            MODE_EMERGENCY_WITHDRAW => client
+                .try_emergency_withdraw(&group_id, &actor)
                 .is_err(),
             _ => false,
         };
@@ -321,4 +325,53 @@ fn a_disarmed_token_leaves_the_happy_path_intact() {
     assert_eq!(record.cycle, 0);
     assert!(!fixture.token_client.was_rejected());
     assert!(refund_record(&fixture, group_id).is_some());
+}
+
+#[test]
+fn emergency_withdraw_removes_profile_before_calling_the_token() {
+    let group_id = 5u64;
+    let fixture = setup(group_id);
+
+    // Fast-forward ledger time past emergency withdrawal threshold (3 cycles inactive)
+    let threshold_time = fixture.env.ledger().timestamp() + (CYCLE_DURATION * 3);
+    fixture.env.ledger().set_timestamp(threshold_time);
+
+    // Seed group balance so emergency_withdraw can deduct
+    fixture.env.as_contract(&fixture.contract_id, || {
+        fixture.env.storage().persistent().set(
+            &StorageKeyBuilder::group_balance(group_id),
+            &CONTRIBUTION,
+        );
+    });
+
+    fixture.token_client.arm(
+        &fixture.contract_id,
+        &MODE_EMERGENCY_WITHDRAW,
+        &group_id,
+        &fixture.member,
+    );
+
+    let result = fixture
+        .client
+        .try_emergency_withdraw(&group_id, &fixture.member);
+    assert!(result.is_ok());
+
+    // The reentrant call must have been rejected because the member profile was already removed
+    assert!(
+        fixture.token_client.was_rejected(),
+        "reentrant emergency_withdraw should have been rejected by NotMember guard"
+    );
+
+    // Member profile must be absent
+    let has_profile: bool = fixture.env.as_contract(&fixture.contract_id, || {
+        fixture
+            .env
+            .storage()
+            .persistent()
+            .has(&StorageKeyBuilder::member_profile(
+                group_id,
+                fixture.member.clone(),
+            ))
+    });
+    assert!(!has_profile);
 }

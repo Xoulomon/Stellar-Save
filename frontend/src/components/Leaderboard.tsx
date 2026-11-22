@@ -1,18 +1,16 @@
 import { Box, Stack, Typography, Tabs, Tab, Skeleton, Alert, Chip, Tooltip } from '@mui/material';
 import { useState } from 'react';
-
-import { formatAddress } from '../utils/formatAddress';
-import { formatAmount } from '../utils/formatAmount';
+import type { SyntheticEvent } from 'react';
+import { formatAddress, formatAmount } from '@shared-utils/formatting';
 
 import type { LeaderboardGroup, LeaderboardMember, TimePeriod } from '../types/leaderboard';
-import type { SyntheticEvent } from 'react';
 
 // ── Period selector ───────────────────────────────────────────────────────────
 
-const PERIODS: { value: TimePeriod; label: string }[] = [
-  { value: 'week', label: 'This Week' },
-  { value: 'month', label: 'This Month' },
-  { value: 'all-time', label: 'All Time' },
+const PERIODS: { value: TimePeriod; label: 'thisWeek' | 'thisMonth' | 'allTime' }[] = [
+  { value: 'week', label: 'thisWeek' },
+  { value: 'month', label: 'thisMonth' },
+  { value: 'all-time', label: 'allTime' },
 ];
 
 interface PeriodTabsProps {
@@ -21,15 +19,16 @@ interface PeriodTabsProps {
 }
 
 export function PeriodTabs({ value, onChange }: PeriodTabsProps) {
+  const { t } = useTranslation();
   return (
     <Tabs
       value={value}
       onChange={(_event: SyntheticEvent, v: TimePeriod) => onChange(v)}
-      aria-label="Leaderboard time period"
+      aria-label={t('leaderboard.timePeriod')}
       sx={{ borderBottom: 1, borderColor: 'divider' }}
     >
       {PERIODS.map((p) => (
-        <Tab key={p.value} value={p.value} label={p.label} />
+        <Tab key={p.value} value={p.value} label={p.label === 'thisWeek' ? t('leaderboard.thisWeek') : p.label === 'thisMonth' ? t('leaderboard.thisMonth') : t('leaderboard.allTime')} />
       ))}
     </Tabs>
   );
@@ -40,9 +39,10 @@ export function PeriodTabs({ value, onChange }: PeriodTabsProps) {
 const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
 function RankBadge({ rank }: { rank: number }) {
+  const { t } = useTranslation();
   if (rank <= 3) {
     return (
-      <Typography fontSize={22} lineHeight={1} aria-label={`Rank ${rank}`}>
+      <Typography fontSize={22} lineHeight={1} aria-label={t('leaderboard.rank', { rank })}>
         {MEDAL[rank]}
       </Typography>
     );
@@ -69,20 +69,21 @@ function RankBadge({ rank }: { rank: number }) {
 // ── Trend indicator ───────────────────────────────────────────────────────────
 
 function TrendIcon({ trend }: { trend: 'up' | 'down' | 'stable' }) {
+  const { t } = useTranslation();
   if (trend === 'up')
     return (
-      <Typography color="success.main" fontSize={14} aria-label="Trending up">
+      <Typography color="success.main" fontSize={14} aria-label={t('leaderboard.trendingUp')}>
         ▲
       </Typography>
     );
   if (trend === 'down')
     return (
-      <Typography color="error.main" fontSize={14} aria-label="Trending down">
+      <Typography color="error.main" fontSize={14} aria-label={t('leaderboard.trendingDown')}>
         ▼
       </Typography>
     );
   return (
-    <Typography color="text.disabled" fontSize={14} aria-label="Stable">
+    <Typography color="text.disabled" fontSize={14} aria-label={t('leaderboard.stable')}>
       —
     </Typography>
   );
@@ -149,6 +150,7 @@ interface GroupRowProps {
 }
 
 function GroupRow({ group, highlight }: GroupRowProps) {
+  const { t } = useTranslation();
   return (
     <Box
       sx={{
@@ -175,14 +177,18 @@ function GroupRow({ group, highlight }: GroupRowProps) {
           {group.name}
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          {group.memberCount} members · {group.completedCycles}/{group.totalCycles} cycles
+          {t('leaderboard.memberCycleSummary', {
+            members: group.memberCount,
+            completed: group.completedCycles,
+            total: group.totalCycles,
+          })}
         </Typography>
       </Box>
 
       {/* Completion rate */}
       <Stack spacing={0.5}>
         <Typography variant="caption" color="text.secondary">
-          Completion
+          {t('leaderboard.completion')}
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <ProgressBar
@@ -198,7 +204,7 @@ function GroupRow({ group, highlight }: GroupRowProps) {
       {/* On-time rate */}
       <Stack spacing={0.5}>
         <Typography variant="caption" color="text.secondary">
-          On-time
+          {t('leaderboard.onTime')}
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <ProgressBar value={group.onTimeRate} color="warning.main" />
@@ -211,7 +217,7 @@ function GroupRow({ group, highlight }: GroupRowProps) {
       {/* Volume */}
       <Stack spacing={0}>
         <Typography variant="caption" color="text.secondary">
-          Volume
+          {t('leaderboard.volume')}
         </Typography>
         <Typography variant="caption" fontWeight={600}>
           {formatAmount(group.totalVolume, { decimals: 0 })}
@@ -232,6 +238,7 @@ interface MemberRowProps {
 }
 
 function MemberRow({ member, highlight }: MemberRowProps) {
+  const { t } = useTranslation();
   return (
     <Box
       sx={{
@@ -272,7 +279,7 @@ function MemberRow({ member, highlight }: MemberRowProps) {
       {/* On-time rate */}
       <Stack spacing={0.5}>
         <Typography variant="caption" color="text.secondary">
-          On-time
+            {t('leaderboard.onTime')}
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <ProgressBar
@@ -288,7 +295,7 @@ function MemberRow({ member, highlight }: MemberRowProps) {
       {/* Total contributed */}
       <Stack spacing={0}>
         <Typography variant="caption" color="text.secondary">
-          Contributed
+          {t('leaderboard.contributed')}
         </Typography>
         <Typography variant="caption" fontWeight={600}>
           {formatAmount(member.totalContributed, { decimals: 0 })}
@@ -298,7 +305,7 @@ function MemberRow({ member, highlight }: MemberRowProps) {
       {/* Streak */}
       <Box sx={{ textAlign: 'center' }}>
         {member.streak > 0 ? (
-          <Tooltip title={`${member.streak}-cycle streak`}>
+          <Tooltip title={t('leaderboard.streak', { count: member.streak })}>
             <Chip label={`🔥 ${member.streak}`} size="small" sx={{ fontSize: 11, height: 22 }} />
           </Tooltip>
         ) : (
@@ -317,6 +324,7 @@ function MemberRow({ member, highlight }: MemberRowProps) {
 // ── Table header ──────────────────────────────────────────────────────────────
 
 function GroupTableHeader() {
+  const { t } = useTranslation();
   return (
     <Box
       sx={{
@@ -329,9 +337,9 @@ function GroupTableHeader() {
         borderColor: 'divider',
       }}
     >
-      {['#', 'Group', 'Completion', 'On-time', 'Volume', ''].map((h) => (
+      {['#', t('leaderboard.groupHeader'), t('leaderboard.completion'), t('leaderboard.onTime'), t('leaderboard.volume'), ''].map((h, i) => (
         <Typography
-          key={h}
+          key={`${i}-${h}`}
           variant="caption"
           color="text.secondary"
           fontWeight={600}
@@ -345,6 +353,7 @@ function GroupTableHeader() {
 }
 
 function MemberTableHeader() {
+  const { t } = useTranslation();
   return (
     <Box
       sx={{
@@ -357,7 +366,7 @@ function MemberTableHeader() {
         borderColor: 'divider',
       }}
     >
-      {['#', '', 'Member', 'On-time', 'Contributed', 'Streak', ''].map((h, i) => (
+      {['#', '', t('leaderboard.memberHeader'), t('leaderboard.onTime'), t('leaderboard.contributed'), t('leaderboard.streakHeader'), ''].map((h, i) => (
         <Typography
           key={i}
           variant="caption"
@@ -419,6 +428,7 @@ export function Leaderboard({
   onPeriodChange,
   generatedAt,
 }: LeaderboardProps) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<'groups' | 'members'>('groups');
 
   return (
@@ -445,7 +455,7 @@ export function Leaderboard({
           }}
           aria-pressed={tab === 'groups'}
         >
-          🏆 Top Groups
+          {t('leaderboard.topGroups')}
         </Box>
         <Box
           component="button"
@@ -464,7 +474,7 @@ export function Leaderboard({
           }}
           aria-pressed={tab === 'members'}
         >
-          ⭐ Top Contributors
+          {t('leaderboard.topContributors')}
         </Box>
       </Box>
 
@@ -483,14 +493,16 @@ export function Leaderboard({
               <SkeletonRows count={5} cols={6} />
             ) : groups.length === 0 ? (
               <Typography color="text.secondary" textAlign="center" py={4}>
-                No data available
+                {t('leaderboard.noData')}
               </Typography>
             ) : (
-              <Stack spacing={0}>
-                {groups.map((g) => (
-                  <GroupRow key={g.id} group={g} />
-                ))}
-              </Stack>
+              <VirtualizedList
+                items={groups}
+                itemHeight={72}
+                getKey={(group) => group.id}
+                label="Leaderboard groups"
+                renderItem={(group) => <GroupRow group={group} />}
+              />
             )}
           </Box>
         ) : (
@@ -500,18 +512,21 @@ export function Leaderboard({
               <SkeletonRows count={5} cols={7} />
             ) : members.length === 0 ? (
               <Typography color="text.secondary" textAlign="center" py={4}>
-                No data available
+                {t('leaderboard.noData')}
               </Typography>
             ) : (
-              <Stack spacing={0}>
-                {members.map((m) => (
+              <VirtualizedList
+                items={members}
+                itemHeight={72}
+                getKey={(member) => member.address}
+                label="Leaderboard members"
+                renderItem={(member) => (
                   <MemberRow
-                    key={m.address}
-                    member={m}
-                    highlight={m.address === currentUserAddress}
+                    member={member}
+                    highlight={member.address === currentUserAddress}
                   />
-                ))}
-              </Stack>
+                )}
+              />
             )}
           </Box>
         )}
@@ -520,7 +535,7 @@ export function Leaderboard({
       {/* Footer */}
       {generatedAt && !isLoading && (
         <Typography variant="caption" color="text.disabled" textAlign="right" px={2} pb={1}>
-          Updated {generatedAt.toLocaleTimeString()}
+          {t('leaderboard.updated', { time: generatedAt.toLocaleTimeString() })}
         </Typography>
       )}
     </Stack>

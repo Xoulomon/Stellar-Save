@@ -1,5 +1,11 @@
 # Issue #1556 — Add Analytics Event Contract Tests
 
+> This analytics event contract is separate from the Soroban contract/indexer
+> event schema contract covered by `backend/src/tests/events-schema-contract.test.ts`.
+> The latter validates `contracts/stellar-save/src/events.rs` against
+> `packages/events-schema/schema.json`; this issue remains focused on analytics
+> `eventType` and `eventData` validation.
+
 ## Summary
 
 `backend/src/analytics_service.ts` exposes `recordEvent(eventType, eventName,

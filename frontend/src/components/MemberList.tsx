@@ -1,3 +1,4 @@
+import { formatAddress } from '@shared-utils/formatting';
 import { useState, useMemo } from 'react';
 
 import './MemberList.css';
@@ -21,7 +22,7 @@ interface MemberListProps {
 
 function truncateAddress(address: string): string {
   if (address.length <= 12) return address;
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  return formatAddress(address);
 }
 
 export function MemberList({ members, className = '' }: MemberListProps) {

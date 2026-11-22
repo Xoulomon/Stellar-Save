@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "contract": "StellarSaveContract",
+  "methods": [
+    "create_group",
+    "get_group",
+    "join_group",
+    "contribute",
+    "execute_payout",
+    "list_members",
+    "is_member",
+    "get_contribution_status",
+    "is_complete",
+    "pause_group",
+    "unpause_group",
+    "activate_group",
+    "get_next_recipient",
+    "get_group_balance"
+  ]
+}

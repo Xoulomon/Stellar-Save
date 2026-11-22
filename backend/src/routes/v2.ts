@@ -1,11 +1,11 @@
-
-
 import { randomBytes } from 'crypto';
 
 import { Router } from 'express';
 
 import { config } from '../config';
 import { AppError } from '../lib/errors';
+import { parseOffsetParams, paginateArray } from '../lib/pagination';
+import { withApiVersion } from '../lib/response-envelope';
 import { logger } from '../logger';
 import { ValidationMiddleware } from '../middleware/validation';
 import { groupInvitationSchema } from '../middleware/validation.schemas';
@@ -23,7 +23,7 @@ import type { Request, Response, NextFunction } from 'express';
 export function migrateV1ToV2<T extends Record<string, unknown>>(
   v1Response: T
 ): T & { apiVersion: 'v2' } {
-  return { ...v1Response, apiVersion: 'v2' as const };
+  return withApiVersion(v1Response, 'v2');
 }
 
 export function createV2Router(services: V1Services): Router {
@@ -33,11 +33,14 @@ export function createV2Router(services: V1Services): Router {
   // Health — v2 adds uptime
   router.get('/health', (_req: Request, res: Response) => {
     res.json(
-      migrateV1ToV2({
-        status: 'ok',
-        version: 'v2',
-        uptime: process.uptime(),
-      })
+      withApiVersion(
+        {
+          status: 'ok',
+          version: 'v2',
+          uptime: process.uptime(),
+        },
+        'v2'
+      )
     );
   });
 
@@ -55,12 +58,15 @@ export function createV2Router(services: V1Services): Router {
     const up = database.up && horizon.up && cache.up;
 
     res.status(up ? 200 : 503).json(
-      migrateV1ToV2({
-        status: up ? 'ready' : 'not_ready',
-        version: 'v2',
-        responseTimeMs,
-        dependencies: { database, horizon, cache },
-      })
+      withApiVersion(
+        {
+          status: up ? 'ready' : 'not_ready',
+          version: 'v2',
+          responseTimeMs,
+          dependencies: { database, horizon, cache },
+        },
+        'v2'
+      )
     );
   });
 
@@ -68,7 +74,7 @@ export function createV2Router(services: V1Services): Router {
   router.get('/recommendations/:userId', (req: Request, res: Response) => {
     const { userId } = req.params;
     const recommendations = engine.getRecommendations(userId, 'collaborative');
-    res.json(migrateV1ToV2({ userId, algorithm: 'collaborative', recommendations }));
+    res.json(withApiVersion({ userId, algorithm: 'collaborative', recommendations }, 'v2'));
   });
 
   // Group invitation email
@@ -80,11 +86,28 @@ export function createV2Router(services: V1Services): Router {
       try {
         const { groupId, email } = req.body;
 
+        // Look up the real group so we don't send fabricated data to clients
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const group = await (prisma as any).group.findUnique({
+          where: { id: groupId },
+          select: { id: true, name: true, creatorId: true },
+        });
+
+        if (!group) {
+          next(new AppError('GROUP_NOT_FOUND', 'Group not found', 404));
+          return;
+        }
+
         // Generate token for join link
         const joinToken = randomBytes(32).toString('hex');
 
         // Persist invitation in DB
-        const invitation = await (prisma as any).groupInvitation.create({
+        const db = prisma as unknown as {
+          groupInvitation: {
+            create: (args: unknown) => Promise<{ id: string }>;
+          };
+        };
+        const invitation = await db.groupInvitation.create({
           data: {
             groupId,
             recipientEmail: email,
@@ -96,53 +119,52 @@ export function createV2Router(services: V1Services): Router {
         const frontendUrl = config.urls.frontend;
         const joinLink = `${frontendUrl}/groups/join?token=${joinToken}`;
 
-        const groupName = `Group ${groupId}`; // TODO: fetch actual group name if available
-        const creatorUserId = 'unknown'; // TODO: extract from auth context
+        const groupName = group.name;
+        const creatorUserId = (req as Request & { user?: { id?: string } }).user?.id ?? group.creatorId;
 
         // Ensure a template exists in the system; use a dedicated template key.
         const templateKey = 'email_group_invitation';
         const subject = 'You are invited to join {{groupName}}';
 
+        const emailData: Record<string, unknown> = {
+          userName: email,
+          groupName,
+          joinLink,
+          creatorUserId,
+        };
+
         await notificationService.sendEmail(
           email,
           templateKey,
-          {
-            userName: email,
-            groupName,
-            joinLink,
-            creatorUserId,
-          } as any,
+          emailData,
           subject.replace('{{groupName}}', groupName)
         );
 
         res.status(201).json(
-          migrateV1ToV2({
-            invitationId: invitation.id,
-            status: 'sent',
-            joinLink,
-          })
+          withApiVersion(
+            {
+              invitationId: invitation.id,
+              status: 'sent',
+              joinLink,
+            },
+            'v2'
+          )
         );
-      } catch (err: any) {
-        logger.error('Failed to send group invitation', { error: err?.message || String(err) });
+      } catch (err: unknown) {
+        logger.error('Failed to send group invitation', {
+          error: err instanceof Error ? err.message : String(err),
+        });
         next(new AppError('GROUP_INVITATION_FAILED', 'Failed to send invitation', 500));
       }
     }
   );
 
-  // Backup list — v2 adds pagination
+  // Backup list — v2 now uses shared pagination utility with offset/limit
   router.get('/backup', (req: Request, res: Response) => {
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(100, parseInt(req.query.limit as string) || 20);
-    const all = backupService.listJobs();
-    const start = (page - 1) * limit;
-    res.json(
-      migrateV1ToV2({
-        data: all.slice(start, start + limit),
-        total: all.length,
-        page,
-        limit,
-      })
-    );
+    const pageParams = parseOffsetParams(req.query, { limit: 20 });
+    const allJobs = backupService.listJobs();
+    const result = paginateArray(allJobs, pageParams);
+    res.json(withApiVersion(result, 'v2'));
   });
 
   // All other v2 routes are stubs — return 501 with migration hint

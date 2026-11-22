@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- page.evaluate callbacks run in browser context; IndexedDB and window property access requires `any` to bypass TypeScript's strict browser types */
 import { injectMockWallet } from './helpers/stellar-standalone';
 
 /**
@@ -12,7 +13,7 @@ import { injectMockWallet } from './helpers/stellar-standalone';
  * 4. UI updates to reflect successful sync
  */
 
-test.describe('Offline Contribution Queue', () => {
+test.describe('@journey Offline Contribution Queue', () => {
   test('should queue contribution while offline and replay on reconnect', async ({ page, context }) => {
     // Set up mock wallet
     await injectMockWallet(page, 'contributor');

@@ -5,13 +5,7 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch as any;
 
 jest.mock('../prisma_client', () => ({
-  prisma: {
-    rampTransaction: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-    },
-  },
+  prisma: require('../../tests/helpers/prismaMock').createPrismaMock(),
 }));
 
 const TOML_RESPONSE = `AUTH_SERVER = "https://anchor.example.com/auth"\nTRANSFER_SERVER_SEP0024 = "https://anchor.example.com/sep24"\n`;

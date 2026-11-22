@@ -4,32 +4,6 @@
 export { env, envSchema, parseEnv, EnvValidationError } from './env';
 export type { Env, StellarNetwork } from './env';
 
-// ── Shared SDK types & contract bindings (single source of truth) ─────────────
-export type {
-  Group,
-  GroupFilters,
-  GroupMember,
-  GroupStatus,
-  Contribution,
-  ContributionStatus,
-  Payout,
-  PayoutStatus,
-  Transaction,
-  TransactionType,
-  CostReport,
-  ServiceCost,
-  OptimizationRecommendation,
-  PaginationMeta,
-  PaginatedResponse,
-} from '@stellar-save/sdk';
-export {
-  ContractError,
-  parseContractError,
-  CONTRACT_ERROR_MESSAGES,
-  CONTRACT_FUNCTIONS,
-  StellarSaveApiClient,
-} from '@stellar-save/sdk';
-
 // ── Typed SDK client (preferred import point for all contract calls) ──────────
 export { StellarSaveClient, stellarSaveClient } from './client';
 export type {

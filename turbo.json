@@ -1,4 +1,5 @@
 {
+  "$comment": "Turborepo pipeline config — defines task graph (build/test/lint/typecheck) for all workspaces.",
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
   "tasks": {

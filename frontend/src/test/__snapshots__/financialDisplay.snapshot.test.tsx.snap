@@ -1,0 +1,4424 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BalanceDisplay snapshots > prompts to connect when no wallet is attached 1`] = `
+<div>
+  <div
+    class="card card-default balance-display "
+  >
+    <div
+      class="card-body"
+    >
+      <div
+        class="balance-display__empty"
+      >
+        <p>
+          Connect your wallet to view balance
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`BalanceDisplay snapshots > renders every asset when showAllBalances is set 1`] = `
+<div>
+  <div
+    class="card card-default balance-display "
+  >
+    <div
+      class="card-body"
+    >
+      <div
+        class="balance-display__header"
+      >
+        <h3
+          class="balance-display__title"
+        >
+          Account Balance
+        </h3>
+        <button
+          aria-label="Refresh balance"
+          class="balance-display__refresh"
+        >
+          <span
+            class="balance-display__refresh-icon "
+          >
+            ↻
+          </span>
+        </button>
+      </div>
+      <div
+        class="balance-display__main"
+      >
+        <div
+          class="balance-display__xlm"
+        >
+          <span
+            class="balance-display__amount"
+          >
+            1,234.5678901
+          </span>
+          <span
+            class="balance-display__currency"
+          >
+            XLM
+          </span>
+        </div>
+        <div
+          class="balance-display__timestamp"
+        >
+          Updated 
+          1m ago
+        </div>
+      </div>
+      <div
+        class="balance-display__all-balances"
+      >
+        <h4
+          class="balance-display__subtitle"
+        >
+          All Assets
+        </h4>
+        <div
+          class="balance-display__assets"
+        >
+          <div
+            class="balance-display__asset"
+          >
+            <span
+              class="balance-display__asset-code"
+            >
+              XLM
+            </span>
+            <span
+              class="balance-display__asset-balance"
+            >
+              1,234.5678901
+            </span>
+          </div>
+          <div
+            class="balance-display__asset"
+          >
+            <span
+              class="balance-display__asset-code"
+            >
+              USDC
+            </span>
+            <span
+              class="balance-display__asset-balance"
+            >
+              5,000.00
+            </span>
+          </div>
+          <div
+            class="balance-display__asset"
+          >
+            <span
+              class="balance-display__asset-code"
+            >
+              EURC
+            </span>
+            <span
+              class="balance-display__asset-balance"
+            >
+              2,500.50
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`BalanceDisplay snapshots > renders the XLM balance with a relative timestamp 1`] = `
+<div>
+  <div
+    class="card card-default balance-display "
+  >
+    <div
+      class="card-body"
+    >
+      <div
+        class="balance-display__header"
+      >
+        <h3
+          class="balance-display__title"
+        >
+          Account Balance
+        </h3>
+        <button
+          aria-label="Refresh balance"
+          class="balance-display__refresh"
+        >
+          <span
+            class="balance-display__refresh-icon "
+          >
+            ↻
+          </span>
+        </button>
+      </div>
+      <div
+        class="balance-display__main"
+      >
+        <div
+          class="balance-display__xlm"
+        >
+          <span
+            class="balance-display__amount"
+          >
+            1,234.5678901
+          </span>
+          <span
+            class="balance-display__currency"
+          >
+            XLM
+          </span>
+        </div>
+        <div
+          class="balance-display__timestamp"
+        >
+          Updated 
+          1m ago
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`BalanceDisplay snapshots > surfaces a balance fetch error 1`] = `
+<div>
+  <div
+    class="card card-default balance-display "
+  >
+    <div
+      class="card-body"
+    >
+      <div
+        class="balance-display__header"
+      >
+        <h3
+          class="balance-display__title"
+        >
+          Account Balance
+        </h3>
+        <button
+          aria-label="Refresh balance"
+          class="balance-display__refresh"
+        >
+          <span
+            class="balance-display__refresh-icon "
+          >
+            ↻
+          </span>
+        </button>
+      </div>
+      <div
+        class="balance-display__error"
+      >
+        <span
+          class="balance-display__error-icon"
+        >
+          ⚠️
+        </span>
+        <span
+          class="balance-display__error-message"
+        >
+          Failed to load account: horizon timeout
+        </span>
+      </div>
+      <div
+        class="balance-display__main"
+      >
+        <div
+          class="balance-display__xlm"
+        >
+          <span
+            class="balance-display__amount"
+          >
+            0.00
+          </span>
+          <span
+            class="balance-display__currency"
+          >
+            XLM
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`CycleProgress snapshots > renders a completed cycle at 100% 1`] = `
+<div>
+  <div
+    class="cycle-progress cycle-progress--completed"
+  >
+    <div
+      class="cycle-progress-header"
+    >
+      <div
+        class="cycle-progress-title"
+      >
+        <h3>
+          Cycle 
+          3
+        </h3>
+        <span
+          class="badge badge-success badge-md"
+        >
+          <span
+            class="badge-content"
+          >
+            completed
+          </span>
+        </span>
+      </div>
+      <div
+        class="cycle-progress-time overdue"
+      >
+        <span
+          class="time-label"
+        >
+          Time Remaining:
+        </span>
+        <span
+          class="time-value"
+        >
+          Ended
+        </span>
+      </div>
+    </div>
+    <div
+      class="cycle-progress-stats"
+    >
+      <div
+        class="stat"
+      >
+        <span
+          class="stat-label"
+        >
+          Contributions
+        </span>
+        <span
+          class="stat-value"
+        >
+          10
+          /
+          10
+        </span>
+      </div>
+      <div
+        class="stat"
+      >
+        <span
+          class="stat-label"
+        >
+          Amount
+        </span>
+        <span
+          class="stat-value"
+        >
+          5,000
+           XLM
+        </span>
+      </div>
+      <div
+        class="stat"
+      >
+        <span
+          class="stat-label"
+        >
+          Target
+        </span>
+        <span
+          class="stat-value"
+        >
+          5,000
+           XLM
+        </span>
+      </div>
+    </div>
+    <div
+      class="cycle-progress-bars"
+    >
+      <div
+        class="progress-item"
+      >
+        <div
+          class="progress-header"
+        >
+          <span>
+            Contribution Progress
+          </span>
+          <span
+            class="progress-percentage"
+          >
+            100
+            %
+          </span>
+        </div>
+        <div
+          class="progress-bar"
+        >
+          <div
+            class="progress-fill"
+            style="width: 100%;"
+          />
+        </div>
+      </div>
+      <div
+        class="progress-item"
+      >
+        <div
+          class="progress-header"
+        >
+          <span>
+            Amount Progress
+          </span>
+          <span
+            class="progress-percentage"
+          >
+            100
+            %
+          </span>
+        </div>
+        <div
+          class="progress-bar"
+        >
+          <div
+            class="progress-fill progress-fill--amount"
+            style="width: 100%;"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      class="cycle-progress-complete"
+    >
+      ✓ Cycle complete
+    </div>
+  </div>
+</div>
+`;
+
+exports[`CycleProgress snapshots > renders an active cycle part-way through 1`] = `
+<div>
+  <div
+    class="cycle-progress cycle-progress--active"
+  >
+    <div
+      class="cycle-progress-header"
+    >
+      <div
+        class="cycle-progress-title"
+      >
+        <h3>
+          Cycle 
+          4
+        </h3>
+        <span
+          class="badge badge-info badge-md"
+        >
+          <span
+            class="badge-content"
+          >
+            active
+          </span>
+        </span>
+      </div>
+      <div
+        class="cycle-progress-time "
+      >
+        <span
+          class="time-label"
+        >
+          Time Remaining:
+        </span>
+        <span
+          class="time-value"
+        >
+          5d 0h
+        </span>
+      </div>
+    </div>
+    <div
+      class="cycle-progress-stats"
+    >
+      <div
+        class="stat"
+      >
+        <span
+          class="stat-label"
+        >
+          Contributions
+        </span>
+        <span
+          class="stat-value"
+        >
+          7
+          /
+          10
+        </span>
+      </div>
+      <div
+        class="stat"
+      >
+        <span
+          class="stat-label"
+        >
+          Amount
+        </span>
+        <span
+          class="stat-value"
+        >
+          3,500
+           XLM
+        </span>
+      </div>
+      <div
+        class="stat"
+      >
+        <span
+          class="stat-label"
+        >
+          Target
+        </span>
+        <span
+          class="stat-value"
+        >
+          5,000
+           XLM
+        </span>
+      </div>
+    </div>
+    <div
+      class="cycle-progress-bars"
+    >
+      <div
+        class="progress-item"
+      >
+        <div
+          class="progress-header"
+        >
+          <span>
+            Contribution Progress
+          </span>
+          <span
+            class="progress-percentage"
+          >
+            70
+            %
+          </span>
+        </div>
+        <div
+          class="progress-bar"
+        >
+          <div
+            class="progress-fill"
+            style="width: 70%;"
+          />
+        </div>
+      </div>
+      <div
+        class="progress-item"
+      >
+        <div
+          class="progress-header"
+        >
+          <span>
+            Amount Progress
+          </span>
+          <span
+            class="progress-percentage"
+          >
+            70
+            %
+          </span>
+        </div>
+        <div
+          class="progress-bar"
+        >
+          <div
+            class="progress-fill progress-fill--amount"
+            style="width: 70%;"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`CycleProgress snapshots > renders an overdue cycle 1`] = `
+<div>
+  <div
+    class="cycle-progress cycle-progress--pending"
+  >
+    <div
+      class="cycle-progress-header"
+    >
+      <div
+        class="cycle-progress-title"
+      >
+        <h3>
+          Cycle 
+          2
+        </h3>
+        <span
+          class="badge badge-warning badge-md"
+        >
+          <span
+            class="badge-content"
+          >
+            pending
+          </span>
+        </span>
+      </div>
+      <div
+        class="cycle-progress-time overdue"
+      >
+        <span
+          class="time-label"
+        >
+          Time Remaining:
+        </span>
+        <span
+          class="time-value"
+        >
+          Ended
+        </span>
+      </div>
+    </div>
+    <div
+      class="cycle-progress-stats"
+    >
+      <div
+        class="stat"
+      >
+        <span
+          class="stat-label"
+        >
+          Contributions
+        </span>
+        <span
+          class="stat-value"
+        >
+          2
+          /
+          10
+        </span>
+      </div>
+      <div
+        class="stat"
+      >
+        <span
+          class="stat-label"
+        >
+          Amount
+        </span>
+        <span
+          class="stat-value"
+        >
+          1,000
+           XLM
+        </span>
+      </div>
+      <div
+        class="stat"
+      >
+        <span
+          class="stat-label"
+        >
+          Target
+        </span>
+        <span
+          class="stat-value"
+        >
+          5,000
+           XLM
+        </span>
+      </div>
+    </div>
+    <div
+      class="cycle-progress-bars"
+    >
+      <div
+        class="progress-item"
+      >
+        <div
+          class="progress-header"
+        >
+          <span>
+            Contribution Progress
+          </span>
+          <span
+            class="progress-percentage"
+          >
+            20
+            %
+          </span>
+        </div>
+        <div
+          class="progress-bar"
+        >
+          <div
+            class="progress-fill"
+            style="width: 20%;"
+          />
+        </div>
+      </div>
+      <div
+        class="progress-item"
+      >
+        <div
+          class="progress-header"
+        >
+          <span>
+            Amount Progress
+          </span>
+          <span
+            class="progress-percentage"
+          >
+            20
+            %
+          </span>
+        </div>
+        <div
+          class="progress-bar"
+        >
+          <div
+            class="progress-fill progress-fill--amount"
+            style="width: 20%;"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`GroupMetrics snapshots > renders completion rate, average time, and health score 1`] = `
+<div>
+  <div
+    class="card card-elevated group-metrics "
+  >
+    <div
+      class="card-body"
+    >
+      <div
+        class="group-metrics-header"
+      >
+        <h4>
+          Performance Metrics
+        </h4>
+      </div>
+      <div
+        class="group-metrics-grid"
+      >
+        <div
+          class="group-metric-item"
+        >
+          <div
+            class="group-metric-label"
+          >
+            Contribution Completion Rate
+          </div>
+          <div
+            class="group-metric-value"
+            data-testid="completion-rate-value"
+          >
+            75
+            %
+          </div>
+          <div
+            class="group-metric-trend group-metric-trend-improving"
+          >
+            Improving
+          </div>
+        </div>
+        <div
+          class="group-metric-item"
+        >
+          <div
+            class="group-metric-label"
+          >
+            Average Contribution Time
+          </div>
+          <div
+            class="group-metric-value"
+            data-testid="average-time-value"
+          >
+            1.0 days
+          </div>
+          <div
+            class="group-metric-trend group-metric-trend-improving"
+          >
+            Improving
+          </div>
+        </div>
+        <div
+          class="group-metric-item"
+        >
+          <div
+            class="group-metric-label"
+          >
+            Group Health Score
+          </div>
+          <div
+            class="group-metric-value"
+            data-testid="health-score-value"
+          >
+            79
+            /100
+          </div>
+          <div
+            class="group-metric-trend group-metric-trend-improving"
+          >
+            Improving
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`GroupMetrics snapshots > renders zeroes with no contributions or cycles 1`] = `
+<div>
+  <div
+    class="card card-elevated group-metrics "
+  >
+    <div
+      class="card-body"
+    >
+      <div
+        class="group-metrics-header"
+      >
+        <h4>
+          Performance Metrics
+        </h4>
+      </div>
+      <div
+        class="group-metrics-grid"
+      >
+        <div
+          class="group-metric-item"
+        >
+          <div
+            class="group-metric-label"
+          >
+            Contribution Completion Rate
+          </div>
+          <div
+            class="group-metric-value"
+            data-testid="completion-rate-value"
+          >
+            0
+            %
+          </div>
+          <div
+            class="group-metric-trend group-metric-trend-improving"
+          >
+            Improving
+          </div>
+        </div>
+        <div
+          class="group-metric-item"
+        >
+          <div
+            class="group-metric-label"
+          >
+            Average Contribution Time
+          </div>
+          <div
+            class="group-metric-value"
+            data-testid="average-time-value"
+          >
+            0 hours
+          </div>
+          <div
+            class="group-metric-trend group-metric-trend-improving"
+          >
+            Improving
+          </div>
+        </div>
+        <div
+          class="group-metric-item"
+        >
+          <div
+            class="group-metric-label"
+          >
+            Group Health Score
+          </div>
+          <div
+            class="group-metric-value"
+            data-testid="health-score-value"
+          >
+            24
+            /100
+          </div>
+          <div
+            class="group-metric-trend group-metric-trend-improving"
+          >
+            Improving
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`MemberCard snapshots > renders a member who has already been paid 1`] = `
+<div>
+  <div
+    class="bg-white rounded-2xl border shadow-sm overflow-hidden transition-all duration-200 border-gray-100 hover:shadow-md "
+  >
+    <div
+      class="relative bg-gradient-to-r from-indigo-50 to-purple-50 px-5 pt-5 pb-10"
+    >
+      <div
+        class="absolute top-4 right-4"
+      >
+        <span
+          class="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-500"
+        >
+          Inactive
+        </span>
+      </div>
+    </div>
+    <div
+      class="flex justify-center -mt-8 mb-3"
+    >
+      <div
+        class="w-16 h-16 rounded-full border-4 border-white shadow flex items-center justify-center text-white text-xl font-bold bg-orange-500"
+      >
+        GR
+      </div>
+    </div>
+    <div
+      class="text-center px-5 mb-4"
+    >
+      <h3
+        class="font-bold text-gray-900 text-base"
+      >
+        Grace Hopper
+      </h3>
+      <div
+        class="flex items-center justify-center gap-1 mt-0.5"
+      >
+        <p
+          class="text-sm text-gray-500 font-mono"
+        >
+          GAX7BQ...6E8F
+        </p>
+        <button
+          class="text-gray-400 hover:text-indigo-500 transition-colors"
+          title="Copy address"
+        >
+          <svg
+            class="w-3.5 h-3.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            />
+          </svg>
+        </button>
+      </div>
+      <p
+        class="text-xs text-gray-400 mt-1"
+      >
+        Joined 
+        Feb 14, 2026
+      </p>
+    </div>
+    <div
+      class="border-t border-gray-100 mx-5"
+    />
+    <div
+      class="grid grid-cols-3 gap-2 px-5 py-4"
+    >
+      <div
+        class="text-center"
+      >
+        <p
+          class="text-lg font-bold text-gray-900"
+        >
+          8
+        </p>
+        <p
+          class="text-xs text-gray-500"
+        >
+          Contributions
+        </p>
+      </div>
+      <div
+        class="text-center"
+      >
+        <p
+          class="text-lg font-bold text-gray-900"
+        >
+          4000 XLM
+        </p>
+        <p
+          class="text-xs text-gray-500"
+        >
+          Total Paid
+        </p>
+      </div>
+      <div
+        class="text-center"
+      >
+        <p
+          class="text-lg font-bold text-gray-900"
+        >
+          1st
+        </p>
+        <p
+          class="text-xs text-gray-500"
+        >
+          Payout Position
+        </p>
+        <p
+          class="text-xs text-indigo-500"
+        >
+          Received
+        </p>
+      </div>
+    </div>
+    <div
+      class="px-5 pb-4"
+    >
+      <div
+        class="flex justify-between text-xs text-gray-400 mb-1"
+      >
+        <span>
+          Payout queue
+        </span>
+        <span>
+          1
+           / 
+          10
+        </span>
+      </div>
+      <div
+        class="w-full bg-gray-100 rounded-full h-1.5"
+      >
+        <div
+          class="h-1.5 rounded-full transition-all bg-green-400"
+          style="width: 10%;"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`MemberCard snapshots > renders the compact variant 1`] = `
+<div>
+  <div
+    class="flex items-center gap-3 p-3 rounded-xl border transition-all border-gray-100 bg-white hover:border-gray-200 "
+  >
+    <div
+      class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 bg-orange-500"
+    >
+      AD
+    </div>
+    <div
+      class="flex-1 min-w-0"
+    >
+      <div
+        class="flex items-center gap-1"
+      >
+        <p
+          class="text-sm font-semibold text-gray-900 truncate"
+        >
+          Ada Lovelace
+        </p>
+      </div>
+      <p
+        class="text-xs text-gray-500"
+      >
+        8
+         contributions
+      </p>
+    </div>
+    <span
+      class="text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 bg-green-100 text-green-700"
+    >
+      Active
+    </span>
+  </div>
+</div>
+`;
+
+exports[`MemberCard snapshots > renders the current user with a You marker 1`] = `
+<div>
+  <div
+    class="bg-white rounded-2xl border shadow-sm overflow-hidden transition-all duration-200 border-indigo-300 ring-2 ring-indigo-100 "
+  >
+    <div
+      class="relative bg-gradient-to-r from-indigo-50 to-purple-50 px-5 pt-5 pb-10"
+    >
+      <div
+        class="absolute top-4 right-4"
+      >
+        <span
+          class="text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700"
+        >
+          Active
+        </span>
+      </div>
+      <div
+        class="absolute top-4 left-4"
+      >
+        <span
+          class="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700"
+        >
+          You
+        </span>
+      </div>
+    </div>
+    <div
+      class="flex justify-center -mt-8 mb-3"
+    >
+      <div
+        class="w-16 h-16 rounded-full border-4 border-white shadow flex items-center justify-center text-white text-xl font-bold bg-orange-500"
+      >
+        AD
+      </div>
+    </div>
+    <div
+      class="text-center px-5 mb-4"
+    >
+      <h3
+        class="font-bold text-gray-900 text-base"
+      >
+        Ada Lovelace
+      </h3>
+      <div
+        class="flex items-center justify-center gap-1 mt-0.5"
+      >
+        <p
+          class="text-sm text-gray-500 font-mono"
+        >
+          GAX7BQ...6E8F
+        </p>
+        <button
+          class="text-gray-400 hover:text-indigo-500 transition-colors"
+          title="Copy address"
+        >
+          <svg
+            class="w-3.5 h-3.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            />
+          </svg>
+        </button>
+      </div>
+      <p
+        class="text-xs text-gray-400 mt-1"
+      >
+        Joined 
+        Feb 14, 2026
+      </p>
+    </div>
+    <div
+      class="border-t border-gray-100 mx-5"
+    />
+    <div
+      class="grid grid-cols-3 gap-2 px-5 py-4"
+    >
+      <div
+        class="text-center"
+      >
+        <p
+          class="text-lg font-bold text-gray-900"
+        >
+          8
+        </p>
+        <p
+          class="text-xs text-gray-500"
+        >
+          Contributions
+        </p>
+      </div>
+      <div
+        class="text-center"
+      >
+        <p
+          class="text-lg font-bold text-gray-900"
+        >
+          4000 XLM
+        </p>
+        <p
+          class="text-xs text-gray-500"
+        >
+          Total Paid
+        </p>
+      </div>
+      <div
+        class="text-center"
+      >
+        <p
+          class="text-lg font-bold text-gray-900"
+        >
+          3rd
+        </p>
+        <p
+          class="text-xs text-gray-500"
+        >
+          Payout Position
+        </p>
+        <p
+          class="text-xs text-indigo-500"
+        >
+          of 10
+        </p>
+      </div>
+    </div>
+    <div
+      class="px-5 pb-4"
+    >
+      <div
+        class="flex justify-between text-xs text-gray-400 mb-1"
+      >
+        <span>
+          Payout queue
+        </span>
+        <span>
+          3
+           / 
+          10
+        </span>
+      </div>
+      <div
+        class="w-full bg-gray-100 rounded-full h-1.5"
+      >
+        <div
+          class="h-1.5 rounded-full transition-all bg-indigo-400"
+          style="width: 30%;"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`MemberCard snapshots > renders the full card with totals and payout position 1`] = `
+<div>
+  <div
+    class="bg-white rounded-2xl border shadow-sm overflow-hidden transition-all duration-200 border-gray-100 hover:shadow-md "
+  >
+    <div
+      class="relative bg-gradient-to-r from-indigo-50 to-purple-50 px-5 pt-5 pb-10"
+    >
+      <div
+        class="absolute top-4 right-4"
+      >
+        <span
+          class="text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700"
+        >
+          Active
+        </span>
+      </div>
+    </div>
+    <div
+      class="flex justify-center -mt-8 mb-3"
+    >
+      <div
+        class="w-16 h-16 rounded-full border-4 border-white shadow flex items-center justify-center text-white text-xl font-bold bg-orange-500"
+      >
+        AD
+      </div>
+    </div>
+    <div
+      class="text-center px-5 mb-4"
+    >
+      <h3
+        class="font-bold text-gray-900 text-base"
+      >
+        Ada Lovelace
+      </h3>
+      <div
+        class="flex items-center justify-center gap-1 mt-0.5"
+      >
+        <p
+          class="text-sm text-gray-500 font-mono"
+        >
+          GAX7BQ...6E8F
+        </p>
+        <button
+          class="text-gray-400 hover:text-indigo-500 transition-colors"
+          title="Copy address"
+        >
+          <svg
+            class="w-3.5 h-3.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            />
+          </svg>
+        </button>
+      </div>
+      <p
+        class="text-xs text-gray-400 mt-1"
+      >
+        Joined 
+        Feb 14, 2026
+      </p>
+    </div>
+    <div
+      class="border-t border-gray-100 mx-5"
+    />
+    <div
+      class="grid grid-cols-3 gap-2 px-5 py-4"
+    >
+      <div
+        class="text-center"
+      >
+        <p
+          class="text-lg font-bold text-gray-900"
+        >
+          8
+        </p>
+        <p
+          class="text-xs text-gray-500"
+        >
+          Contributions
+        </p>
+      </div>
+      <div
+        class="text-center"
+      >
+        <p
+          class="text-lg font-bold text-gray-900"
+        >
+          4000 XLM
+        </p>
+        <p
+          class="text-xs text-gray-500"
+        >
+          Total Paid
+        </p>
+      </div>
+      <div
+        class="text-center"
+      >
+        <p
+          class="text-lg font-bold text-gray-900"
+        >
+          3rd
+        </p>
+        <p
+          class="text-xs text-gray-500"
+        >
+          Payout Position
+        </p>
+        <p
+          class="text-xs text-indigo-500"
+        >
+          of 10
+        </p>
+      </div>
+    </div>
+    <div
+      class="px-5 pb-4"
+    >
+      <div
+        class="flex justify-between text-xs text-gray-400 mb-1"
+      >
+        <span>
+          Payout queue
+        </span>
+        <span>
+          3
+           / 
+          10
+        </span>
+      </div>
+      <div
+        class="w-full bg-gray-100 rounded-full h-1.5"
+      >
+        <div
+          class="h-1.5 rounded-full transition-all bg-indigo-400"
+          style="width: 30%;"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PayoutQueue snapshots > renders an empty queue with no entries 1`] = `
+<div>
+  <div
+    class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+  >
+    <div
+      class="bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-4"
+    >
+      <div
+        class="flex items-center justify-between"
+      >
+        <div>
+          <h2
+            class="text-white font-bold text-lg"
+          >
+            Payout Queue
+          </h2>
+          <p
+            class="text-indigo-200 text-sm"
+          >
+            Cycle #
+            1
+          </p>
+        </div>
+        <button
+          class="text-xs bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-full transition-colors font-medium"
+        >
+          Jump to Next
+        </button>
+      </div>
+      <div
+        class="mt-3"
+      >
+        <div
+          class="flex justify-between text-xs text-indigo-200 mb-1"
+        >
+          <span>
+            0
+             of 
+            0
+             paid out
+          </span>
+          <span>
+            NaN
+            %
+          </span>
+        </div>
+        <div
+          class="w-full bg-white/20 rounded-full h-1.5"
+        >
+          <div
+            class="bg-white h-1.5 rounded-full transition-all duration-500"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      class="overflow-y-auto px-4 py-3 space-y-2"
+      style="max-height: 480px;"
+    />
+    <div
+      class="border-t border-gray-100 px-5 py-3 flex justify-between text-xs text-gray-400"
+    >
+      <span>
+        0
+         total members
+      </span>
+      <span>
+        0
+         remaining
+      </span>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PayoutQueue snapshots > renders completed, next, and upcoming payouts 1`] = `
+<div>
+  <div
+    class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+  >
+    <div
+      class="bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-4"
+    >
+      <div
+        class="flex items-center justify-between"
+      >
+        <div>
+          <h2
+            class="text-white font-bold text-lg"
+          >
+            Payout Queue
+          </h2>
+          <p
+            class="text-indigo-200 text-sm"
+          >
+            Cycle #
+            5
+          </p>
+        </div>
+        <button
+          class="text-xs bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-full transition-colors font-medium"
+        >
+          Jump to Next
+        </button>
+      </div>
+      <div
+        class="mt-3"
+      >
+        <div
+          class="flex justify-between text-xs text-indigo-200 mb-1"
+        >
+          <span>
+            1
+             of 
+            6
+             paid out
+          </span>
+          <span>
+            17
+            %
+          </span>
+        </div>
+        <div
+          class="w-full bg-white/20 rounded-full h-1.5"
+        >
+          <div
+            class="bg-white h-1.5 rounded-full transition-all duration-500"
+            style="width: 16.666666666666664%;"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      class="overflow-y-auto px-4 py-3 space-y-2"
+      style="max-height: 480px;"
+    >
+      <div>
+        <p
+          class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1"
+        >
+          Completed (
+          1
+          )
+        </p>
+        <div
+          class="mb-2"
+        >
+          <div
+            class="flex items-center gap-3 p-3 rounded-xl border transition-all bg-gray-50 border-gray-200 opacity-75 "
+          >
+            <div
+              class="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-sm font-bold text-gray-600 flex-shrink-0 shadow-sm"
+            >
+              1
+            </div>
+            <div
+              class="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-gray-400"
+            />
+            <div
+              class="flex-1 min-w-0"
+            >
+              <div
+                class="flex items-center gap-1"
+              >
+                <p
+                  class="text-sm font-semibold text-gray-900 truncate"
+                >
+                  Ada Lovelace
+                </p>
+              </div>
+              <p
+                class="text-xs text-gray-500"
+              >
+                Paid on May 1, 2026
+              </p>
+              <a
+                class="text-xs text-indigo-500 hover:underline"
+                href="https://stellar.expert/explorer/testnet/tx/abc123"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                View transaction
+              </a>
+            </div>
+            <div
+              class="flex flex-col items-end gap-1 flex-shrink-0"
+            >
+              <span
+                class="text-sm font-bold text-gray-800"
+              >
+                500
+                 XLM
+              </span>
+              <span
+                class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500"
+              >
+                Paid
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        data-next="true"
+      >
+        <p
+          class="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-2 px-1"
+        >
+          Next Payout
+        </p>
+        <div
+          class="mb-2"
+        >
+          <div
+            class="flex items-center gap-3 p-3 rounded-xl border transition-all bg-indigo-50 border-indigo-300 ring-2 ring-indigo-200 ring-2 ring-purple-300"
+          >
+            <div
+              class="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-sm font-bold text-gray-600 flex-shrink-0 shadow-sm"
+            >
+              2
+            </div>
+            <div
+              class="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-indigo-500"
+            />
+            <div
+              class="flex-1 min-w-0"
+            >
+              <div
+                class="flex items-center gap-1"
+              >
+                <p
+                  class="text-sm font-semibold text-gray-900 truncate"
+                >
+                  Grace Hopper
+                </p>
+                <span
+                  class="text-xs text-purple-600 font-semibold flex-shrink-0"
+                >
+                  (you)
+                </span>
+              </div>
+              <p
+                class="text-xs text-gray-500"
+              >
+                Est. Jun 1, 2026
+              </p>
+            </div>
+            <div
+              class="flex flex-col items-end gap-1 flex-shrink-0"
+            >
+              <span
+                class="text-sm font-bold text-gray-800"
+              >
+                750.25
+                 XLM
+              </span>
+              <span
+                class="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold animate-pulse"
+              >
+                Next
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p
+          class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1"
+        >
+          Upcoming (
+          1
+          )
+        </p>
+        <div
+          class="mb-2"
+        >
+          <div
+            class="flex items-center gap-3 p-3 rounded-xl border transition-all bg-white border-gray-100 "
+          >
+            <div
+              class="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-sm font-bold text-gray-600 flex-shrink-0 shadow-sm"
+            >
+              3
+            </div>
+            <div
+              class="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-yellow-400"
+            />
+            <div
+              class="flex-1 min-w-0"
+            >
+              <div
+                class="flex items-center gap-1"
+              >
+                <p
+                  class="text-sm font-semibold text-gray-900 truncate"
+                >
+                  GBBBBB...BBBB
+                </p>
+              </div>
+              <p
+                class="text-xs text-gray-500"
+              >
+                Est. Jul 1, 2026
+              </p>
+            </div>
+            <div
+              class="flex flex-col items-end gap-1 flex-shrink-0"
+            >
+              <span
+                class="text-sm font-bold text-gray-800"
+              >
+                1000
+                 XLM
+              </span>
+              <span
+                class="text-xs px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-600"
+              >
+                Upcoming
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="border-t border-gray-100 px-5 py-3 flex justify-between text-xs text-gray-400"
+    >
+      <span>
+        6
+         total members
+      </span>
+      <span>
+        2
+         remaining
+      </span>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`StaleDataBanner snapshots > renders nothing when data is neither stale nor cached 1`] = `<div />`;
+
+exports[`StaleDataBanner snapshots > renders the cached notice without a refresh action 1`] = `
+<div>
+  <div
+    class="MuiPaper-root MuiPaper-elevation MuiPaper-rounded MuiPaper-elevation0 MuiAlert-root MuiAlert-colorInfo MuiAlert-standardInfo MuiAlert-standard css-dws3yv-MuiPaper-root-MuiAlert-root"
+    role="alert"
+    style="--Paper-shadow: none;"
+  >
+    <div
+      class="MuiAlert-icon css-vab54s-MuiAlert-icon"
+    >
+      <svg
+        aria-hidden="true"
+        class="MuiSvgIcon-root MuiSvgIcon-fontSizeInherit css-1ckov0h-MuiSvgIcon-root"
+        data-testid="InfoOutlinedIcon"
+        focusable="false"
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20, 12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10, 10 0 0,0 12,2M11,17H13V11H11V17Z"
+        />
+      </svg>
+    </div>
+    <div
+      class="MuiAlert-message css-zioonp-MuiAlert-message"
+    >
+      <div
+        class="MuiTypography-root MuiTypography-body1 MuiTypography-gutterBottom MuiAlertTitle-root css-5ick94-MuiTypography-root-MuiAlertTitle-root"
+      >
+        Viewing Cached Data
+      </div>
+      You are viewing cached data. Some information may not be up to date.
+    </div>
+  </div>
+</div>
+`;
+
+exports[`StaleDataBanner snapshots > renders the stale warning with a refresh action 1`] = `
+<div>
+  <div
+    class="MuiPaper-root MuiPaper-elevation MuiPaper-rounded MuiPaper-elevation0 MuiAlert-root MuiAlert-colorWarning MuiAlert-standardWarning MuiAlert-standard css-1u6i1g1-MuiPaper-root-MuiAlert-root"
+    role="alert"
+    style="--Paper-shadow: none;"
+  >
+    <div
+      class="MuiAlert-icon css-vab54s-MuiAlert-icon"
+    >
+      <svg
+        aria-hidden="true"
+        class="MuiSvgIcon-root MuiSvgIcon-fontSizeInherit css-1ckov0h-MuiSvgIcon-root"
+        data-testid="ReportProblemOutlinedIcon"
+        focusable="false"
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M12 5.99L19.53 19H4.47L12 5.99M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2v-4z"
+        />
+      </svg>
+    </div>
+    <div
+      class="MuiAlert-message css-zioonp-MuiAlert-message"
+    >
+      <div
+        class="MuiTypography-root MuiTypography-body1 MuiTypography-gutterBottom MuiAlertTitle-root css-5ick94-MuiTypography-root-MuiAlertTitle-root"
+      >
+        Viewing Stale Data
+      </div>
+      This data may be outdated. Connect to the internet to get the latest updates.
+    </div>
+    <div
+      class="MuiAlert-action css-rgppqo-MuiAlert-action"
+    >
+      <button
+        class="MuiButtonBase-root MuiButton-root MuiButton-text MuiButton-textInherit MuiButton-sizeSmall MuiButton-textSizeSmall MuiButton-colorInherit css-j44k7s-MuiButtonBase-root-MuiButton-root"
+        tabindex="0"
+        type="button"
+      >
+        <span
+          class="MuiButton-icon MuiButton-startIcon MuiButton-iconSizeSmall css-d8i980-MuiButton-startIcon"
+        >
+          <svg
+            aria-hidden="true"
+            class="MuiSvgIcon-root MuiSvgIcon-fontSizeMedium css-1umw9bq-MuiSvgIcon-root"
+            data-testid="RefreshIcon"
+            focusable="false"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z"
+            />
+          </svg>
+        </span>
+        Refresh
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`StreakDisplay snapshots > renders streaks with the next milestone and earned badges 1`] = `
+<div>
+  <div
+    class="streak-display"
+    data-testid="streak-display"
+  >
+    <div
+      class="streak-stats"
+    >
+      <div
+        class="streak-stat"
+        data-testid="current-streak"
+      >
+        <span
+          class="streak-stat-value"
+        >
+          12
+        </span>
+        <span
+          class="streak-stat-label"
+        >
+          Current Streak
+        </span>
+      </div>
+      <div
+        class="streak-stat"
+        data-testid="longest-streak"
+      >
+        <span
+          class="streak-stat-value"
+        >
+          19
+        </span>
+        <span
+          class="streak-stat-label"
+        >
+          Longest Streak
+        </span>
+      </div>
+    </div>
+    <div
+      class="streak-progress"
+      data-testid="streak-progress"
+    >
+      <div
+        class="streak-progress-header"
+      >
+        <span>
+          Next: 
+          ⚡
+           
+          Dedicated
+           (
+          20
+          )
+        </span>
+        <span
+          class="streak-progress-pct"
+        >
+          60
+          %
+        </span>
+      </div>
+      <div
+        aria-label="Progress to Dedicated badge"
+        aria-valuemax="20"
+        aria-valuemin="0"
+        aria-valuenow="12"
+        class="streak-progress-bar"
+        role="progressbar"
+      >
+        <div
+          class="streak-progress-fill"
+          style="width: 60%;"
+        />
+      </div>
+      <span
+        class="streak-progress-sub"
+      >
+        12
+         / 
+        20
+         contributions
+      </span>
+    </div>
+    <div
+      class="streak-badges"
+      data-testid="streak-badges"
+    >
+      <h4
+        class="streak-badges-title"
+      >
+        Earned Badges
+      </h4>
+      <ul
+        aria-label="Earned badges"
+        class="streak-badges-list"
+      >
+        <li
+          class="streak-badge"
+          data-testid="badge-5"
+          title="Starter — 5 contributions"
+        >
+          <span
+            aria-hidden="true"
+            class="streak-badge-icon"
+          >
+            🌱
+          </span>
+          <span
+            class="streak-badge-label"
+          >
+            Starter
+          </span>
+        </li>
+        <li
+          class="streak-badge"
+          data-testid="badge-10"
+          title="Consistent — 10 contributions"
+        >
+          <span
+            aria-hidden="true"
+            class="streak-badge-icon"
+          >
+            🔥
+          </span>
+          <span
+            class="streak-badge-label"
+          >
+            Consistent
+          </span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`StreakDisplay snapshots > renders the at-risk warning 1`] = `
+<div>
+  <div
+    class="streak-display streak-display--at-risk"
+    data-testid="streak-display"
+  >
+    <div
+      class="streak-warning"
+      data-testid="streak-warning"
+      role="alert"
+    >
+      ⚠️ Your streak is at risk! Contribute before the deadline to keep it.
+    </div>
+    <div
+      class="streak-stats"
+    >
+      <div
+        class="streak-stat"
+        data-testid="current-streak"
+      >
+        <span
+          class="streak-stat-value"
+        >
+          3
+        </span>
+        <span
+          class="streak-stat-label"
+        >
+          Current Streak
+        </span>
+      </div>
+      <div
+        class="streak-stat"
+        data-testid="longest-streak"
+      >
+        <span
+          class="streak-stat-value"
+        >
+          8
+        </span>
+        <span
+          class="streak-stat-label"
+        >
+          Longest Streak
+        </span>
+      </div>
+    </div>
+    <div
+      class="streak-progress"
+      data-testid="streak-progress"
+    >
+      <div
+        class="streak-progress-header"
+      >
+        <span>
+          Next: 
+          🌱
+           
+          Starter
+           (
+          5
+          )
+        </span>
+        <span
+          class="streak-progress-pct"
+        >
+          60
+          %
+        </span>
+      </div>
+      <div
+        aria-label="Progress to Starter badge"
+        aria-valuemax="5"
+        aria-valuemin="0"
+        aria-valuenow="3"
+        class="streak-progress-bar"
+        role="progressbar"
+      >
+        <div
+          class="streak-progress-fill"
+          style="width: 60%;"
+        />
+      </div>
+      <span
+        class="streak-progress-sub"
+      >
+        3
+         / 
+        5
+         contributions
+      </span>
+    </div>
+    <p
+      class="streak-no-badges"
+      data-testid="no-badges"
+    >
+      Keep contributing to earn your first badge at 5 contributions!
+    </p>
+  </div>
+</div>
+`;
+
+exports[`StreakDisplay snapshots > renders the empty badge state below the first threshold 1`] = `
+<div>
+  <div
+    class="streak-display"
+    data-testid="streak-display"
+  >
+    <div
+      class="streak-stats"
+    >
+      <div
+        class="streak-stat"
+        data-testid="current-streak"
+      >
+        <span
+          class="streak-stat-value"
+        >
+          0
+        </span>
+        <span
+          class="streak-stat-label"
+        >
+          Current Streak
+        </span>
+      </div>
+      <div
+        class="streak-stat"
+        data-testid="longest-streak"
+      >
+        <span
+          class="streak-stat-value"
+        >
+          0
+        </span>
+        <span
+          class="streak-stat-label"
+        >
+          Longest Streak
+        </span>
+      </div>
+    </div>
+    <div
+      class="streak-progress"
+      data-testid="streak-progress"
+    >
+      <div
+        class="streak-progress-header"
+      >
+        <span>
+          Next: 
+          🌱
+           
+          Starter
+           (
+          5
+          )
+        </span>
+        <span
+          class="streak-progress-pct"
+        >
+          0
+          %
+        </span>
+      </div>
+      <div
+        aria-label="Progress to Starter badge"
+        aria-valuemax="5"
+        aria-valuemin="0"
+        aria-valuenow="0"
+        class="streak-progress-bar"
+        role="progressbar"
+      >
+        <div
+          class="streak-progress-fill"
+          style="width: 0%;"
+        />
+      </div>
+      <span
+        class="streak-progress-sub"
+      >
+        0
+         / 
+        5
+         contributions
+      </span>
+    </div>
+    <p
+      class="streak-no-badges"
+      data-testid="no-badges"
+    >
+      Keep contributing to earn your first badge at 5 contributions!
+    </p>
+  </div>
+</div>
+`;
+
+exports[`TransactionTables snapshots > renders a populated transaction list 1`] = `
+<div>
+  <style>
+    
+      .tx-table__type { text-transform: capitalize; }
+      .tx-table__amount--positive { color: #4ade80; font-weight: 600; }
+      .tx-table__amount--negative { color: #f87171; font-weight: 600; }
+      .tx-table__address { font-size: 0.8125rem; color: rgba(0,0,0,0.54); overflow: hidden; text-overflow: ellipsis; max-width: 180px; white-space: nowrap; }
+    
+  </style>
+  <div
+    class="data-table-wrapper "
+    data-testid="data-table"
+  >
+    <div
+      aria-label="Transaction history"
+      class="data-table-scroll"
+      role="region"
+    >
+      <table
+        aria-busy="false"
+        aria-label="Transaction history"
+        class="data-table"
+      >
+        <caption
+          class="data-table__caption"
+        >
+          Transaction history
+        </caption>
+        <colgroup>
+          <col />
+          <col />
+          <col />
+          <col />
+          <col />
+          <col />
+          <col />
+        </colgroup>
+        <thead
+          class="data-table__head"
+        >
+          <tr>
+            <th
+              aria-sort="descending"
+              class="data-table__th data-table__th--sortable data-table__th--sorted"
+              scope="col"
+              tabindex="0"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                Date
+                <span
+                  aria-hidden="true"
+                  class="data-table__sort-icon data-table__sort-icon--active"
+                >
+                  ▼
+                </span>
+              </span>
+            </th>
+            <th
+              aria-sort="none"
+              class="data-table__th data-table__th--sortable"
+              scope="col"
+              tabindex="0"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                Type
+                <span
+                  aria-hidden="true"
+                  class="data-table__sort-icon "
+                >
+                  ⇅
+                </span>
+              </span>
+            </th>
+            <th
+              aria-sort="none"
+              class="data-table__th data-table__th--sortable"
+              scope="col"
+              tabindex="0"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                Amount
+                <span
+                  aria-hidden="true"
+                  class="data-table__sort-icon "
+                >
+                  ⇅
+                </span>
+              </span>
+            </th>
+            <th
+              aria-sort="none"
+              class="data-table__th data-table__th--sortable"
+              scope="col"
+              tabindex="0"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                Asset
+                <span
+                  aria-hidden="true"
+                  class="data-table__sort-icon "
+                >
+                  ⇅
+                </span>
+              </span>
+            </th>
+            <th
+              class="data-table__th"
+              scope="col"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                From / To
+              </span>
+            </th>
+            <th
+              aria-sort="none"
+              class="data-table__th data-table__th--sortable"
+              scope="col"
+              tabindex="0"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                Status
+                <span
+                  aria-hidden="true"
+                  class="data-table__sort-icon "
+                >
+                  ⇅
+                </span>
+              </span>
+            </th>
+            <th
+              class="data-table__th"
+              scope="col"
+            >
+              <span
+                class="data-table__th-content"
+              />
+            </th>
+          </tr>
+        </thead>
+        <tbody
+          class="data-table__body"
+        >
+          <tr
+            class="data-table__row data-table__row--clickable"
+            role="button"
+            tabindex="0"
+          >
+            <td
+              class="data-table__td"
+            >
+              6/10/2026
+            </td>
+            <td
+              class="data-table__td tx-table__type"
+            >
+              <span
+                style="text-transform: capitalize;"
+              >
+                deposit
+              </span>
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                class="tx-table__amount--positive"
+              >
+                1500.25
+                 
+                XLM
+              </span>
+            </td>
+            <td
+              class="data-table__td"
+            >
+              XLM
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                class="tx-table__address"
+              >
+                GAX7BQJ2N3V5YRQ4Z8W6KTPY1M3N9QRS7T2V4X6Z8A0B2C4D6E8F
+              </span>
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                class="badge badge-success badge-md"
+              >
+                <span
+                  class="badge-content"
+                >
+                  success
+                </span>
+              </span>
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <button
+                class="btn btn-secondary btn-sm"
+                role="button"
+              >
+                Details
+              </button>
+            </td>
+          </tr>
+          <tr
+            class="data-table__row data-table__row--clickable"
+            role="button"
+            tabindex="0"
+          >
+            <td
+              class="data-table__td"
+            >
+              6/8/2026
+            </td>
+            <td
+              class="data-table__td tx-table__type"
+            >
+              <span
+                style="text-transform: capitalize;"
+              >
+                payment
+              </span>
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                class="tx-table__amount--negative"
+              >
+                -320.10
+                 
+                USDC
+              </span>
+            </td>
+            <td
+              class="data-table__td"
+            >
+              USDC
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                class="tx-table__address"
+              >
+                GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+              </span>
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                class="badge badge-success badge-md"
+              >
+                <span
+                  class="badge-content"
+                >
+                  success
+                </span>
+              </span>
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <button
+                class="btn btn-secondary btn-sm"
+                role="button"
+              >
+                Details
+              </button>
+            </td>
+          </tr>
+          <tr
+            class="data-table__row data-table__row--clickable"
+            role="button"
+            tabindex="0"
+          >
+            <td
+              class="data-table__td"
+            >
+              6/5/2026
+            </td>
+            <td
+              class="data-table__td tx-table__type"
+            >
+              <span
+                style="text-transform: capitalize;"
+              >
+                withdraw
+              </span>
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                class="tx-table__amount--negative"
+              >
+                -99
+                 
+                XLM
+              </span>
+            </td>
+            <td
+              class="data-table__td"
+            >
+              XLM
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                class="tx-table__address"
+              >
+                GCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+              </span>
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                class="badge badge-danger badge-md"
+              >
+                <span
+                  class="badge-content"
+                >
+                  failed
+                </span>
+              </span>
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <button
+                class="btn btn-secondary btn-sm"
+                role="button"
+              >
+                Details
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div
+      aria-label="Table pagination"
+      class="data-table__pagination"
+      role="navigation"
+    >
+      <div
+        class="data-table__pagination-info"
+      >
+        Showing 
+        1
+        –
+        3
+         of 
+        3
+      </div>
+      <div
+        class="data-table__pagination-controls"
+      >
+        <button
+          aria-label="First page"
+          class="data-table__page-btn"
+          disabled=""
+        >
+          «
+        </button>
+        <button
+          aria-label="Previous page"
+          class="data-table__page-btn"
+          disabled=""
+        >
+          ‹
+        </button>
+        <span
+          aria-current="page"
+          class="data-table__page-indicator"
+        >
+          Page 
+          1
+           of 
+          1
+        </span>
+        <button
+          aria-label="Next page"
+          class="data-table__page-btn"
+          disabled=""
+        >
+          ›
+        </button>
+        <button
+          aria-label="Last page"
+          class="data-table__page-btn"
+          disabled=""
+        >
+          »
+        </button>
+      </div>
+      <div
+        class="data-table__page-size"
+      >
+        <label
+          class="data-table__page-size-label"
+          for="data-table-page-size"
+        >
+          Per page:
+        </label>
+        <select
+          class="data-table__page-size-select"
+          id="data-table-page-size"
+        >
+          <option
+            value="5"
+          >
+            5
+          </option>
+          <option
+            value="10"
+          >
+            10
+          </option>
+          <option
+            value="25"
+          >
+            25
+          </option>
+          <option
+            value="50"
+          >
+            50
+          </option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`TransactionTables snapshots > renders the empty state 1`] = `
+<div>
+  <style>
+    
+      .tx-table__type { text-transform: capitalize; }
+      .tx-table__amount--positive { color: #4ade80; font-weight: 600; }
+      .tx-table__amount--negative { color: #f87171; font-weight: 600; }
+      .tx-table__address { font-size: 0.8125rem; color: rgba(0,0,0,0.54); overflow: hidden; text-overflow: ellipsis; max-width: 180px; white-space: nowrap; }
+    
+  </style>
+  <div
+    class="data-table-wrapper "
+    data-testid="data-table"
+  >
+    <div
+      aria-label="Transaction history"
+      class="data-table-scroll"
+      role="region"
+    >
+      <table
+        aria-busy="false"
+        aria-label="Transaction history"
+        class="data-table"
+      >
+        <caption
+          class="data-table__caption"
+        >
+          Transaction history
+        </caption>
+        <colgroup>
+          <col />
+          <col />
+          <col />
+          <col />
+          <col />
+          <col />
+          <col />
+        </colgroup>
+        <thead
+          class="data-table__head"
+        >
+          <tr>
+            <th
+              aria-sort="descending"
+              class="data-table__th data-table__th--sortable data-table__th--sorted"
+              scope="col"
+              tabindex="0"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                Date
+                <span
+                  aria-hidden="true"
+                  class="data-table__sort-icon data-table__sort-icon--active"
+                >
+                  ▼
+                </span>
+              </span>
+            </th>
+            <th
+              aria-sort="none"
+              class="data-table__th data-table__th--sortable"
+              scope="col"
+              tabindex="0"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                Type
+                <span
+                  aria-hidden="true"
+                  class="data-table__sort-icon "
+                >
+                  ⇅
+                </span>
+              </span>
+            </th>
+            <th
+              aria-sort="none"
+              class="data-table__th data-table__th--sortable"
+              scope="col"
+              tabindex="0"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                Amount
+                <span
+                  aria-hidden="true"
+                  class="data-table__sort-icon "
+                >
+                  ⇅
+                </span>
+              </span>
+            </th>
+            <th
+              aria-sort="none"
+              class="data-table__th data-table__th--sortable"
+              scope="col"
+              tabindex="0"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                Asset
+                <span
+                  aria-hidden="true"
+                  class="data-table__sort-icon "
+                >
+                  ⇅
+                </span>
+              </span>
+            </th>
+            <th
+              class="data-table__th"
+              scope="col"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                From / To
+              </span>
+            </th>
+            <th
+              aria-sort="none"
+              class="data-table__th data-table__th--sortable"
+              scope="col"
+              tabindex="0"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                Status
+                <span
+                  aria-hidden="true"
+                  class="data-table__sort-icon "
+                >
+                  ⇅
+                </span>
+              </span>
+            </th>
+            <th
+              class="data-table__th"
+              scope="col"
+            >
+              <span
+                class="data-table__th-content"
+              />
+            </th>
+          </tr>
+        </thead>
+        <tbody
+          class="data-table__body"
+        >
+          <tr>
+            <td
+              class="data-table__td data-table__td--empty"
+              colspan="7"
+            >
+              No transactions found
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`TransactionTables snapshots > renders the loading state 1`] = `
+<div>
+  <style>
+    
+      .tx-table__type { text-transform: capitalize; }
+      .tx-table__amount--positive { color: #4ade80; font-weight: 600; }
+      .tx-table__amount--negative { color: #f87171; font-weight: 600; }
+      .tx-table__address { font-size: 0.8125rem; color: rgba(0,0,0,0.54); overflow: hidden; text-overflow: ellipsis; max-width: 180px; white-space: nowrap; }
+    
+  </style>
+  <div
+    class="data-table-wrapper "
+    data-testid="data-table"
+  >
+    <div
+      aria-label="Transaction history"
+      class="data-table-scroll"
+      role="region"
+    >
+      <table
+        aria-busy="true"
+        aria-label="Transaction history"
+        class="data-table"
+      >
+        <caption
+          class="data-table__caption"
+        >
+          Transaction history
+        </caption>
+        <colgroup>
+          <col />
+          <col />
+          <col />
+          <col />
+          <col />
+          <col />
+          <col />
+        </colgroup>
+        <thead
+          class="data-table__head"
+        >
+          <tr>
+            <th
+              aria-sort="descending"
+              class="data-table__th data-table__th--sortable data-table__th--sorted"
+              scope="col"
+              tabindex="0"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                Date
+                <span
+                  aria-hidden="true"
+                  class="data-table__sort-icon data-table__sort-icon--active"
+                >
+                  ▼
+                </span>
+              </span>
+            </th>
+            <th
+              aria-sort="none"
+              class="data-table__th data-table__th--sortable"
+              scope="col"
+              tabindex="0"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                Type
+                <span
+                  aria-hidden="true"
+                  class="data-table__sort-icon "
+                >
+                  ⇅
+                </span>
+              </span>
+            </th>
+            <th
+              aria-sort="none"
+              class="data-table__th data-table__th--sortable"
+              scope="col"
+              tabindex="0"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                Amount
+                <span
+                  aria-hidden="true"
+                  class="data-table__sort-icon "
+                >
+                  ⇅
+                </span>
+              </span>
+            </th>
+            <th
+              aria-sort="none"
+              class="data-table__th data-table__th--sortable"
+              scope="col"
+              tabindex="0"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                Asset
+                <span
+                  aria-hidden="true"
+                  class="data-table__sort-icon "
+                >
+                  ⇅
+                </span>
+              </span>
+            </th>
+            <th
+              class="data-table__th"
+              scope="col"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                From / To
+              </span>
+            </th>
+            <th
+              aria-sort="none"
+              class="data-table__th data-table__th--sortable"
+              scope="col"
+              tabindex="0"
+            >
+              <span
+                class="data-table__th-content"
+              >
+                Status
+                <span
+                  aria-hidden="true"
+                  class="data-table__sort-icon "
+                >
+                  ⇅
+                </span>
+              </span>
+            </th>
+            <th
+              class="data-table__th"
+              scope="col"
+            >
+              <span
+                class="data-table__th-content"
+              />
+            </th>
+          </tr>
+        </thead>
+        <tbody
+          class="data-table__body"
+        >
+          <tr
+            class="data-table__row data-table__row--skeleton"
+          >
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+          </tr>
+          <tr
+            class="data-table__row data-table__row--skeleton"
+          >
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+          </tr>
+          <tr
+            class="data-table__row data-table__row--skeleton"
+          >
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+          </tr>
+          <tr
+            class="data-table__row data-table__row--skeleton"
+          >
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+          </tr>
+          <tr
+            class="data-table__row data-table__row--skeleton"
+          >
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+            <td
+              class="data-table__td"
+            >
+              <span
+                aria-hidden="true"
+                class="data-table__skeleton-cell"
+                role="presentation"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p
+      aria-live="polite"
+      class="data-table__sr-only"
+      role="status"
+    >
+      Loading data…
+    </p>
+  </div>
+</div>
+`;
+
+exports[`UserStats snapshots > renders a non-XLM currency label 1`] = `
+<div>
+  <div
+    class="user-stats "
+  >
+    <div
+      class="user-stats-grid"
+    >
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Total Contributed
+        </div>
+        <div
+          class="stat-value"
+        >
+          12,500
+           
+          USDC
+        </div>
+      </div>
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Total Received
+        </div>
+        <div
+          class="stat-value"
+        >
+          8,200.5
+           
+          USDC
+        </div>
+      </div>
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Groups Joined
+        </div>
+        <div
+          class="stat-value"
+        >
+          4
+        </div>
+      </div>
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Active Groups
+        </div>
+        <div
+          class="stat-value"
+        >
+          3
+        </div>
+      </div>
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Completed Cycles
+        </div>
+        <div
+          class="stat-value"
+        >
+          17
+        </div>
+      </div>
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Avg. Contribution
+        </div>
+        <div
+          class="stat-value"
+        >
+          312.5
+           
+          USDC
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`UserStats snapshots > renders every total with thousands separators 1`] = `
+<div>
+  <div
+    class="user-stats "
+  >
+    <div
+      class="user-stats-grid"
+    >
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Total Contributed
+        </div>
+        <div
+          class="stat-value"
+        >
+          12,500
+           
+          XLM
+        </div>
+      </div>
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Total Received
+        </div>
+        <div
+          class="stat-value"
+        >
+          8,200.5
+           
+          XLM
+        </div>
+      </div>
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Groups Joined
+        </div>
+        <div
+          class="stat-value"
+        >
+          4
+        </div>
+      </div>
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Active Groups
+        </div>
+        <div
+          class="stat-value"
+        >
+          3
+        </div>
+      </div>
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Completed Cycles
+        </div>
+        <div
+          class="stat-value"
+        >
+          17
+        </div>
+      </div>
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Avg. Contribution
+        </div>
+        <div
+          class="stat-value"
+        >
+          312.5
+           
+          XLM
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`UserStats snapshots > renders zeroes without collapsing a stat 1`] = `
+<div>
+  <div
+    class="user-stats "
+  >
+    <div
+      class="user-stats-grid"
+    >
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Total Contributed
+        </div>
+        <div
+          class="stat-value"
+        >
+          0
+           
+          XLM
+        </div>
+      </div>
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Total Received
+        </div>
+        <div
+          class="stat-value"
+        >
+          0
+           
+          XLM
+        </div>
+      </div>
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Groups Joined
+        </div>
+        <div
+          class="stat-value"
+        >
+          0
+        </div>
+      </div>
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Active Groups
+        </div>
+        <div
+          class="stat-value"
+        >
+          0
+        </div>
+      </div>
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Completed Cycles
+        </div>
+        <div
+          class="stat-value"
+        >
+          0
+        </div>
+      </div>
+      <div
+        class="stat-item"
+      >
+        <div
+          class="stat-label"
+        >
+          Avg. Contribution
+        </div>
+        <div
+          class="stat-value"
+        >
+          0
+           
+          XLM
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`dashboard TransactionTable snapshots > renders recent transactions with signed amounts and status chips 1`] = `
+<div>
+  <div
+    class="MuiBox-root css-1q330vz"
+  >
+    <div
+      class="MuiBox-root css-kbyqrn"
+    >
+      <h6
+        class="MuiTypography-root MuiTypography-h6 css-h9fkkg-MuiTypography-root"
+      >
+        Recent Transactions
+      </h6>
+    </div>
+    <div
+      class="MuiBox-root css-19midj6"
+    >
+      <div
+        class="data-table-wrapper "
+        data-testid="data-table"
+      >
+        <div
+          aria-label="Recent transactions"
+          class="data-table-scroll"
+          role="region"
+        >
+          <table
+            aria-busy="false"
+            aria-label="Recent transactions"
+            class="data-table"
+          >
+            <caption
+              class="data-table__caption"
+            >
+              Recent transactions
+            </caption>
+            <colgroup>
+              <col />
+              <col />
+              <col />
+              <col />
+            </colgroup>
+            <thead
+              class="data-table__head"
+            >
+              <tr>
+                <th
+                  aria-sort="descending"
+                  class="data-table__th data-table__th--sortable data-table__th--sorted"
+                  scope="col"
+                  tabindex="0"
+                >
+                  <span
+                    class="data-table__th-content"
+                  >
+                    Date
+                    <span
+                      aria-hidden="true"
+                      class="data-table__sort-icon data-table__sort-icon--active"
+                    >
+                      ▼
+                    </span>
+                  </span>
+                </th>
+                <th
+                  aria-sort="none"
+                  class="data-table__th data-table__th--sortable"
+                  scope="col"
+                  tabindex="0"
+                >
+                  <span
+                    class="data-table__th-content"
+                  >
+                    Type
+                    <span
+                      aria-hidden="true"
+                      class="data-table__sort-icon "
+                    >
+                      ⇅
+                    </span>
+                  </span>
+                </th>
+                <th
+                  aria-sort="none"
+                  class="data-table__th data-table__th--sortable"
+                  scope="col"
+                  tabindex="0"
+                >
+                  <span
+                    class="data-table__th-content"
+                  >
+                    Amount
+                    <span
+                      aria-hidden="true"
+                      class="data-table__sort-icon "
+                    >
+                      ⇅
+                    </span>
+                  </span>
+                </th>
+                <th
+                  aria-sort="none"
+                  class="data-table__th data-table__th--sortable"
+                  scope="col"
+                  tabindex="0"
+                >
+                  <span
+                    class="data-table__th-content"
+                  >
+                    Status
+                    <span
+                      aria-hidden="true"
+                      class="data-table__sort-icon "
+                    >
+                      ⇅
+                    </span>
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            <tbody
+              class="data-table__body"
+            >
+              <tr
+                class="data-table__row"
+              >
+                <td
+                  class="data-table__td"
+                >
+                  <p
+                    class="MuiTypography-root MuiTypography-body2 css-7ctihp-MuiTypography-root"
+                  >
+                    2026-06-12
+                  </p>
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <p
+                    class="MuiTypography-root MuiTypography-body2 css-3wl6x-MuiTypography-root"
+                  >
+                    deposit
+                  </p>
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <p
+                    class="MuiTypography-root MuiTypography-body2 css-19ajev3-MuiTypography-root"
+                  >
+                    -
+                    2,500
+                     
+                    XLM
+                  </p>
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <div
+                    class="MuiChip-root MuiChip-outlined MuiChip-sizeSmall MuiChip-colorSuccess MuiChip-outlinedSuccess css-9ze7ur-MuiChip-root"
+                  >
+                    <span
+                      class="MuiChip-label MuiChip-labelSmall css-19m61dl-MuiChip-label"
+                    >
+                      PAID
+                    </span>
+                  </div>
+                </td>
+              </tr>
+              <tr
+                class="data-table__row"
+              >
+                <td
+                  class="data-table__td"
+                >
+                  <p
+                    class="MuiTypography-root MuiTypography-body2 css-7ctihp-MuiTypography-root"
+                  >
+                    2026-06-06
+                  </p>
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <p
+                    class="MuiTypography-root MuiTypography-body2 css-3wl6x-MuiTypography-root"
+                  >
+                    payout
+                  </p>
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <p
+                    class="MuiTypography-root MuiTypography-body2 css-1uegkyv-MuiTypography-root"
+                  >
+                    +
+                    750.5
+                     
+                    XLM
+                  </p>
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <div
+                    class="MuiChip-root MuiChip-outlined MuiChip-sizeSmall MuiChip-colorSuccess MuiChip-outlinedSuccess css-9ze7ur-MuiChip-root"
+                  >
+                    <span
+                      class="MuiChip-label MuiChip-labelSmall css-19m61dl-MuiChip-label"
+                    >
+                      PAID
+                    </span>
+                  </div>
+                </td>
+              </tr>
+              <tr
+                class="data-table__row"
+              >
+                <td
+                  class="data-table__td"
+                >
+                  <p
+                    class="MuiTypography-root MuiTypography-body2 css-7ctihp-MuiTypography-root"
+                  >
+                    2026-06-06
+                  </p>
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <p
+                    class="MuiTypography-root MuiTypography-body2 css-3wl6x-MuiTypography-root"
+                  >
+                    fee
+                  </p>
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <p
+                    class="MuiTypography-root MuiTypography-body2 css-12ormm-MuiTypography-root"
+                  >
+                    -
+                    0.5
+                     
+                    XLM
+                  </p>
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <div
+                    class="MuiChip-root MuiChip-outlined MuiChip-sizeSmall MuiChip-colorWarning MuiChip-outlinedWarning css-1f7kbkl-MuiChip-root"
+                  >
+                    <span
+                      class="MuiChip-label MuiChip-labelSmall css-19m61dl-MuiChip-label"
+                    >
+                      PENDING
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div
+          aria-label="Table pagination"
+          class="data-table__pagination"
+          role="navigation"
+        >
+          <div
+            class="data-table__pagination-info"
+          >
+            Showing 
+            1
+            –
+            3
+             of 
+            3
+          </div>
+          <div
+            class="data-table__pagination-controls"
+          >
+            <button
+              aria-label="First page"
+              class="data-table__page-btn"
+              disabled=""
+            >
+              «
+            </button>
+            <button
+              aria-label="Previous page"
+              class="data-table__page-btn"
+              disabled=""
+            >
+              ‹
+            </button>
+            <span
+              aria-current="page"
+              class="data-table__page-indicator"
+            >
+              Page 
+              1
+               of 
+              1
+            </span>
+            <button
+              aria-label="Next page"
+              class="data-table__page-btn"
+              disabled=""
+            >
+              ›
+            </button>
+            <button
+              aria-label="Last page"
+              class="data-table__page-btn"
+              disabled=""
+            >
+              »
+            </button>
+          </div>
+          <div
+            class="data-table__page-size"
+          >
+            <label
+              class="data-table__page-size-label"
+              for="data-table-page-size"
+            >
+              Per page:
+            </label>
+            <select
+              class="data-table__page-size-select"
+              id="data-table-page-size"
+            >
+              <option
+                value="5"
+              >
+                5
+              </option>
+              <option
+                value="10"
+              >
+                10
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`dashboard TransactionTable snapshots > renders the empty state 1`] = `
+<div>
+  <div
+    class="MuiBox-root css-1q330vz"
+  >
+    <div
+      class="MuiBox-root css-kbyqrn"
+    >
+      <h6
+        class="MuiTypography-root MuiTypography-h6 css-h9fkkg-MuiTypography-root"
+      >
+        Recent Transactions
+      </h6>
+    </div>
+    <div
+      class="MuiBox-root css-19midj6"
+    >
+      <div
+        class="data-table-wrapper "
+        data-testid="data-table"
+      >
+        <div
+          aria-label="Recent transactions"
+          class="data-table-scroll"
+          role="region"
+        >
+          <table
+            aria-busy="false"
+            aria-label="Recent transactions"
+            class="data-table"
+          >
+            <caption
+              class="data-table__caption"
+            >
+              Recent transactions
+            </caption>
+            <colgroup>
+              <col />
+              <col />
+              <col />
+              <col />
+            </colgroup>
+            <thead
+              class="data-table__head"
+            >
+              <tr>
+                <th
+                  aria-sort="descending"
+                  class="data-table__th data-table__th--sortable data-table__th--sorted"
+                  scope="col"
+                  tabindex="0"
+                >
+                  <span
+                    class="data-table__th-content"
+                  >
+                    Date
+                    <span
+                      aria-hidden="true"
+                      class="data-table__sort-icon data-table__sort-icon--active"
+                    >
+                      ▼
+                    </span>
+                  </span>
+                </th>
+                <th
+                  aria-sort="none"
+                  class="data-table__th data-table__th--sortable"
+                  scope="col"
+                  tabindex="0"
+                >
+                  <span
+                    class="data-table__th-content"
+                  >
+                    Type
+                    <span
+                      aria-hidden="true"
+                      class="data-table__sort-icon "
+                    >
+                      ⇅
+                    </span>
+                  </span>
+                </th>
+                <th
+                  aria-sort="none"
+                  class="data-table__th data-table__th--sortable"
+                  scope="col"
+                  tabindex="0"
+                >
+                  <span
+                    class="data-table__th-content"
+                  >
+                    Amount
+                    <span
+                      aria-hidden="true"
+                      class="data-table__sort-icon "
+                    >
+                      ⇅
+                    </span>
+                  </span>
+                </th>
+                <th
+                  aria-sort="none"
+                  class="data-table__th data-table__th--sortable"
+                  scope="col"
+                  tabindex="0"
+                >
+                  <span
+                    class="data-table__th-content"
+                  >
+                    Status
+                    <span
+                      aria-hidden="true"
+                      class="data-table__sort-icon "
+                    >
+                      ⇅
+                    </span>
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            <tbody
+              class="data-table__body"
+            >
+              <tr>
+                <td
+                  class="data-table__td data-table__td--empty"
+                  colspan="4"
+                >
+                  No recent transactions
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`dashboard TransactionTable snapshots > renders the loading state 1`] = `
+<div>
+  <div
+    class="MuiBox-root css-1q330vz"
+  >
+    <div
+      class="MuiBox-root css-kbyqrn"
+    >
+      <h6
+        class="MuiTypography-root MuiTypography-h6 css-h9fkkg-MuiTypography-root"
+      >
+        Recent Transactions
+      </h6>
+    </div>
+    <div
+      class="MuiBox-root css-19midj6"
+    >
+      <div
+        class="data-table-wrapper "
+        data-testid="data-table"
+      >
+        <div
+          aria-label="Recent transactions"
+          class="data-table-scroll"
+          role="region"
+        >
+          <table
+            aria-busy="true"
+            aria-label="Recent transactions"
+            class="data-table"
+          >
+            <caption
+              class="data-table__caption"
+            >
+              Recent transactions
+            </caption>
+            <colgroup>
+              <col />
+              <col />
+              <col />
+              <col />
+            </colgroup>
+            <thead
+              class="data-table__head"
+            >
+              <tr>
+                <th
+                  aria-sort="descending"
+                  class="data-table__th data-table__th--sortable data-table__th--sorted"
+                  scope="col"
+                  tabindex="0"
+                >
+                  <span
+                    class="data-table__th-content"
+                  >
+                    Date
+                    <span
+                      aria-hidden="true"
+                      class="data-table__sort-icon data-table__sort-icon--active"
+                    >
+                      ▼
+                    </span>
+                  </span>
+                </th>
+                <th
+                  aria-sort="none"
+                  class="data-table__th data-table__th--sortable"
+                  scope="col"
+                  tabindex="0"
+                >
+                  <span
+                    class="data-table__th-content"
+                  >
+                    Type
+                    <span
+                      aria-hidden="true"
+                      class="data-table__sort-icon "
+                    >
+                      ⇅
+                    </span>
+                  </span>
+                </th>
+                <th
+                  aria-sort="none"
+                  class="data-table__th data-table__th--sortable"
+                  scope="col"
+                  tabindex="0"
+                >
+                  <span
+                    class="data-table__th-content"
+                  >
+                    Amount
+                    <span
+                      aria-hidden="true"
+                      class="data-table__sort-icon "
+                    >
+                      ⇅
+                    </span>
+                  </span>
+                </th>
+                <th
+                  aria-sort="none"
+                  class="data-table__th data-table__th--sortable"
+                  scope="col"
+                  tabindex="0"
+                >
+                  <span
+                    class="data-table__th-content"
+                  >
+                    Status
+                    <span
+                      aria-hidden="true"
+                      class="data-table__sort-icon "
+                    >
+                      ⇅
+                    </span>
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            <tbody
+              class="data-table__body"
+            >
+              <tr
+                class="data-table__row data-table__row--skeleton"
+              >
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+              </tr>
+              <tr
+                class="data-table__row data-table__row--skeleton"
+              >
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+              </tr>
+              <tr
+                class="data-table__row data-table__row--skeleton"
+              >
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+              </tr>
+              <tr
+                class="data-table__row data-table__row--skeleton"
+              >
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+              </tr>
+              <tr
+                class="data-table__row data-table__row--skeleton"
+              >
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+                <td
+                  class="data-table__td"
+                >
+                  <span
+                    aria-hidden="true"
+                    class="data-table__skeleton-cell"
+                    role="presentation"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p
+          aria-live="polite"
+          class="data-table__sr-only"
+          role="status"
+        >
+          Loading data…
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+`;

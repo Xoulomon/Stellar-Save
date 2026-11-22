@@ -75,6 +75,11 @@ pub enum ContractError {
     /// Error Code: 3008
     InsufficientBalance = 3008,
 
+    /// The submitted contribution zk proof failed cryptographic verification
+    /// or was malformed (wrong length / unparseable).
+    /// Error Code: 3010
+    InvalidProof = 3010,
+
     // Payout-related errors (4000-4999)
     /// The payout operation failed due to insufficient funds or transfer error.
     /// Error Code: 4001
@@ -130,6 +135,10 @@ pub enum ContractError {
     /// Reentrancy detected during function execution.
     /// Error Code: 9004
     ReentrancyDetected = 9004,
+
+    /// The contract is paused by the admin; contributions and payouts are rejected.
+    /// Error Code: 9005
+    ContractPaused = 9005,
 
     /// The cycle deadline has passed; contributions are no longer accepted.
     /// Error Code: 3009
@@ -237,6 +246,9 @@ impl ContractError {
             ContractError::InsufficientBalance => {
                 "The member's token balance is insufficient to cover the auto-contribution amount."
             }
+            ContractError::InvalidProof => {
+                "The submitted contribution proof failed verification or was malformed."
+            }
             ContractError::CycleDeadlineExpired => {
                 "The cycle deadline has passed. Contributions are no longer accepted for this cycle."
             }
@@ -302,6 +314,9 @@ impl ContractError {
             }
             ContractError::ReentrancyDetected => {
                 "Reentrancy detected during function execution."
+            }
+            ContractError::ContractPaused => {
+                "The contract is paused by an admin. Retry after it is unpaused."
             }
             ContractError::AlreadyVoted => {
                 "You have already raised a dispute for this group. Each member may only vote once per dispute round."
@@ -442,6 +457,9 @@ impl ErrorRecoveryStrategy {
             ContractError::InsufficientBalance => {
                 "Ensure your token balance is sufficient to cover the contribution amount before the cycle starts, or disable auto-contribution."
             }
+            ContractError::InvalidProof => {
+                "Regenerate the zk proof for the correct group and cycle and resubmit it to verify_contribution_proof."
+            }
             ContractError::CycleDeadlineExpired => {
                 "The cycle deadline has passed. Contributions are no longer accepted for this cycle."
             }
@@ -510,6 +528,9 @@ impl ErrorRecoveryStrategy {
             }
             ContractError::ReentrancyDetected => {
                 "Ensure no reentrant calls are performed during execution."
+            }
+            ContractError::ContractPaused => {
+                "Wait for the admin to unpause the contract, then retry."
             }
         }
     }

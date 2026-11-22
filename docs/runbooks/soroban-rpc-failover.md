@@ -17,8 +17,8 @@ automatic recovery is bounded by `RPC_BREAKER_RESET_TIMEOUT_MS` plus one
 successful probe. Operators should alert on `circuit_breaker_state` and
 `circuit_breaker_trips_total`.
 
-Run the integration test with:
+Run the unit test with:
 
 ```sh
-npm run test:integration -- --runTestsByPath test/integration/rpc-failover.test.ts
+npm test -- --testPathPattern=rpc_circuit_breaker
 ```

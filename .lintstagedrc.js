@@ -1,6 +1,6 @@
 module.exports = {
   // Use each workspace's flat config explicitly because lint-staged runs at the repository root.
-  // Backend files currently have existing warnings, so report them without blocking commits.
+  // Backend files have existing warnings, so report them without blocking commits.
   'backend/**/*.{ts,tsx,js,jsx,mjs,cjs}': [
     'eslint --config backend/eslint.config.mjs',
     'prettier --check',

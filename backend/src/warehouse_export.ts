@@ -62,7 +62,7 @@ export class WarehouseExportPipeline {
   private alertWebhook?: string;
 
   constructor(opts: { s3Client: S3Client; bucket: string; alertWebhook?: string }) {
-    this.prisma = new (PrismaClient as any)();
+    this.prisma = new PrismaClient();
     this.s3 = opts.s3Client;
     this.bucket = opts.bucket;
     this.alertWebhook = opts.alertWebhook;
@@ -196,6 +196,7 @@ export class WarehouseExportPipeline {
 
   private async loadWatermark(): Promise<number> {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- sorobanEventCursor model is pending Prisma migration; not yet in generated client
       const row = await (this.prisma as any).sorobanEventCursor.findUnique({
         where: { contractId: WATERMARK_KEY },
         select: { lastLedger: true },
@@ -207,6 +208,7 @@ export class WarehouseExportPipeline {
   }
 
   private async saveWatermark(ledger: number): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- sorobanEventCursor model is pending Prisma migration; not yet in generated client
     await (this.prisma as any).sorobanEventCursor.upsert({
       where: { contractId: WATERMARK_KEY },
       update: { lastLedger: ledger, lastCursor: String(ledger) },

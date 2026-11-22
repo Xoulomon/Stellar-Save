@@ -1,20 +1,13 @@
-const mockPrisma = {
-  indexedTransaction: {
-    findFirst: jest.fn(),
-    upsert: jest.fn().mockResolvedValue({}),
-    findMany: jest.fn(),
-    count: jest.fn(),
-  },
-  $disconnect: jest.fn().mockResolvedValue(undefined),
-};
+import { createPrismaMock } from '../../tests/helpers/prismaMock';
+
+const flush = (ms = 50) => new Promise((resolve) => setTimeout(resolve, ms));
+const mockPrisma = createPrismaMock();
 
 jest.mock('../generated/prisma/client', () => ({
   PrismaClient: jest.fn(() => mockPrisma),
 }));
 
 import { HorizonIndexer } from '../services/indexer';
-
-const flush = (ms = 50) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function txRecord(overrides: Record<string, unknown> = {}) {
   return {

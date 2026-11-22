@@ -6,17 +6,12 @@
 #![cfg(test)]
 
 use crate::contract::{ExampleContract, ExampleContractClient};
-use soroban_sdk::{testutils::Address as _, Address, Env, String};
+use soroban_sdk::{Address, Env, String};
 
-/// Initialize a test environment with auth mocking.
-///
-/// # Returns
-/// A new `Env` instance ready for testing
-pub fn create_env() -> Env {
-    let env = Env::default();
-    env.mock_all_auths();
-    env
-}
+// create_env and generate_address are identical across all sibling contracts.
+// Delegate to the canonical implementations in stellar-save-common rather than
+// maintaining per-contract copies.
+pub use stellar_save_common::test_support::{create_env, generate_address};
 
 /// Create a client for the NFT contract.
 ///
@@ -34,17 +29,6 @@ pub fn create_client<'a>(env: &Env, owner: &Address) -> ExampleContractClient<'a
     let symbol = String::from_str(env, "TKN");
     let address = env.register(ExampleContract, (uri, name, symbol, owner));
     ExampleContractClient::new(env, &address)
-}
-
-/// Generate a new test address.
-///
-/// # Arguments
-/// * `env` - The Soroban environment
-///
-/// # Returns
-/// A new unique address
-pub fn generate_address(env: &Env) -> Address {
-    Address::generate(env)
 }
 
 /// Create test scenario with owner, recipient, and spender.

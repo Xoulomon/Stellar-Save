@@ -1,0 +1,171 @@
+# Full onboarding E2E — app install through KYC submission (happy path)
+# Covers the complete 4-screen chain:
+#   WelcomeScreen → WalletSetupScreen → KycFormScreen → KycStatusScreen → Dashboard
+#
+# This is the master flow that exercises every step end-to-end.
+# Individual sub-flows (onboarding_wallet_setup, onboarding_kyc_form,
+# onboarding_kyc_status, onboarding_biometric_auth) cover edge cases in depth.
+#
+# Fixture data used in this flow is documented in mobile/docs/E2E_FIXTURES.md.
+appId: com.stellarsave.app
+---
+# ═══════════════════════════════════════════════════════════════════════════════
+# STEP 1 — Fresh launch: AuthGate & Welcome
+# ═══════════════════════════════════════════════════════════════════════════════
+- launchApp:
+    clearState: true
+
+# On first install there is no PIN and no biometric enrollment — the gate
+# passes through to the welcome screen immediately.
+- extendedWaitUntil:
+    visible:
+      id: "welcome-screen"
+    timeout: 15000
+
+- assertVisible:
+    text: "Welcome to Stellar Save"
+
+- assertVisible:
+    text: "Let's set up your wallet"
+
+- assertVisible:
+    id: "get-started-button"
+    text: "Get started"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STEP 2 — Wallet setup
+# ═══════════════════════════════════════════════════════════════════════════════
+- tapOn:
+    id: "get-started-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "wallet-setup-screen"
+    timeout: 10000
+
+- assertVisible:
+    text: "Set up your wallet"
+
+- assertVisible:
+    id: "create-wallet-button"
+
+- assertVisible:
+    id: "import-wallet-button"
+
+# Take the "create new wallet" path
+- tapOn:
+    id: "create-wallet-button"
+
+# Key derivation is async — wait for the screen to signal completion
+- extendedWaitUntil:
+    visible:
+      id: "wallet-setup-done"
+    timeout: 15000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STEP 3 — KYC form: identity fields + document capture
+# ═══════════════════════════════════════════════════════════════════════════════
+- extendedWaitUntil:
+    visible:
+      id: "kyc-form-screen"
+    timeout: 10000
+
+- assertVisible:
+    text: "Identity verification"
+
+# Fill full name
+- tapOn:
+    id: "kyc-full-name-input"
+- inputText: "Ada Okafor"
+
+# Fill date of birth (YYYY-MM-DD)
+- tapOn:
+    id: "kyc-dob-input"
+- inputText: "1990-09-25"
+
+# Fill country (ISO 3166-1 alpha-2)
+- tapOn:
+    id: "kyc-country-input"
+- inputText: "NG"
+
+# Grant camera permission and capture document
+- tapOn:
+    id: "kyc-capture-document-button"
+
+- extendedWaitUntil:
+    visible:
+      text: "Allow"
+    timeout: 8000
+
+- tapOn:
+    text: "Allow"
+
+- extendedWaitUntil:
+    visible:
+      id: "kyc-camera-viewfinder"
+    timeout: 10000
+
+- tapOn:
+    id: "kyc-capture-document-button"
+
+- extendedWaitUntil:
+    visible:
+      text: "Document captured ✓"
+    timeout: 10000
+
+# Submit the form
+- tapOn:
+    id: "kyc-submit-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "kyc-submitting-indicator"
+    timeout: 5000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STEP 4 — KYC status screen (pending — immediate post-submission state)
+# ═══════════════════════════════════════════════════════════════════════════════
+- extendedWaitUntil:
+    visible:
+      id: "kyc-status-screen"
+    timeout: 30000
+
+- assertVisible:
+    id: "kyc-status-title"
+    text: "Verification in progress"
+
+- assertVisible:
+    id: "kyc-status-body"
+    text: "We're reviewing your documents"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STEP 5 — Continue to app (pending does not block dashboard access)
+# ═══════════════════════════════════════════════════════════════════════════════
+- assertVisible:
+    id: "continue-to-app-button"
+
+- tapOn:
+    id: "continue-to-app-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-screen"
+    timeout: 10000
+
+# Verify the main tab bar is accessible
+- assertVisible:
+    id: "dashboard-tab"
+
+- assertVisible:
+    id: "browse-groups-tab"
+
+- assertVisible:
+    id: "profile-tab"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Final checkpoint — onboarding complete
+# ═══════════════════════════════════════════════════════════════════════════════
+# If execution reaches here without any assertion failure, the full onboarding
+# flow from fresh install through KYC submission is confirmed working.
+- assertVisible:
+    id: "dashboard-screen"

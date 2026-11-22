@@ -24,11 +24,27 @@ export class FraudDetectionWorker {
     }
   }
 
-  stop() {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      logger.info('Fraud detection worker stopped');
+  async stop(timeoutMs?: number): Promise<void> {
+    if (!this.intervalId) {
+      return;
     }
+
+    clearInterval(this.intervalId);
+    this.intervalId = undefined;
+
+    // Give any in-flight scan a bounded window to settle before reporting stopped.
+    const boundedTimeout = typeof timeoutMs === 'number' ? timeoutMs : 5000;
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, boundedTimeout);
+      if (typeof timer.unref === 'function') {
+        timer.unref();
+      }
+      // Resolve immediately on the next tick since scans are awaited internally;
+      // the timeout acts as an upper bound for the coordinator.
+      setImmediate(resolve);
+    });
+
+    logger.info('Fraud detection worker stopped');
   }
 }
 

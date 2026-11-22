@@ -18,13 +18,13 @@ export interface BackupResult {
   checksum: string;
 }
 
-// Compact, S3-safe timestamp: 20240115T120000Z
-function formatTimestamp(d: Date): string {
+/** Compact, S3-safe timestamp: 20240115T120000Z */
+export function formatTimestamp(d: Date): string {
   return d.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
 }
 
-// Inverse of formatTimestamp
-function parseTimestamp(s: string): Date | null {
+/** Inverse of formatTimestamp. Returns null for unrecognised input. */
+export function parseTimestamp(s: string): Date | null {
   // Input like 20240115T120000Z → 2024-01-15T12:00:00Z
   const m = s.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/);
   if (!m) return null;
@@ -32,6 +32,12 @@ function parseTimestamp(s: string): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
+/**
+ * BackupService owns the backup *primitives* only: pg_dump, S3 upload and
+ * retention pruning. Scheduling/timers live in the orchestrator
+ * (`backup_scheduler.ts`) so there is a single source of truth for when
+ * backups run.
+ */
 export class BackupService {
   private s3: S3Client;
   private bucket: string;

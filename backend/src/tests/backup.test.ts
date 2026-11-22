@@ -1,3 +1,4 @@
+import { BackupFactory } from '../../test/fixtures/factory';
 import { BackupMonitor } from '../backup_monitor';
 import { BackupRestoreDrill } from '../backup_restore_drill';
 import { BackupScheduler } from '../backup_scheduler';
@@ -9,33 +10,9 @@ import type { S3Client } from '../backup_service';
 const test = it;
 
 // ── Mock S3 client ────────────────────────────────────────────────────────────
+// Delegate to the shared BackupFactory — keeps the local harness thin.
 function makeMockS3(): S3Client & { store: Map<string, Buffer> } {
-  const store = new Map<string, Buffer>();
-  return {
-    store,
-    async putObject({
-      Key,
-      Body,
-    }: {
-      Bucket: string;
-      Key: string;
-      Body: Buffer;
-      ContentType: string;
-    }) {
-      store.set(Key, Body);
-    },
-    async getObject({ Key }: { Bucket: string; Key: string }) {
-      const data = store.get(Key);
-      if (!data) throw new Error(`Key not found: ${Key}`);
-      return data;
-    },
-    async listObjects({ Prefix }: { Bucket: string; Prefix: string }) {
-      return Array.from(store.keys()).filter((k) => k.startsWith(Prefix));
-    },
-    async deleteObject({ Key }: { Bucket: string; Key: string }) {
-      store.delete(Key);
-    },
-  };
+  return BackupFactory.makeMockS3();
 }
 
 // ── BackupService tests ───────────────────────────────────────────────────────

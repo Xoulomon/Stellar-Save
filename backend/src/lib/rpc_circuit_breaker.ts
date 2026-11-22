@@ -59,7 +59,7 @@ function onStateChange(name: string, from: CircuitState, to: CircuitState): void
  * instance can guard every call site for that dependency. This mirrors the
  * existing `fiatRampCircuitBreaker` in services/sep24.ts.
  */
-function makeRpcBreaker(name: RpcBreakerName): CircuitBreaker<[() => Promise<any>], any> {
+function makeRpcBreaker(name: RpcBreakerName): CircuitBreaker<[() => Promise<unknown>], unknown> {
   circuitBreakerState.set({ breaker: name }, STATE_VALUE[CircuitState.CLOSED]);
   return new CircuitBreaker(async <T>(fn: () => Promise<T>): Promise<T> => fn(), {
     name,
@@ -74,7 +74,7 @@ function makeRpcBreaker(name: RpcBreakerName): CircuitBreaker<[() => Promise<any
 export const sorobanCircuitBreaker = makeRpcBreaker('soroban_rpc');
 export const horizonCircuitBreaker = makeRpcBreaker('horizon');
 
-const BREAKERS: Record<RpcBreakerName, CircuitBreaker<[() => Promise<any>], any>> = {
+const BREAKERS: Record<RpcBreakerName, CircuitBreaker<[() => Promise<unknown>], unknown>> = {
   soroban_rpc: sorobanCircuitBreaker,
   horizon: horizonCircuitBreaker,
 };

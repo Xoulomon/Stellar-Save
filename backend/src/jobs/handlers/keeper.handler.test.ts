@@ -1,17 +1,14 @@
 import { KeeperHandler } from './keeper.handler';
+import { createPrismaMock } from '../../../tests/helpers/prismaMock';
 
 import type { IStellarClient } from '../../lib/stellar_client';
 
 describe('KeeperHandler', () => {
-  let mockDb: any;
+  let mockDb: ReturnType<typeof createPrismaMock>;
   let mockStellarClient: jest.Mocked<IStellarClient>;
 
   beforeEach(() => {
-    mockDb = {
-      contractEvent: {
-        findMany: jest.fn(),
-      },
-    };
+    mockDb = createPrismaMock();
 
     mockStellarClient = {
       executePayoutsBatch: jest.fn(),

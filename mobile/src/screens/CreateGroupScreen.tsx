@@ -86,6 +86,7 @@ function Field({
   placeholder,
   keyboardType = 'numeric',
   suffix,
+  testID,
 }: {
   label: string;
   value: string;
@@ -94,12 +95,14 @@ function Field({
   placeholder?: string;
   keyboardType?: 'numeric' | 'number-pad' | 'decimal-pad';
   suffix?: string;
+  testID: string;
 }) {
   return (
     <View style={fieldStyles.wrapper}>
       <Text style={fieldStyles.label}>{label}</Text>
       <View style={[fieldStyles.inputRow, !!error && fieldStyles.inputError]}>
         <TextInput
+          testID={testID}
           style={fieldStyles.input}
           value={value}
           onChangeText={onChangeText}
@@ -202,7 +205,7 @@ export function CreateGroupScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView testID="create-group-screen" style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.subtitle}>
           Set the terms for your savings group. These cannot be changed after creation.
         </Text>
@@ -215,6 +218,7 @@ export function CreateGroupScreen() {
           placeholder="e.g. 100"
           keyboardType="decimal-pad"
           suffix="XLM"
+          testID="contribution-amount-input"
         />
 
         <Field
@@ -225,6 +229,7 @@ export function CreateGroupScreen() {
           placeholder="e.g. 30"
           keyboardType="number-pad"
           suffix="days"
+          testID="cycle-duration-input"
         />
 
         <Field
@@ -234,6 +239,7 @@ export function CreateGroupScreen() {
           error={errors.maxMembers}
           placeholder="e.g. 10"
           keyboardType="number-pad"
+          testID="max-members-input"
         />
 
         <View style={styles.summary}>
@@ -246,6 +252,7 @@ export function CreateGroupScreen() {
         </View>
 
         <TouchableOpacity
+          testID="create-group-submit-button"
           style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
           onPress={handleSubmit}
           disabled={submitting}

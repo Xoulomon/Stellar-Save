@@ -54,7 +54,7 @@ function GroupPreview({ group }: { group: Group }) {
   const cycleDays = Math.round(group.cycleDuration / 86400);
 
   return (
-    <View style={styles.preview}>
+    <View testID="group-preview" style={styles.preview}>
       <Text style={styles.previewTitle}>{group.name ?? `Group #${group.id}`}</Text>
       <View style={styles.previewRow}>
         <View style={styles.previewStat}>
@@ -181,7 +181,7 @@ export function JoinGroupScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.container}>
+      <View testID="join-group-screen" style={styles.container}>
         <Text style={styles.subtitle}>
           Enter a group ID or paste an invite link to join a savings group.
         </Text>
@@ -189,6 +189,7 @@ export function JoinGroupScreen() {
         {/* Input row */}
         <View style={styles.inputRow}>
           <TextInput
+            testID="group-id-input"
             style={[styles.input, !!inputError && styles.inputError]}
             value={groupIdInput}
             onChangeText={handleInputChange}
@@ -200,6 +201,7 @@ export function JoinGroupScreen() {
             accessibilityLabel="Group ID or invite link"
           />
           <TouchableOpacity
+            testID="lookup-group-button"
             style={styles.lookupBtn}
             onPress={handleLookup}
             disabled={lookupLoading || !groupIdInput.trim()}
@@ -226,6 +228,7 @@ export function JoinGroupScreen() {
         {/* Join button */}
         {preview ? (
           <TouchableOpacity
+            testID="join-group-button"
             style={[styles.joinBtn, submitting && styles.joinBtnDisabled]}
             onPress={handleJoin}
             disabled={submitting}

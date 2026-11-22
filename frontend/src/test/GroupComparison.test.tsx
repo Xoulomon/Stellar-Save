@@ -4,6 +4,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { GroupComparison } from '../components/GroupComparison';
 
 import type { PublicGroup } from '../types/group';
+import { makePublicGroup } from './factories';
 
 const mockGroups: PublicGroup[] = [
   {

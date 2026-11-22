@@ -1,0 +1,43 @@
+# Onboarding flow — covers app launch, welcome screen, and wallet connect prompt
+appId: com.stellarsave.app
+---
+# Step 1: Launch the app fresh
+- launchApp:
+    clearState: true
+
+# Step 2: Welcome screen should be visible
+- assertVisible:
+    id: "welcome-screen"
+- assertVisible:
+    text: "Stellar Save"
+
+# Step 3: Headline and subtitle present
+- assertVisible:
+    text: "Rotational Savings"
+- assertVisible:
+    text: "Built for communities"
+
+# Step 4: Primary CTA button visible
+- assertVisible:
+    id: "get-started-button"
+
+# Step 5: Tap Get Started
+- tapOn:
+    id: "get-started-button"
+
+# Step 6: Wallet connection prompt appears
+- assertVisible:
+    id: "wallet-connect-screen"
+- assertVisible:
+    text: "Connect Your Wallet"
+
+# Step 7: Freighter option is listed
+- assertVisible:
+    text: "Freighter"
+
+# Step 8: Back navigation works
+- back
+
+# Step 9: Returned to welcome screen
+- assertVisible:
+    id: "welcome-screen"

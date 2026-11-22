@@ -20,7 +20,13 @@ const notificationService = new NotificationService();
 /** Fetch the user's stored locale preference, defaulting to 'en'. */
 async function getUserLocale(userId: string): Promise<string> {
   try {
-    const pref = await (prisma as any).notificationPreference.findUnique({
+    const pref = await (
+      prisma as unknown as {
+        notificationPreference: {
+          findUnique: (args: unknown) => Promise<{ locale?: string } | null>;
+        };
+      }
+    ).notificationPreference.findUnique({
       where: { userId },
       select: { locale: true },
     });

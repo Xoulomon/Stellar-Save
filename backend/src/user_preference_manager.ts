@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 
+import { prisma } from './lib/prisma';
 import { logger } from './logger';
 import { notificationPreferenceRepository } from './modules/notifications/notification-preference.repository';
 
@@ -149,17 +150,27 @@ export class UserPreferenceManager {
    * Register device token for push notifications
    */
   static async registerDeviceToken(userId: string, deviceToken: string, platform: string) {
-    // TODO: persist via Prisma once the DeviceToken model is added to the schema.
+    const now = new Date();
+    const record = await prisma.mobileDeviceToken.upsert({
+      where: { token: deviceToken },
+      create: { userId, token: deviceToken, platform, lastUsedAt: now },
+      update: { userId, platform, isValid: true, lastUsedAt: now },
+    });
+
     logger.info(`Device token registered for user: ${userId}`, { platform });
-    return { userId, deviceToken, platform, registeredAt: new Date() };
+    return record;
   }
 
   /**
    * Unregister device token
    */
   static async unregisterDeviceToken(userId: string, deviceToken: string) {
+    await prisma.mobileDeviceToken.updateMany({
+      where: { userId, token: deviceToken },
+      data: { isValid: false },
+    });
+
     logger.info(`Device token unregistered for user: ${userId}`);
-    // TODO: persist via Prisma once the DeviceToken model is added to the schema.
     return { userId, deviceToken, unregisteredAt: new Date() };
   }
 
@@ -167,9 +178,13 @@ export class UserPreferenceManager {
    * Get all device tokens for a user
    */
   static async getUserDeviceTokens(userId: string): Promise<string[]> {
-    // TODO: query via Prisma once the DeviceToken model is added to the schema.
+    const tokens: Array<{ token: string }> = await prisma.mobileDeviceToken.findMany({
+      where: { userId, isValid: true },
+      select: { token: true },
+    });
+
     logger.info(`Retrieved device tokens for user: ${userId}`);
-    return [];
+    return tokens.map((entry) => entry.token);
   }
 
   /**
@@ -189,7 +204,10 @@ export class UserPreferenceManager {
       emailEnabledPercent: total > 0 ? ((emailEnabled / total) * 100).toFixed(2) : 0,
       pushEnabledPercent: total > 0 ? ((pushEnabled / total) * 100).toFixed(2) : 0,
       byFrequency: Object.fromEntries(
-        byFrequency.map((group: any) => [group.emailFrequency, group._count])
+        byFrequency.map((group: { emailFrequency: string; _count: number }) => [
+          group.emailFrequency,
+          group._count,
+        ])
       ),
     };
   }

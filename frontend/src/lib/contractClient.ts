@@ -7,6 +7,7 @@
  */
 
 import * as freighterApi from '@stellar/freighter-api';
+import { withRetry } from '@stellar-save/shared-utils/src/retry';
 import {
   Contract,
   Networks,
@@ -18,12 +19,11 @@ import {
   xdr,
   Address,
 } from '@stellar/stellar-sdk';
-import * as freighterApi from '@stellar/freighter-api';
+
 import { env } from './env';
+import { rpcServer } from './rpcClient';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-
-const RPC_URL: string = env.VITE_STELLAR_RPC_URL;
 
 const NETWORK_PASSPHRASE: string =
   env.VITE_STELLAR_NETWORK === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
@@ -31,7 +31,7 @@ const NETWORK_PASSPHRASE: string =
 export const CONTRACT_ID: string = env.VITE_STELLAR_SAVE_CONTRACT_ID;
 
 // Soroban RPC server instance (singleton)
-export const server = new SorobanRpc.Server(RPC_URL, { allowHttp: false });
+export const server = rpcServer;
 
 // ─── Error Handling ───────────────────────────────────────────────────────────
 
@@ -181,15 +181,33 @@ async function signAndSubmit(sourceAddress: string, operation: xdr.Operation): P
 
   // 7. Poll for confirmation (up to ~30 s)
   const hash = sendResult.hash;
-  let getResult = await server.getTransaction(hash);
+  class TransactionNotConfirmedYet extends Error {}
 
-  for (
-    let i = 0;
-    i < 20 && getResult.status === SorobanRpc.Api.GetTransactionStatus.NOT_FOUND;
-    i++
-  ) {
-    await new Promise<void>((r) => setTimeout(r, 1500));
-    getResult = await server.getTransaction(hash);
+  let getResult: Awaited<ReturnType<typeof server.getTransaction>>;
+  try {
+    getResult = await withRetry(
+      async () => {
+        const result = await server.getTransaction(hash);
+        if (result.status === SorobanRpc.Api.GetTransactionStatus.NOT_FOUND) {
+          throw new TransactionNotConfirmedYet();
+        }
+        return result;
+      },
+      {
+        // Match the previous 20 polls, 1.5 seconds apart, after the first read.
+        attempts: 21,
+        initialDelayMs: 1500,
+        maxDelayMs: 1500,
+        backoffMultiplier: 1,
+        jitter: 0,
+        isRetryable: (error) => error instanceof TransactionNotConfirmedYet,
+      }
+    );
+  } catch (error) {
+    if (error instanceof TransactionNotConfirmedYet) {
+      throw new ContractError(null, 'Transaction did not confirm in time.');
+    }
+    throw error;
   }
 
   if (getResult.status === SorobanRpc.Api.GetTransactionStatus.FAILED) {

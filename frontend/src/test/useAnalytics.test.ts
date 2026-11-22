@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { useAnalytics } from '../hooks/useAnalytics';
 
+import { createQueryWrapper } from './createQueryWrapper';
+
 describe('useAnalytics', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -12,14 +14,14 @@ describe('useAnalytics', () => {
   });
 
   it('starts in loading state', () => {
-    const { result } = renderHook(() => useAnalytics());
+    const { result } = renderHook(() => useAnalytics(), { wrapper: createQueryWrapper() });
     expect(result.current.isLoading).toBe(true);
   });
 
   it('resolves with stats after timer fires', async () => {
-    const { result } = renderHook(() => useAnalytics());
+    const { result } = renderHook(() => useAnalytics(), { wrapper: createQueryWrapper() });
     await act(async () => {
-      vi.runAllTimers();
+      await vi.runAllTimersAsync();
     });
 
     expect(result.current.isLoading).toBe(false);
@@ -29,9 +31,9 @@ describe('useAnalytics', () => {
   });
 
   it('returns history data points', async () => {
-    const { result } = renderHook(() => useAnalytics());
+    const { result } = renderHook(() => useAnalytics(), { wrapper: createQueryWrapper() });
     await act(async () => {
-      vi.runAllTimers();
+      await vi.runAllTimersAsync();
     });
 
     expect(result.current.history.length).toBeGreaterThan(0);
@@ -43,9 +45,9 @@ describe('useAnalytics', () => {
   });
 
   it('returns member comparison data including "You"', async () => {
-    const { result } = renderHook(() => useAnalytics());
+    const { result } = renderHook(() => useAnalytics(), { wrapper: createQueryWrapper() });
     await act(async () => {
-      vi.runAllTimers();
+      await vi.runAllTimersAsync();
     });
 
     expect(result.current.memberComparison.length).toBeGreaterThan(0);
@@ -53,9 +55,9 @@ describe('useAnalytics', () => {
   });
 
   it('has no error', async () => {
-    const { result } = renderHook(() => useAnalytics());
+    const { result } = renderHook(() => useAnalytics(), { wrapper: createQueryWrapper() });
     await act(async () => {
-      vi.runAllTimers();
+      await vi.runAllTimersAsync();
     });
     expect(result.current.error).toBeNull();
   });

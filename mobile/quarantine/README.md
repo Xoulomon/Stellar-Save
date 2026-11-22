@@ -32,3 +32,10 @@ Remove its line from `quarantined_tests.txt` and open a PR.
 - A test should not stay quarantined for more than **2 sprint cycles**.
 - If a fix cannot be found, the test should be rewritten or removed.
 - The CI quarantine report job will **warn** (not fail) when quarantined tests exist.
+
+## Status
+
+**Active.** This directory is the triage target for flaky Maestro flows.
+`mobile/scripts/run-tests.sh` reads `quarantined_tests.txt` to exclude
+those flows from CI, and the quarantine-report job surfaces them in PRs.
+Do not archive — archiving would break the documented quarantine workflow.

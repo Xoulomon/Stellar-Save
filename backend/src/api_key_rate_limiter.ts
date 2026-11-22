@@ -4,9 +4,18 @@ import { logger } from './logger';
 
 import type { Request, Response, NextFunction } from 'express';
 
+/** Extend Express Request with the resolved API key context. */
+export interface ApiKeyRequest extends Request {
+  apiKey?: { keyId: string; userId: string | undefined };
+}
+
 const keyUsageCounts = new Map<string, { count: number; resetAt: number }>();
 
-export async function apiKeyAuthMiddleware(req: Request, res: Response, next: NextFunction) {
+export async function apiKeyAuthMiddleware(
+  req: ApiKeyRequest,
+  res: Response,
+  next: NextFunction
+) {
   const key = req.headers['x-api-key'] as string;
 
   if (!key) {
@@ -35,13 +44,13 @@ export async function apiKeyAuthMiddleware(req: Request, res: Response, next: Ne
 
   keyUsageCounts.set(validation.keyId!, usage);
 
-  (req as any).apiKey = { keyId: validation.keyId, userId: validation.userId };
+  req.apiKey = { keyId: validation.keyId!, userId: validation.userId };
   next();
 }
 
-export async function recordApiUsage(req: Request, res: Response) {
-  if ((req as any).apiKey) {
+export async function recordApiUsage(req: ApiKeyRequest, res: Response) {
+  if (req.apiKey) {
     const statusCode = res.statusCode || 200;
-    await apiKeyService.recordUsage((req as any).apiKey.keyId, req.path, req.method, statusCode);
+    await apiKeyService.recordUsage(req.apiKey.keyId, req.path, req.method, statusCode);
   }
 }

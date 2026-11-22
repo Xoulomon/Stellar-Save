@@ -34,7 +34,9 @@ async function checkEndpoint(path) {
 const results = await Promise.all(endpoints.map(checkEndpoint));
 for (const result of results) {
   const status = result.ok ? 'PASS' : 'FAIL';
-  console.log(`[${status}] ${result.journey} (${result.durationMs}ms)${result.error ? ` — ${result.error}` : ''}`);
+  process.stdout.write(
+    `[${status}] ${result.journey} (${result.durationMs}ms)${result.error ? ` — ${result.error}` : ''}\n`
+  );
 }
 
 const failed = results.filter((r) => !r.ok);

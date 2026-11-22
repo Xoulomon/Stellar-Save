@@ -1,3 +1,4 @@
+import { NotificationFactory } from '../../test/fixtures/factory';
 import { NotificationService } from '../notification_service';
 import {
   NotificationTemplateManager,
@@ -5,8 +6,8 @@ import {
 } from '../notification_template_manager';
 import {
   PushNotificationService,
-  FirebaseProvider,
-  OneSignalProvider,
+  FirebasePushProvider,
+  OneSignalPushProvider,
 } from '../push_notification_service';
 import { UserPreferenceManager } from '../user_preference_manager';
 
@@ -17,6 +18,20 @@ jest.mock('../prisma_client', () => ({
     },
     notification: {
       create: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
+      deleteMany: jest.fn(),
+    },
+    notificationQueue: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+      count: jest.fn(),
+    },
+    mobileDeviceToken: {
+      upsert: jest.fn(),
+      updateMany: jest.fn(),
+      findMany: jest.fn(),
     },
   },
 }));
@@ -29,6 +44,7 @@ jest.mock('../config', () => ({
       provider: 'firebase',
       firebase: { projectId: undefined, serviceAccount: undefined },
       onesignal: { appId: undefined, apiKey: undefined },
+      oneSignal: { appId: undefined, apiKey: undefined },
     },
     apns: { keyId: undefined, teamId: undefined, key: undefined, bundleId: undefined },
     nodeEnv: 'test',
@@ -100,7 +116,7 @@ describe('Notification Service', () => {
 
   describe('Push Notifications', () => {
     it('should initialize Firebase provider', () => {
-      const provider = new FirebaseProvider(
+      const provider = new FirebasePushProvider(
         'test-project',
         JSON.stringify({ type: 'service_account' })
       );
@@ -110,12 +126,12 @@ describe('Notification Service', () => {
 
     it('should throw error for invalid Firebase credentials', () => {
       expect(() => {
-        new FirebaseProvider('test-project', 'invalid-json');
+        new FirebasePushProvider('test-project', 'invalid-json');
       }).toThrow('Invalid Firebase service account JSON');
     });
 
     it('should initialize OneSignal provider', () => {
-      const provider = new OneSignalProvider('app-id-123', 'api-key-456');
+      const provider = new OneSignalPushProvider('app-id-123', 'api-key-456');
 
       expect(provider).toBeDefined();
     });
@@ -123,39 +139,28 @@ describe('Notification Service', () => {
     it('should send push notification via default provider', async () => {
       const pushService = new PushNotificationService();
 
-      const providers = pushService.getAvailableProviders();
-
-      expect(Array.isArray(providers)).toBe(true);
+      expect(typeof pushService.getProvider().send).toBe('function');
     });
 
     it('should check provider availability', async () => {
       const pushService = new PushNotificationService();
 
-      const isAvailable = pushService.isProviderAvailable('firebase');
-
-      expect(typeof isAvailable).toBe('boolean');
+      expect(() => pushService.getProvider('firebase')).toThrow(
+        'Push provider not configured: firebase'
+      );
     });
   });
 
   describe('User Preferences', () => {
     it('should create default preferences for new user', async () => {
-      const mockPreferences = {
+      const mockPreferences = NotificationFactory.buildPreference('user-123', {
         id: 'pref-1',
-        userId: 'user-123',
-        emailNotifications: true,
-        pushNotifications: true,
-        contributionReminders: true,
-        groupUpdates: true,
-        payoutNotifications: true,
-        emailFrequency: 'immediate',
         unsubscribeToken: 'token-123',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
       jest
         .spyOn(UserPreferenceManager, 'getOrCreatePreferences')
-        .mockResolvedValue(mockPreferences);
+        .mockResolvedValue(mockPreferences as any);
 
       const preferences = await UserPreferenceManager.getOrCreatePreferences('user-123');
 
@@ -164,21 +169,14 @@ describe('Notification Service', () => {
     });
 
     it('should update user preferences', async () => {
-      const mockUpdated = {
+      const mockUpdated = NotificationFactory.buildPreference('user-123', {
         id: 'pref-1',
-        userId: 'user-123',
         emailNotifications: false,
-        pushNotifications: true,
-        contributionReminders: true,
-        groupUpdates: true,
-        payoutNotifications: true,
         emailFrequency: 'daily',
         unsubscribeToken: 'token-123',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      });
 
-      jest.spyOn(UserPreferenceManager, 'updatePreferences').mockResolvedValue(mockUpdated);
+      jest.spyOn(UserPreferenceManager, 'updatePreferences').mockResolvedValue(mockUpdated as any);
 
       const updated = await UserPreferenceManager.updatePreferences('user-123', {
         emailNotifications: false,
@@ -229,19 +227,7 @@ describe('Notification Service', () => {
     });
 
     it('should get aggregate preference statistics', async () => {
-      const mockStats = {
-        total: 1000,
-        emailEnabled: 750,
-        pushEnabled: 600,
-        emailEnabledPercent: '75.00',
-        pushEnabledPercent: '60.00',
-        byFrequency: {
-          immediate: 400,
-          daily: 200,
-          weekly: 150,
-          never: 250,
-        },
-      };
+      const mockStats = NotificationFactory.buildPreferenceStats();
 
       jest.spyOn(UserPreferenceManager, 'getPreferenceStats').mockResolvedValue(mockStats);
 
@@ -265,22 +251,42 @@ describe('Notification Service', () => {
     });
 
     it('should register device token', async () => {
+      const { prisma } = jest.requireMock('../prisma_client');
+      prisma.mobileDeviceToken.upsert.mockResolvedValue({
+        userId: 'user-123',
+        token: 'device-token-abc',
+        platform: 'iOS',
+      });
+
       const registered = await UserPreferenceManager.registerDeviceToken(
         'user-123',
         'device-token-abc',
         'iOS'
       );
 
+      expect(prisma.mobileDeviceToken.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { token: 'device-token-abc' },
+          update: expect.objectContaining({ isValid: true }),
+        })
+      );
       expect(registered.userId).toBe('user-123');
       expect(registered.platform).toBe('iOS');
     });
 
     it('should unregister device token', async () => {
+      const { prisma } = jest.requireMock('../prisma_client');
+      prisma.mobileDeviceToken.updateMany.mockResolvedValue({ count: 1 });
+
       const unregistered = await UserPreferenceManager.unregisterDeviceToken(
         'user-123',
         'device-token-abc'
       );
 
+      expect(prisma.mobileDeviceToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'user-123', token: 'device-token-abc' },
+        data: { isValid: false },
+      });
       expect(unregistered.userId).toBe('user-123');
     });
   });
@@ -297,16 +303,12 @@ describe('Notification Service', () => {
     });
 
     it('should get template by key', async () => {
-      const mockTemplate = {
+      const mockTemplate = NotificationFactory.buildTemplate('email_contribution_reminder', {
         id: 'template-1',
-        templateKey: 'email_contribution_reminder',
-        templateName: 'Contribution Reminder - Email',
-        templateType: 'email',
         subject: 'Reminder: Contribution due',
         htmlContent: '<h1>Reminder</h1>',
         textContent: 'Reminder',
-        active: true,
-      };
+      });
 
       jest.spyOn(NotificationTemplateManager, 'getTemplate').mockResolvedValue(mockTemplate as any);
 
@@ -316,20 +318,7 @@ describe('Notification Service', () => {
     });
 
     it('should get all active templates', async () => {
-      const mockTemplates = [
-        {
-          templateKey: 'email_reminder',
-          templateName: 'Reminder',
-          templateType: 'email',
-          active: true,
-        },
-        {
-          templateKey: 'push_reminder',
-          templateName: 'Push Reminder',
-          templateType: 'push',
-          active: true,
-        },
-      ];
+      const mockTemplates = NotificationFactory.buildTemplateList();
 
       jest
         .spyOn(NotificationTemplateManager, 'getActiveTemplates')
@@ -337,20 +326,17 @@ describe('Notification Service', () => {
 
       const templates = await NotificationTemplateManager.getActiveTemplates();
 
-      expect(templates.length).toBe(2);
+      expect(templates.length).toBe(4);
     });
 
     it('should create custom template', async () => {
-      const mockTemplate = {
+      const mockTemplate = NotificationFactory.buildTemplate('custom_notification', {
         id: 'template-2',
-        templateKey: 'custom_notification',
         templateName: 'Custom Notification',
-        templateType: 'email',
         subject: 'Custom Template',
         htmlContent: '<h1>Custom</h1>',
         textContent: 'Custom',
-        active: true,
-      };
+      });
 
       jest
         .spyOn(NotificationTemplateManager, 'createTemplate')
@@ -429,20 +415,7 @@ describe('Notification Service', () => {
 
   describe('Notification History', () => {
     it('should retrieve notification history', async () => {
-      const mockHistory = [
-        {
-          id: 'notif-1',
-          userId: 'user-123',
-          status: 'sent',
-          createdAt: new Date(),
-        },
-        {
-          id: 'notif-2',
-          userId: 'user-123',
-          status: 'sent',
-          createdAt: new Date(),
-        },
-      ];
+      const mockHistory = NotificationFactory.buildNotificationList(2, 'user-123');
 
       jest
         .spyOn(notificationService, 'getNotificationHistory')
@@ -454,12 +427,7 @@ describe('Notification Service', () => {
     });
 
     it('should get notification statistics', async () => {
-      const mockStats = {
-        totalSent: 1000,
-        totalFailed: 50,
-        totalPending: 20,
-        byType: { email: 800, push: 250 },
-      };
+      const mockStats = NotificationFactory.buildNotificationStats();
 
       jest.spyOn(notificationService, 'getNotificationStats').mockResolvedValue(mockStats);
 

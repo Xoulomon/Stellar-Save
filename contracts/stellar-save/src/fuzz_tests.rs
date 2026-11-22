@@ -79,15 +79,9 @@ mod fuzz_tests {
             prop_assert!(result.is_err(), "expected panic for amount={}", amount);
         }
 
-        /// Contribution amounts never overflow when summed within i128 bounds.
-        #[test]
-        fn prop_contribution_sum_no_overflow(
-            amounts in prop::collection::vec(1_i128..=1_000_000_000_i128, 1..=100),
-        ) {
-            let total: i128 = amounts.iter().try_fold(0_i128, |acc, &x| acc.checked_add(x))
-                .expect("sum overflowed i128");
-            prop_assert!(total > 0);
-        }
+        // prop_contribution_sum_no_overflow removed: superseded by the stronger
+        // prop_contribution_total_equals_amount_times_count in property_tests.rs,
+        // which asserts the exact accumulated value, not merely that no panic occurs.
     }
 
     // ── GroupStatus state-machine invariants ──────────────────────────────────
@@ -269,24 +263,11 @@ mod fuzz_tests {
             }
         }
 
-        /// Total payout across all cycles equals contribution_amount * member_count.
-        #[test]
-        fn prop_total_payout_equals_total_contributions(
-            member_count in valid_member_count(),
-            contribution_amount in 1_i128..=1_000_000_i128,
-        ) {
-            let total_contributions = contribution_amount
-                .checked_mul(member_count as i128)
-                .expect("overflow");
-            // Each cycle pays out exactly total_contributions to one member
-            // After all cycles, total paid = total_contributions * member_count
-            // But each cycle pool = contribution_amount * member_count
-            // So payout per cycle = contribution_amount * member_count
-            let payout_per_cycle = contribution_amount
-                .checked_mul(member_count as i128)
-                .expect("overflow");
-            prop_assert_eq!(total_contributions, payout_per_cycle);
-        }
+        // prop_total_payout_equals_total_contributions removed: was a tautology
+        // (contribution_amount * member_count == contribution_amount * member_count).
+        // The real fund-conservation invariant is asserted in property_tests.rs
+        // (prop_total_payouts_equal_total_contributions), which simulates a full
+        // ROSCA rotation with actual PayoutRecord objects.
 
         /// Cycle number must be < member_count for a valid active group.
         #[test]
@@ -301,48 +282,20 @@ mod fuzz_tests {
     }
 
     // ── Deposit / Withdraw Boundary Invariants ────────────────────────────────
+    //
+    // prop_deposit_boundary_and_overflow_invariants and
+    // prop_withdraw_boundary_and_underflow_invariants have been removed.
+    //
+    // Both were weaker restatements of arithmetic properties already covered
+    // more thoroughly — with a realistic multi-member state machine — by:
+    //   • prop_escrow_interleaved_contributions_and_withdrawals_solvency  (Property 9)
+    //   • prop_escrow_partial_withdrawal_exceeding_balance_rejected        (Property 10)
+    // in escrow_property_tests.rs.
+    //
+    // The fee-deduction invariant below is unique to this suite (no escrow
+    // analogue) and is therefore kept here.
 
     proptest! {
-        /// Deposits must not overflow contract/group balance and zero deposits must be rejected.
-        #[test]
-        fn prop_deposit_boundary_and_overflow_invariants(
-            deposit in any::<i128>(),
-            current_balance in 0_i128..=i128::MAX,
-        ) {
-            if deposit <= 0 {
-                // Zero or negative deposit is rejected
-                prop_assert!(deposit <= 0);
-            } else {
-                // Positive deposit
-                if let Some(new_balance) = current_balance.checked_add(deposit) {
-                    prop_assert!(new_balance >= current_balance);
-                    prop_assert!(new_balance >= deposit);
-                } else {
-                    // Overflow properly detected by checked_add
-                    prop_assert!(current_balance.checked_add(deposit).is_none());
-                }
-            }
-        }
-
-        /// Withdrawals exceeding current balance must be rejected and remaining balance must stay >= 0.
-        #[test]
-        fn prop_withdraw_boundary_and_underflow_invariants(
-            withdraw in any::<i128>(),
-            current_balance in 0_i128..=i128::MAX,
-        ) {
-            if withdraw <= 0 {
-                // Non-positive withdrawal rejected
-                prop_assert!(withdraw <= 0);
-            } else if withdraw > current_balance {
-                // Overdraw correctly detected
-                prop_assert!(withdraw > current_balance);
-            } else {
-                let remaining = current_balance.checked_sub(withdraw);
-                prop_assert!(remaining.is_some());
-                prop_assert!(remaining.unwrap() >= 0);
-            }
-        }
-
         /// Fee deduction on withdrawal never exceeds original amount.
         #[test]
         fn prop_withdraw_fee_deduction_invariants(

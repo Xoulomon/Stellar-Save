@@ -6,6 +6,11 @@ export default defineConfig({
   retries: process.env['CI'] ? 2 : 0,
   workers: process.env['CI'] ? 1 : undefined,
   reporter: process.env['CI'] ? 'github' : 'list',
+  expect: {
+    // Condition-based waits (expect.poll / locator assertions) get a generous
+    // budget so slow CI runners don't need fixed setTimeout delays.
+    timeout: 10_000,
+  },
   use: {
     baseURL: 'http://localhost:5173',
     browserName: 'chromium',

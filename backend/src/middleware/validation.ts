@@ -7,7 +7,7 @@ import type { ZodSchema } from 'zod';
 
 
 export interface AuthenticatedRequest extends Request {
-  user?: any;
+  user?: Record<string, unknown>;
 }
 
 export interface ValidationError {
@@ -85,7 +85,7 @@ export class ValidationMiddleware {
     return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       try {
         const validated = schema.parse(req.query);
-        req.query = validated as any;
+        req.query = validated;
         next();
       } catch (err) {
         if (err instanceof z.ZodError) {
@@ -117,7 +117,7 @@ export class ValidationMiddleware {
     return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       try {
         const validated = schema.parse(req.params);
-        req.params = validated as any;
+        req.params = validated;
         next();
       } catch (err) {
         if (err instanceof z.ZodError) {

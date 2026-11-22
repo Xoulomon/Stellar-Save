@@ -137,6 +137,178 @@ const dateRangeQuery = z.object({
   endDate: z.string().datetime().optional(),
 });
 
+// ── Issue #1693: Query Parameter Schemas ──────────────────────────────────────
+
+/**
+ * Analytics date query: optional ISO 8601 date parameter.
+ * Used for: GET /analytics/platform, GET /analytics/users/:userId, GET /analytics/groups/:groupId
+ */
+const analyticsDateQuery = z.object({
+  date: z
+    .string()
+    .datetime({ message: 'date must be an ISO 8601 datetime' })
+    .optional(),
+});
+
+/**
+ * Search query: required search string with length constraints.
+ * Used for: GET /search, GET /search/autocomplete
+ */
+const searchQuery = z.object({
+  q: z
+    .string()
+    .trim()
+    .min(1, 'Search query is required')
+    .max(200, 'Search query must be 200 characters or less'),
+});
+
+/**
+ * Contract events filter query: complex filtering for blockchain events.
+ * Used for: GET /events
+ * Supports filtering by contract, event type, ledger range, and timestamp range.
+ */
+const eventsFilterQuery = z.object({
+  contractId: z.string().trim().optional(),
+  eventType: z.string().trim().optional(),
+  startLedger: z.coerce.number().int().min(0).optional(),
+  endLedger: z.coerce.number().int().min(0).optional(),
+  startTime: z
+    .string()
+    .datetime({ message: 'startTime must be an ISO 8601 datetime' })
+    .optional(),
+  endTime: z
+    .string()
+    .datetime({ message: 'endTime must be an ISO 8601 datetime' })
+    .optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+/**
+ * Pagination query with optional date range.
+ * Used for: GET /analytics/events, GET /analytics/reports
+ */
+const paginationWithDateRange = z.object({
+  startDate: z
+    .string()
+    .datetime({ message: 'startDate must be an ISO 8601 datetime' })
+    .optional(),
+  endDate: z
+    .string()
+    .datetime({ message: 'endDate must be an ISO 8601 datetime' })
+    .optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+/**
+ * Cache pattern for cache operations.
+ * Used for: POST /analytics/cache/clear
+ */
+const cachePattern = z.object({
+  pattern: z.string().trim().default('*'),
+});
+
+/**
+ * User preferences update body.
+ * Used for: POST /preferences
+ */
+const userPreferenceUpdate = z.object({
+  userId: z.string().trim().min(1, 'userId is required'),
+  emailNotifications: z.boolean().optional(),
+  pushNotifications: z.boolean().optional(),
+  contributionReminders: z.boolean().optional(),
+  groupUpdates: z.boolean().optional(),
+  payoutNotifications: z.boolean().optional(),
+  emailFrequency: z.enum(['immediate', 'daily', 'weekly', 'never']).optional(),
+});
+
+// ── Issue #1693: Path Parameter Schemas ──────────────────────────────────────
+
+/**
+ * ID parameter validation (generic for jobId, alertId, etc.).
+ * Accepts any non-empty string (UUIDs, slugs, numeric IDs all supported).
+ */
+const idParam = z.object({
+  id: z.string().trim().min(1, 'ID is required'),
+});
+
+const jobIdParam = z.object({
+  jobId: z.string().trim().min(1, 'jobId is required'),
+});
+
+const groupIdParam = z.object({
+  groupId: z.string().trim().min(1, 'groupId is required'),
+});
+
+const userIdParam = z.object({
+  userId: z.string().trim().min(1, 'userId is required'),
+});
+
+const alertIdParam = z.object({
+  alertId: z.string().trim().min(1, 'alertId is required'),
+});
+
+const addressParam = z.object({
+  address: stellarAddress,
+});
+
+// ── Issue #1693: Additional Admin/Backup Body Schemas ───────────────────────
+
+/**
+ * Admin user update body: `updates` object and `adminId` for audit trail.
+ * Used for: PATCH /admin/users/:id
+ */
+const adminUserUpdate = z.object({
+  updates: z.record(z.unknown()).refine(
+    (val) => Object.keys(val).length >= 1,
+    { message: 'updates must contain at least one field' }
+  ),
+  adminId: z.string().trim().min(1, 'adminId is required'),
+});
+
+/**
+ * Admin group flag body: `flagged` boolean and `adminId` for audit.
+ * Used for: POST /admin/groups/:id/flag
+ */
+const adminGroupFlag = z.object({
+  flagged: z.boolean(),
+  adminId: z.string().trim().min(1, 'adminId is required'),
+});
+
+/**
+ * Admin user delete body: `adminId` for audit trail.
+ * Used for: DELETE /admin/users/:id
+ */
+const adminUserDelete = z.object({
+  adminId: z.string().trim().min(1, 'adminId is required'),
+});
+
+/**
+ * Backup restore body: optional `jobId` to restore specific backup or latest.
+ * Used for: POST /backup/restore
+ */
+const backupRestore = z.object({
+  jobId: z.string().trim().optional(),
+});
+
+/**
+ * API key creation body: userId, optional name, optional tier.
+ * Used for: POST /api-keys
+ */
+const apiKeyCreate = z.object({
+  userId: z.string().trim().min(1, 'userId is required'),
+  name: z.string().trim().min(1).max(100).optional(),
+  tier: z.enum(['free', 'pro', 'enterprise']).optional(),
+});
+
+/**
+ * Key ID parameter.
+ */
+const keyIdParam = z.object({
+  keyId: z.string().trim().min(1, 'keyId is required'),
+});
+
 /** All named schemas, exported for route use */
 export const schemas = {
   // Auth
@@ -152,19 +324,43 @@ export const schemas = {
   // Analytics
   analyticsEventBody,
   analyticsReport,
+  analyticsDateQuery,
   dateRangeQuery,
+  paginationWithDateRange,
+  // Analytics Cache
+  cachePattern,
+  // Search
+  searchQuery,
+  // Events
+  eventsFilterQuery,
   // Backup
   backupTrigger,
+  backupRestore,
   // Webhooks
   webhookCreate,
   // Notifications
   notificationPreferences,
+  userPreferenceUpdate,
+  // Admin
+  adminUserUpdate,
+  adminGroupFlag,
+  adminUserDelete,
+  // API Keys
+  apiKeyCreate,
   // Shared
   paginationQuery,
   cursorQuery,
   memberCount,
   amount,
   stellarAddress,
+  // Path Parameters
+  idParam,
+  jobIdParam,
+  groupIdParam,
+  userIdParam,
+  alertIdParam,
+  addressParam,
+  keyIdParam,
 };
 
 // ── Middleware factories ───────────────────────────────────────────────────────

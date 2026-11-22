@@ -1,12 +1,18 @@
-import { paginateResults } from './shared';
+import { paginateArray } from '../../lib/pagination';
 import { mockGroups, mockMembers, mockTransactions } from '../../mock_data';
 
+import type { OffsetParams } from '../../lib/pagination';
 import type { Member } from '../../models';
 
 export const memberResolvers = {
   Query: {
-    members: (_: unknown, { limit, offset }: { limit?: number; offset?: number }) =>
-      paginateResults(mockMembers, limit, offset),
+    members: (_: unknown, { limit, offset }: { limit?: number; offset?: number }) => {
+      const params: OffsetParams = {
+        limit: Math.min(100, Math.max(1, limit ?? 20)),
+        offset: Math.max(0, offset ?? 0),
+      };
+      return paginateArray(mockMembers, params).data;
+    },
     member: (_: unknown, { id }: { id: string }) => mockMembers.find((m) => m.id === id) ?? null,
   },
 

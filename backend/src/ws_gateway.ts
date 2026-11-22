@@ -41,7 +41,7 @@
 import { Gauge, Counter } from 'prom-client';
 import { WebSocketServer, WebSocket } from 'ws';
 
-import { verifyJwt } from './auth_service';
+import { verifyJwt } from './modules/auth/auth_service';
 import { config } from './config';
 import { logger } from './logger';
 import { registry } from './metrics';
@@ -177,10 +177,44 @@ export class WebSocketGateway {
     this.publish('global', event);
   }
 
-  stop(): void {
-    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
-    this.wss.close();
-    logger.info('[WSGateway] Stopped');
+  /**
+   * Stop the gateway. Returns a promise that resolves once the underlying
+   * WebSocketServer has closed (or the timeout elapses), so the shutdown
+   * coordinator can await it as part of the reverse-order teardown.
+   */
+  stop(timeoutMs = 5_000): Promise<void> {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = undefined;
+    }
+
+    return new Promise<void>((resolve) => {
+      let settled = false;
+      const finish = (): void => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        logger.info('[WSGateway] Stopped');
+        resolve();
+      };
+
+      const timer = setTimeout(() => {
+        logger.warn('[WSGateway] Timed out waiting for clients to close', { timeoutMs });
+        finish();
+      }, timeoutMs);
+      if (typeof timer.unref === 'function') timer.unref();
+
+      // Terminate any lingering client sockets so close() can complete.
+      for (const client of this.clients.values()) {
+        try {
+          client.ws.terminate();
+        } catch {
+          /* ignore */
+        }
+      }
+
+      this.wss.close(() => finish());
+    });
   }
 
   get connectionCount(): number {
@@ -239,127 +273,6 @@ export class WebSocketGateway {
     ws.on('close', () => this.onClose(client));
     ws.on('error', (err) => {
       logger.warn('[WSGateway] Client error', { wallet: client.walletAddress, error: String(err) });
-      this.onClose(client);
-    });
+      this
 
-    this.send(client, JSON.stringify({ type: 'connected', walletAddress: client.walletAddress }));
-    logger.debug('[WSGateway] Client connected', { wallet: client.walletAddress, isAdmin });
-  }
-
-  private onMessage(client: ClientState, raw: string): void {
-    let msg: unknown;
-    try {
-      msg = JSON.parse(raw);
-    } catch {
-      this.send(client, JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
-      return;
-    }
-
-    const { type, topics } = msg as { type?: string; topics?: unknown };
-
-    if (type === 'subscribe' && Array.isArray(topics)) {
-      this.handleSubscribe(client, topics as string[]);
-    } else if (type === 'unsubscribe' && Array.isArray(topics)) {
-      this.handleUnsubscribe(client, topics as string[]);
-    } else if (type === 'ping') {
-      this.send(client, JSON.stringify({ type: 'pong', ts: Date.now() }));
-    } else {
-      this.send(
-        client,
-        JSON.stringify({ type: 'error', message: `Unknown message type: ${type}` })
-      );
-    }
-  }
-
-  private handleSubscribe(client: ClientState, topics: string[]): void {
-    const accepted: string[] = [];
-    const rejected: string[] = [];
-
-    for (const topic of topics) {
-      if (!isAuthorized(client, topic)) {
-        rejected.push(topic);
-        continue;
-      }
-      if (!this.subscriptions.has(topic)) this.subscriptions.set(topic, new Set());
-      this.subscriptions.get(topic)!.add(client);
-      client.topics.add(topic);
-      accepted.push(topic);
-    }
-
-    this.send(client, JSON.stringify({ type: 'subscribed', accepted, rejected }));
-    if (rejected.length > 0) {
-      logger.warn('[WSGateway] Unauthorized subscribe attempt', {
-        wallet: client.walletAddress,
-        rejected,
-      });
-    }
-  }
-
-  private handleUnsubscribe(client: ClientState, topics: string[]): void {
-    for (const topic of topics) {
-      this.subscriptions.get(topic)?.delete(client);
-      client.topics.delete(topic);
-    }
-    this.send(client, JSON.stringify({ type: 'unsubscribed', topics }));
-  }
-
-  private onClose(client: ClientState): void {
-    for (const topic of client.topics) {
-      this.subscriptions.get(topic)?.delete(client);
-    }
-    this.clients.delete(client.ws);
-    wsActiveConnections.set(this.clients.size);
-    logger.debug('[WSGateway] Client disconnected', { wallet: client.walletAddress });
-  }
-
-  // ── Heartbeat / backpressure helpers ────────────────────────────────────────
-
-  private startHeartbeat(): void {
-    this.heartbeatTimer = setInterval(() => {
-      const heartbeatFrame = JSON.stringify({ type: 'heartbeat', ts: Date.now() });
-      for (const [ws, client] of this.clients) {
-        if (!client.isAlive) {
-          logger.debug('[WSGateway] Terminating unresponsive client', {
-            wallet: client.walletAddress,
-          });
-          ws.terminate();
-          continue;
-        }
-        client.isAlive = false;
-        ws.ping();
-        this.send(client, heartbeatFrame);
-      }
-    }, HEARTBEAT_INTERVAL_MS);
-  }
-
-  private send(client: ClientState, frame: string): void {
-    if (client.ws.readyState !== WebSocket.OPEN) return;
-    try {
-      client.ws.send(frame);
-    } catch (err) {
-      logger.warn('[WSGateway] Send error', { wallet: client.walletAddress, error: String(err) });
-    }
-  }
-
-  private flush(client: ClientState): void {
-    while (client.pendingQueue.length > 0 && client.ws.readyState === WebSocket.OPEN) {
-      const frame = client.pendingQueue.shift()!;
-      this.send(client, frame);
-    }
-  }
-}
-
-// ── Singleton ─────────────────────────────────────────────────────────────────
-
-let _gateway: WebSocketGateway | null = null;
-
-export function initWebSocketGateway(server: HttpServer): WebSocketGateway {
-  if (!_gateway) {
-    _gateway = new WebSocketGateway(server);
-  }
-  return _gateway;
-}
-
-export function getWebSocketGateway(): WebSocketGateway | null {
-  return _gateway;
-}
+/* … truncated 3921 chars — edit only what you need near the top … */

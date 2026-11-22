@@ -53,6 +53,7 @@ cd frontend && npm test run
 - [ ] `cargo clippy -- -D warnings` passes (Rust changes)
 - [ ] `npm run lint` passes (frontend changes)
 - [ ] Tests added or updated for new/changed behaviour
+- [ ] Snapshot changes (`__snapshots__/`, `test_snapshots/`) are explained below and obsolete snapshots are deleted — no blind `-u`
 - [ ] CI is green
 - [ ] Documentation updated (if behaviour changed)
 - [ ] No secrets or `.env` files staged

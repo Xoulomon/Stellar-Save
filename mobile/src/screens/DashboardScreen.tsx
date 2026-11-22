@@ -42,6 +42,7 @@ export function DashboardScreen() {
 
   return (
     <ScrollView
+      testID="dashboard-screen"
       style={styles.container}
       contentContainerStyle={styles.content}
       refreshControl={
@@ -53,7 +54,7 @@ export function DashboardScreen() {
       }
     >
       {/* Balance card */}
-      <View style={styles.card} accessibilityRole="summary" accessibilityLabel="Wallet balance">
+      <View testID="wallet-balance-card" style={styles.card} accessibilityRole="summary" accessibilityLabel="Wallet balance">
         <Text style={styles.cardLabel}>XLM Balance</Text>
         {balanceLoading ? (
           <Text style={styles.balancePlaceholder}>—</Text>
@@ -82,6 +83,7 @@ export function DashboardScreen() {
       {/* Quick actions */}
       <View style={styles.actions}>
         <TouchableOpacity
+          testID="view-groups-button"
           style={styles.actionBtn}
           onPress={() => nav.navigate('GroupList')}
           accessibilityRole="button"
@@ -91,6 +93,7 @@ export function DashboardScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          testID="create-group-button"
           style={[styles.actionBtn, styles.actionBtnPrimary]}
           onPress={() => nav.navigate('CreateGroup')}
           accessibilityRole="button"

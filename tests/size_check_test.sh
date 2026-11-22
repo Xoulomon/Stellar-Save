@@ -6,7 +6,41 @@ set -euo pipefail
 
 PASS=0; FAIL=0
 TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT
+HISTORY="$(dirname "$0")/../deployment-records/size_history.json"
+REPORT="$(dirname "$0")/../deployment-records/size_report.md"
+HISTORY_EXISTED=false
+REPORT_EXISTED=false
+if [ -f "$HISTORY" ]; then
+  cp "$HISTORY" "$TMP/size_history.original.json"
+  HISTORY_EXISTED=true
+fi
+if [ -f "$REPORT" ]; then
+  cp "$REPORT" "$TMP/size_report.original.md"
+  REPORT_EXISTED=true
+fi
+
+cleanup() {
+  if [ "$HISTORY_EXISTED" = true ]; then
+    cp "$TMP/size_history.original.json" "$HISTORY"
+  else
+    rm -f "$HISTORY"
+  fi
+  if [ "$REPORT_EXISTED" = true ]; then
+    cp "$TMP/size_report.original.md" "$REPORT"
+  else
+    rm -f "$REPORT"
+  fi
+  rm -rf "$TMP"
+}
+trap cleanup EXIT
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Source the single source of truth for the WASM size budget so the
+# test defaults match the values used by the production check script.
+# Individual test cases can still override via explicit arguments.
+# shellcheck source=wasm_size_budget.sh
+source "$ROOT/scripts/wasm_size_budget.sh"
 
 ok()   { echo "  ✅  $*"; ((PASS++)) || true; }
 fail() { echo "  ❌  $*"; ((FAIL++)) || true; }
@@ -25,8 +59,8 @@ make_wasm() {
 
 run_check() {
   WASM_PATH="$TMP/stellar_save.wasm" \
-  WASM_SIZE_LIMIT_KB="${1:-100}" \
-  WARN_THRESHOLD_PCT="${2:-80}" \
+  WASM_SIZE_LIMIT_KB="${1:-$WASM_SIZE_BUDGET_KB}" \
+  WARN_THRESHOLD_PCT="${2:-$WASM_WARN_THRESHOLD_PCT}" \
   GIT_SHA="test-sha" \
   bash "$(dirname "$0")/../scripts/check_contract_size.sh" 2>&1
 }
@@ -39,7 +73,7 @@ echo
 # ─── Test 1: Well within limit → OK (✅ icon) ────────────────────────────────
 echo "── Status: OK ───────────────────────────────────────────────────────────"
 make_wasm $(( 50 * 1024 ))   # 50 KB
-OUT=$(run_check 100 80)
+OUT=$(run_check "$WASM_SIZE_BUDGET_KB" "$WASM_WARN_THRESHOLD_PCT")
 assert_contains "50 KB file shows ✅ icon"  "✅"    "$OUT"
 assert_contains "50 KB file shows size"     "50 KB" "$OUT"
 
@@ -47,19 +81,22 @@ assert_contains "50 KB file shows size"     "50 KB" "$OUT"
 echo
 echo "── Status: WARN ─────────────────────────────────────────────────────────"
 make_wasm $(( 85 * 1024 ))   # 85 KB (> 80% of 100 KB)
-OUT=$(run_check 100 80)
+OUT=$(run_check "$WASM_SIZE_BUDGET_KB" "$WASM_WARN_THRESHOLD_PCT")
 assert_contains "85 KB file shows ⚠️ icon"  "⚠"    "$OUT"
 
 # ─── Test 3: Exceeds limit → FAIL (🚨 icon) + exit 1 ─────────────────────────
 echo
 echo "── Status: FAIL ─────────────────────────────────────────────────────────"
 make_wasm $(( 105 * 1024 ))  # 105 KB
-OUT=$(run_check 100 80 || true)
+OUT=$(run_check "$WASM_SIZE_BUDGET_KB" "$WASM_WARN_THRESHOLD_PCT" || true)
 assert_contains "105 KB file shows 🚨 icon"         "🚨"      "$OUT"
 assert_contains "105 KB file shows blocked message" "blocked" "$OUT"
 
 # Confirm exit code is 1
-if ! WASM_PATH="$TMP/stellar_save.wasm" WASM_SIZE_LIMIT_KB=100 WARN_THRESHOLD_PCT=80 GIT_SHA=test \
+if ! WASM_PATH="$TMP/stellar_save.wasm" \
+     WASM_SIZE_LIMIT_KB="$WASM_SIZE_BUDGET_KB" \
+     WARN_THRESHOLD_PCT="$WASM_WARN_THRESHOLD_PCT" \
+     GIT_SHA=test \
      bash "$(dirname "$0")/../scripts/check_contract_size.sh" &>/dev/null; then
   ok "exit code is 1 when limit exceeded"
 else
@@ -71,12 +108,11 @@ echo
 echo "── History tracking ─────────────────────────────────────────────────────"
 make_wasm $(( 60 * 1024 ))
 WASM_PATH="$TMP/stellar_save.wasm" \
-WASM_SIZE_LIMIT_KB=100 \
-WARN_THRESHOLD_PCT=80 \
+WASM_SIZE_LIMIT_KB="$WASM_SIZE_BUDGET_KB" \
+WARN_THRESHOLD_PCT="$WASM_WARN_THRESHOLD_PCT" \
 GIT_SHA=abc123 \
 bash "$(dirname "$0")/../scripts/check_contract_size.sh" &>/dev/null
 
-HISTORY="$(dirname "$0")/../deployment-records/size_history.json"
 if [ -f "$HISTORY" ]; then
   SHA_IN_HISTORY=$(python3 -c "
 import json
@@ -93,13 +129,12 @@ fi
 echo
 echo "── Report generation ────────────────────────────────────────────────────"
 make_wasm $(( 60 * 1024 ))
-run_check 100 80 &>/dev/null || true
+run_check "$WASM_SIZE_BUDGET_KB" "$WASM_WARN_THRESHOLD_PCT" &>/dev/null || true
 
-REPORT="$(dirname "$0")/../deployment-records/size_report.md"
 if [ -f "$REPORT" ]; then
   ok "size_report.md was created"
   assert_contains "report contains size table" "Size" "$(cat "$REPORT")"
-  assert_contains "report contains limit"      "100"  "$(cat "$REPORT")"
+  assert_contains "report contains limit"      "$WASM_SIZE_BUDGET_KB"  "$(cat "$REPORT")"
 else
   fail "size_report.md was not created"
 fi
@@ -109,18 +144,27 @@ echo
 echo "── Trend delta ──────────────────────────────────────────────────────────"
 # First run: 60 KB
 make_wasm $(( 60 * 1024 ))
-WASM_PATH="$TMP/stellar_save.wasm" WASM_SIZE_LIMIT_KB=100 WARN_THRESHOLD_PCT=80 GIT_SHA=sha1 \
+WASM_PATH="$TMP/stellar_save.wasm" \
+WASM_SIZE_LIMIT_KB="$WASM_SIZE_BUDGET_KB" \
+WARN_THRESHOLD_PCT="$WASM_WARN_THRESHOLD_PCT" \
+GIT_SHA=sha1 \
   bash "$(dirname "$0")/../scripts/check_contract_size.sh" &>/dev/null
 
 # Second run: 65 KB (should show positive delta)
 make_wasm $(( 65 * 1024 ))
-OUT=$(WASM_PATH="$TMP/stellar_save.wasm" WASM_SIZE_LIMIT_KB=100 WARN_THRESHOLD_PCT=80 GIT_SHA=sha2 \
+OUT=$(WASM_PATH="$TMP/stellar_save.wasm" \
+  WASM_SIZE_LIMIT_KB="$WASM_SIZE_BUDGET_KB" \
+  WARN_THRESHOLD_PCT="$WASM_WARN_THRESHOLD_PCT" \
+  GIT_SHA=sha2 \
   bash "$(dirname "$0")/../scripts/check_contract_size.sh" 2>&1)
 assert_contains "trend shows positive delta" "↑" "$OUT"
 
 # Third run: 55 KB (should show negative delta)
 make_wasm $(( 55 * 1024 ))
-OUT=$(WASM_PATH="$TMP/stellar_save.wasm" WASM_SIZE_LIMIT_KB=100 WARN_THRESHOLD_PCT=80 GIT_SHA=sha3 \
+OUT=$(WASM_PATH="$TMP/stellar_save.wasm" \
+  WASM_SIZE_LIMIT_KB="$WASM_SIZE_BUDGET_KB" \
+  WARN_THRESHOLD_PCT="$WASM_WARN_THRESHOLD_PCT" \
+  GIT_SHA=sha3 \
   bash "$(dirname "$0")/../scripts/check_contract_size.sh" 2>&1)
 assert_contains "trend shows negative delta" "↓" "$OUT"
 
@@ -128,7 +172,7 @@ assert_contains "trend shows negative delta" "↓" "$OUT"
 echo
 echo "── Optimization suggestions ─────────────────────────────────────────────"
 make_wasm $(( 85 * 1024 ))
-run_check 100 80 &>/dev/null || true
+run_check "$WASM_SIZE_BUDGET_KB" "$WASM_WARN_THRESHOLD_PCT" &>/dev/null || true
 assert_contains "report includes opt suggestions for large WASM" "opt-level" "$(cat "$REPORT")"
 
 # ─── Summary ─────────────────────────────────────────────────────────────────

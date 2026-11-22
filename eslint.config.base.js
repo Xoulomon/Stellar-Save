@@ -1,13 +1,24 @@
 /**
- * Shared ESLint flat-config base.
- * Extend in each package's eslint.config.js:
+ * Shared ESLint flat-config base for every workspace (frontend, backend, mobile,
+ * packages/sdk, packages/shared-utils, packages/events-schema).
  *
- *   import base from '../../eslint.config.base.js';
- *   export default [...base, { ... package-specific rules ... }];
+ * This is the single source of truth for the recommended presets, shared
+ * rules, and common ignores. Workspace configs spread it first and add only
+ * genuine overrides (runtime globals, framework plugins, stricter severities):
+ *
+ *   import base from '../eslint.config.base.js';
+ *   export default [...base, { ... workspace-specific overrides ... }];
+ *
+ * The full rule list is documented in CONTRIBUTING.md ("ESLint configuration").
+ * Keep the two in sync when changing a rule here.
+ *
+ * Do not re-apply `js.configs.recommended` / `tseslint.configs.recommended`
+ * in a workspace: doing so resets the tuned rule options below to their
+ * preset defaults.
  */
 import js from '@eslint/js';
-import tseslint from 'typescript-eslint';
 import importPlugin from 'eslint-plugin-import';
+import tseslint from 'typescript-eslint';
 
 /** @type {import('typescript-eslint').ConfigArray} */
 const base = tseslint.config(
@@ -18,10 +29,23 @@ const base = tseslint.config(
       import: importPlugin,
     },
     rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      // `fixToUnknown` makes `eslint --fix` rewrite `any` to `unknown`.
+      '@typescript-eslint/no-explicit-any': ['error', { fixToUnknown: true }],
+      // Prefix deliberately unused bindings with `_` to opt out.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+        },
+      ],
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      // Use the workspace logger (frontend/src/utils/logger.ts,
+      // backend/src/lib/logger.ts) or process.stdout/stderr in CLI scripts.
+      // Only logger modules may disable this rule inline.
+      'no-console': ['error', { allow: ['warn', 'error'] }],
       'import/no-cycle': ['error'],
       // Import grouping convention (external → internal → parent/sibling → index → type):
       //  1. builtin      Node built-ins (fs, path, ...)
@@ -35,7 +59,15 @@ const base = tseslint.config(
       'import/order': [
         'error',
         {
-          groups: ['builtin', 'external', 'internal', ['parent', 'sibling'], 'index', 'object', 'type'],
+          groups: [
+            'builtin',
+            'external',
+            'internal',
+            ['parent', 'sibling'],
+            'index',
+            'object',
+            'type',
+          ],
           'newlines-between': 'always',
           alphabetize: { order: 'asc', caseInsensitive: true },
         },
@@ -43,8 +75,23 @@ const base = tseslint.config(
     },
   },
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.d.ts'],
+    // Test files and test runners report progress on stdout by design.
+    files: [
+      '**/*.test.{ts,tsx,js,mjs,cjs}',
+      '**/*.spec.{ts,tsx,js,mjs,cjs}',
+      '**/*.e2e.{ts,tsx}',
+      '**/test/**',
+      '**/tests/**',
+      '**/tests-e2e/**',
+      '**/e2e/**',
+    ],
+    rules: {
+      'no-console': 'off',
+    },
   },
+  {
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.d.ts'],
+  }
 );
 
 export default base;

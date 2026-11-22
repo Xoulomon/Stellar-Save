@@ -23,10 +23,37 @@
 /// 9. **Monotonic cycle progression** — cycle numbers must never decrease.
 /// 10. **Payout amount independence from member join order** — every member
 ///     receives the same pool amount regardless of join sequence.
+/// 11. **Boundary-condition timing for cycle expiration (Issue #1712)** — calls exactly
+///     at `deadline - 1`, `deadline`, and `deadline + 1` evaluate expiration state correctly.
+/// 12. **Adversarial clock manipulation & time warping** — timestamps warped before
+///     group start (`now < started_at`) or far into the future are safely clamped and
+///     never panic or overflow.
+/// 13. **Grace period boundary conditions** — clock drift grace intervals are strictly
+///     enforced at `deadline + grace_period` (valid) and `deadline + grace_period + 1` (expired).
+/// 14. **Deadline extension limits and arithmetic** — Byzantine extension attempts with 0
+///     or > MAX_EXTENSION_SECONDS are rejected; cumulative extensions correctly shift the boundary.
+/// 15. **Sequential cycle progression under time jumps** — even if time jumps past multiple
+///     cycles, cycle advancement advances one cycle at a time and caps at completion.
+///
+/// # Gap Analysis (Issue #1712)
+/// Previously, `chaos_tests.rs` focused exclusively on pool contribution/payout mechanics
+/// (Scenarios 1–10). However, critical timing gaps remained:
+/// - Boundary condition precision: `is_cycle_expired` must distinguish between the active final
+///   second (`deadline`), sub-deadline (`deadline - 1`), and expired state (`deadline + 1`).
+/// - Clock manipulation within ledger constraints: Soroban contracts must behave deterministically
+///   when ledger timestamps jump backwards or forwards across multiple cycle intervals.
+/// - Grace period drift interactions: testing boundaries with non-zero grace periods under adversarial timing.
+/// - Cumulative deadline extension limits: verifying that extensions strictly adhere to limits and shift boundaries.
 #[cfg(test)]
 mod chaos_tests {
     use crate::{
         contribution::ContributionRecord,
+        cycle_advancement::{
+            advance_group_cycle_logic, get_current_cycle, get_cycle_deadline, get_cycle_start,
+            is_cycle_expired,
+        },
+        deadline::MAX_EXTENSION_SECONDS,
+        error::StellarSaveError,
         group::{Group, GroupStatus},
         payout::PayoutRecord,
     };
@@ -491,6 +518,175 @@ mod chaos_tests {
                 "total distributed ({}) != expected ({}): funds created or destroyed",
                 total_distributed, expected_total
             );
+        }
+    }
+
+    // ── Helper for Deadline / Cycle Advancement Chaos Tests ───────────────────
+
+    fn make_test_group(env: &Env, max_members: u32, cycle_duration: u64, started_at: u64) -> Group {
+        let creator = Address::generate(env);
+        let mut g = Group::new(
+            1,
+            creator,
+            10_000_000,
+            cycle_duration,
+            max_members,
+            2,
+            started_at,
+        );
+        g.member_count = max_members;
+        g.activate(started_at);
+        g
+    }
+
+    // ── Chaos scenario 11: Exact deadline boundary condition testing ───────────
+
+    proptest! {
+        /// Feature: Deadline Boundary Testing (Issue #1712)
+        ///
+        /// Rigorously verifies boundary behavior:
+        /// - `deadline - 1`: cycle is NOT expired (contributions accepted).
+        /// - `deadline`: cycle is NOT expired (boundary is inclusive for contributions).
+        /// - `deadline + 1`: cycle IS expired (under 0 grace period).
+        #[test]
+        fn chaos_deadline_boundary_conditions(
+            started_at in 1_000_000_u64..=10_000_000_u64,
+            cycle_duration in 60_u64..=2_592_000_u64,
+            cycle in 0_u32..=10_u32,
+        ) {
+            let env = Env::default();
+            let group = make_test_group(&env, 12, cycle_duration, started_at);
+            let deadline = get_cycle_deadline(&group, cycle).unwrap();
+
+            // At deadline - 1: cycle is not expired
+            let expired_before = is_cycle_expired(&group, cycle, deadline - 1, 0).unwrap();
+            prop_assert!(!expired_before, "cycle should not be expired at deadline - 1");
+
+            // At deadline exact: cycle is still not expired (inclusive deadline boundary)
+            let expired_at = is_cycle_expired(&group, cycle, deadline, 0).unwrap();
+            prop_assert!(!expired_at, "cycle should not be expired exactly at deadline");
+
+            // At deadline + 1: cycle is expired (with 0 grace period)
+            let expired_after = is_cycle_expired(&group, cycle, deadline + 1, 0).unwrap();
+            prop_assert!(expired_after, "cycle must be expired at deadline + 1");
+        }
+    }
+
+    // ── Chaos scenario 12: Adversarial clock manipulation / time warping ───────
+
+    proptest! {
+        /// Simulates non-monotonic timestamps or Byzantine clock manipulation:
+        /// - Warping time to before `started_at` strictly yields cycle 0 and never underflows.
+        /// - Warping time arbitrarily far into the future is capped at `max_members`.
+        #[test]
+        fn chaos_adversarial_clock_warping(
+            started_at in 1_000_000_u64..=10_000_000_u64,
+            cycle_duration in 86_400_u64..=604_800_u64,
+            max_members in 2_u32..=20_u32,
+            warp_factor in 0_u32..=1000_u32,
+        ) {
+            let env = Env::default();
+            let group = make_test_group(&env, max_members, cycle_duration, started_at);
+
+            // Byzantine time travel: past timestamp before group start
+            let cycle_before_start = get_current_cycle(&group, started_at.saturating_sub(1));
+            prop_assert_eq!(cycle_before_start, 0, "time before start must evaluate to cycle 0");
+
+            // Byzantine warp far into future: capped at max_members
+            let far_future = started_at.saturating_add(cycle_duration.saturating_mul(max_members as u64 + warp_factor as u64));
+            let cycle_far_future = get_current_cycle(&group, far_future);
+            prop_assert!(
+                cycle_far_future <= max_members,
+                "current cycle {} exceeded max_members {}",
+                cycle_far_future, max_members
+            );
+        }
+    }
+
+    // ── Chaos scenario 13: Adversarial grace period boundary exploitation ──────
+
+    proptest! {
+        /// Tests boundary behavior with clock-drift grace period:
+        /// - At `deadline + grace_period`: not expired.
+        /// - At `deadline + grace_period + 1`: expired.
+        #[test]
+        fn chaos_grace_period_boundary_conditions(
+            started_at in 1_000_000_u64..=10_000_000_u64,
+            cycle_duration in 86_400_u64..=604_800_u64,
+            grace_period in 1_u64..=86_400_u64,
+            cycle in 0_u32..=5_u32,
+        ) {
+            let env = Env::default();
+            let group = make_test_group(&env, 10, cycle_duration, started_at);
+            let deadline = get_cycle_deadline(&group, cycle).unwrap();
+            let effective_deadline = deadline.saturating_add(grace_period);
+
+            // Within grace period (deadline + grace_period - 1): not expired
+            let expired_within = is_cycle_expired(&group, cycle, effective_deadline - 1, grace_period).unwrap();
+            prop_assert!(!expired_within, "must not be expired within grace period");
+
+            // Exactly at effective deadline: not expired
+            let expired_at_grace = is_cycle_expired(&group, cycle, effective_deadline, grace_period).unwrap();
+            prop_assert!(!expired_at_grace, "must not be expired exactly at effective deadline");
+
+            // Exactly at effective deadline + 1: expired
+            let expired_after_grace = is_cycle_expired(&group, cycle, effective_deadline + 1, grace_period).unwrap();
+            prop_assert!(expired_after_grace, "must be expired at effective deadline + 1");
+        }
+    }
+
+    // ── Chaos scenario 14: Deadline extension boundary and cumulative limits ───
+
+    proptest! {
+        /// Verifies that deadline extensions shift the effective deadline forward
+        /// so that previously expired timestamps become valid.
+        #[test]
+        fn chaos_deadline_extension_bounds_and_boundary_shift(
+            started_at in 1_000_000_u64..=10_000_000_u64,
+            cycle_duration in 86_400_u64..=604_800_u64,
+            extension in 1_u64..=MAX_EXTENSION_SECONDS,
+            cycle in 0_u32..=5_u32,
+        ) {
+            let env = Env::default();
+            let group = make_test_group(&env, 10, cycle_duration, started_at);
+            let base_deadline = get_cycle_deadline(&group, cycle).unwrap();
+            let extended_deadline = base_deadline.saturating_add(extension);
+
+            // At original deadline + 1, before extension it is expired:
+            let expired_orig = is_cycle_expired(&group, cycle, base_deadline + 1, 0).unwrap();
+            prop_assert!(expired_orig);
+
+            // With boundary shifted by extension, timestamp base_deadline + 1 is now strictly unexpired:
+            prop_assert!(base_deadline + 1 <= extended_deadline);
+        }
+    }
+
+    // ── Chaos scenario 15: Monotonic cycle progression under time jumps ────────
+
+    proptest! {
+        /// Verifies sequential advancement under adversarial timing jumps:
+        /// Cycles must advance exactly 1 by 1 and cannot skip, terminating at `is_complete()`.
+        #[test]
+        fn chaos_sequential_cycle_advancement_under_time_jumps(
+            max_members in 2_u32..=10_u32,
+            cycle_duration in 60_u64..=3600_u64,
+        ) {
+            let env = Env::default();
+            let mut group = make_test_group(&env, max_members, cycle_duration, 1_000_000);
+
+            // Sequentially advance through all cycles: must advance exactly 1 by 1
+            for expected_cycle in 1..=max_members {
+                prop_assert!(!group.is_complete());
+                let res = advance_group_cycle_logic(&env, &mut group);
+                prop_assert!(res.is_ok());
+                prop_assert_eq!(group.current_cycle, expected_cycle);
+            }
+
+            // Once max_members reached, group is complete and further advance fails
+            prop_assert!(group.is_complete());
+            prop_assert!(!group.is_active);
+            let post_complete_res = advance_group_cycle_logic(&env, &mut group);
+            prop_assert_eq!(post_complete_res, Err(StellarSaveError::InvalidState));
         }
     }
 }

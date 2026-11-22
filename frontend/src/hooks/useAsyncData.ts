@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+﻿import { useCallback, useId, useState } from 'react';
 import type { DependencyList } from 'react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 /**
  * Options for configuring the useAsyncData hook.
@@ -32,14 +33,13 @@ export interface UseAsyncDataResult<T> {
  * useAsyncData
  *
  * Canonical hook for the "load one thing into isLoading/error/data state"
- * pattern that used to be hand-rolled (with small inconsistencies) across
- * several hooks in this project — mock-data hooks that simulate latency via
- * `setTimeout`, as well as hooks that call a real async API. It centralizes:
+ * pattern. Built on React Query's useQuery, with options chosen so behavior
+ * matches the previous hand-rolled implementation:
  *
- *  - isLoading / error / data bookkeeping
- *  - guarding against a stale response landing after unmount or after the
- *    inputs have already changed again (no fetchId ref needed at call sites)
- *  - a refetch() that reruns the loader on demand
+ *  - no retries, no refetch on focus/reconnect, no cross-instance cache
+ *  - previous data stays visible while deps change and a reload is in flight
+ *  - stale responses are ignored (handled by React Query's query keys)
+ *  - refetch() reruns the loader on demand
  *  - an `enabled` escape hatch for "nothing to load yet"
  *
  * `loader` is invoked on mount, whenever an entry in `deps` changes, and
@@ -72,54 +72,38 @@ export function useAsyncData<T>(
 ): UseAsyncDataResult<T> {
   const { enabled = true } = options;
 
-  const [data, setData] = useState<T | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(enabled);
-  const [error, setError] = useState<string | null>(null);
+  // Unique per hook instance, so two callers with the same deps (e.g. `[]`)
+  // never share a cache entry.
+  const instanceId = useId();
   const [tick, setTick] = useState(0);
-
-  // Keep the latest loader in a ref so identity churn on the caller's side
-  // (e.g. an inline arrow function) doesn't retrigger the effect — only
-  // `deps`, `enabled`, and refetch() should do that.
-  const loaderRef = useRef(loader);
-  loaderRef.current = loader;
 
   const refetch = useCallback(() => setTick((t) => t + 1), []);
 
-  useEffect(() => {
-    if (!enabled) {
-      setData(null);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
+  const query = useQuery<T, unknown>({
+    queryKey: ['async-data', instanceId, tick, ...deps],
+    queryFn: () => loader(),
+    enabled,
+    placeholderData: keepPreviousData,
+    retry: false,
+    gcTime: 0,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
 
-    let cancelled = false;
-    setIsLoading(true);
-    setError(null);
+  const errorMessage =
+    query.error == null
+      ? null
+      : query.error instanceof Error
+        ? query.error.message
+        : String(query.error);
 
-    loaderRef
-      .current()
-      .then((result) => {
-        if (!cancelled) setData(result);
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : String(err));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-    // `deps` is caller-controlled, spread intentionally alongside our own
-    // enabled/tick triggers.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, tick, ...deps]);
-
-  return { data, isLoading, error, refetch };
+  return {
+    data: enabled ? (query.data ?? null) : null,
+    isLoading: enabled && query.isFetching,
+    error: enabled && !query.isFetching ? errorMessage : null,
+    refetch,
+  };
 }
 
 /**
@@ -157,3 +141,4 @@ export function mockDelay<T>(factory: () => T, ms: number): Promise<T> {
     }, ms);
   });
 }
+

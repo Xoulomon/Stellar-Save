@@ -1,4 +1,5 @@
 import { calculateScore, getMemberReputation } from '../reputation_service';
+import { ReputationFactory } from '../../test/fixtures/factory';
 
 describe('calculateScore', () => {
   it('returns 0 when totalContributions is 0', () => {
@@ -30,12 +31,13 @@ describe('calculateScore', () => {
 
 describe('getMemberReputation', () => {
   it('returns a default record when Prisma is unavailable', async () => {
+    const expected = ReputationFactory.buildDefaultReputation('GTEST123');
     const result = await getMemberReputation('GTEST123');
     expect(result).toMatchObject({
-      address: 'GTEST123',
-      score: 0,
-      totalContributions: 0,
-      onTimeContributions: 0,
+      address: expected.address,
+      score: expected.score,
+      totalContributions: expected.totalContributions,
+      onTimeContributions: expected.onTimeContributions,
     });
     expect(typeof result.updatedAt).toBe('string');
   });

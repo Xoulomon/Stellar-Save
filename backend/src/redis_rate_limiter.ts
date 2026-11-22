@@ -1,4 +1,3 @@
-
 import { Counter } from 'prom-client';
 
 import { logger } from './logger';
@@ -171,8 +170,15 @@ async function checkWindow(
   };
 }
 
+interface RateLimitedRequest extends Request {
+  adminId?: string;
+  apiKey?: { tier?: string; userId?: string };
+  user?: { tier?: string; id?: string };
+  userId?: string;
+}
+
 function extractTier(req: Request): string {
-  const r = req as any;
+  const r = req as RateLimitedRequest;
   if (r.adminId) return 'admin';
   if (r.apiKey?.tier && TIERS[r.apiKey.tier]) return r.apiKey.tier;
   if (r.user?.tier && TIERS[r.user.tier]) return r.user.tier;
@@ -181,7 +187,7 @@ function extractTier(req: Request): string {
 }
 
 function extractUserId(req: Request): string | undefined {
-  const r = req as any;
+  const r = req as RateLimitedRequest;
   return r.userId || r.adminId || r.user?.id || r.apiKey?.userId || undefined;
 }
 
@@ -216,7 +222,7 @@ function matchEndpointCost(path: string): EndpointCost {
 }
 
 export function createTieredRateLimiter(opts: { redis?: Redis } = {}) {
-  const redis = opts.redis || (redisClient as any as Redis);
+  const redis = opts.redis || (redisClient as unknown as Redis);
 
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const now = Date.now();
@@ -319,7 +325,7 @@ export async function getQuotaUsage(
   tier: string,
   redis?: Redis
 ): Promise<QuotaUsage[]> {
-  const r = redis || (redisClient as any as Redis);
+  const r = redis || (redisClient as unknown as Redis);
   const config = TIERS[tier];
   if (!config) return [];
 

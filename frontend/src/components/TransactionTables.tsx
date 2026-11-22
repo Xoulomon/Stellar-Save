@@ -76,8 +76,8 @@ const columns: DataTableColumn<Transaction>[] = [
     key: '_actions',
     header: '',
     sortable: false,
-    render: () => (
-      <Button variant="secondary" size="sm">
+    render: (row) => (
+      <Button variant="secondary" size="sm" aria-label={`View transaction ${row.hash}`}>
         Details
       </Button>
     ),

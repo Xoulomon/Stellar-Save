@@ -13,7 +13,8 @@ with `backend/`.
 
 ## [Unreleased]
 
-_No unreleased changes tracked yet._
+### Changed
+- Consolidated backend test suite: moved `test/unit/` unit tests into `src/tests/`, removed flaky `test/integration/` tests that duplicated unit coverage, and removed `test/helpers/`, `test/fixtures/`, `test/setup.ts`, and `jest.integration.config.js`. This eliminates the `backend/test` / `backend/tests` directory split and reduces suite runtime.
 
 ---
 

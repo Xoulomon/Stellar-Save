@@ -12,26 +12,30 @@
  */
 import http from 'k6/http';
 import { check, sleep, group } from 'k6';
-import { Trend, Rate } from 'k6/metrics';
+import { Counter, Trend, Rate } from 'k6/metrics';
 import { FRONTEND_URL, loadOptions, smokeOptions, stressOptions } from './config.js';
 
 // ── Custom metrics ────────────────────────────────────────────────────────────
 const pageLoadDuration = new Trend('page_load_duration', true);
 const assetLoadDuration = new Trend('asset_load_duration', true);
 const frontendErrorRate = new Rate('frontend_errors');
+const pageLoadOps = new Counter('page_load_ops');
 
 // ── Options ───────────────────────────────────────────────────────────────────
 const SCENARIO = __ENV.SCENARIO || 'load';
+const profileOptions = SCENARIO === 'smoke'
+  ? smokeOptions
+  : SCENARIO === 'stress'
+    ? stressOptions
+    : loadOptions;
 export const options = {
-  ...(SCENARIO === 'smoke'
-    ? smokeOptions
-    : SCENARIO === 'stress'
-      ? stressOptions
-      : loadOptions),
+  ...profileOptions,
   thresholds: {
+    ...profileOptions.thresholds,
     page_load_duration: ['p(95)<3000'],   // pages load within 3 s at p95
     asset_load_duration: ['p(95)<1000'],  // static assets within 1 s at p95
     http_req_failed: ['rate<0.01'],
+    ...(SCENARIO === 'smoke' ? {} : { page_load_ops: ['rate>10'] }),
   },
 };
 
@@ -47,6 +51,7 @@ export default function () {
       'page status 200': (r) => r.status === 200,
       'page has html': (r) => r.body.includes('<!doctype html') || r.body.includes('<!DOCTYPE html'),
     });
+    if (ok) pageLoadOps.add(1);
     frontendErrorRate.add(!ok);
   });
 

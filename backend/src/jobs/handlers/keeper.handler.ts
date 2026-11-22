@@ -28,31 +28,40 @@ interface DueGroup {
   memberCount: number;
 }
 
-async function findDueGroups(contractId: string, db: any = prisma): Promise<DueGroup[]> {
-  const contributions: Array<{ data: any }> = await db.contractEvent.findMany({
-    where: { contractId, eventType: 'ContributionMade' },
-    select: { data: true },
-  });
+interface ContractEventDb {
+  contractEvent: {
+    findMany: (args: unknown) => Promise<Array<{ data: Record<string, unknown> | null }>>;
+  };
+}
+
+async function findDueGroups(contractId: string, db: unknown = prisma): Promise<DueGroup[]> {
+  const dbClient = db as ContractEventDb;
+  const contributions: Array<{ data: Record<string, unknown> | null }> =
+    await dbClient.contractEvent.findMany({
+      where: { contractId, eventType: 'ContributionMade' },
+      select: { data: true },
+    });
 
   const cycleMap = new Map<string, Set<string>>();
   for (const { data } of contributions) {
-    const groupId: string = data?.group_id ?? data?.groupId;
-    const cycleNumber: string | number = data?.cycle_number ?? data?.cycleNumber ?? '0';
-    const member: string = data?.member ?? data?.address ?? 'unknown';
+    const groupId = String(data?.group_id ?? data?.groupId ?? '');
+    const cycleNumber = String(data?.cycle_number ?? data?.cycleNumber ?? '0');
+    const member = String(data?.member ?? data?.address ?? 'unknown');
     if (!groupId) continue;
     const key = `${groupId}:${cycleNumber}`;
     if (!cycleMap.has(key)) cycleMap.set(key, new Set());
     cycleMap.get(key)!.add(member);
   }
 
-  const payouts: Array<{ data: any }> = await db.contractEvent.findMany({
-    where: { contractId, eventType: 'PayoutExecuted' },
-    select: { data: true },
-  });
+  const payouts: Array<{ data: Record<string, unknown> | null }> =
+    await dbClient.contractEvent.findMany({
+      where: { contractId, eventType: 'PayoutExecuted' },
+      select: { data: true },
+    });
   const paidKeys = new Set<string>();
   for (const { data } of payouts) {
-    const gid: string = data?.group_id ?? data?.groupId;
-    const cycle: string | number = data?.cycle_number ?? data?.cycleNumber ?? '0';
+    const gid = String(data?.group_id ?? data?.groupId ?? '');
+    const cycle = String(data?.cycle_number ?? data?.cycleNumber ?? '0');
     if (gid) paidKeys.add(`${gid}:${cycle}`);
   }
 
@@ -71,10 +80,10 @@ async function findDueGroups(contractId: string, db: any = prisma): Promise<DueG
 export class KeeperHandler {
   private contractId: string;
   private stellarClient: IStellarClient;
-  private db: any;
+  private db: unknown;
   private retryMap = new Map<string, number>();
 
-  constructor(contractId: string, stellarClient: IStellarClient, dbClient?: any) {
+  constructor(contractId: string, stellarClient: IStellarClient, dbClient?: unknown) {
     this.contractId = contractId;
     this.stellarClient = stellarClient;
     this.db = dbClient ?? prisma;
@@ -103,8 +112,11 @@ export class KeeperHandler {
       await this.stellarClient.executePayoutsBatch(groupIds, this.contractId);
       keeperPayoutsExecuted.inc({ status: 'success' }, groupIds.length);
       for (const g of actionable) this.retryMap.delete(`${g.groupId}:${g.cycleNumber}`);
-    } catch (err: any) {
-      logger.error('[keeper] batch execution failed', { error: err?.message, groupIds });
+    } catch (err: unknown) {
+      logger.error('[keeper] batch execution failed', {
+        error: err instanceof Error ? err.message : String(err),
+        groupIds,
+      });
       keeperPayoutsExecuted.inc({ status: 'failure' }, groupIds.length);
 
       for (const g of actionable) {

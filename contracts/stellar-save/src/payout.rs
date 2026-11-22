@@ -1,7 +1,30 @@
+//! # Payout Data Types
+//!
+//! This module owns the payout **data types** only:
+//!
+//! - [`PayoutOrder`] — the selection strategy enum stored on [`crate::group::Group`].
+//! - [`PayoutRecord`] — an immutable, on-chain audit record written once per cycle.
+//!
+//! ## Responsibility boundary
+//!
+//! | Concern                        | Module                        |
+//! |--------------------------------|-------------------------------|
+//! | Payout data types & records    | **`payout`** (this file)      |
+//! | Recipient selection & execution| `payout_executor`             |
+//!
+//! `payout` does **not** execute payouts, select recipients, or touch storage
+//! outside of [`PayoutRecord`] construction.  All execution logic lives in
+//! [`crate::payout_executor`].
+//!
+//! ## Call flow summary
+//! ```text
+//! contract.rs::execute_payout(group_id)
+//!   → payout_executor::execute_payout(env, group_id)
+//!       (see payout_executor module doc for the full step list)
+//! ```
+
 use crate::error::StellarSaveError;
-use crate::group::{Group, GroupStatus};
-use crate::storage::StorageKeyBuilder;
-use soroban_sdk::{contracttype, Address, Env};
+use soroban_sdk::{contracttype, Address};
 
 /// Determines how the payout recipient is selected each cycle.
 ///
@@ -59,35 +82,37 @@ pub struct PayoutRecord {
 }
 
 impl PayoutRecord {
-    /// Creates a new PayoutRecord with validation.
+    /// Creates a new `PayoutRecord`, returning an error if `amount <= 0`.
     ///
     /// # Arguments
-    /// * `recipient` - Address of the member receiving the payout
-    /// * `group_id` - ID of the group making the payout
+    /// * `recipient`    - Address of the member receiving the payout
+    /// * `group_id`     - ID of the group making the payout
     /// * `cycle_number` - Current cycle number
-    /// * `amount` - Payout amount in stroops
-    /// * `timestamp` - Payout timestamp
+    /// * `amount`       - Payout amount in stroops (must be > 0)
+    /// * `timestamp`    - Payout timestamp
     ///
-    /// # Panics
-    /// Panics if validation constraints are violated:
-    /// - amount must be > 0
+    /// # Errors
+    /// Returns [`StellarSaveError::InvalidAmount`] when `amount <= 0`.
+    /// This is the **single enforcement point** for the invariant that every
+    /// payout amount must be positive; callers must not add their own duplicate check.
     pub fn new(
         recipient: Address,
         group_id: u64,
         cycle_number: u32,
         amount: i128,
         timestamp: u64,
-    ) -> Self {
-        // Validate amount
-        assert!(amount > 0, "amount must be greater than 0");
+    ) -> Result<Self, StellarSaveError> {
+        if amount <= 0 {
+            return Err(StellarSaveError::InvalidAmount);
+        }
 
-        Self {
+        Ok(Self {
             recipient,
             group_id,
             cycle_number,
             amount,
             timestamp,
-        }
+        })
     }
 
     /// Validates that the payout record is internally consistent.
@@ -102,7 +127,7 @@ impl PayoutRecord {
     ///
     /// # Arguments
     /// * `expected_group_id` - The group ID to verify against
-    /// * `expected_cycle` - The cycle number to verify against
+    /// * `expected_cycle`    - The cycle number to verify against
     pub fn matches_group_and_cycle(&self, expected_group_id: u64, expected_cycle: u32) -> bool {
         self.group_id == expected_group_id && self.cycle_number == expected_cycle
     }
@@ -138,39 +163,6 @@ impl PayoutRecord {
     }
 }
 
-/// Returns the address of the next scheduled payout recipient without executing the payout.
-///
-/// The recipient is derived from the group's `current_cycle` and the payout position
-/// reverse-index stored at join/assign time. This is an O(1) read-only view function.
-///
-/// # Arguments
-/// * `env`      - Soroban environment
-/// * `group_id` - ID of the group to query
-///
-/// # Returns
-/// * `Ok(Address)` - Address of the member scheduled to receive the next payout
-/// * `Err(StellarSaveError::GroupNotFound)` - Group does not exist
-/// * `Err(StellarSaveError::InvalidState)` - Group is not Active or no recipient found
-pub fn get_next_recipient(env: &Env, group_id: u64) -> Result<Address, StellarSaveError> {
-    let group_key = StorageKeyBuilder::group_data(group_id);
-    let group: Group = env
-        .storage()
-        .persistent()
-        .get(&group_key)
-        .ok_or(StellarSaveError::GroupNotFound)?;
-
-    if group.status != GroupStatus::Active {
-        return Err(StellarSaveError::InvalidState);
-    }
-
-    // O(1) lookup: position → Address via the reverse index written at join/assign time
-    let pos_idx_key = StorageKeyBuilder::group_payout_position_index(group_id, group.current_cycle);
-    env.storage()
-        .persistent()
-        .get::<_, Address>(&pos_idx_key)
-        .ok_or(StellarSaveError::InvalidState)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -187,7 +179,8 @@ mod tests {
             0,          // cycle_number
             50_000_000, // 5 XLM (5 members * 1 XLM each)
             1234567890, // timestamp
-        );
+        )
+        .unwrap();
 
         assert_eq!(payout.recipient, recipient);
         assert_eq!(payout.group_id, 1);
@@ -197,12 +190,17 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "amount must be greater than 0")]
-    fn test_invalid_amount() {
+    fn test_invalid_amount_returns_error() {
         let env = Env::default();
         let recipient = Address::generate(&env);
 
-        PayoutRecord::new(recipient, 1, 0, 0, 1234567890);
+        let result = PayoutRecord::new(recipient.clone(), 1, 0, 0, 1234567890);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StellarSaveError::InvalidAmount);
+
+        let result_neg = PayoutRecord::new(recipient, 1, 0, -1, 1234567890);
+        assert!(result_neg.is_err());
+        assert_eq!(result_neg.unwrap_err(), StellarSaveError::InvalidAmount);
     }
 
     #[test]
@@ -210,7 +208,7 @@ mod tests {
         let env = Env::default();
         let recipient = Address::generate(&env);
 
-        let payout = PayoutRecord::new(recipient, 1, 0, 50_000_000, 1234567890);
+        let payout = PayoutRecord::new(recipient, 1, 0, 50_000_000, 1234567890).unwrap();
 
         assert!(payout.validate());
     }
@@ -220,7 +218,7 @@ mod tests {
         let env = Env::default();
         let recipient = Address::generate(&env);
 
-        let payout = PayoutRecord::new(recipient, 1, 2, 50_000_000, 1234567890);
+        let payout = PayoutRecord::new(recipient, 1, 2, 50_000_000, 1234567890).unwrap();
 
         assert!(payout.matches_group_and_cycle(1, 2));
         assert!(!payout.matches_group_and_cycle(1, 3));
@@ -234,7 +232,7 @@ mod tests {
         let recipient1 = Address::generate(&env);
         let recipient2 = Address::generate(&env);
 
-        let payout = PayoutRecord::new(recipient1.clone(), 1, 0, 50_000_000, 1234567890);
+        let payout = PayoutRecord::new(recipient1.clone(), 1, 0, 50_000_000, 1234567890).unwrap();
 
         assert!(payout.is_for_recipient(&recipient1));
         assert!(!payout.is_for_recipient(&recipient2));
@@ -245,7 +243,7 @@ mod tests {
         let env = Env::default();
         let recipient = Address::generate(&env);
 
-        let payout = PayoutRecord::new(recipient, 1, 0, 50_000_000, 1234567890);
+        let payout = PayoutRecord::new(recipient, 1, 0, 50_000_000, 1234567890).unwrap();
 
         assert!(payout.belongs_to_group(1));
         assert!(!payout.belongs_to_group(2));
@@ -259,7 +257,8 @@ mod tests {
         let payout = PayoutRecord::new(
             recipient, 1, 0, 50_000_000, // 5 XLM in stroops
             1234567890,
-        );
+        )
+        .unwrap();
 
         assert_eq!(payout.amount_in_xlm(), 5);
     }
@@ -270,7 +269,8 @@ mod tests {
         let recipient1 = Address::generate(&env);
         let recipient2 = Address::generate(&env);
 
-        let payout1 = PayoutRecord::new(recipient1.clone(), 1, 0, 50_000_000, 1234567890);
+        let payout1 =
+            PayoutRecord::new(recipient1.clone(), 1, 0, 50_000_000, 1234567890).unwrap();
 
         let payout2 = PayoutRecord::new(
             recipient2.clone(),
@@ -278,7 +278,8 @@ mod tests {
             1,
             50_000_000,
             1234567890 + 604800, // 1 week later
-        );
+        )
+        .unwrap();
 
         assert_eq!(payout1.group_id, payout2.group_id);
         assert_ne!(payout1.cycle_number, payout2.cycle_number);
@@ -291,10 +292,11 @@ mod tests {
         let env = Env::default();
         let recipient = Address::generate(&env);
 
-        let payout_cycle_0 = PayoutRecord::new(recipient.clone(), 1, 0, 50_000_000, 1234567890);
+        let payout_cycle_0 =
+            PayoutRecord::new(recipient.clone(), 1, 0, 50_000_000, 1234567890).unwrap();
 
         let payout_cycle_1 =
-            PayoutRecord::new(recipient.clone(), 1, 1, 50_000_000, 1234567890 + 604800);
+            PayoutRecord::new(recipient.clone(), 1, 1, 50_000_000, 1234567890 + 604800).unwrap();
 
         assert_eq!(payout_cycle_0.group_id, payout_cycle_1.group_id);
         assert_eq!(payout_cycle_0.recipient, payout_cycle_1.recipient);

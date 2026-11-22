@@ -7,8 +7,14 @@ import {
   distributeRewards,
   saveAmbassadorProfile,
 } from '../ambassador_service';
-import { jwtAuthMiddleware, adminAuthMiddleware } from '../auth_middleware';
+import { jwtAuthMiddleware, adminAuthMiddleware } from '../modules/auth/auth_middleware';
 import { AppError } from '../lib/errors';
+import { parseOffsetParams, paginateArray } from '../lib/pagination';
+import {
+  createEnvelope,
+  createEnvelopeWithPagination,
+  createEmptyEnvelope,
+} from '../lib/response-envelope';
 
 import type { NextFunction } from 'express';
 
@@ -16,15 +22,21 @@ export function createAmbassadorRouter(): Router {
   const router = Router();
 
   // GET /ambassadors/leaderboard — public
-  router.get('/leaderboard', (_req, res) => {
-    res.json(getAmbassadorLeaderboard());
+  router.get('/leaderboard', (req, res, next: NextFunction) => {
+    try {
+      const { offset, limit } = parseOffsetParams(req.query as Record<string, unknown>);
+      const { items, total } = paginateArray(getAmbassadorLeaderboard(), offset, limit);
+      res.json(createEnvelopeWithPagination(items, { offset, limit, total }));
+    } catch (err: unknown) {
+      next(err);
+    }
   });
 
   // GET /ambassadors/:address — public
   router.get('/:address', (req, res, next: NextFunction) => {
     const profile = getAmbassadorProfile(req.params.address);
     if (!profile) return next(new AppError('AMBASSADOR_NOT_FOUND', 'Ambassador not found', 404));
-    return res.json(profile);
+    return res.json(createEnvelope(profile));
   });
 
   // POST /ambassadors/evaluate — JWT protected
@@ -47,10 +59,10 @@ export function createAmbassadorRouter(): Router {
     }
 
     const tier = evaluateAmbassadorStatus(address, reputationScore, contributions, referrals);
-    if (!tier) return res.json({ eligible: false, tier: null });
+    if (!tier) return res.json(createEnvelope({ eligible: false, tier: null, profile: null }));
 
     const profile = saveAmbassadorProfile(address, tier, reputationScore, contributions, referrals);
-    return res.json({ eligible: true, tier, profile });
+    return res.json(createEnvelope({ eligible: true, tier, profile }));
   });
 
   // POST /ambassadors/:address/reward — admin protected
@@ -61,7 +73,7 @@ export function createAmbassadorRouter(): Router {
     }
     try {
       distributeRewards(req.params.address, amount);
-      return res.json({ success: true });
+      return res.json(createEmptyEnvelope({ rewarded: true, amount }));
     } catch (err: unknown) {
       return next(
         new AppError(

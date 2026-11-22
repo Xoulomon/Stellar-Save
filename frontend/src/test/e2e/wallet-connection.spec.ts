@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
  * E2E tests: Wallet connection flow
  * Covers connecting, disconnecting, and UI state changes.
  */
-test.describe('Wallet connection flow', () => {
+test.describe('@journey Wallet connection flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
   });
