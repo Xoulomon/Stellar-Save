@@ -145,12 +145,15 @@ mod tests {
 
     fn setup_group(env: &Env, group_id: u64, creator: &Address) {
         let group = Group::new(
+            env,
             group_id,
             creator.clone(),
             10_000_000,
             604800,
             3,
+            2,
             env.ledger().timestamp(),
+            0,
         );
         env.storage()
             .persistent()

@@ -16,9 +16,9 @@
 pub mod execution;
 pub mod proposal;
 pub mod storage;
-pub mod voting;
 #[cfg(test)]
 pub mod tests;
+pub mod voting;
 
 pub use proposal::propose_contribution_change;
 pub use voting::{vote_contribution_change, vote_dissolve};
