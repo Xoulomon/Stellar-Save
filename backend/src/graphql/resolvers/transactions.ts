@@ -1,8 +1,8 @@
-import { paginateArray } from '@app/backend/lib/pagination';
-import { mockGroups, mockMembers, mockTransactions } from '@app/backend/mock_data';
+import { paginateArray } from '../../lib/pagination';
+import { mockGroups, mockMembers, mockTransactions } from '../../mock_data';
 
-import type { OffsetParams } from '@app/backend/lib/pagination';
-import type { Transaction } from '@app/backend/models';
+import type { OffsetParams } from '../../lib/pagination';
+import type { Transaction } from '../../models';
 
 export const transactionResolvers = {
   Query: {
@@ -19,7 +19,7 @@ export const transactionResolvers = {
         offset: Math.max(0, offset ?? 0),
       };
 
-      return paginateArray(filtered, params);
+      return paginateArray(filtered, params).data;
     },
     transaction: (_: unknown, { id }: { id: string }) =>
       mockTransactions.find((t) => t.id === id) ?? null,

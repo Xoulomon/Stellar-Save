@@ -1,8 +1,8 @@
-import { paginateArray } from '@app/backend/lib/pagination';
-import { mockGroups, mockMembers, mockTransactions } from '@app/backend/mock_data';
+import { paginateArray } from '../../lib/pagination';
+import { mockGroups, mockMembers, mockTransactions } from '../../mock_data';
 
-import type { OffsetParams } from '@app/backend/lib/pagination';
-import type { Group } from '@app/backend/models';
+import type { OffsetParams } from '../../lib/pagination';
+import type { Group } from '../../models';
 
 export const groupResolvers = {
   Query: {
@@ -11,7 +11,7 @@ export const groupResolvers = {
         limit: Math.min(100, Math.max(1, limit ?? 20)),
         offset: Math.max(0, offset ?? 0),
       };
-      return paginateArray(mockGroups, params);
+      return paginateArray(mockGroups, params).data;
     },
     group: (_: unknown, { id }: { id: string }) => mockGroups.find((g) => g.id === id) ?? null,
   },

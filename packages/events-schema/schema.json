@@ -437,6 +437,15 @@
         "resolution": "string",
         "resolved_at": "u64"
       }
+    },
+    "group_activated": {
+      "topic": "group_activated",
+      "fields": {
+        "schema_version": "u32",
+        "group_id": "u64",
+        "timestamp": "u64",
+        "member_count": "u32"
+      }
     }
   }
 }

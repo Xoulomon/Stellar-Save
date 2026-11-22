@@ -1,66 +1,100 @@
 import { makeExecutableSchema } from '@graphql-tools/schema';
 
-import { typeDefs as commonTypeDefs } from './resolvers/common';
-import { typeDefs as groupTypeDefs, resolvers as groupResolvers } from './resolvers/groups';
-import { typeDefs as memberTypeDefs, resolvers as memberResolvers } from './resolvers/members';
-import {
-  typeDefs as transactionTypeDefs,
-  resolvers as transactionResolvers,
-} from './resolvers/transactions';
-import {
-  typeDefs as recommendationTypeDefs,
-  resolvers as recommendationResolvers,
-} from './resolvers/recommendations';
-import { typeDefs as searchTypeDefs, resolvers as searchResolvers } from './resolvers/search';
-import { typeDefs as healthTypeDefs, resolvers as healthResolvers } from './resolvers/health';
-import {
-  typeDefs as preferencesTypeDefs,
-  resolvers as preferencesResolvers,
-} from './resolvers/preferences';
+import { validationRules } from './complexity';
+import { resolvers } from './resolvers';
 
-export { complexityRules } from './complexity';
+export { validationRules as complexityRules };
 
-/**
- * Per-domain SDL fragments. Each domain module owns its own types and the
- * fields it contributes to the root `Query`/`Mutation` types.
- */
-export const typeDefs = [
-  commonTypeDefs,
-  groupTypeDefs,
-  memberTypeDefs,
-  transactionTypeDefs,
-  recommendationTypeDefs,
-  searchTypeDefs,
-  healthTypeDefs,
-  preferencesTypeDefs,
-];
+export const typeDefs = `#graphql
+  type PaginationInfo {
+    limit: Int!
+    offset: Int!
+    total: Int!
+    hasMore: Boolean!
+  }
 
-/**
- * Per-domain resolver maps, merged into a single resolver map.
- */
-export const resolvers = {
-  Query: {
-    ...groupResolvers.Query,
-    ...memberResolvers.Query,
-    ...transactionResolvers.Query,
-    ...recommendationResolvers.Query,
-    ...searchResolvers.Query,
-    ...healthResolvers.Query,
-  },
-  Mutation: {
-    ...preferencesResolvers.Mutation,
-  },
-  Group: groupResolvers.Group,
-  Member: memberResolvers.Member,
-  Transaction: transactionResolvers.Transaction,
-  Recommendation: recommendationResolvers.Recommendation,
-};
+  type Group {
+    id: ID!
+    name: String!
+    contributionAmount: Float!
+    cycleDuration: Int!
+    maxMembers: Int!
+    currentMembers: Int!
+    status: String!
+    tags: [String!]!
+    members: [Member!]!
+    transactions: [Transaction!]!
+  }
 
-/**
- * Executable schema composed from the per-domain fragments and resolvers.
- * The resulting schema surface is identical to the previous monolithic SDL.
- */
-export const schema = makeExecutableSchema({
-  typeDefs,
-  resolvers,
-});
+  type Member {
+    id: ID!
+    address: String!
+    name: String!
+    joinedAt: Float!
+    groupIds: [String!]!
+    groups: [Group!]!
+    transactions: [Transaction!]!
+  }
+
+  type Transaction {
+    id: ID!
+    groupId: String!
+    memberAddress: String!
+    amount: Float!
+    type: TransactionType!
+    timestamp: Float!
+    stellarTxHash: String!
+    group: Group
+    member: Member
+  }
+
+  type Recommendation {
+    groupId: String!
+    score: Float!
+    algorithm: String!
+    group: Group
+  }
+
+  type RecommendationResult {
+    userId: String!
+    bucket: String!
+    algorithm: String!
+    recommendations: [Recommendation!]!
+    groups: [Group!]!
+  }
+
+  type SearchResult {
+    groups: [Group!]!
+    members: [Member!]!
+    transactions: [Transaction!]!
+  }
+
+  enum TransactionType {
+    contribution
+    payout
+  }
+
+  type Query {
+    groups(limit: Int, offset: Int): [Group!]!
+    group(id: ID!): Group
+    members(limit: Int, offset: Int): [Member!]!
+    member(id: ID!): Member
+    transactions(groupId: ID, limit: Int, offset: Int): [Transaction!]!
+    transaction(id: ID!): Transaction
+    recommendations(userId: ID!): RecommendationResult!
+    search(query: String!): SearchResult!
+    health: String!
+  }
+
+  type Mutation {
+    setPreferences(
+      userId: ID!
+      minContribution: Float
+      maxContribution: Float
+      preferredDuration: Int
+      tags: [String!]!
+    ): Boolean!
+  }
+`;
+
+export const schema = makeExecutableSchema({ typeDefs, resolvers });

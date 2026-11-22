@@ -36,7 +36,6 @@ export type PushNotificationProvider = PushProvider;
  */
 export class FirebasePushProvider implements PushProvider {
   private projectId: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Firebase service account is parsed from raw JSON; typed by Firebase Admin SDK not yet integrated
   private serviceAccount: Record<string, unknown>;
 
   constructor(projectId: string, serviceAccountJson: string) {
@@ -112,7 +111,7 @@ export class ApnsProvider implements PushProvider {
   private getJwtToken(): string {
     return jwt.sign({}, this.privateKey, {
       algorithm: 'ES256',
-      keyid: this.keyId,
+      header: { kid: this.keyId },
       issuer: this.teamId,
       expiresIn: 3600,
     });
@@ -272,7 +271,12 @@ export interface PushNotificationServiceDeps {
     apns: { keyId?: string; teamId?: string; key?: string; bundleId?: string };
     nodeEnv: string;
   };
-  logger?: { info: (...a: unknown[]) => void; error: (...a: unknown[]) => void; warn: (...a: unknown[]) => void; debug: (...a: unknown[]) => void };
+  logger?: {
+    info: (...a: unknown[]) => void;
+    error: (...a: unknown[]) => void;
+    warn: (...a: unknown[]) => void;
+    debug: (...a: unknown[]) => void;
+  };
 }
 
 export class PushNotificationService {

@@ -71,8 +71,16 @@
 
 import crypto from 'crypto';
 
-import type { Group, Member, Transaction, UserInteraction, UserPreference, BackupJob, BackupAlert } from '../../src/models';
-import type { S3Client } from '../../src/backup_service';
+import type {
+  Group,
+  Member,
+  Transaction,
+  UserInteraction,
+  UserPreference,
+  BackupJob,
+  BackupAlert,
+} from '../../src/models';
+import type { NextFunction, Request, Response } from 'express';
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
@@ -96,10 +104,7 @@ function stellarAddress(seed: string): string {
 
 /** Deterministic UUID-like string for test IDs (not cryptographically random). */
 function testId(prefix: string, seed: string | number): string {
-  const hash = crypto
-    .createHash('md5')
-    .update(`${prefix}-${seed}`)
-    .digest('hex');
+  const hash = crypto.createHash('md5').update(`${prefix}-${seed}`).digest('hex');
   return `${prefix}-${hash.slice(0, 8)}`;
 }
 
@@ -170,7 +175,7 @@ export const GroupFactory = {
     groupId: string,
     member: Member,
     txIndex: number,
-    overrides: Partial<Transaction> = {},
+    overrides: Partial<Transaction> = {}
   ): Transaction {
     return {
       id: `tx-${groupId}-${String(txIndex).padStart(3, '0')}`,
@@ -222,7 +227,10 @@ export const GroupFactory = {
    * @param userId    The user this preference belongs to.
    * @param overrides Partial field overrides.
    */
-  buildUserPreference(userId = 'user-001', overrides: Partial<UserPreference> = {}): UserPreference {
+  buildUserPreference(
+    userId = 'user-001',
+    overrides: Partial<UserPreference> = {}
+  ): UserPreference {
     return {
       userId,
       minContribution: 50,
@@ -239,7 +247,9 @@ export const GroupFactory = {
    *
    * @param userIds   List of user IDs to seed (defaults to three generic users).
    */
-  buildUserPreferenceMap(userIds = ['user-001', 'user-002', 'user-003']): Map<string, UserPreference> {
+  buildUserPreferenceMap(
+    userIds = ['user-001', 'user-002', 'user-003']
+  ): Map<string, UserPreference> {
     const map = new Map<string, UserPreference>();
     userIds.forEach((id) => map.set(id, GroupFactory.buildUserPreference(id)));
     return map;
@@ -262,11 +272,11 @@ export const GroupFactory = {
     });
 
     const members = Array.from({ length: memberCount }, (_, i) =>
-      GroupFactory.buildMember(i + 1, { groupIds: [group.id] }),
+      GroupFactory.buildMember(i + 1, { groupIds: [group.id] })
     );
 
     const transactions = members.map((m, i) =>
-      GroupFactory.buildTransaction(group.id, m, i + 1, { amount: group.contributionAmount }),
+      GroupFactory.buildTransaction(group.id, m, i + 1, { amount: group.contributionAmount })
     );
 
     const contributionStates: MemberContributionState[] = members.map((m, i) => ({
@@ -285,14 +295,12 @@ export const GroupFactory = {
   buildMixedContributionGroup(
     memberCount: number,
     contributedCount: number,
-    groupOverrides: Partial<Group> = {},
+    groupOverrides: Partial<Group> = {}
   ): GroupFixture {
     if (memberCount < 1) throw new RangeError('memberCount must be ≥ 1');
     if (memberCount > 20) throw new RangeError('memberCount must be ≤ 20');
     if (contributedCount < 0 || contributedCount > memberCount) {
-      throw new RangeError(
-        `contributedCount (${contributedCount}) must be 0–${memberCount}`,
-      );
+      throw new RangeError(`contributedCount (${contributedCount}) must be 0–${memberCount}`);
     }
 
     const group = GroupFactory.buildGroup({
@@ -302,7 +310,7 @@ export const GroupFactory = {
     });
 
     const members = Array.from({ length: memberCount }, (_, i) =>
-      GroupFactory.buildMember(i + 1, { groupIds: [group.id] }),
+      GroupFactory.buildMember(i + 1, { groupIds: [group.id] })
     );
 
     const transactions: Transaction[] = [];
@@ -343,14 +351,14 @@ export const GroupFactory = {
     });
 
     const members = Array.from({ length: memberCount }, (_, i) =>
-      GroupFactory.buildMember(i + 1, { groupIds: [group.id] }),
+      GroupFactory.buildMember(i + 1, { groupIds: [group.id] })
     );
 
     const transactions = members.map((m, i) =>
       GroupFactory.buildTransaction(group.id, m, i + 1, {
         type: 'payout',
         amount: group.contributionAmount * memberCount,
-      }),
+      })
     );
 
     return {
@@ -367,7 +375,7 @@ export const GroupFactory = {
   buildPausedGroup(
     memberCount: number,
     contributedCount: number,
-    groupOverrides: Partial<Group> = {},
+    groupOverrides: Partial<Group> = {}
   ): GroupFixture {
     return GroupFactory.buildMixedContributionGroup(memberCount, contributedCount, {
       status: 'Paused',
@@ -386,7 +394,7 @@ export const GroupFactory = {
         name: `Test Group ${i + 1}`,
         currentMembers: i % 3,
         ...groupOverrides,
-      }),
+      })
     );
   },
 };
@@ -397,7 +405,18 @@ export const GroupFactory = {
  * In-memory S3 mock compatible with `BackupService` and `RecoveryService`.
  * Exposes the underlying `store` Map for inspection in tests.
  */
-export type MockS3Client = S3Client & { store: Map<string, Buffer> };
+export interface MockS3Client {
+  store: Map<string, Buffer>;
+  putObject(params: {
+    Bucket: string;
+    Key: string;
+    Body: Buffer;
+    ContentType: string;
+  }): Promise<void>;
+  getObject(params: { Bucket: string; Key: string }): Promise<Buffer>;
+  listObjects(params: { Bucket: string; Prefix: string }): Promise<string[]>;
+  deleteObject(params: { Bucket: string; Key: string }): Promise<void>;
+}
 
 /**
  * Factory for `BackupJob`, `BackupAlert`, and the in-memory S3 mock client.
@@ -417,7 +436,15 @@ export const BackupFactory = {
     const store = new Map<string, Buffer>();
     return {
       store,
-      async putObject({ Key, Body }: { Bucket: string; Key: string; Body: Buffer; ContentType: string }) {
+      async putObject({
+        Key,
+        Body,
+      }: {
+        Bucket: string;
+        Key: string;
+        Body: Buffer;
+        ContentType: string;
+      }) {
         store.set(Key, Body);
       },
       async getObject({ Key }: { Bucket: string; Key: string }): Promise<Buffer> {
@@ -478,12 +505,14 @@ export const BackupFactory = {
    *
    * @param opts  Optional row counts per table.
    */
-  buildBackupPayload(opts: {
-    groups?: number;
-    members?: number;
-    transactions?: number;
-    preferences?: number;
-  } = {}): Record<string, unknown> {
+  buildBackupPayload(
+    opts: {
+      groups?: number;
+      members?: number;
+      transactions?: number;
+      preferences?: number;
+    } = {}
+  ): Record<string, unknown> {
     const {
       groups: groupCount = 2,
       members: memberCount = 4,
@@ -591,7 +620,7 @@ export const NotificationFactory = {
    */
   buildPreference(
     userId = 'user-001',
-    overrides: Partial<MockNotificationPreference> = {},
+    overrides: Partial<MockNotificationPreference> = {}
   ): MockNotificationPreference {
     return {
       id: testId('pref', userId),
@@ -615,7 +644,7 @@ export const NotificationFactory = {
    */
   buildPreferences(
     userIds: string[],
-    overrides: Partial<MockNotificationPreference> = {},
+    overrides: Partial<MockNotificationPreference> = {}
   ): MockNotificationPreference[] {
     return userIds.map((id) => NotificationFactory.buildPreference(id, overrides));
   },
@@ -628,15 +657,13 @@ export const NotificationFactory = {
    */
   buildTemplate(
     templateKey = 'email_contribution_reminder',
-    overrides: Partial<MockNotificationTemplate> = {},
+    overrides: Partial<MockNotificationTemplate> = {}
   ): MockNotificationTemplate {
     const isEmail = templateKey.startsWith('email_');
     return {
       id: testId('tmpl', templateKey),
       templateKey,
-      templateName: templateKey
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, (c) => c.toUpperCase()),
+      templateName: templateKey.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
       templateType: isEmail ? 'email' : 'push',
       subject: isEmail ? 'Notification: {{groupName}}' : undefined,
       htmlContent: '<p>Hello {{userName}}, action required for {{groupName}}.</p>',
@@ -669,7 +696,7 @@ export const NotificationFactory = {
    */
   buildNotification(
     userId = 'user-001',
-    overrides: Partial<MockNotification> = {},
+    overrides: Partial<MockNotification> = {}
   ): MockNotification {
     return {
       id: testId('notif', userId),
@@ -699,7 +726,7 @@ export const NotificationFactory = {
       NotificationFactory.buildNotification(userId, {
         id: `notif-${String(i + 1).padStart(3, '0')}`,
         status: 'sent',
-      }),
+      })
     );
   },
 
@@ -707,12 +734,14 @@ export const NotificationFactory = {
    * Build a mock `notificationStats` response as returned by
    * `NotificationService.getNotificationStats()`.
    */
-  buildNotificationStats(overrides: Partial<{
-    totalSent: number;
-    totalFailed: number;
-    totalPending: number;
-    byType: Record<string, number>;
-  }> = {}) {
+  buildNotificationStats(
+    overrides: Partial<{
+      totalSent: number;
+      totalFailed: number;
+      totalPending: number;
+      byType: Record<string, number>;
+    }> = {}
+  ) {
     return {
       totalSent: 1000,
       totalFailed: 50,
@@ -726,14 +755,16 @@ export const NotificationFactory = {
    * Build a mock `preferenceStats` response as returned by
    * `UserPreferenceManager.getPreferenceStats()`.
    */
-  buildPreferenceStats(overrides: Partial<{
-    total: number;
-    emailEnabled: number;
-    pushEnabled: number;
-    emailEnabledPercent: string;
-    pushEnabledPercent: string;
-    byFrequency: Record<string, number>;
-  }> = {}) {
+  buildPreferenceStats(
+    overrides: Partial<{
+      total: number;
+      emailEnabled: number;
+      pushEnabled: number;
+      emailEnabledPercent: string;
+      pushEnabledPercent: string;
+      byFrequency: Record<string, number>;
+    }> = {}
+  ) {
     return {
       total: 1000,
       emailEnabled: 750,
@@ -828,13 +859,15 @@ export const AnalyticsFactory = {
    */
   buildPlatformMetrics(
     date?: Date,
-    overrides: Partial<MockPlatformMetrics> = {},
+    overrides: Partial<MockPlatformMetrics> = {}
   ): MockPlatformMetrics {
-    const d = date ?? (() => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return today;
-    })();
+    const d =
+      date ??
+      (() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return today;
+      })();
 
     return {
       id: testId('plat', d.toISOString()),
@@ -891,13 +924,15 @@ export const AnalyticsFactory = {
   buildUserMetrics(
     userId = 'user-001',
     date?: Date,
-    overrides: Partial<MockUserMetrics> = {},
+    overrides: Partial<MockUserMetrics> = {}
   ): MockUserMetrics {
-    const d = date ?? (() => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return today;
-    })();
+    const d =
+      date ??
+      (() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return today;
+      })();
 
     return {
       id: testId('um', `${userId}-${d.toISOString()}`),
@@ -929,13 +964,15 @@ export const AnalyticsFactory = {
   buildGroupMetrics(
     groupId = 'grp-001',
     date?: Date,
-    overrides: Partial<MockGroupMetrics> = {},
+    overrides: Partial<MockGroupMetrics> = {}
   ): MockGroupMetrics {
-    const d = date ?? (() => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return today;
-    })();
+    const d =
+      date ??
+      (() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return today;
+      })();
 
     return {
       id: testId('gm', `${groupId}-${d.toISOString()}`),
@@ -961,7 +998,10 @@ export const AnalyticsFactory = {
    * @param eventType  The event type string.
    * @param overrides  Partial field overrides.
    */
-  buildEvent(eventType = 'page_view', overrides: Partial<MockAnalyticsEvent> = {}): MockAnalyticsEvent {
+  buildEvent(
+    eventType = 'page_view',
+    overrides: Partial<MockAnalyticsEvent> = {}
+  ): MockAnalyticsEvent {
     return {
       id: testId('evt', `${eventType}-${Date.now()}`),
       eventType,
@@ -1055,7 +1095,7 @@ export const ReputationFactory = {
    */
   buildReputation(
     address = stellarAddress('testmember1'),
-    overrides: Partial<MockMemberReputation> = {},
+    overrides: Partial<MockMemberReputation> = {}
   ): MockMemberReputation {
     return {
       address,
@@ -1096,10 +1136,12 @@ export const ServiceMockFactory = {
    * @param overrides  Partial method overrides — any method not overridden
    *                   defaults to `jest.fn()`.
    */
-  buildMockEventIndexer(overrides: Partial<{
-    readinessCheckDatabase: jest.Mock;
-    readinessCheckHorizon: jest.Mock;
-  }> = {}) {
+  buildMockEventIndexer(
+    overrides: Partial<{
+      readinessCheckDatabase: jest.Mock;
+      readinessCheckHorizon: jest.Mock;
+    }> = {}
+  ) {
     return {
       readinessCheckDatabase: jest.fn().mockResolvedValue({ up: true, latencyMs: 5 }),
       readinessCheckHorizon: jest.fn().mockResolvedValue({ up: true, latencyMs: 12 }),
@@ -1135,28 +1177,26 @@ export const ServiceMockFactory = {
    * @param query   Query string parameters.
    * @param params  Route parameters.
    */
-  buildMockRequest(
-    body: unknown = {},
-    query: unknown = {},
-    params: unknown = {},
-  ) {
-    return { body, query, params } as import('express').Request;
+  buildMockRequest(body: unknown = {}, query: unknown = {}, params: unknown = {}) {
+    return { body, query, params } as Request;
   },
 
   /**
    * Build a minimal mock Express `Response` object.
    */
   buildMockResponse() {
-    return {} as import('express').Response;
+    return {} as Response;
   },
 
   /**
    * Capture calls to an Express `next()` function.
    * Returns the `next` function and a `calls` array.
    */
-  captureNext(): { next: import('express').NextFunction; calls: unknown[] } {
+  captureNext(): { next: NextFunction; calls: unknown[] } {
     const calls: unknown[] = [];
-    const next = (arg?: unknown) => { calls.push(arg); };
-    return { next: next as import('express').NextFunction, calls };
+    const next = (arg?: unknown) => {
+      calls.push(arg);
+    };
+    return { next: next as NextFunction, calls };
   },
 };

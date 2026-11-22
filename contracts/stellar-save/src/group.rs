@@ -1,10 +1,5 @@
 use core::fmt;
-use soroban_sdk::{contracttype, Address, Env, Map};
-use crate::constants::{
-    GROUP_STATUS_ACTIVE, GROUP_STATUS_CANCELLED, GROUP_STATUS_COMPLETED,
-    GROUP_STATUS_PAUSED, GROUP_STATUS_PENDING, MAX_GROUP_GRACE_PERIOD_SECONDS,
-    MAX_MEMBERS, MIN_GROUP_MEMBERS,
-};
+use soroban_sdk::{contracttype, Address, Env};
 
 /// Protocol-level maximum number of members per group.
 /// Prevents unbounded storage growth and gas exhaustion.
@@ -36,7 +31,8 @@ pub struct TokenConfig {
 /// - Completed: All cycles finished successfully
 /// - Cancelled: Permanently terminated before completion
 #[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[repr(u32)]
 pub enum GroupStatus {
     /// Group is created but not yet active.
     /// Waiting for minimum members or creator activation.
@@ -450,7 +446,7 @@ impl Group {
         self.is_active = false;
 
         // Emit completion event
-        Self::emit_completed_event(env, self.id);
+        Self::emit_completed_event(env, self);
     }
 
     /// Emits a GroupEvent::Completed event.
@@ -458,10 +454,18 @@ impl Group {
     /// # Arguments
     /// * `env` - Soroban environment
     /// * `group_id` - The ID of the completed group
-    fn emit_completed_event(env: &soroban_sdk::Env, group_id: u64) {
-        env.events().publish(
-            (soroban_sdk::Symbol::new(env, "group_completed"),),
-            group_id,
+    fn emit_completed_event(env: &soroban_sdk::Env, group: &Group) {
+        let total_distributed = group
+            .contribution_amount
+            .checked_mul(group.member_count as i128)
+            .unwrap_or(i128::MAX);
+        crate::events::EventEmitter::emit_group_completed(
+            env,
+            group.id,
+            group.creator.clone(),
+            group.max_members,
+            total_distributed,
+            env.ledger().timestamp(),
         );
     }
 
@@ -492,7 +496,7 @@ impl Group {
             self.is_active = false;
 
             // Emit completion event
-            Self::emit_completed_event(env, self.id);
+            Self::emit_completed_event(env, self);
         }
     }
 
@@ -621,6 +625,7 @@ mod tests {
     fn make_group(env: &Env, max_members: u32, grace_period_seconds: u64) -> Group {
         let creator = Address::generate(env);
         Group::new(
+            env,
             1,
             creator,
             10_000_000,
@@ -638,6 +643,7 @@ mod tests {
         let creator = Address::generate(&env);
 
         let group = Group::new(
+            &env,
             1,
             creator.clone(),
             10_000_000, // 1 XLM
@@ -673,7 +679,9 @@ mod tests {
     fn test_invalid_grace_period() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        Group::new(1, creator, 10_000_000, 604800, 5, 2, 1234567890, 604801);
+        Group::new(
+            &env, 1, creator, 10_000_000, 604800, 5, 2, 1234567890, 604801,
+        );
     }
 
     #[test]
@@ -681,7 +689,7 @@ mod tests {
     fn test_invalid_min_members() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        Group::new(1, creator, 10_000_000, 604800, 5, 1, 1234567890, 0);
+        Group::new(&env, 1, creator, 10_000_000, 604800, 5, 1, 1234567890, 0);
     }
 
     #[test]
@@ -689,7 +697,7 @@ mod tests {
     fn test_min_members_greater_than_max() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        Group::new(1, creator, 10_000_000, 604800, 3, 5, 1234567890, 0);
+        Group::new(&env, 1, creator, 10_000_000, 604800, 3, 5, 1234567890, 0);
     }
 
     #[test]
@@ -698,7 +706,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
 
-        Group::new(1, creator, 0, 604800, 5, 2, 1234567890);
+        Group::new(&env, 1, creator, 0, 604800, 5, 2, 1234567890, 0);
     }
 
     #[test]
@@ -707,7 +715,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
 
-        Group::new(1, creator, 10_000_000, 0, 5, 2, 1234567890);
+        Group::new(&env, 1, creator, 10_000_000, 0, 5, 2, 1234567890, 0);
     }
 
     #[test]
@@ -716,7 +724,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
 
-        Group::new(1, creator, 10_000_000, 604800, 1, 2, 1234567890);
+        Group::new(&env, 1, creator, 10_000_000, 604800, 1, 2, 1234567890, 0);
     }
 
     #[test]
@@ -724,7 +732,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
 
-        let mut group = Group::new(1, creator, 10_000_000, 604800, 3, 2, 1234567890);
+        let mut group = Group::new(&env, 1, creator, 10_000_000, 604800, 3, 2, 1234567890, 0);
 
         assert!(!group.is_complete());
         group.current_cycle = 2;
@@ -944,7 +952,7 @@ mod tests {
         let env = Env::default();
         let creator = Address::generate(&env);
         // max_members=20, contribution_amount=100_000_000 → 2_000_000_000 < i128::MAX
-        let g = Group::new(1, creator, 100_000_000, 604800, 20, 2, 0);
+        let g = Group::new(&env, 1, creator, 100_000_000, 604800, 20, 2, 0, 0);
         assert_eq!(g.total_pool_amount(), 2_000_000_000);
     }
 }

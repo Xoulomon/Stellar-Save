@@ -36,7 +36,7 @@ pub enum SortOrder {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SearchParams {
     /// Only return groups with this status.
-    pub status: Option<GroupStatus>,
+    pub status: Option<u32>,
 
     /// Only return groups whose `contribution_amount` is >= this value.
     pub min_amount: Option<i128>,
@@ -203,7 +203,7 @@ pub fn search_groups(env: &Env, params: SearchParams) -> SearchResult {
 /// Returns `true` if `group` satisfies all active filter constraints.
 fn matches_filters(group: &Group, params: &SearchParams) -> bool {
     if let Some(ref status) = params.status {
-        if &group.status != status {
+        if group.status as u32 != *status {
             return false;
         }
     }
@@ -301,6 +301,7 @@ mod tests {
     ) {
         let creator = Address::generate(env);
         let mut g = Group::new(
+            env,
             id,
             creator,
             contribution_amount,
@@ -321,7 +322,7 @@ mod tests {
             .set(&StorageKeyBuilder::next_group_id(), &id);
     }
 
-    fn default_params(env: &Env) -> SearchParams {
+    fn default_params(_env: &Env) -> SearchParams {
         SearchParams {
             status: None,
             min_amount: None,
@@ -376,7 +377,7 @@ mod tests {
             .set(&StorageKeyBuilder::next_group_id(), &3u64);
 
         let mut params = default_params(&env);
-        params.status = Some(GroupStatus::Active);
+        params.status = Some(GroupStatus::Active as u32);
         let result = search_groups(&env, params);
 
         assert_eq!(result.groups.len(), 2);
@@ -395,7 +396,7 @@ mod tests {
             .set(&StorageKeyBuilder::next_group_id(), &2u64);
 
         let mut params = default_params(&env);
-        params.status = Some(GroupStatus::Pending);
+        params.status = Some(GroupStatus::Pending as u32);
         let result = search_groups(&env, params);
 
         assert_eq!(result.groups.len(), 1);
@@ -544,7 +545,7 @@ mod tests {
             .set(&StorageKeyBuilder::next_group_id(), &4u64);
 
         let mut params = default_params(&env);
-        params.status = Some(GroupStatus::Active);
+        params.status = Some(GroupStatus::Active as u32);
         params.min_amount = Some(150);
         params.min_members = Some(4);
         let result = search_groups(&env, params);
@@ -733,7 +734,7 @@ mod tests {
             .set(&StorageKeyBuilder::next_group_id(), &1u64);
 
         let mut params = default_params(&env);
-        params.status = Some(GroupStatus::Cancelled);
+        params.status = Some(GroupStatus::Cancelled as u32);
         let result = search_groups(&env, params);
 
         assert_eq!(result.groups.len(), 0);
