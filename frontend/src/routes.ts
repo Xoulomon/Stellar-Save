@@ -8,6 +8,7 @@
 
 export const routes = {
   home: '/',
+  dashboard: '/dashboard',
   profile: '/profile',
   groups: '/groups',
   group: '/groups/:id',
@@ -23,14 +24,24 @@ export const routes = {
 
 export type RouteName = keyof typeof routes;
 
+/**
+ * Returns all route pattern strings defined in the route table.
+ * Useful for programmatic enumeration (e.g. breadcrumb matchers, test assertions).
+ */
+export function getRoutePatterns(): string[] {
+  return Object.values(routes);
+}
+
 export const paths = {
   home: (): string => routes.home,
+  dashboard: (): string => routes.dashboard,
   profile: (): string => routes.profile,
   groups: (): string => routes.groups,
-  group: (id: string | number): string => `/groups/${id}`,
-  groupSettings: (id: string | number): string => `/groups/${id}/settings`,
+  group: (id: string | number): string => `/groups/${encodeURIComponent(String(id))}`,
+  groupSettings: (id: string | number): string =>
+    `/groups/${encodeURIComponent(String(id))}/settings`,
   transactions: (): string => routes.transactions,
-  transaction: (id: string | number): string => `/transactions/${id}`,
+  transaction: (id: string | number): string => `/transactions/${encodeURIComponent(String(id))}`,
   transactionBuilder: (): string => routes.transactionBuilder,
   settings: (): string => routes.settings,
   login: (): string => routes.login,
