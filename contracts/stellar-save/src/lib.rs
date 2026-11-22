@@ -91,6 +91,8 @@ pub mod templates;
 // mod invitation_tests;
 #[cfg(test)]
 pub mod test_utils;
+#[cfg(test)]
+mod escrow_property_tests;
 // mod merge_tests;
 // mod migration_matrix_tests;
 // mod migration_tests;

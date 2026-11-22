@@ -3,15 +3,17 @@ import crypto from 'crypto';
 import { logger } from './logger';
 import { prisma } from './prisma_client';
 
-const API_KEY_PREFIX = 'ss_';
-const KEY_HASH_ALGORITHM = 'sha256';
+export const API_KEY_PREFIX = 'ss_';
+export const KEY_HASH_ALGORITHM = 'sha256';
+
+export type ApiKeyTier = 'free' | 'pro' | 'enterprise';
 
 export interface ApiKeyInfo {
   id: string;
   keyPrefix: string;
   userId: string;
   name: string;
-  tier: 'free' | 'pro' | 'enterprise';
+  tier: ApiKeyTier;
   rateLimit: number;
   isActive: boolean;
   lastUsedAt?: Date;
@@ -19,18 +21,45 @@ export interface ApiKeyInfo {
   createdAt: Date;
 }
 
+export const DEFAULT_RATE_LIMITS: Record<ApiKeyTier, number> = {
+  free: 100,
+  pro: 1000,
+  enterprise: 10000,
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- apiKey/apiKeyUsage are pending Prisma migration models; not yet in generated client
 type ApiKeyDb = any;
 
 /**
+ * Hash an API key using the canonical algorithm.
+ */
+export function hashApiKey(key: string): string {
+  return crypto.createHash(KEY_HASH_ALGORITHM).update(key).digest('hex');
+}
+
+/**
+ * Mask an API key for safe display/logging.
+ */
+export function maskApiKey(key: string): string {
+  if (!key) return '';
+  return key.length <= 15 ? `${key}...` : `${key.substring(0, 15)}...`;
+}
+
+/**
  * API Key Service
  *
- * Refactored for dependency injection (Issue #1701):
+ * Refactored for dependency injection and modularity (Issue #1701, #2114):
  * - DB client and logger are accepted via constructor
+ * - Extracted hashing and masking utilities
+ * - Added input validation and boundary protections
  */
 export interface ApiKeyServiceDeps {
   db?: ApiKeyDb;
-  logger?: { info: (...a: unknown[]) => void; error: (...a: unknown[]) => void; warn: (...a: unknown[]) => void };
+  logger?: {
+    info: (...a: unknown[]) => void;
+    error: (...a: unknown[]) => void;
+    warn: (...a: unknown[]) => void;
+  };
 }
 
 export class ApiKeyService {
@@ -45,14 +74,21 @@ export class ApiKeyService {
   async generateKey(
     userId: string,
     name: string,
-    tier: 'free' | 'pro' = 'free'
+    tier: ApiKeyTier = 'free'
   ): Promise<{ key: string; info: ApiKeyInfo }> {
+    if (!userId || typeof userId !== 'string') {
+      throw new Error('userId is required');
+    }
+    if (!name || typeof name !== 'string') {
+      throw new Error('name is required');
+    }
+
     const keyId = crypto.randomBytes(16).toString('hex');
     const fullKey = `${API_KEY_PREFIX}${keyId}`;
-    const keyHash = crypto.createHash(KEY_HASH_ALGORITHM).update(fullKey).digest('hex');
-    const keyPrefix = fullKey.substring(0, 15) + '...';
+    const keyHash = hashApiKey(fullKey);
+    const keyPrefix = maskApiKey(fullKey);
 
-    const rateLimits: Record<string, number> = { free: 100, pro: 1000, enterprise: 10000 };
+    const rateLimit = DEFAULT_RATE_LIMITS[tier] ?? DEFAULT_RATE_LIMITS.free;
 
     const apiKey: ApiKeyInfo = await this.db.apiKey.create({
       data: {
@@ -61,7 +97,7 @@ export class ApiKeyService {
         userId,
         name,
         tier,
-        rateLimit: rateLimits[tier],
+        rateLimit,
         isActive: true,
       },
     });
@@ -73,9 +109,13 @@ export class ApiKeyService {
   async validateKey(
     key: string
   ): Promise<{ valid: boolean; keyId?: string; userId?: string; rateLimit?: number }> {
-    const keyHash = crypto.createHash(KEY_HASH_ALGORITHM).update(key).digest('hex');
+    if (!key || typeof key !== 'string' || !key.startsWith(API_KEY_PREFIX)) {
+      return { valid: false };
+    }
 
-    const apiKey: ApiKeyInfo & { expiresAt?: Date } = await this.db.apiKey.findUnique({
+    const keyHash = hashApiKey(key);
+
+    const apiKey: (ApiKeyInfo & { expiresAt?: Date }) | null = await this.db.apiKey.findUnique({
       where: { keyHash },
     });
 
@@ -96,6 +136,7 @@ export class ApiKeyService {
   }
 
   async getKeysForUser(userId: string): Promise<ApiKeyInfo[]> {
+    if (!userId) return [];
     return this.db.apiKey.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -103,6 +144,7 @@ export class ApiKeyService {
   }
 
   async revokeKey(keyId: string): Promise<void> {
+    if (!keyId) return;
     await this.db.apiKey.update({
       where: { id: keyId },
       data: { isActive: false },
