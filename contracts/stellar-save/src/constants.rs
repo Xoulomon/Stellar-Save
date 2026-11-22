@@ -32,6 +32,10 @@ pub const MAX_MEMBERS: u32 = 20;
 /// Unit: count
 pub const MIN_MEMBERS_FLOOR: u32 = 2;
 
+/// Minimum valid member count for every savings group.
+/// Kept separate from the configurable member floor for direct validation.
+pub const MIN_GROUP_MEMBERS: u32 = MIN_MEMBERS_FLOOR;
+
 // ─── Contribution Amount Limits ───────────────────────────────────────────────
 
 /// Rounding precision for contribution amounts (0.01 XLM = 10^5 stroops).
@@ -83,12 +87,23 @@ pub const ONE_DAY_SECONDS: u64 = 86_400;
 /// Unit: seconds
 pub const MAX_DEADLINE_EXTENSION_SECONDS: u64 = ONE_WEEK_SECONDS; // 7 days = 604,800 s
 
+/// Maximum grace period that may be configured for a group.
+pub const MAX_GROUP_GRACE_PERIOD_SECONDS: u64 = ONE_WEEK_SECONDS;
+
 /// Number of inactive cycles before an `emergency_withdraw` is allowed.
 ///
 /// A member may only emergency-withdraw after the group has been inactive for
 /// at least this many cycle durations.
 /// Unit: cycle count (multiplied by cycle_duration to get seconds)
 pub const EMERGENCY_WITHDRAW_INACTIVE_CYCLES: u64 = 2;
+
+// ─── Group Status Wire Values ─────────────────────────────────────────────────
+
+pub const GROUP_STATUS_PENDING: u32 = 0;
+pub const GROUP_STATUS_ACTIVE: u32 = 1;
+pub const GROUP_STATUS_PAUSED: u32 = 2;
+pub const GROUP_STATUS_COMPLETED: u32 = 3;
+pub const GROUP_STATUS_CANCELLED: u32 = 4;
 
 // ─── Pagination Limits ────────────────────────────────────────────────────────
 

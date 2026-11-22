@@ -28,7 +28,9 @@ export const recommendationResolvers = {
   },
 
   RecommendationResult: {
-    groups: (result: { recommendations: string[] }) =>
-      mockGroups.filter((g) => result.recommendations.includes(g.id)),
+    groups: (result: { recommendations: Array<{ groupId: string }> }) =>
+      mockGroups.filter((g) =>
+        result.recommendations.some((recommendation) => recommendation.groupId === g.id)
+      ),
   },
 };

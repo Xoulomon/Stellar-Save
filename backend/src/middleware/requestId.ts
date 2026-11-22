@@ -1,9 +1,4 @@
-import { randomUUID } from 'crypto';
-
-import {
-  attachCorrelationId,
-  runWithRequestContext,
-} from '../lib/requestContext';
+import { attachCorrelationId, runWithRequestContext } from '../lib/requestContext';
 
 import type { Request, Response, NextFunction } from 'express';
 

@@ -3,10 +3,9 @@
 /// This module provides a centralized repository pattern for all group-related storage reads and writes.
 /// It encapsulates all direct env.storage() calls related to group state, improving testability and
 /// reducing duplication across the codebase.
-use crate::constants::{TTL_EXTEND_TO_LEDGERS, TTL_THRESHOLD_LEDGERS};
 use crate::error::StellarSaveError;
 use crate::group::{Group, TokenConfig};
-use crate::storage::{StorageKey, StorageKeyBuilder};
+use crate::storage::{extend_persistent_ttl, StorageKey, StorageKeyBuilder};
 use soroban_sdk::{Address, Env, Vec};
 
 /// Bumps the TTL of a persistent storage entry if it is at risk of archival.
@@ -16,9 +15,7 @@ use soroban_sdk::{Address, Env, Vec};
 /// avoids paying rent-bump costs on every access when the entry is already
 /// long-lived (Issue #75).
 fn bump_ttl(env: &Env, key: &StorageKey) {
-    env.storage()
-        .persistent()
-        .extend_ttl(key, TTL_THRESHOLD_LEDGERS, TTL_EXTEND_TO_LEDGERS);
+    extend_persistent_ttl(env, key);
 }
 
 /// Repository for managing group storage operations.
