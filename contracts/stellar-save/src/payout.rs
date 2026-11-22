@@ -269,8 +269,7 @@ mod tests {
         let recipient1 = Address::generate(&env);
         let recipient2 = Address::generate(&env);
 
-        let payout1 =
-            PayoutRecord::new(recipient1.clone(), 1, 0, 50_000_000, 1234567890).unwrap();
+        let payout1 = PayoutRecord::new(recipient1.clone(), 1, 0, 50_000_000, 1234567890).unwrap();
 
         let payout2 = PayoutRecord::new(
             recipient2.clone(),

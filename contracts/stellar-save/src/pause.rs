@@ -79,7 +79,10 @@ mod tests {
             env.storage()
                 .persistent()
                 .set(&StorageKeyBuilder::emergency_pause(), &true);
-            assert_eq!(require_not_paused(&env), Err(StellarSaveError::ContractPaused));
+            assert_eq!(
+                require_not_paused(&env),
+                Err(StellarSaveError::ContractPaused)
+            );
         });
     }
 

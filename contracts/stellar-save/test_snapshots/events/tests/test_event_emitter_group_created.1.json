@@ -78,6 +78,14 @@
                   "val": {
                     "u32": 5
                   }
+                },
+                {
+                  "key": {
+                    "symbol": "schema_version"
+                  },
+                  "val": {
+                    "u32": 1
+                  }
                 }
               ]
             }

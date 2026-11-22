@@ -204,13 +204,17 @@ pub fn get_member_rating(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{group::Group, storage::StorageKeyBuilder, MemberProfile};
+    use crate::{
+        group::{Group, GroupStatus},
+        storage::StorageKeyBuilder,
+        MemberProfile,
+    };
     use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
     /// Store a minimal completed group + member profile.
     fn setup(env: &Env, group_id: u64, member: &Address) {
         let creator = Address::generate(env);
-        let mut g = Group::new(group_id, creator.clone(), 100, 604800, 5, 2, 1000, 0);
+        let mut g = Group::new(env, group_id, creator.clone(), 100, 604800, 5, 2, 1000, 0);
         g.status = GroupStatus::Completed;
         g.member_count = 1;
 
@@ -326,7 +330,7 @@ mod tests {
 
         // Active group (not terminal)
         let creator = Address::generate(&env);
-        let g = Group::new(1, creator, 100, 604800, 5, 2, 1000, 0);
+        let g = Group::new(&env, 1, creator, 100, 604800, 5, 2, 1000, 0);
         env.storage()
             .persistent()
             .set(&StorageKeyBuilder::group_data(1), &g);

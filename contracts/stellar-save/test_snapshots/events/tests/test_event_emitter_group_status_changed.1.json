@@ -70,6 +70,14 @@
                   "val": {
                     "u32": 0
                   }
+                },
+                {
+                  "key": {
+                    "symbol": "schema_version"
+                  },
+                  "val": {
+                    "u32": 1
+                  }
                 }
               ]
             }
