@@ -6,74 +6,7 @@ import { RecoveryService } from '../recovery_service';
 
 import type { S3Client } from '../backup_service';
 
-// ── Inline test harness (matches existing test files) ────────────────────────
-let _currentBeforeEach: (() => void) | null = null;
-const _testQueue: Array<() => Promise<void>> = [];
-let _queueDraining = false;
-
-async function _drainQueue() {
-  if (_queueDraining) return;
-  _queueDraining = true;
-  for (const run of _testQueue) await run();
-  _queueDraining = false;
-}
-
-function describe(name: string, fn: () => void) {
-  console.log(`\nDescribe: ${name}`);
-  const saved = _currentBeforeEach;
-  _currentBeforeEach = null;
-  fn();
-  _currentBeforeEach = saved;
-}
-function beforeEach(fn: () => void) {
-  _currentBeforeEach = fn;
-}
-function test(name: string, fn: () => Promise<void> | void) {
-  const setup = _currentBeforeEach; // captured at registration time
-  console.log(`  Test: ${name}`);
-  _testQueue.push(async () => {
-    try {
-      if (setup) setup();
-      await fn();
-    } catch (e: any) {
-      console.error(`  ✗ FAILED: ${name}\n   `, e.message);
-      process.exitCode = 1;
-    }
-  });
-  // Kick off the drain after all synchronous registration is done
-  Promise.resolve().then(() => _drainQueue());
-}
-const expect = (val: any) => ({
-  toBe: (exp: any) => {
-    if (val !== exp) throw new Error(`Expected ${JSON.stringify(exp)}, got ${JSON.stringify(val)}`);
-  },
-  toEqual: (exp: any) => {
-    if (JSON.stringify(val) !== JSON.stringify(exp))
-      throw new Error(`Expected ${JSON.stringify(exp)}, got ${JSON.stringify(val)}`);
-  },
-  toBeDefined: () => {
-    if (val === undefined || val === null) throw new Error(`Expected defined, got ${val}`);
-  },
-  toBeUndefined: () => {
-    if (val !== undefined) throw new Error(`Expected undefined, got ${val}`);
-  },
-  toContain: (exp: any) => {
-    if (!String(val).includes(String(exp)))
-      throw new Error(`Expected "${val}" to contain "${exp}"`);
-  },
-  toBeGreaterThan: (exp: number) => {
-    if (val <= exp) throw new Error(`Expected ${val} > ${exp}`);
-  },
-  toHaveLength: (exp: number) => {
-    if (val.length !== exp) throw new Error(`Expected length ${exp}, got ${val.length}`);
-  },
-  toBeTruthy: () => {
-    if (!val) throw new Error(`Expected truthy, got ${val}`);
-  },
-  toBeFalsy: () => {
-    if (val) throw new Error(`Expected falsy, got ${val}`);
-  },
-});
+const test = it;
 
 // ── Mock S3 client ────────────────────────────────────────────────────────────
 function makeMockS3(): S3Client & { store: Map<string, Buffer> } {

@@ -1,4 +1,7 @@
+import sgMail from '@sendgrid/mail';
+
 import { config } from './config';
+import { logger } from './logger';
 import { prisma } from './prisma_client';
 
 /**

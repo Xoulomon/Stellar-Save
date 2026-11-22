@@ -10,6 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 
@@ -506,7 +507,6 @@ model RampTransaction {
   @@index([anchorId])
   @@index([status])
   @@index([startedAt])
-  @@index([createdAt])
 }
 
 // ========== NORMALIZED TRANSACTION MODEL (Issue #1508) ==========

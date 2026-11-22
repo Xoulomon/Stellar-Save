@@ -1,3 +1,10 @@
+type PaginationInfo {
+  limit: Int!
+  offset: Int!
+  total: Int!
+  hasMore: Boolean!
+}
+
 type Group {
   id: ID!
   name: String!
@@ -18,6 +25,7 @@ type Member {
   joinedAt: Float!
   groupIds: [String!]!
   groups: [Group!]!
+  transactions: [Transaction!]!
 }
 
 type Transaction {
@@ -28,6 +36,8 @@ type Transaction {
   type: TransactionType!
   timestamp: Float!
   stellarTxHash: String!
+  group: Group
+  member: Member
 }
 
 type Recommendation {
@@ -42,6 +52,7 @@ type RecommendationResult {
   bucket: String!
   algorithm: String!
   recommendations: [Recommendation!]!
+  groups: [Group!]!
 }
 
 type SearchResult {
@@ -56,11 +67,11 @@ enum TransactionType {
 }
 
 type Query {
-  groups: [Group!]!
+  groups(limit: Int, offset: Int): [Group!]!
   group(id: ID!): Group
-  members: [Member!]!
+  members(limit: Int, offset: Int): [Member!]!
   member(id: ID!): Member
-  transactions(groupId: ID): [Transaction!]!
+  transactions(groupId: ID, limit: Int, offset: Int): [Transaction!]!
   transaction(id: ID!): Transaction
   recommendations(userId: ID!): RecommendationResult!
   search(query: String!): SearchResult!

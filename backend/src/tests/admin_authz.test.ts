@@ -6,8 +6,6 @@
  * and reject unauthenticated requests.
  */
 
-import { describe, it, expect } from '@jest/globals';
-
 describe('Admin Endpoints Authorization', () => {
   describe('Platform Stats Endpoint', () => {
     it('should require authentication to fetch platform stats', async () => {

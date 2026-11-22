@@ -26,6 +26,7 @@ export const typeDefs = `#graphql
     joinedAt: Float!
     groupIds: [String!]!
     groups: [Group!]!
+    transactions: [Transaction!]!
   }
 
   type Transaction {
@@ -36,6 +37,8 @@ export const typeDefs = `#graphql
     type: TransactionType!
     timestamp: Float!
     stellarTxHash: String!
+    group: Group
+    member: Member
   }
 
   type Recommendation {
@@ -50,6 +53,7 @@ export const typeDefs = `#graphql
     bucket: String!
     algorithm: String!
     recommendations: [Recommendation!]!
+    groups: [Group!]!
   }
 
   type SearchResult {

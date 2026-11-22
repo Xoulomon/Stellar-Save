@@ -1,12 +1,19 @@
-
 import { logger } from './logger';
 import * as redis from './redis';
 
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from './generated/prisma/client';
+
+interface AnalyticsEventRow {
+  userId: string | null;
+  groupId: string | null;
+  eventType: string;
+  eventData: unknown;
+  createdAt: Date;
+}
 
 export class AnalyticsAggregator {
   private prisma: PrismaClient;
-  private aggregationInterval: NodeJS.Timer | null = null;
+  private aggregationInterval: ReturnType<typeof setInterval> | null = null;
   private aggregationIntervalMs = 24 * 60 * 60 * 1000; // 24 hours by default
 
   constructor(prisma: PrismaClient, intervalMs?: number) {
@@ -87,14 +94,14 @@ export class AnalyticsAggregator {
       nextDay.setDate(nextDay.getDate() + 1);
 
       // Get events for the day
-      const events = await this.prisma.analyticsEvent.findMany({
+      const events = (await this.prisma.analyticsEvent.findMany({
         where: {
           createdAt: {
             gte: date,
             lt: nextDay,
           },
         },
-      });
+      })) as AnalyticsEventRow[];
 
       // Count unique users and groups
       const uniqueUsers = new Set(events.map((e) => e.userId).filter(Boolean));
@@ -125,14 +132,14 @@ export class AnalyticsAggregator {
       const successRate = createdGroups > 0 ? (completedGroups / createdGroups) * 100 : 0;
 
       // Check if metrics already exist for this date
-      const existingMetrics = await this.prisma.platformMetrics.findFirst({
+      const existingMetrics = (await this.prisma.platformMetrics.findFirst({
         where: {
           date: {
             gte: date,
             lt: nextDay,
           },
         },
-      });
+      })) as AnalyticsEventRow[];
 
       // Upsert metrics
       if (existingMetrics) {
@@ -197,7 +204,7 @@ export class AnalyticsAggregator {
       nextDay.setDate(nextDay.getDate() + 1);
 
       // Get all events for the day
-      const events = await this.prisma.analyticsEvent.findMany({
+      const events = (await this.prisma.analyticsEvent.findMany({
         where: {
           userId: { not: null },
           createdAt: {
@@ -205,7 +212,7 @@ export class AnalyticsAggregator {
             lt: nextDay,
           },
         },
-      });
+      })) as AnalyticsEventRow[];
 
       // Group events by userId
       const userEvents = new Map<string, any[]>();

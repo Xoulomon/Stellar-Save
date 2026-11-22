@@ -52,6 +52,14 @@ jest.mock('../config', () => ({
     },
     stellar: { rpcUrl: 'http://localhost:8000/soroban/rpc' },
     soroban: { poolSize: 2, poolTimeoutMs: 500 },
+    logging: { level: 'error' },
+    rpcCircuitBreaker: {
+      timeoutMs: 500,
+      errorThresholdPercentage: 50,
+      resetTimeoutMs: 30000,
+      volumeThreshold: 5,
+      staleCacheTtlSeconds: 60,
+    },
   },
 }));
 

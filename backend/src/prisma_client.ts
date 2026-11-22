@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import { Gauge } from 'prom-client';
 
 import { config } from './config';
+import { PrismaClient } from './generated/prisma/client';
 import { logger } from './logger';
 import { registry } from './metrics';
 

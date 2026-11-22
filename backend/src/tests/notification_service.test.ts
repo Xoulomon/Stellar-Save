@@ -1,29 +1,55 @@
-import { PrismaClient } from '@prisma/client';
+import { NotificationService } from '../notification_service';
+import {
+  NotificationTemplateManager,
+  NotificationEventType,
+} from '../notification_template_manager';
+import {
+  PushNotificationService,
+  FirebaseProvider,
+  OneSignalProvider,
+} from '../push_notification_service';
+import { UserPreferenceManager } from '../user_preference_manager';
 
-import { NotificationService } from '../src/notification_service';
-import { NotificationTemplateManager, NotificationEventType } from '../src/notification_template_manager';
-import { PushNotificationService, FirebaseProvider, OneSignalProvider } from '../src/push_notification_service';
-import { UserPreferenceManager } from '../src/user_preference_manager';
+jest.mock('../prisma_client', () => ({
+  prisma: {
+    notificationTemplate: {
+      findUnique: jest.fn(),
+    },
+    notification: {
+      create: jest.fn(),
+    },
+  },
+}));
 
-// Mock Prisma
-jest.mock('@prisma/client', () => ({
-  PrismaClient: jest.fn(),
+jest.mock('../config', () => ({
+  config: {
+    logging: { level: 'error' },
+    sendgrid: { apiKey: 'test-sendgrid-key', fromEmail: 'noreply@stellar-save.com' },
+    push: {
+      provider: 'firebase',
+      firebase: { projectId: undefined, serviceAccount: undefined },
+      onesignal: { appId: undefined, apiKey: undefined },
+    },
+    apns: { keyId: undefined, teamId: undefined, key: undefined, bundleId: undefined },
+    nodeEnv: 'test',
+  },
 }));
 
 // Mock SendGrid
 jest.mock('@sendgrid/mail', () => ({
-  setApiKey: jest.fn(),
-  send: jest.fn(),
+  __esModule: true,
+  default: {
+    setApiKey: jest.fn(),
+    send: jest.fn(),
+  },
 }));
 
 describe('Notification Service', () => {
   let notificationService: NotificationService;
-  let prismaClient: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
     notificationService = new NotificationService();
-    prismaClient = new PrismaClient();
   });
 
   describe('Email Notifications', () => {
@@ -37,16 +63,28 @@ describe('Notification Service', () => {
         textContent: 'Hello {{userName}}',
         active: true,
       };
+      const { prisma } = jest.requireMock('../prisma_client');
+      prisma.notificationTemplate.findUnique.mockResolvedValue(mockTemplate);
+      prisma.notification.create.mockResolvedValue({ id: 'notification-1' });
+      const sgMail = jest.requireMock('@sendgrid/mail').default;
+      sgMail.send.mockResolvedValue([{ statusCode: 202, headers: {} }]);
 
-      jest.spyOn(prismaClient.notificationTemplate, 'findUnique').mockResolvedValue(mockTemplate);
+      await notificationService.sendEmail(
+        'test@example.com',
+        'email_contribution_reminder',
+        { userName: 'Ada', groupName: 'Builders' },
+        'Reminder'
+      );
 
-      // Test email sending logic
-      expect(notificationService).toBeDefined();
+      expect(sgMail.send).toHaveBeenCalledWith(
+        expect.objectContaining({ to: 'test@example.com', subject: 'Reminder' })
+      );
+      expect(prisma.notification.create).toHaveBeenCalled();
     });
 
     it('should handle email template not found', async () => {
-      jest.spyOn(prismaClient.notificationTemplate, 'findUnique').mockResolvedValue(null);
-
+      const { prisma } = jest.requireMock('../prisma_client');
+      prisma.notificationTemplate.findUnique.mockResolvedValue(null);
       await expect(
         notificationService.sendEmail('test@example.com', 'invalid_template', {}, 'Test')
       ).rejects.toThrow('template not found');
