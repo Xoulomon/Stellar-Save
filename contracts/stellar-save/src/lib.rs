@@ -68,6 +68,7 @@ pub mod storage_optimization;
 pub mod time_source;
 pub mod token;
 pub mod types;
+pub mod validation;
 pub mod xlm;
 // ZK proof verification (Ed25519 Phase-1 scheme, zk/CIRCUIT_AUDIT.md).
 // Excluded from the default build — enable with `--features zk`.

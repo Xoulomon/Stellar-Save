@@ -1,5 +1,6 @@
 use core::fmt;
 use soroban_sdk::{contracttype, Address, Env};
+use crate::constants::*;
 
 /// Protocol-level maximum number of members per group.
 /// Prevents unbounded storage growth and gas exhaustion.
