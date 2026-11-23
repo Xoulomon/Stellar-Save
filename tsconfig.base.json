@@ -12,6 +12,27 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true
+    "exactOptionalPropertyTypes": true,
+
+    "$comment_paths": [
+      "Path aliases — set baseUrl in each workspace tsconfig.json to that",
+      "workspace's root directory, then add or extend 'paths' as needed.",
+      "",
+      "Convention used across this monorepo:",
+      "  @/*        → src/*   (frontend, mobile: resolve from workspace src root)",
+      "  ~/*        → src/*   (backend:          same, different prefix to avoid",
+      "                        collision with Vite's import.meta.env ~ shim)",
+      "  #/*        → src/*   (packages/*:       library-internal alias)",
+      "",
+      "Workspace configs that need path aliases must:",
+      "  1. Set \"baseUrl\": \".\" (workspace root, not repo root).",
+      "  2. Add a \"paths\" block that maps the prefix(es) they use.",
+      "  3. Mirror each alias in the bundler config (vite.config.ts →",
+      "     resolve.alias, metro.config.js → moduleNameMapper, etc.).",
+      "",
+      "Example for frontend/tsconfig.json:",
+      "  { \"extends\": \"../tsconfig.base.json\",",
+      "    \"compilerOptions\": { \"baseUrl\": \".\", \"paths\": { \"@/*\": [\"src/*\"] } } }"
+    ]
   }
 }
