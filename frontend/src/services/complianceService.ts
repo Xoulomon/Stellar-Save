@@ -5,9 +5,7 @@
  * All responses follow the standard ApiResponseEnvelope shape: { data, meta, errors }
  */
 
-import { env } from '../lib/env';
-
-const API_BASE_URL = env.VITE_API_URL || 'http://localhost:3000/api/v1';
+import { apiRequest } from './apiClient';
 
 export enum RiskLevel {
   LOW = 'LOW',
@@ -16,7 +14,8 @@ export enum RiskLevel {
   CRITICAL = 'CRITICAL',
 }
 
-export type FlagReason = 'sanctioned_address' | 'high_value' | 'rapid_succession' | 'blacklist_match';
+export type FlagReason =
+  'sanctioned_address' | 'high_value' | 'rapid_succession' | 'blacklist_match';
 
 export interface AmlCheckResult {
   flagged: boolean;
@@ -40,16 +39,6 @@ export interface ComplianceFlag {
 /**
  * Generic response envelope type
  */
-interface ApiResponseEnvelope<T> {
-  data: T | null;
-  meta?: Record<string, unknown>;
-  errors?: Array<{
-    code: string;
-    message: string;
-    details?: Record<string, unknown>;
-  }>;
-}
-
 /**
  * Screen a transaction for compliance (requires JWT)
  * @param address - Stellar address
@@ -62,36 +51,18 @@ export async function screenTransaction(
   txHash: string,
   amount: number
 ): Promise<AmlCheckResult> {
-  const token = localStorage.getItem('auth_token');
-
-  if (!token) {
-    throw new Error('Authentication required');
-  }
-
-  const response = await fetch(`${API_BASE_URL}/compliance/screen`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      address,
-      txHash,
-      amount,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to screen transaction: ${response.statusText}`);
-  }
-
-  const envelope = (await response.json()) as ApiResponseEnvelope<AmlCheckResult>;
-
-  if (envelope.errors && envelope.errors.length > 0) {
-    throw new Error(envelope.errors[0].message);
-  }
-
-  return envelope.data || { flagged: false, riskLevel: RiskLevel.LOW, reasons: [] };
+  return (
+    (await apiRequest<AmlCheckResult>('/compliance/screen', {
+      method: 'POST',
+      authenticated: true,
+      errorLabel: 'screen transaction',
+      body: {
+        address,
+        txHash,
+        amount,
+      },
+    })) || { flagged: false, riskLevel: RiskLevel.LOW, reasons: [] }
+  );
 }
 
 /**
@@ -99,29 +70,12 @@ export async function screenTransaction(
  * @returns List of flagged transactions pending review
  */
 export async function getFlaggedTransactions(): Promise<ComplianceFlag[]> {
-  const token = localStorage.getItem('auth_token');
-
-  if (!token) {
-    throw new Error('Authentication required');
-  }
-
-  const response = await fetch(`${API_BASE_URL}/compliance/queue`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch flagged transactions: ${response.statusText}`);
-  }
-
-  const envelope = (await response.json()) as ApiResponseEnvelope<ComplianceFlag[]>;
-
-  if (envelope.errors && envelope.errors.length > 0) {
-    throw new Error(envelope.errors[0].message);
-  }
-
-  return envelope.data || [];
+  return (
+    (await apiRequest<ComplianceFlag[]>('/compliance/queue', {
+      authenticated: true,
+      errorLabel: 'fetch flagged transactions',
+    })) || []
+  );
 }
 
 /**
@@ -136,35 +90,22 @@ export async function reviewFlag(
   decision: 'approved' | 'rejected',
   notes?: string
 ): Promise<boolean> {
-  const token = localStorage.getItem('auth_token');
-
-  if (!token) {
-    throw new Error('Authentication required');
-  }
-
-  const response = await fetch(`${API_BASE_URL}/compliance/flags/${flagId}/review`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      decision,
-      notes,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to review flag: ${response.statusText}`);
-  }
-
-  const envelope = (await response.json()) as ApiResponseEnvelope<{ reviewed: boolean }>;
-
-  if (envelope.errors && envelope.errors.length > 0) {
-    throw new Error(envelope.errors[0].message);
-  }
-
-  return envelope.data?.reviewed || false;
+  return (
+    (
+      await apiRequest<{ reviewed: boolean }>(
+        `/compliance/flags/${encodeURIComponent(flagId)}/review`,
+        {
+          method: 'POST',
+          authenticated: true,
+          errorLabel: 'review flag',
+          body: {
+            decision,
+            notes,
+          },
+        }
+      )
+    )?.reviewed || false
+  );
 }
 
 /**
@@ -172,27 +113,10 @@ export async function reviewFlag(
  * @returns List of all compliance flags and reviews
  */
 export async function getAuditLog(): Promise<ComplianceFlag[]> {
-  const token = localStorage.getItem('auth_token');
-
-  if (!token) {
-    throw new Error('Authentication required');
-  }
-
-  const response = await fetch(`${API_BASE_URL}/compliance/audit-log`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch audit log: ${response.statusText}`);
-  }
-
-  const envelope = (await response.json()) as ApiResponseEnvelope<ComplianceFlag[]>;
-
-  if (envelope.errors && envelope.errors.length > 0) {
-    throw new Error(envelope.errors[0].message);
-  }
-
-  return envelope.data || [];
+  return (
+    (await apiRequest<ComplianceFlag[]>('/compliance/audit-log', {
+      authenticated: true,
+      errorLabel: 'fetch audit log',
+    })) || []
+  );
 }
