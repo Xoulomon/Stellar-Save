@@ -61,6 +61,15 @@ Split the crate by **domain responsibility**, not by technical layer, so each mo
 - **`contract.rs`** — the `#[contract]` entry point that wires the public functions to the modules above.
 - **`clone.rs`** — contract cloning/duplication support.
 
+### Fund custody boundary
+
+There is no standalone escrow contract or `escrow.rs` module. The deployed
+StellarSave contract address holds group tokens; `token.rs` validates the
+configured SEP-41 token, `contract.rs` handles contribution entrypoints,
+`payout_executor.rs` handles payouts, and `refund.rs` handles eligible refunds.
+See [ADR-008: Token Custody and Escrow Lifecycle](./ADR-008-token-custody-and-escrow.md)
+for the transfer sequence, atomicity assumptions, and limitations.
+
 ## Inter-Module Dependencies
 
 ```mermaid
