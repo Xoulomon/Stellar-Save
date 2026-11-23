@@ -50,10 +50,13 @@ const base = tseslint.config(
       // Import grouping convention (external → internal → parent/sibling → index → type):
       //  1. builtin      Node built-ins (fs, path, ...)
       //  2. external     third-party packages (react, @mui, ...)
-      //  3. internal     TS path aliases / workspace imports
-      //  4. parent/sibling  relative imports (../, ./)
-      //  5. index        index files
-      //  6. object, type
+      //  3. internal     workspace packages (@stellar-save/*, @repo/*)
+      //                  and TS path aliases (@/*,  ~/*,  #/*)
+      //  4. parent       relative imports going up   (../)
+      //     sibling      relative imports at the same level (./)
+      //  5. index        index files (./index)
+      //  6. object       import() expressions
+      //  7. type         import type …
       // Each group is separated by a blank line; within a group imports are
       // alphabetized ascending, case-insensitively.
       'import/order': [
@@ -68,6 +71,41 @@ const base = tseslint.config(
             'object',
             'type',
           ],
+          // Map workspace-scoped package names and common TS path-alias
+          // prefixes to the `internal` group so they sort after third-party
+          // packages but before relative imports.
+          pathGroups: [
+            {
+              pattern: '@stellar-save/**',
+              group: 'internal',
+              position: 'before',
+            },
+            {
+              pattern: '@repo/**',
+              group: 'internal',
+              position: 'before',
+            },
+            // Common TS path-alias roots — add more here as tsconfig paths grow.
+            {
+              pattern: '@/**',
+              group: 'internal',
+              position: 'after',
+            },
+            {
+              pattern: '~/**',
+              group: 'internal',
+              position: 'after',
+            },
+            {
+              pattern: '#/**',
+              group: 'internal',
+              position: 'after',
+            },
+          ],
+          // Without this, scoped packages also match the built-in `external`
+          // group, which produces duplicate-group warnings and defeats the
+          // ordering above.
+          pathGroupsExcludedImportTypes: ['builtin'],
           'newlines-between': 'always',
           alphabetize: { order: 'asc', caseInsensitive: true },
         },
