@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { appStore, useAppStore } from '../store/appStore';
 import { lightTheme, darkTheme } from '../ui/theme/theme';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -33,20 +34,10 @@ function getSystemPreference(): 'light' | 'dark' {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-function readStoredMode(): ThemeMode {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
-  } catch {
-    // localStorage unavailable (SSR / private browsing)
-  }
-  return 'system';
-}
-
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 export function AppThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>(readStoredMode);
+  const mode = useAppStore((state) => state.themeMode);
   const [systemPref, setSystemPref] = useState<'light' | 'dark'>(getSystemPreference);
 
   useEffect(() => {
@@ -70,14 +61,13 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
   }, [mode, systemPref]);
 
   const setMode = useCallback((next: ThemeMode) => {
-    setModeState(next);
+    appStore.setState({ themeMode: next });
   }, []);
 
   const toggleTheme = useCallback(() => {
-    setModeState((prev) => {
-      const resolved = prev === 'system' ? systemPref : prev;
-      return resolved === 'dark' ? 'light' : 'dark';
-    });
+    const current = appStore.getSnapshot().themeMode;
+    const resolved = current === 'system' ? systemPref : current;
+    appStore.setState({ themeMode: resolved === 'dark' ? 'light' : 'dark' });
   }, [systemPref]);
 
   const resolvedMode = useMemo<'light' | 'dark'>(

@@ -2,10 +2,12 @@ import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, beforeEach } from 'vitest';
 
 import { AppThemeProvider, useTheme } from './ThemeContext';
+import { appStore } from '../store/appStore';
 
 describe('AppThemeProvider', () => {
   beforeEach(() => {
     localStorage.clear();
+    appStore.setState({ themeMode: 'system' });
   });
 
   it('shares theme state through a scoped context', () => {
