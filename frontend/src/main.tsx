@@ -7,11 +7,13 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
 import { ToastProvider } from './components/Toast';
+import { AppThemeProvider } from './context/ThemeContext';
+import { env } from './lib/env';
 import { GroupRepositoryProvider } from './lib/groupRepository/GroupRepositoryContext';
 import { logger } from './lib/logger';
 import { queryClient } from './lib/queryClient';
 import { registerServiceWorker } from './notifications/serviceWorkerRegistration';
-import { env } from './lib/env';
+import { WalletProvider } from './wallet/WalletProvider';
 import './index.css';
 
 // Initialise distributed tracing (no-op unless VITE_OTEL_ENABLED=true).

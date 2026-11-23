@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
+
 import {
   getLeaderboard,
   getProfile,
@@ -149,7 +150,10 @@ describe('Ambassador Service', () => {
 
       expect(result).toEqual(mockProfile);
       expect(result?.tier).toBe(AmbassadorTier.Gold);
-      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/ambassadors/GBDLJSTEST1'));
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/ambassadors/GBDLJSTEST1'),
+        expect.objectContaining({ method: 'GET' })
+      );
     });
 
     it('should return null when profile not found (404)', async () => {

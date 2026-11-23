@@ -1,9 +1,7 @@
-import { useContext } from 'react';
-
-import { ThemeContext } from '../ui/providers/ThemeContext';
+import { ThemeContext, useTheme as useContextTheme, type ThemeMode } from '../context/ThemeContext';
 
 export { ThemeContext };
-export type { ThemeMode } from '../ui/providers/ThemeContext';
+export type { ThemeMode };
 
 /**
  * Hook to access and toggle the app theme.
@@ -12,9 +10,5 @@ export type { ThemeMode } from '../ui/providers/ThemeContext';
  * const { mode, toggleTheme, setMode } = useTheme();
  */
 export function useTheme() {
-  const ctx = useContext(ThemeContext);
-  if (!ctx) {
-    throw new Error('useTheme must be used within AppThemeProvider');
-  }
-  return ctx;
+  return useContextTheme();
 }
