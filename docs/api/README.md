@@ -11,8 +11,9 @@ Stellar-Save exposes a REST API for its decentralised rotational savings platfor
 The API is served by the Express backend at `http://localhost:3001` (dev) or
 `https://api.stellar-save.app` (production).
 
-Interactive docs are available at `/api-docs` (Swagger UI) and `/api-docs/redoc`
-(Redoc) when the server is running.
+Interactive docs are available at `/docs` (Swagger UI) and `/redoc` (Redoc)
+when the backend is running. The OpenAPI document is also served as
+`/openapi.yaml` and `/openapi.json`.
 
 ---
 

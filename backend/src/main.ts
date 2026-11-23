@@ -7,6 +7,7 @@ import { logger } from './logger';
 import { requestId } from './middleware/requestId';
 import { errorMiddleware } from './middleware/errorMiddleware';
 import { notFoundMiddleware } from './middleware/notFoundMiddleware';
+import docsRouter from './docs';
 
 async function bootstrap() {
   // Validate configuration on startup (fails fast if misconfigured)
@@ -22,6 +23,7 @@ async function bootstrap() {
   // Request-ID propagation: assign/propagate a request id for every request
   // so it can be included in logs and error responses.
   app.use(requestId);
+  app.use(docsRouter);
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   app.enableCors();
