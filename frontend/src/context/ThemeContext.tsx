@@ -1,11 +1,4 @@
-/**
- * ThemeContext — Issue #772
- *
- * Provides a dark/light mode toggle that:
- * - Persists the user's preference in localStorage
- * - Exposes `mode` and `toggleTheme` to the whole app
- * - Wraps MUI ThemeProvider with the correct theme object
- */
+/* eslint-disable react-refresh/only-export-components */
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import {
   createContext,
@@ -21,36 +14,49 @@ import { lightTheme, darkTheme } from '../ui/theme/theme';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type ThemeMode = 'light' | 'dark';
+export type ThemeMode = 'light' | 'dark' | 'system';
 
-interface ThemeContextValue {
+export interface ThemeContextValue {
   mode: ThemeMode;
+  resolvedMode: 'light' | 'dark';
+  setMode: (mode: ThemeMode) => void;
   toggleTheme: () => void;
+  isDark: boolean;
 }
 
-// ── Context ───────────────────────────────────────────────────────────────────
+export const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-// Split by concern: `mode` changes on toggle, while `toggleTheme` is stable, so
-// components that only toggle don't re-render when the mode changes.
-const ThemeModeContext = createContext<ThemeMode | undefined>(undefined);
-const ThemeToggleContext = createContext<(() => void) | undefined>(undefined);
+const STORAGE_KEY = 'stellar-save-theme';
 
-const STORAGE_KEY = 'stellar-save:theme-mode';
+function getSystemPreference(): 'light' | 'dark' {
+  if (typeof window.matchMedia !== 'function') return 'light';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function readStoredMode(): ThemeMode {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
+  } catch {
+    // localStorage unavailable (SSR / private browsing)
+  }
+  return 'system';
+}
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 export function AppThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setMode] = useState<ThemeMode>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored === 'dark' || stored === 'light') return stored;
-    } catch {
-      // localStorage unavailable (SSR / private browsing)
-    }
-    return 'light';
-  });
+  const [mode, setModeState] = useState<ThemeMode>(readStoredMode);
+  const [systemPref, setSystemPref] = useState<'light' | 'dark'>(getSystemPreference);
 
-  // Persist preference whenever it changes
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (event: MediaQueryListEvent) => setSystemPref(event.matches ? 'dark' : 'light');
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, mode);
@@ -59,21 +65,44 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
     }
   }, [mode]);
 
-  const toggleTheme = useCallback(() => {
-    setMode((prev) => (prev === 'light' ? 'dark' : 'light'));
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', mode === 'system' ? systemPref : mode);
+  }, [mode, systemPref]);
+
+  const setMode = useCallback((next: ThemeMode) => {
+    setModeState(next);
   }, []);
 
-  const theme = useMemo(() => (mode === 'dark' ? darkTheme : lightTheme), [mode]);
+  const toggleTheme = useCallback(() => {
+    setModeState((prev) => {
+      const resolved = prev === 'system' ? systemPref : prev;
+      return resolved === 'dark' ? 'light' : 'dark';
+    });
+  }, [systemPref]);
+
+  const resolvedMode = useMemo<'light' | 'dark'>(
+    () => (mode === 'system' ? systemPref : mode),
+    [mode, systemPref]
+  );
+  const theme = useMemo(() => (resolvedMode === 'dark' ? darkTheme : lightTheme), [resolvedMode]);
+  const value = useMemo<ThemeContextValue>(
+    () => ({
+      mode,
+      resolvedMode,
+      setMode,
+      toggleTheme,
+      isDark: resolvedMode === 'dark',
+    }),
+    [mode, resolvedMode, setMode, toggleTheme]
+  );
 
   return (
-    <ThemeToggleContext.Provider value={toggleTheme}>
-      <ThemeModeContext.Provider value={mode}>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          {children}
-        </ThemeProvider>
-      </ThemeModeContext.Provider>
-    </ThemeToggleContext.Provider>
+    <ThemeContext.Provider value={value}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        {children}
+      </ThemeProvider>
+    </ThemeContext.Provider>
   );
 }
 
@@ -84,12 +113,7 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
  * Must be used inside `<AppThemeProvider>`.
  */
 export function useThemeMode(): ThemeContextValue {
-  const mode = useContext(ThemeModeContext);
-  const toggleTheme = useContext(ThemeToggleContext);
-  const value = useMemo(
-    () => (mode && toggleTheme ? { mode, toggleTheme } : undefined),
-    [mode, toggleTheme]
-  );
+  const value = useContext(ThemeContext);
   if (!value) {
     throw new Error('useThemeMode must be used inside <AppThemeProvider>.');
   }
@@ -101,9 +125,9 @@ export function useThemeMode(): ThemeContextValue {
  * re-render when the theme mode changes.
  */
 export function useToggleTheme(): () => void {
-  const toggleTheme = useContext(ThemeToggleContext);
-  if (!toggleTheme) {
-    throw new Error('useToggleTheme must be used inside <AppThemeProvider>.');
-  }
-  return toggleTheme;
+  return useThemeMode().toggleTheme;
+}
+
+export function useTheme(): ThemeContextValue {
+  return useThemeMode();
 }
