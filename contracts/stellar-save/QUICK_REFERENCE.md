@@ -1,4 +1,5 @@
 > For why this crate is split into `pool.rs`, `governance/`, `payout_executor.rs`, and the rest of its ~30 modules, see [ADR-004: Contract Module Boundaries](../../docs/adr/ADR-004-contract-module-boundaries.md).
+> For the complete public contract interface, see the [Contract Entrypoint API Reference](API_REFERENCE.md).
 
 # Quick Reference: get_member_total_contributions
 

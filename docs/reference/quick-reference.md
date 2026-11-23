@@ -25,14 +25,17 @@ Documentation files are generated in `target/doc/stellar_save/index.html`.
 | `get_current_timestamp` | `env: Env` | `u64` | Returns the canonical ledger timestamp (Unix epoch seconds). |
 | `validate_contribution_amount` | `env: &Env, group_id: u64, amount: i128` | `Result<(), StellarSaveError>` | Validates that contribution matches group requirement. |
 | `validate_cycle_duration` | `env: &Env, cycle_duration: u64` | `Result<(), StellarSaveError>` | Checks if cycle duration lies within contract min/max boundaries. |
-| `create_group` | `env: Env, creator: Address, amount: i128, cycle: u64, max_members: u32` | `Result<u64, StellarSaveError>` | Initializes a new savings group with specified contribution parameters. |
-| `join_group` | `env: Env, group_id: u64, member: Address` | `Result<(), StellarSaveError>` | Adds a member address to a pending savings group. |
+| `create_group` | `env: Env, creator: Address, contribution_amount: i128, cycle_duration: u64, max_members: u32, token_address: Address, grace_period_seconds: u64, payout_order: PayoutOrder` | `Result<u64, StellarSaveError>` | Creates a pending group; creator authorization is required. |
+| `join_group` | `env: Env, group_id: u64, member: Address, referrer: Option<Address>` | `Result<(), StellarSaveError>` | Adds an authorized member to a pending group. |
 | `contribute` | `env: Env, group_id: u64, member: Address, amount: i128` | `Result<(), StellarSaveError>` | Records member contribution for current cycle and manages escrow. |
-| `execute_payout` | `env: Env, group_id: u64` | `Result<Address, StellarSaveError>` | Transfers accumulated pool to the designated recipient for the cycle. |
+| `execute_payout` | `env: Env, group_id: u64` | `Result<(), StellarSaveError>` | Transfers the accumulated pool to the designated recipient and advances the cycle. |
 | `pause_group` | `env: Env, group_id: u64, caller: Address` | `Result<(), StellarSaveError>` | Creator-only emergency pause for group operations. |
 | `unpause_group` | `env: Env, group_id: u64, caller: Address` | `Result<(), StellarSaveError>` | Creator-only unpause to resume group activities. |
 
 ---
+
+For the contract's entrypoint signatures, authorization notes, and complete
+documentation workflow, see the [Contract Entrypoint API Reference](../../contracts/stellar-save/API_REFERENCE.md).
 
 ## ⚠️ Common Error Codes (`StellarSaveError` & `ContractError`)
 

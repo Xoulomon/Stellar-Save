@@ -211,6 +211,9 @@ pub fn create_group(
     contribution_amount: i128,
     cycle_duration: u64,
     max_members: u32,
+    token_address: Address,
+    grace_period_seconds: u64,
+    payout_order: PayoutOrder,
 ) -> Result<u64, StellarSaveError>
 ```
 
@@ -220,6 +223,9 @@ pub fn create_group(
 - `contribution_amount`: Fixed contribution per member per cycle (stroops, 1 XLM = 10^7 stroops)
 - `cycle_duration`: Length of each cycle in seconds
 - `max_members`: Maximum number of members allowed
+- `token_address`: SEP-41 token contract used for group contributions and payouts
+- `grace_period_seconds`: Allowed contribution grace period in seconds
+- `payout_order`: Payout strategy (`Sequential`, `Random`, or `Bid`)
 
 **Returns:**
 - `Ok(u64)`: Unique group ID
@@ -242,7 +248,10 @@ let group_id = contract.create_group(
     creator_address,
     100_000_000,  // 10 XLM in stroops
     604_800,      // 7 days in seconds
-    5             // max 5 members
+    5,            // max 5 members
+    token_address,
+    86_400,       // 1 day grace period
+    PayoutOrder::Sequential,
 )?;
 ```
 
@@ -255,7 +264,10 @@ stellar contract invoke \
   --creator CREATOR_ADDRESS \
   --contribution_amount 100000000 \
   --cycle_duration 604800 \
-  --max_members 5
+    --max_members 5 \
+    --token_address TOKEN_CONTRACT_ADDRESS \
+    --grace_period_seconds 86400 \
+    --payout_order Sequential
 ```
 
 ---

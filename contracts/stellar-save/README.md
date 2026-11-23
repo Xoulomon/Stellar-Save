@@ -10,33 +10,28 @@ contract storage.
 
 ## Upgrade & Migration Path
 
-**This contract is not upgradeable.** There is no upgrade entrypoint in
-`contract.rs` — no `upgrade`, `migrate`, or `__constructor`-based replacement
-function, and no admin-gated code path that can swap the deployed WASM.
+The contract exposes admin-authorized upgrade and storage-migration entrypoints
+in [`src/contract.rs`](src/contract.rs). `upgrade_contract` replaces the
+contract WASM using a 32-byte WASM hash and requires a strictly increasing
+version number. `migrate_storage` separately migrates persistent data to the
+current storage schema.
 
 ### Rationale
 
-- Soroban contracts are immutable once deployed unless they explicitly expose an
-  upgrade mechanism (e.g. `env.deployer().update_current_contract_wasm(...)`).
-  `stellar-save` deliberately does not expose one.
-- Because there is no upgrade path, there is also no migration path for existing
-  pool or contribution storage data. Storage written by one deployment cannot be
-  reinterpreted by a different contract version.
-- Immutability removes the risk of an admin silently changing pool/contribution
-  semantics or draining funds via a malicious upgrade, which is important for a
-  contract that custodies member contributions.
+- The upgrade is gated by the configured admin and the monotonically increasing
+  version guard; it is not permissionless.
+- Code upgrades and storage migrations are distinct operations. A new WASM may
+  require a migration, which must be reviewed and run deliberately.
+- Admin-controlled upgrades carry trust risk because the replacement code can
+  change pool and contribution behavior for assets held by the contract.
 
 ### Consequences
 
-- Any change to storage layout or pool/contribution logic requires deploying a
-  **new** contract instance. Existing pools remain on the old instance and are
-  not migrated automatically.
-- Users must be informed to withdraw from the old instance and re-join the new
-  one if a breaking change is released.
-- If an upgrade path is ever required, it must be added explicitly (with an
-  admin-gated `update_current_contract_wasm` call and a documented migration
-  routine) and covered by a migration test that seeds pre-existing pool and
-  contribution data and asserts data integrity after the upgrade.
+- Upgrade and migration calls require an explicit operational plan and tests
+  against existing storage; do not assume an upgrade automatically migrates
+  pools or contribution records.
+- Admin key custody and review of replacement WASM are critical security
+  controls for deployments that use the upgrade entrypoint.
 
 ## WASM Size Budget
 
@@ -93,9 +88,9 @@ Run the contract test suite with:
 cargo test -p stellar-save
 ```
 
-Tests cover pool creation, joining, contributions, and payout logic. Since the
-contract is not upgradeable, there is no upgrade-simulation test; the constraint
-above is the enforced contract behavior.
+Tests cover pool creation, joining, contributions, and payout logic. Upgrade
+and storage migration behavior is implemented separately; consult the tests
+covering migration/version guards before operating those entrypoints.
 
 ## Cargo Feature Flags
 
