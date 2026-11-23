@@ -99,16 +99,21 @@ After that, `pnpm` will automatically use the pinned version without a separate 
 
 ## Development Setup
 
+For the complete, maintained setup—including Docker, environment configuration,
+and test commands—see the [Monorepo Developer Setup](docs/SETUP.md).
+
 ### Prerequisites
 
 | Tool                  | Version         | Install                                                                   |
 | --------------------- | --------------- | ------------------------------------------------------------------------- |
-| Rust                  | 1.81.0 (pinned) | [rustup.rs](https://rustup.rs)                                            |
+| Rust                  | stable (toolchain file) | [rustup.rs](https://rustup.rs)                                      |
 | Soroban / Stellar CLI | latest          | [Stellar CLI docs](https://developers.stellar.org/docs/tools/stellar-cli) |
-| Node.js               | 18+             | [nodejs.org](https://nodejs.org)                                          |
-| pnpm                  | 9.x (pinned)    | `corepack enable` (after Node.js install)                                 |
+| Node.js               | 20 (CI version) | [nodejs.org](https://nodejs.org)                                          |
+| pnpm                  | 9.0.0 (pinned)  | `corepack enable` (after Node.js install)                                 |
 
-The Rust toolchain version is pinned in `rust-toolchain.toml`. Running any `cargo` command will install it automatically via rustup.
+The repository's `rust-toolchain.toml` selects the stable Rust channel and
+installs the required `rustfmt`, `clippy`, and `wasm32-unknown-unknown` target
+through rustup.
 
 ### Clone and install
 
@@ -119,8 +124,8 @@ cd Stellar-Save
 # Enable Corepack so pnpm@9 is used automatically
 corepack enable
 
-# Install all workspace dependencies (frontend, backend, mobile, packages/*)
-pnpm install
+# Install all workspace dependencies (frontend, backend, packages/*)
+pnpm install --frozen-lockfile
 ```
 
 The repository uses **pnpm only**. `pnpm-lock.yaml` at the root is the single
