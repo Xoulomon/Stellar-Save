@@ -15,13 +15,13 @@ export function buildShutdownHooks(): ShutdownHook[] {
     {
       name: 'http-server',
       handler: async () => {
-        logger.info('closing http server');
+        logger.info('closing http server', { hook: 'http-server' });
       },
     },
     {
       name: 'database',
       handler: async () => {
-        logger.info('closing database connections');
+        logger.info('closing database connections', { hook: 'database' });
       },
     },
   ];
@@ -73,7 +73,7 @@ export async function bootstrap(): Promise<void> {
   }
 }
 
-start().catch((error: unknown) => {
+bootstrap().catch((error: unknown) => {
   logger.error('backend service failed to start', { error });
   process.exit(1);
 });

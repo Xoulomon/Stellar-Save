@@ -26,6 +26,21 @@ export interface ApiError {
   timestamp: string;
 }
 
+/**
+ * Canonical mapping from error code to HTTP status.
+ *
+ * This is the single source of truth for status codes; subclasses derive their
+ * status from it so the mapping can never drift between classes.
+ */
+export const HTTP_STATUS_BY_CODE: Readonly<Record<AppErrorCode, number>> = {
+  VALIDATION_ERROR: 400,
+  UNAUTHORIZED: 401,
+  NOT_FOUND: 404,
+  CONFLICT: 409,
+  UPSTREAM_FAILURE: 502,
+  INTERNAL_ERROR: 500,
+};
+
 export class AppError extends Error {
   readonly status: number;
   readonly code: AppErrorCode;
@@ -71,31 +86,31 @@ export class AppError extends Error {
 
 export class ValidationError extends AppError {
   constructor(message = 'Validation failed', details?: unknown) {
-    super(message, 400, 'VALIDATION_ERROR', details);
+    super(message, HTTP_STATUS_BY_CODE.VALIDATION_ERROR, 'VALIDATION_ERROR', details);
   }
 }
 
 export class AuthError extends AppError {
   constructor(message = 'Unauthorized', details?: unknown) {
-    super(message, 401, 'UNAUTHORIZED', details);
+    super(message, HTTP_STATUS_BY_CODE.UNAUTHORIZED, 'UNAUTHORIZED', details);
   }
 }
 
 export class NotFoundError extends AppError {
   constructor(message = 'Resource not found', details?: unknown) {
-    super(message, 404, 'NOT_FOUND', details);
+    super(message, HTTP_STATUS_BY_CODE.NOT_FOUND, 'NOT_FOUND', details);
   }
 }
 
 export class ConflictError extends AppError {
   constructor(message = 'Conflict', details?: unknown) {
-    super(message, 409, 'CONFLICT', details);
+    super(message, HTTP_STATUS_BY_CODE.CONFLICT, 'CONFLICT', details);
   }
 }
 
 export class UpstreamError extends AppError {
   constructor(message = 'Upstream service failure', details?: unknown) {
-    super(message, 502, 'UPSTREAM_FAILURE', details);
+    super(message, HTTP_STATUS_BY_CODE.UPSTREAM_FAILURE, 'UPSTREAM_FAILURE', details);
   }
 }
 
@@ -110,7 +125,7 @@ export function isAppError(err: unknown): err is AppError {
  * unexpected internal failure (500).
  */
 export function statusCodeOf(err: unknown): number {
-  return isAppError(err) ? err.status : 500;
+  return isAppError(err) ? err.status : HTTP_STATUS_BY_CODE.INTERNAL_ERROR;
 }
 
 /**
