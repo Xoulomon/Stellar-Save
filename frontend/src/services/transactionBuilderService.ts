@@ -14,6 +14,7 @@ import type {
   TransactionTemplate,
 } from '../types/transactionBuilder';
 import { env } from '../lib/env';
+import { logger } from '../lib/logger';
 import { rpcServer } from '../lib/rpcClient';
 
 const NETWORK_PASSPHRASE =
@@ -211,7 +212,7 @@ export function saveTemplate(template: TransactionTemplate): void {
     }
     localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
   } catch {
-    console.warn('Failed to save template');
+    logger.warn('Failed to save template');
   }
 }
 
@@ -233,7 +234,7 @@ export function deleteTemplate(id: string): void {
       JSON.stringify(templates.filter((t) => t.id !== id))
     );
   } catch {
-    console.warn('Failed to delete template');
+    logger.warn('Failed to delete template');
   }
 }
 

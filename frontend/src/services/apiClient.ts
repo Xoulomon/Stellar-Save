@@ -19,7 +19,7 @@ export interface ApiRequestOptions {
   tokenKey?: string;
 }
 
-export const API_BASE_URL = env.VITE_API_URL || 'http://localhost:3000/api/v1';
+export const API_BASE_URL = env.VITE_API_BASE_URL;
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   const {

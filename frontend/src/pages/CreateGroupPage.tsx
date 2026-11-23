@@ -6,6 +6,7 @@ import { CreateGroupForm } from '../components/CreateGroupForm';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
 import { useWallet } from '../hooks/useWallet';
+import { logger } from '../lib/logger';
 import { queryKeys } from '../lib/queryKeys';
 import { createGroup } from '../utils/groupApi';
 import { updateInsuranceSettings } from '../utils/insuranceApi';
@@ -48,7 +49,7 @@ const CreateGroupPage: React.FC = () => {
       setSuccessMessage('Group created successfully');
       setTimeout(() => navigate(`/groups/${groupId}`), 2000);
     } catch (error) {
-      console.error('Failed to create group:', error);
+      logger.error('Failed to create group:', error);
       setTxError(
         error instanceof Error ? error.message : 'Failed to create group. Please try again.'
       );
