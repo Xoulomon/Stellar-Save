@@ -39,6 +39,8 @@
 // The `cfg` attribute is placed here rather than on every item so callers only
 // need a single feature gate on their import site.
 
+extern crate alloc;
+use alloc::vec::Vec;
 use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
 /// Create a test environment with all authorizations mocked.

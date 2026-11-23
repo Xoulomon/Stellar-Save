@@ -20,7 +20,7 @@
     "check:abi": "vitest run src/abi-drift.test.ts"
   },
   "dependencies": {
-    "@stellar-save/shared-utils": "workspace:*"
+    "@stellar-save/types": "workspace:*"
   },
   "peerDependencies": {
     "@stellar/stellar-sdk": ">=14.0.0"
