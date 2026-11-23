@@ -108,6 +108,8 @@ function generateMarkdown(spec: OpenApiSpec, endpoints: EndpointRow[]): string {
     lines.push(spec.info.description.trim());
     lines.push('');
   }
+  lines.push('Interactive documentation is available at `/docs` (Swagger UI) and `/redoc` (Redoc) when the backend is running. The OpenAPI document is served at `/openapi.yaml` and `/openapi.json`.');
+  lines.push('');
   lines.push('---');
   lines.push('');
 
