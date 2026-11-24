@@ -1,13 +1,16 @@
 import { useContext } from 'react';
 
-import { WalletContext } from '../wallet/WalletProvider';
+import { WalletConnectionContext } from '../wallet/WalletConnectionProvider';
+import { WalletSigningContext } from '../wallet/WalletSigningProvider';
 
 import type { WalletContextValue } from '../wallet/types';
 
 export function useWallet(): WalletContextValue {
-  const context = useContext(WalletContext);
-  if (!context) {
+  const connection = useContext(WalletConnectionContext);
+  const signing = useContext(WalletSigningContext);
+  if (!connection || !signing) {
     throw new Error('useWallet must be used within WalletProvider.');
   }
-  return context;
+
+  return { ...connection, ...signing };
 }
