@@ -33,7 +33,7 @@
 //!
 //! ## Call Flow
 use crate::auth::is_active_member;
-use crate::error::StellarSaveError;
+use crate::errors::ContractError as StellarSaveError;
 use crate::events::EventEmitter;
 use crate::group::{Group, GroupStatus};
 use crate::payout::{PayoutOrder, PayoutRecord};

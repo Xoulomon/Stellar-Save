@@ -4,7 +4,7 @@
 //! Implements role-based access control for sensitive operations.
 
 use soroban_sdk::{Bytes, BytesN, Env, Address};
-use crate::error::{StellarSaveError, ContractResult};
+use crate::errors::{ContractError as StellarSaveError, ContractResult};
 
 /// Role-based access control for contract operations.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

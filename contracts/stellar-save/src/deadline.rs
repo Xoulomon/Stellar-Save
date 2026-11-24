@@ -1,7 +1,7 @@
 use soroban_sdk::{Address, Env};
 
 use crate::{
-    error::StellarSaveError,
+    errors::ContractError as StellarSaveError,
     events::EventEmitter,
     group::Group,
     storage::StorageKeyBuilder,

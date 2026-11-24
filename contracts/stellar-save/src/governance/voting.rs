@@ -5,7 +5,7 @@
 //! [`super::storage`].  Actual group-state mutations triggered when a vote
 //! threshold is met are delegated to [`super::execution`].
 
-use crate::error::StellarSaveError;
+use crate::errors::ContractError as StellarSaveError;
 use crate::governance::{execution, storage as gov_storage};
 use crate::group::{Group, GroupStatus};
 use crate::storage::StorageKeyBuilder;

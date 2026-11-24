@@ -9,7 +9,7 @@
 use soroban_sdk::{Address, Env};
 
 use crate::auth;
-use crate::error::StellarSaveError;
+use crate::errors::ContractError as StellarSaveError;
 use crate::events::EventEmitter;
 use crate::storage::StorageKeyBuilder;
 

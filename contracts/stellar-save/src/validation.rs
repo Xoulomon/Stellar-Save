@@ -1,7 +1,7 @@
 //! Centralized validation for savings-group parameters.
 
 use crate::constants::{MAX_GROUP_GRACE_PERIOD_SECONDS, MAX_MEMBERS, MIN_GROUP_MEMBERS};
-use crate::error::StellarSaveError;
+use crate::errors::ContractError as StellarSaveError;
 use crate::types::ContractConfig;
 
 pub fn validate_contribution_amount(amount: i128) -> Result<(), StellarSaveError> {

@@ -1,5 +1,5 @@
 use crate::auth::is_active_member;
-use crate::error::StellarSaveError;
+use crate::errors::ContractError as StellarSaveError;
 use crate::storage::StorageKeyBuilder;
 use soroban_sdk::{contracttype, Address, Env, Vec};
 
