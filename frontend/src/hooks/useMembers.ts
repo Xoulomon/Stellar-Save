@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
+import { useCancellableRequest } from './useCancellableRequest';
 import { fetchGroup } from '../utils/groupApi';
+
 
 import type { GroupMember } from '../utils/groupApi';
 
@@ -52,10 +54,10 @@ export function useMembers(
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchIdRef = useRef(0);
+  const { begin } = useCancellableRequest();
 
   const load = useCallback(async (id: string, bust = false) => {
-    const fetchId = ++fetchIdRef.current;
+    const request = begin();
 
     if (!bust) {
       const cached = getFromCache(id);
@@ -72,7 +74,7 @@ export function useMembers(
     try {
       const group = await fetchGroup(id);
 
-      if (fetchId !== fetchIdRef.current) return;
+      if (!request.isActive()) return;
 
       if (!group) {
         setMembers([]);
@@ -84,7 +86,7 @@ export function useMembers(
         setError(null);
       }
     } catch (err) {
-      if (fetchId !== fetchIdRef.current) return;
+      if (!request.isActive()) return;
 
       setMembers([]);
       setError(
@@ -93,11 +95,11 @@ export function useMembers(
           : 'Failed to load members. Please try again.'
       );
     } finally {
-      if (fetchId === fetchIdRef.current) {
+      if (request.isActive()) {
         setIsLoading(false);
       }
     }
-  }, []);
+  }, [begin]);
 
   useEffect(() => {
     if (!groupId) {

@@ -13,7 +13,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useCancellableRequest } from './useCancellableRequest';
 import { EventService } from '../lib/EventService';
+
 
 import type { AppEvent, EventType } from '../types/events';
 
@@ -125,8 +127,7 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}): UseActivi
   const nextCursorRef = useRef<string | null>(null);
   // Track seen IDs to deduplicate live events
   const seenIdsRef = useRef<Set<string>>(new Set());
-  // Abort stale fetches
-  const fetchIdRef = useRef(0);
+  const { begin } = useCancellableRequest();
 
   const service = EventService.getInstance();
 
@@ -134,7 +135,7 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}): UseActivi
 
   const load = useCallback(
     async (filter: ActivityFeedFilter, bust = false) => {
-      const fetchId = ++fetchIdRef.current;
+      const request = begin('load');
 
       setIsLoading(true);
       setError(null);
@@ -151,7 +152,7 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}): UseActivi
           limit: pageSize,
         });
 
-        if (fetchId !== fetchIdRef.current) return;
+        if (!request.isActive()) return;
 
         const newItems = result.events
           .filter((e) => matchesFilter(e, filter))
@@ -167,19 +168,21 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}): UseActivi
         setItems(newItems);
         setHasMore(result.hasMore);
       } catch (err) {
-        if (fetchId !== fetchIdRef.current) return;
+        if (!request.isActive()) return;
         setError(err instanceof Error ? err.message : 'Failed to load activity feed.');
       } finally {
-        if (fetchId === fetchIdRef.current) setIsLoading(false);
+        if (request.isActive()) setIsLoading(false);
       }
     },
-    [service, pageSize]
+    [begin, service, pageSize]
   );
 
   // ── Load more (infinite scroll) ────────────────────────────────────────────
 
   const loadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore) return;
+
+    const request = begin('loadMore');
 
     setIsLoadingMore(true);
     setError(null);
@@ -191,6 +194,8 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}): UseActivi
         cursor: nextCursorRef.current ?? undefined,
         limit: pageSize,
       });
+
+      if (!request.isActive()) return;
 
       const newItems = result.events
         .filter((e) => matchesFilter(e, activeFilter))
@@ -206,11 +211,12 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}): UseActivi
       setItems((prev) => [...prev, ...newItems].sort((a, b) => b.timestampMs - a.timestampMs));
       setHasMore(result.hasMore);
     } catch (err) {
+      if (!request.isActive()) return;
       setError(err instanceof Error ? err.message : 'Failed to load more activity.');
     } finally {
-      setIsLoadingMore(false);
+      if (request.isActive()) setIsLoadingMore(false);
     }
-  }, [isLoadingMore, hasMore, service, activeFilter, pageSize]);
+  }, [begin, isLoadingMore, hasMore, service, activeFilter, pageSize]);
 
   // ── Live subscription ──────────────────────────────────────────────────────
 
