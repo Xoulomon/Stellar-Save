@@ -1,3 +1,4 @@
+import { OptimizedImage } from '../assets';
 import { GroupBadge, type GroupBadgeStatus } from './GroupBadge';
 
 interface GroupCardHeaderProps {
@@ -17,7 +18,7 @@ export function GroupCardHeader({
     <>
       {imageUrl && (
         <div className="group-card-image">
-          <img src={imageUrl} alt={groupName} />
+          <OptimizedImage src={imageUrl} alt={groupName} />
         </div>
       )}
 

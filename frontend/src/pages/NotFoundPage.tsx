@@ -1,7 +1,7 @@
 import { Box, Stack, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
-import NotFoundIllustration from '../svg/page-not-found.svg';
+import { notFoundIllustration, OptimizedImage } from '../assets';
 import { AppButton, AppCard } from '../ui';
 
 /**
@@ -40,15 +40,9 @@ export default function NotFoundPage() {
       >
         <Stack spacing={2} alignItems="center">
           {/* Illustration */}
-          <Box
-            component="img"
-            src={NotFoundIllustration}
-            alt="404 Illustration"
-            sx={{
-              width: '100%',
-              maxWidth: 380,
-              mb: 2,
-            }}
+          <OptimizedImage
+            {...notFoundIllustration}
+            style={{ width: '100%', maxWidth: 380, marginBottom: 16 }}
           />
 
           {/* Content */}

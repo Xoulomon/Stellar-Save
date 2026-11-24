@@ -141,4 +141,52 @@ describe('useDebounceWithCancel', () => {
 
     expect(result.current.debouncedValue).toBe('a');
   });
+
+  it('keeps a stable cancel identity across rerenders', () => {
+    const { result, rerender } = renderHook(({ value }) => useDebounceWithCancel(value), {
+      initialProps: { value: 'a' },
+    });
+    const cancel = result.current.cancel;
+
+    rerender({ value: 'b' });
+
+    expect(result.current.cancel).toBe(cancel);
+  });
+
+  it('cancels a pending debounce on unmount', () => {
+    const onDebounced = vi.fn();
+    const { result, rerender, unmount } = renderHook(
+      ({ value }) => {
+        const state = useDebounceWithCancel(value, { delay: 300 });
+        onDebounced(state.debouncedValue);
+        return state;
+      },
+      { initialProps: { value: 'a' } }
+    );
+
+    rerender({ value: 'b' });
+    unmount();
+
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(result.current.debouncedValue).toBe('a');
+    expect(onDebounced).not.toHaveBeenCalledWith('b');
+  });
+
+  it('cancel() also clears a pending maxWait timer', () => {
+    const { result, rerender } = renderHook(
+      ({ value }) => useDebounceWithCancel(value, { delay: 1000, maxWait: 200 }),
+      { initialProps: { value: 'a' } }
+    );
+
+    rerender({ value: 'b' });
+    act(() => {
+      result.current.cancel();
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(result.current.debouncedValue).toBe('a');
+  });
 });
