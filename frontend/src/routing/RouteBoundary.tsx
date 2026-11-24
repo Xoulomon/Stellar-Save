@@ -9,6 +9,7 @@
  *   <RouteBoundary><SomePage /></RouteBoundary>
  */
 import { ErrorBoundary } from '../components/ErrorBoundary/ErrorBoundary';
+import { logger } from '../lib/logger';
 
 interface RouteBoundaryProps {
   children: React.ReactNode;
@@ -20,7 +21,7 @@ export function RouteBoundary({ children }: RouteBoundaryProps) {
       enableErrorReporting={process.env.NODE_ENV !== 'test'}
       onError={(error, info) => {
         // Structured log so monitoring tools can pick it up
-        console.error('[RouteBoundary] Unhandled render error', {
+        logger.error('[RouteBoundary] Unhandled render error', {
           message: error.message,
           componentStack: info.componentStack,
         });

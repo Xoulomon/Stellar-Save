@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { ErrorBoundaryFallback } from './ErrorBoundaryFallback';
+import { logger } from '../../lib/logger';
 import './ErrorBoundary.css';
 
 export interface ErrorBoundaryProps {
@@ -47,7 +48,7 @@ export class ErrorBoundary extends React.Component<
     this.setState({ errorInfo: info });
 
     // Log to console and call optional onError handler
-    console.error('ErrorBoundary caught an error:', error, info);
+    logger.error('ErrorBoundary caught an error:', error, info);
     if (this.props.onError) this.props.onError(error, info);
 
     // Optional error reporting
@@ -58,8 +59,7 @@ export class ErrorBoundary extends React.Component<
 
   private reportError = (error: Error, info: React.ErrorInfo) => {
     // In a real app, integrate with Sentry, LogRocket, etc.
-    // For now, just log to console with more details
-    console.error('Reporting error:', {
+    logger.error('Reporting error:', {
       message: error.message,
       stack: error.stack,
       componentStack: info.componentStack,
@@ -90,7 +90,7 @@ export class ErrorBoundary extends React.Component<
         })
         .catch(() => {
           // Fallback if Sentry not available
-          console.warn('Sentry not available for error reporting');
+          logger.warn('Sentry not available for error reporting');
         });
     }
   };

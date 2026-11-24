@@ -6,6 +6,7 @@ import type {
   TxApprovalRequest,
   TxApprovalStatus,
 } from './types';
+import { logger } from '../../lib/logger';
 
 const STORAGE_KEY = 'stellar-save:hardware-wallet';
 
@@ -84,7 +85,7 @@ function persistState(state: Partial<HardwareWalletState>): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
-    console.warn('Failed to persist hardware wallet state');
+    logger.warn('Failed to persist hardware wallet state');
   }
 }
 
