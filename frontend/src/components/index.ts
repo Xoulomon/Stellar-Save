@@ -24,6 +24,7 @@ export { WalletButton } from './WalletButton';
 export { WalletStatusIndicator } from './WalletStatusIndicator';
 export { NetworkIndicator } from './NetworkIndicator';
 export { SearchBar } from './SearchBar';
+export { FormField } from './FormField';
 export { Pagination } from './Pagination';
 export { Tabs } from './Tabs';
 export { Spinner, FullPageLoader } from './Spinner';

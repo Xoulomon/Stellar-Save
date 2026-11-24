@@ -1,5 +1,7 @@
 import './Input.css';
 
+import { FormField } from './FormField';
+
 type InputType = 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'search';
 
 interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
@@ -37,13 +39,13 @@ export function Input({
     .join(' ');
 
   return (
-    <div className="input-wrapper">
-      {label && (
-        <label className="input-label" htmlFor={inputId}>
-          {label}
-          {required && <span className="input-label-required">*</span>}
-        </label>
-      )}
+    <FormField
+      id={inputId}
+      label={label}
+      required={required}
+      error={error}
+      helperText={helperText}
+    >
       <input
         id={inputId}
         type={type}
@@ -54,16 +56,6 @@ export function Input({
         aria-describedby={error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined}
         {...rest}
       />
-      {error && (
-        <span id={`${inputId}-error`} className="input-error" role="alert">
-          {error}
-        </span>
-      )}
-      {!error && helperText && (
-        <span id={`${inputId}-helper`} className="input-helper">
-          {helperText}
-        </span>
-      )}
-    </div>
+    </FormField>
   );
 }
