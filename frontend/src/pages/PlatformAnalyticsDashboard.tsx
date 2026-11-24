@@ -14,25 +14,11 @@ import {
 import { useState, useEffect, useCallback } from 'react';
 
 import { AppLayout } from '../ui';
+import { KpiCard } from './platform-analytics/KpiCard';
+import { TrendChart } from './platform-analytics/TrendChart';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface PlatformSnapshot {
-  totalUsers: number;
-  activeUsers: number;
-  totalGroups: number;
-  activeGroups: number;
-  totalContributions: number;
-  totalContributionAmount: number;
-  totalPayouts: number;
-  totalPayoutAmount: number;
-  successRate: number;
-}
+import type { PlatformSnapshot, TrendPoint } from './platform-analytics/types';
 
-interface TrendPoint extends PlatformSnapshot {
-  date?: string;
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function getRangeStart(range: string): Date {
   const d = new Date();
   if (range === '7d') d.setDate(d.getDate() - 7);
@@ -55,70 +41,6 @@ async function fetchCached<T>(url: string): Promise<T> {
   const data = await res.json();
   cache.set(url, { data, ts: Date.now() });
   return data;
-}
-
-// ─── KPI card ─────────────────────────────────────────────────────────────────
-function KpiCard({ label, value, loading }: { label: string; value: string; loading: boolean }) {
-  return (
-    <Card variant="outlined">
-      <CardContent>
-        <Typography variant="caption" color="text.secondary">
-          {label}
-        </Typography>
-        {loading ? (
-          <Skeleton width="60%" height={36} />
-        ) : (
-          <Typography variant="h5" fontWeight="bold">
-            {value}
-          </Typography>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// ─── Trend line chart (SVG) ────────────────────────────────────────────────────
-function TrendChart({
-  data,
-  field,
-  label,
-  color,
-}: {
-  data: TrendPoint[];
-  field: keyof TrendPoint;
-  label: string;
-  color: string;
-}) {
-  if (!data.length) return null;
-  const values = data.map((d) => Number(d[field]) || 0);
-  const max = Math.max(...values, 1);
-  const W = 480;
-  const H = 120;
-  const step = W / Math.max(data.length - 1, 1);
-
-  const pts = values.map((v, i) => `${i * step},${H - (v / max) * H}`).join(' ');
-
-  return (
-    <Box>
-      <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-        {label}
-      </Typography>
-      <Box sx={{ overflowX: 'auto' }}>
-        <svg
-          viewBox={`0 0 ${W} ${H + 20}`}
-          style={{ width: '100%', minWidth: 280 }}
-          aria-label={`${label} trend`}
-        >
-          <polyline points={pts} fill="none" stroke={color} strokeWidth={2} />
-          {values.map((v, i) => (
-            <circle key={i} cx={i * step} cy={H - (v / max) * H} r={3} fill={color}>
-              <title>{`${data[i].date ?? i}: ${v.toLocaleString()}`}</title>
-            </circle>
-          ))}
-        </svg>
-      </Box>
-    </Box>
-  );
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
