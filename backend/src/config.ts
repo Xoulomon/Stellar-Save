@@ -11,6 +11,8 @@
  *   import { config } from './config';
  *   config.port          // number
  *   config.backup.bucket // string
+ *
+ * See backend/docs/environment-configuration.md for the environment-variable matrix.
  */
 
 import dotenv from 'dotenv';
