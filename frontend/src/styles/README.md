@@ -22,3 +22,12 @@ the 4.5 : 1 threshold.
 
 Dark-theme equivalents (`#34d399`, `#fbbf24`) were already compliant and
 are unchanged.
+
+## Cleanup (issue #2028)
+
+| Item | Before | After |
+|---|---|---|
+| `responsive.css` | Not imported anywhere; its `.responsive-*` classes and `--breakpoint-*` tokens had no users | Removed |
+| `breakpoints.ts` (+ test) | Only referenced by its own test; duplicated `breakpoints` in `hooks/useMediaQuery.ts` (and disagreed on `sm`: 480 vs 640) | Removed; `hooks/useMediaQuery.ts` is the single source |
+| `--space-1/2/3/4/6/8` in `index.css` | Defined, never referenced | Removed |
+| `--radius-sm`, `--radius-xl` in `index.css` | Defined, never referenced | Removed |
