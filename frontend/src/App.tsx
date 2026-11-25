@@ -1,8 +1,6 @@
 import { lazy, Suspense } from 'react';
 
 import './App.css';
-import { AppProviders } from './context/AppProviders';
-import { GroupRepositoryProvider } from './context/GroupRepositoryProvider';
 import { useDeepLink } from './hooks/useDeepLink';
 import { RouteLoadingFallback } from './routing/RouteLoadingFallback';
 
@@ -13,12 +11,8 @@ export default function App() {
   useDeepLink();
 
   return (
-    <AppProviders>
-      <GroupRepositoryProvider>
-        <Suspense fallback={<RouteLoadingFallback />}>
-          <AppRouter />
-        </Suspense>
-      </GroupRepositoryProvider>
-    </AppProviders>
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <AppRouter />
+    </Suspense>
   );
 }

@@ -1,5 +1,6 @@
 import { formatAddress } from '@shared-utils/formatting';
 import { memo, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 
 import './MemberList.css';
 import { Avatar } from './Avatar';

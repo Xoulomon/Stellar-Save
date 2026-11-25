@@ -1,37 +1,20 @@
-
+import { eventDataType, eventDataAmount, aggregateGroupMetricsForDate } from './analytics_service';
 import { logger } from './logger';
 import * as redis from './redis';
 
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from './generated/prisma/client';
 
-// ---------------------------------------------------------------------------
-// Helpers for working with Prisma's opaque JsonValue event data fields.
-// The Soroban event payload schema is an open-ended JSON blob, so we access
-// it via a typed narrow helper rather than widening with `any`.
-// ---------------------------------------------------------------------------
-
-/** Narrow a Prisma JsonValue to a plain object so we can read known keys. */
-function asEventData(v: unknown): Record<string, unknown> {
-  if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
-    return v as Record<string, unknown>;
-  }
-  return {};
-}
-
-function eventDataType(v: unknown): string | undefined {
-  const d = asEventData(v);
-  return typeof d['type'] === 'string' ? d['type'] : undefined;
-}
-
-function eventDataAmount(v: unknown): number {
-  const d = asEventData(v);
-  const amount = Number(d['amount'] ?? 0);
-  return isNaN(amount) ? 0 : amount;
+interface AnalyticsEventRow {
+  userId: string | null;
+  groupId: string | null;
+  eventType: string;
+  eventData: unknown;
+  createdAt: Date;
 }
 
 export class AnalyticsAggregator {
   private prisma: PrismaClient;
-  private aggregationInterval: NodeJS.Timer | null = null;
+  private aggregationInterval: ReturnType<typeof setInterval> | null = null;
   private aggregationIntervalMs = 24 * 60 * 60 * 1000; // 24 hours by default
 
   constructor(prisma: PrismaClient, intervalMs?: number) {
@@ -112,14 +95,14 @@ export class AnalyticsAggregator {
       nextDay.setDate(nextDay.getDate() + 1);
 
       // Get events for the day
-      const events = await this.prisma.analyticsEvent.findMany({
+      const events = (await this.prisma.analyticsEvent.findMany({
         where: {
           createdAt: {
             gte: date,
             lt: nextDay,
           },
         },
-      });
+      })) as AnalyticsEventRow[];
 
       // Count unique users and groups
       const uniqueUsers = new Set(events.map((e) => e.userId).filter(Boolean));
@@ -150,14 +133,14 @@ export class AnalyticsAggregator {
       const successRate = createdGroups > 0 ? (completedGroups / createdGroups) * 100 : 0;
 
       // Check if metrics already exist for this date
-      const existingMetrics = await this.prisma.platformMetrics.findFirst({
+      const existingMetrics = (await this.prisma.platformMetrics.findFirst({
         where: {
           date: {
             gte: date,
             lt: nextDay,
           },
         },
-      });
+      })) as AnalyticsEventRow[];
 
       // Upsert metrics
       if (existingMetrics) {
@@ -222,7 +205,7 @@ export class AnalyticsAggregator {
       nextDay.setDate(nextDay.getDate() + 1);
 
       // Get all events for the day
-      const events = await this.prisma.analyticsEvent.findMany({
+      const events = (await this.prisma.analyticsEvent.findMany({
         where: {
           userId: { not: null },
           createdAt: {
@@ -230,7 +213,7 @@ export class AnalyticsAggregator {
             lt: nextDay,
           },
         },
-      });
+      })) as AnalyticsEventRow[];
 
       // Group events by userId
       const userEvents = new Map<string, typeof events>();
@@ -322,105 +305,14 @@ export class AnalyticsAggregator {
   }
 
   /**
-   * Aggregate group-specific metrics
+   * Aggregate group-specific metrics.
+   *
+   * Delegates to the canonical implementation in `analytics_service` so the
+   * aggregation logic lives in exactly one place.
    */
   private async aggregateGroupMetrics(date: Date): Promise<void> {
     try {
-      const nextDay = new Date(date);
-      nextDay.setDate(nextDay.getDate() + 1);
-
-      // Get all events for the day
-      const events = await this.prisma.analyticsEvent.findMany({
-        where: {
-          groupId: { not: null },
-          createdAt: {
-            gte: date,
-            lt: nextDay,
-          },
-        },
-      });
-
-      // Group events by groupId
-      const groupEvents = new Map<string, typeof events>();
-      events.forEach((event) => {
-        if (event.groupId) {
-          if (!groupEvents.has(event.groupId)) {
-            groupEvents.set(event.groupId, []);
-          }
-          groupEvents.get(event.groupId)!.push(event);
-        }
-      });
-
-      // Aggregate for each group
-      for (const [groupId, groupEventList] of groupEvents.entries()) {
-        const members = new Set(groupEventList.map((e) => e.userId).filter(Boolean)).size;
-        const contributions = groupEventList.filter(
-          (e) => e.eventType === 'transaction' && eventDataType(e.eventData) === 'contribution'
-        ).length;
-        const contributionAmount = groupEventList
-          .filter(
-            (e) => e.eventType === 'transaction' && eventDataType(e.eventData) === 'contribution'
-          )
-          .reduce((sum, e) => sum + eventDataAmount(e.eventData), 0);
-
-        const payoutsDistributed = groupEventList
-          .filter((e) => e.eventType === 'transaction' && eventDataType(e.eventData) === 'payout')
-          .reduce((sum, e) => sum + eventDataAmount(e.eventData), 0);
-
-        const completed = groupEventList.filter((e) => e.eventType === 'group_completed').length;
-
-        const successRate = completed > 0 ? 100 : 0;
-        const avgContribution = contributions > 0 ? contributionAmount / contributions : 0;
-        const newMembers = groupEventList.filter((e) => e.eventType === 'member_joined').length;
-        const churn = groupEventList.filter((e) => e.eventType === 'member_left').length;
-
-        // Upsert group metrics
-        const existingMetrics = await this.prisma.groupMetrics.findFirst({
-          where: {
-            groupId,
-            date: {
-              gte: date,
-              lt: nextDay,
-            },
-          },
-        });
-
-        if (existingMetrics) {
-          await this.prisma.groupMetrics.update({
-            where: { id: existingMetrics.id },
-            data: {
-              memberCount: members,
-              totalContributions: contributions,
-              totalContributionAmount: contributionAmount,
-              totalPayoutsDistributed: payoutsDistributed,
-              successRate,
-              averageContributionSize: avgContribution,
-              newMembersCount: newMembers,
-              churnCount: churn,
-              updatedAt: new Date(),
-            },
-          });
-        } else {
-          await this.prisma.groupMetrics.create({
-            data: {
-              groupId,
-              date,
-              memberCount: members,
-              totalContributions: contributions,
-              totalContributionAmount: contributionAmount,
-              totalPayoutsDistributed: payoutsDistributed,
-              successRate,
-              averageContributionSize: avgContribution,
-              newMembersCount: newMembers,
-              churnCount: churn,
-            },
-          });
-        }
-      }
-
-      logger.info(
-        `Group metrics aggregated for ${groupEvents.size} groups on ${date.toISOString().split('T')[0]}`
-      );
+      await aggregateGroupMetricsForDate(this.prisma, date);
     } catch (error) {
       logger.error('Error aggregating group metrics:', error);
     }

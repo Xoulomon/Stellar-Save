@@ -28,7 +28,7 @@ pub fn list_templates(env: &Env) -> Vec<GroupTemplate> {
         GroupTemplate {
             id: TEMPLATE_WEEKLY_SAVER,
             name: String::from_str(env, "Weekly Saver"),
-            cycle_duration: 604_800,   // 7 days
+            cycle_duration: 604_800, // 7 days
             max_members: 10,
             description: String::from_str(env, "Weekly contributions, 10 members, 10-week cycle"),
         },
@@ -133,10 +133,18 @@ mod tests {
     fn test_all_templates_have_valid_defaults() {
         let env = Env::default();
         for t in list_templates(&env).iter() {
-            assert!(t.cycle_duration > 0, "template {} has zero cycle_duration", t.id);
+            assert!(
+                t.cycle_duration > 0,
+                "template {} has zero cycle_duration",
+                t.id
+            );
             assert!(t.max_members >= 2, "template {} has max_members < 2", t.id);
             assert!(!t.name.is_empty(), "template {} has empty name", t.id);
-            assert!(!t.description.is_empty(), "template {} has empty description", t.id);
+            assert!(
+                !t.description.is_empty(),
+                "template {} has empty description",
+                t.id
+            );
         }
     }
 
@@ -174,8 +182,11 @@ mod tests {
     fn test_get_template_weekly_defaults() {
         let env = Env::default();
         let t = get_template(&env, TEMPLATE_WEEKLY_SAVER).unwrap();
-        assert_eq!(t.cycle_duration, 604_800,  "Weekly Saver: cycle_duration must be 7 days");
-        assert_eq!(t.max_members,   10,         "Weekly Saver: max_members must be 10");
+        assert_eq!(
+            t.cycle_duration, 604_800,
+            "Weekly Saver: cycle_duration must be 7 days"
+        );
+        assert_eq!(t.max_members, 10, "Weekly Saver: max_members must be 10");
     }
 
     /// Biweekly Saver defaults: 14-day cycle, 8 members.
@@ -183,8 +194,11 @@ mod tests {
     fn test_get_template_biweekly_defaults() {
         let env = Env::default();
         let t = get_template(&env, TEMPLATE_BIWEEKLY_SAVER).unwrap();
-        assert_eq!(t.cycle_duration, 1_209_600, "Biweekly Saver: cycle_duration must be 14 days");
-        assert_eq!(t.max_members,   8,          "Biweekly Saver: max_members must be 8");
+        assert_eq!(
+            t.cycle_duration, 1_209_600,
+            "Biweekly Saver: cycle_duration must be 14 days"
+        );
+        assert_eq!(t.max_members, 8, "Biweekly Saver: max_members must be 8");
     }
 
     /// Monthly Pool defaults: 30-day cycle, 12 members.
@@ -192,8 +206,11 @@ mod tests {
     fn test_get_template_monthly_defaults() {
         let env = Env::default();
         let t = get_template(&env, TEMPLATE_MONTHLY_POOL).unwrap();
-        assert_eq!(t.cycle_duration, 2_592_000, "Monthly Pool: cycle_duration must be 30 days");
-        assert_eq!(t.max_members,   12,         "Monthly Pool: max_members must be 12");
+        assert_eq!(
+            t.cycle_duration, 2_592_000,
+            "Monthly Pool: cycle_duration must be 30 days"
+        );
+        assert_eq!(t.max_members, 12, "Monthly Pool: max_members must be 12");
     }
 
     /// Quarterly Circle defaults: 90-day cycle, 4 members.
@@ -201,8 +218,11 @@ mod tests {
     fn test_get_template_quarterly_defaults() {
         let env = Env::default();
         let t = get_template(&env, TEMPLATE_QUARTERLY_CIRCLE).unwrap();
-        assert_eq!(t.cycle_duration, 7_776_000, "Quarterly Circle: cycle_duration must be 90 days");
-        assert_eq!(t.max_members,   4,          "Quarterly Circle: max_members must be 4");
+        assert_eq!(
+            t.cycle_duration, 7_776_000,
+            "Quarterly Circle: cycle_duration must be 90 days"
+        );
+        assert_eq!(t.max_members, 4, "Quarterly Circle: max_members must be 4");
     }
 
     /// Annual Pool defaults: 365-day cycle, 5 members.
@@ -210,8 +230,11 @@ mod tests {
     fn test_get_template_annual_defaults() {
         let env = Env::default();
         let t = get_template(&env, TEMPLATE_ANNUAL_POOL).unwrap();
-        assert_eq!(t.cycle_duration, 31_536_000, "Annual Pool: cycle_duration must be 365 days");
-        assert_eq!(t.max_members,   5,           "Annual Pool: max_members must be 5");
+        assert_eq!(
+            t.cycle_duration, 31_536_000,
+            "Annual Pool: cycle_duration must be 365 days"
+        );
+        assert_eq!(t.max_members, 5, "Annual Pool: max_members must be 5");
     }
 
     // ─── get_template — invalid rejection ────────────────────────────────────
@@ -236,7 +259,10 @@ mod tests {
     #[test]
     fn test_get_template_id_max_u32_not_found() {
         let env = Env::default();
-        assert_eq!(get_template(&env, u32::MAX), Err(StellarSaveError::TemplateNotFound));
+        assert_eq!(
+            get_template(&env, u32::MAX),
+            Err(StellarSaveError::TemplateNotFound)
+        );
     }
 
     // ─── create_group_from_template — default application ────────────────────
@@ -260,9 +286,18 @@ mod tests {
 
         assert_eq!(group.id, 1);
         assert_eq!(group.creator, creator);
-        assert_eq!(group.contribution_amount, 10_000_000,  "user-supplied amount must be applied");
-        assert_eq!(group.cycle_duration, 604_800,          "template default cycle_duration must be applied");
-        assert_eq!(group.max_members, 10,                  "template default max_members must be applied");
+        assert_eq!(
+            group.contribution_amount, 10_000_000,
+            "user-supplied amount must be applied"
+        );
+        assert_eq!(
+            group.cycle_duration, 604_800,
+            "template default cycle_duration must be applied"
+        );
+        assert_eq!(
+            group.max_members, 10,
+            "template default max_members must be applied"
+        );
         assert!(group.is_active, "new group must start active");
     }
 
@@ -280,9 +315,18 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(group.cycle_duration, 1_209_600, "Biweekly template cycle_duration default applied");
-        assert_eq!(group.max_members, 8,            "Biweekly template max_members default applied");
-        assert_eq!(group.contribution_amount, 25_000_000, "caller amount is preserved");
+        assert_eq!(
+            group.cycle_duration, 1_209_600,
+            "Biweekly template cycle_duration default applied"
+        );
+        assert_eq!(
+            group.max_members, 8,
+            "Biweekly template max_members default applied"
+        );
+        assert_eq!(
+            group.contribution_amount, 25_000_000,
+            "caller amount is preserved"
+        );
     }
 
     #[test]
@@ -325,19 +369,22 @@ mod tests {
     fn test_create_group_from_template_annual() {
         let env = Env::default();
         let creator = Address::generate(&env);
-        let group = create_group_from_template(
-            &env,
-            TEMPLATE_ANNUAL_POOL,
-            99,
-            creator,
-            500_000_000,
-            0,
-        )
-        .unwrap();
+        let group =
+            create_group_from_template(&env, TEMPLATE_ANNUAL_POOL, 99, creator, 500_000_000, 0)
+                .unwrap();
 
-        assert_eq!(group.cycle_duration, 31_536_000, "Annual Pool cycle_duration default applied");
-        assert_eq!(group.max_members, 5,             "Annual Pool max_members default applied");
-        assert_eq!(group.contribution_amount, 500_000_000, "caller amount is preserved");
+        assert_eq!(
+            group.cycle_duration, 31_536_000,
+            "Annual Pool cycle_duration default applied"
+        );
+        assert_eq!(
+            group.max_members, 5,
+            "Annual Pool max_members default applied"
+        );
+        assert_eq!(
+            group.contribution_amount, 500_000_000,
+            "caller amount is preserved"
+        );
     }
 
     // ─── override precedence ──────────────────────────────────────────────────
@@ -351,23 +398,29 @@ mod tests {
         let creator_a = Address::generate(&env);
         let creator_b = Address::generate(&env);
 
-        let group_a = create_group_from_template(
-            &env, TEMPLATE_MONTHLY_POOL, 1, creator_a, 10_000_000, 0,
-        ).unwrap();
+        let group_a =
+            create_group_from_template(&env, TEMPLATE_MONTHLY_POOL, 1, creator_a, 10_000_000, 0)
+                .unwrap();
 
-        let group_b = create_group_from_template(
-            &env, TEMPLATE_MONTHLY_POOL, 2, creator_b, 99_000_000, 0,
-        ).unwrap();
+        let group_b =
+            create_group_from_template(&env, TEMPLATE_MONTHLY_POOL, 2, creator_b, 99_000_000, 0)
+                .unwrap();
 
         // Template defaults must be identical
-        assert_eq!(group_a.cycle_duration, group_b.cycle_duration,
-            "cycle_duration must come from the template and not be affected by amount override");
-        assert_eq!(group_a.max_members, group_b.max_members,
-            "max_members must come from the template and not be affected by amount override");
+        assert_eq!(
+            group_a.cycle_duration, group_b.cycle_duration,
+            "cycle_duration must come from the template and not be affected by amount override"
+        );
+        assert_eq!(
+            group_a.max_members, group_b.max_members,
+            "max_members must come from the template and not be affected by amount override"
+        );
 
         // Only the user-supplied amount should differ
-        assert_ne!(group_a.contribution_amount, group_b.contribution_amount,
-            "contribution_amounts must reflect the distinct user overrides");
+        assert_ne!(
+            group_a.contribution_amount, group_b.contribution_amount,
+            "contribution_amounts must reflect the distinct user overrides"
+        );
         assert_eq!(group_a.contribution_amount, 10_000_000);
         assert_eq!(group_b.contribution_amount, 99_000_000);
     }
@@ -381,16 +434,51 @@ mod tests {
         let amount = 1_000_000_i128;
         let ts = 0_u64;
 
-        let weekly = create_group_from_template(&env, TEMPLATE_WEEKLY_SAVER, 1,
-            Address::generate(&env), amount, ts).unwrap();
-        let biweekly = create_group_from_template(&env, TEMPLATE_BIWEEKLY_SAVER, 2,
-            Address::generate(&env), amount, ts).unwrap();
-        let monthly = create_group_from_template(&env, TEMPLATE_MONTHLY_POOL, 3,
-            Address::generate(&env), amount, ts).unwrap();
-        let quarterly = create_group_from_template(&env, TEMPLATE_QUARTERLY_CIRCLE, 4,
-            Address::generate(&env), amount, ts).unwrap();
-        let annual = create_group_from_template(&env, TEMPLATE_ANNUAL_POOL, 5,
-            Address::generate(&env), amount, ts).unwrap();
+        let weekly = create_group_from_template(
+            &env,
+            TEMPLATE_WEEKLY_SAVER,
+            1,
+            Address::generate(&env),
+            amount,
+            ts,
+        )
+        .unwrap();
+        let biweekly = create_group_from_template(
+            &env,
+            TEMPLATE_BIWEEKLY_SAVER,
+            2,
+            Address::generate(&env),
+            amount,
+            ts,
+        )
+        .unwrap();
+        let monthly = create_group_from_template(
+            &env,
+            TEMPLATE_MONTHLY_POOL,
+            3,
+            Address::generate(&env),
+            amount,
+            ts,
+        )
+        .unwrap();
+        let quarterly = create_group_from_template(
+            &env,
+            TEMPLATE_QUARTERLY_CIRCLE,
+            4,
+            Address::generate(&env),
+            amount,
+            ts,
+        )
+        .unwrap();
+        let annual = create_group_from_template(
+            &env,
+            TEMPLATE_ANNUAL_POOL,
+            5,
+            Address::generate(&env),
+            amount,
+            ts,
+        )
+        .unwrap();
 
         // All amounts are the same (override respected everywhere)
         for g in [&weekly, &biweekly, &monthly, &quarterly, &annual] {
@@ -398,18 +486,18 @@ mod tests {
         }
 
         // Each template applied its own cycle_duration
-        assert_eq!(weekly.cycle_duration,    604_800);
-        assert_eq!(biweekly.cycle_duration,  1_209_600);
-        assert_eq!(monthly.cycle_duration,   2_592_000);
+        assert_eq!(weekly.cycle_duration, 604_800);
+        assert_eq!(biweekly.cycle_duration, 1_209_600);
+        assert_eq!(monthly.cycle_duration, 2_592_000);
         assert_eq!(quarterly.cycle_duration, 7_776_000);
-        assert_eq!(annual.cycle_duration,    31_536_000);
+        assert_eq!(annual.cycle_duration, 31_536_000);
 
         // Each template applied its own max_members
-        assert_eq!(weekly.max_members,    10);
-        assert_eq!(biweekly.max_members,  8);
-        assert_eq!(monthly.max_members,   12);
+        assert_eq!(weekly.max_members, 10);
+        assert_eq!(biweekly.max_members, 8);
+        assert_eq!(monthly.max_members, 12);
         assert_eq!(quarterly.max_members, 4);
-        assert_eq!(annual.max_members,    5);
+        assert_eq!(annual.max_members, 5);
     }
 
     /// group_id is a caller-supplied override; verify it propagates correctly
@@ -419,11 +507,19 @@ mod tests {
         let env = Env::default();
         for expected_id in [0u64, 1, 42, u64::MAX / 2] {
             let group = create_group_from_template(
-                &env, TEMPLATE_WEEKLY_SAVER, expected_id,
-                Address::generate(&env), 1_000_000, 0,
-            ).unwrap();
-            assert_eq!(group.id, expected_id,
-                "group_id {} was not preserved by create_group_from_template", expected_id);
+                &env,
+                TEMPLATE_WEEKLY_SAVER,
+                expected_id,
+                Address::generate(&env),
+                1_000_000,
+                0,
+            )
+            .unwrap();
+            assert_eq!(
+                group.id, expected_id,
+                "group_id {} was not preserved by create_group_from_template",
+                expected_id
+            );
         }
     }
 
@@ -452,7 +548,12 @@ mod tests {
     fn test_create_group_negative_amount_rejected() {
         let env = Env::default();
         let result = create_group_from_template(
-            &env, TEMPLATE_MONTHLY_POOL, 1, Address::generate(&env), -1, 0,
+            &env,
+            TEMPLATE_MONTHLY_POOL,
+            1,
+            Address::generate(&env),
+            -1,
+            0,
         );
         assert_eq!(
             result,
@@ -465,11 +566,12 @@ mod tests {
     #[test]
     fn test_invalid_template_id_with_valid_amount_rejected() {
         let env = Env::default();
-        let result = create_group_from_template(
-            &env, 6, 1, Address::generate(&env), 10_000_000, 0,
+        let result = create_group_from_template(&env, 6, 1, Address::generate(&env), 10_000_000, 0);
+        assert_eq!(
+            result,
+            Err(StellarSaveError::TemplateNotFound),
+            "Template ID 6 does not exist and must be rejected"
         );
-        assert_eq!(result, Err(StellarSaveError::TemplateNotFound),
-            "Template ID 6 does not exist and must be rejected");
     }
 
     /// Amount validation runs before template lookup — InvalidAmount should be
@@ -478,9 +580,7 @@ mod tests {
     fn test_invalid_amount_checked_before_template_lookup() {
         let env = Env::default();
         // Both amount and template_id are invalid; amount guard fires first.
-        let result = create_group_from_template(
-            &env, 999, 1, Address::generate(&env), 0, 0,
-        );
+        let result = create_group_from_template(&env, 999, 1, Address::generate(&env), 0, 0);
         assert_eq!(
             result,
             Err(StellarSaveError::InvalidAmount),
@@ -493,8 +593,16 @@ mod tests {
     fn test_minimum_valid_amount_accepted() {
         let env = Env::default();
         let result = create_group_from_template(
-            &env, TEMPLATE_WEEKLY_SAVER, 1, Address::generate(&env), 1, 0,
+            &env,
+            TEMPLATE_WEEKLY_SAVER,
+            1,
+            Address::generate(&env),
+            1,
+            0,
         );
-        assert!(result.is_ok(), "1 stroops is a valid minimum contribution_amount");
+        assert!(
+            result.is_ok(),
+            "1 stroops is a valid minimum contribution_amount"
+        );
     }
 }

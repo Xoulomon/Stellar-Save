@@ -1,46 +1,18 @@
 /**
- * Shared domain types consumed by the frontend and mobile apps.
- * These mirror the on-chain contract data structures and REST API shapes.
+ * Domain types for the Stellar-Save SDK.
+ *
+ * These types now live in @stellar-save/types (packages/types) so the
+ * backend and other packages that must not depend on the Stellar SDK can
+ * import them without pulling in browser-specific code.
+ *
+ * Re-exporting from here preserves full backwards compatibility for any
+ * existing consumer that imports from @stellar-save/sdk.
  */
-
-// ── Groups ────────────────────────────────────────────────────────────────────
-
-export type GroupStatus = 'active' | 'completed' | 'pending';
-
-// ── Members ───────────────────────────────────────────────────────────────────
-
-export type MemberStatus = 'active' | 'inactive' | 'pending' | 'removed';
-
-// ── Payouts ───────────────────────────────────────────────────────────────────
-
-export type PayoutStatus = 'completed' | 'next' | 'upcoming';
-
-// ── Transactions ──────────────────────────────────────────────────────────────
-
-export type TransactionType = 'payment' | 'swap' | 'deposit' | 'withdraw' | 'claimable' | 'other';
-
-export interface Transaction {
-  id: string;
-  hash: string;
-  createdAt: string;
-  type: TransactionType;
-  amount: string;
-  assetCode: string;
-  assetIssuer?: string;
-  from: string;
-  to?: string;
-  memo?: string;
-  status: 'success' | 'pending' | 'failed';
-  fee: string;
-}
-
-// ── Pagination ────────────────────────────────────────────────────────────────
-
-export interface PaginationMeta {
-  page: number;
-  pageSize: number;
-  totalItems: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-}
+export type {
+  GroupStatus,
+  MemberStatus,
+  PayoutStatus,
+  TransactionType,
+  Transaction,
+  PaginationMeta,
+} from '@stellar-save/types';

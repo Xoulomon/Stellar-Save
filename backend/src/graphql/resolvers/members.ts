@@ -1,8 +1,8 @@
-import { paginateArray } from '@app/backend/lib/pagination';
-import { mockGroups, mockMembers, mockTransactions } from '@app/backend/mock_data';
+import { paginateArray } from '../../lib/pagination';
+import { mockGroups, mockMembers, mockTransactions } from '../../mock_data';
 
-import type { OffsetParams } from '@app/backend/lib/pagination';
-import type { Member } from '@app/backend/models';
+import type { OffsetParams } from '../../lib/pagination';
+import type { Member } from '../../models';
 
 export const memberResolvers = {
   Query: {
@@ -11,7 +11,7 @@ export const memberResolvers = {
         limit: Math.min(100, Math.max(1, limit ?? 20)),
         offset: Math.max(0, offset ?? 0),
       };
-      return paginateArray(mockMembers, params);
+      return paginateArray(mockMembers, params).data;
     },
     member: (_: unknown, { id }: { id: string }) => mockMembers.find((m) => m.id === id) ?? null,
   },

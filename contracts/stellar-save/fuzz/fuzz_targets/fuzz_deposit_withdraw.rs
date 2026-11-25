@@ -19,18 +19,23 @@ fuzz_target!(|input: DepositWithdrawInput| {
     test_withdraw_bounds(input.withdraw_amount, input.initial_balance);
     test_payout_calculation(input.deposit_amount, input.member_count);
     test_fee_deduction(input.withdraw_amount, input.fee_basis_points);
-    test_deposit_withdraw_roundtrip(input.deposit_amount, input.withdraw_amount, input.initial_balance);
+    test_deposit_withdraw_roundtrip(
+        input.deposit_amount,
+        input.withdraw_amount,
+        input.initial_balance,
+    );
 });
 
+/// Validates deposit bounds.  Zero or negative deposits are invalid and
+/// should be rejected by the contract.
 fn test_deposit_bounds(deposit: i128, initial: i128) {
     if deposit <= 0 {
-        // Zero or negative deposits must be rejected
-        assert!(deposit <= 0, "Zero or negative deposit should be invalid");
+        // Zero or negative deposits must be rejected by the contract.
         return;
     }
 
     if initial >= 0 {
-        // Test overflow on balance addition
+        // Test overflow on balance addition.
         if let Some(new_balance) = initial.checked_add(deposit) {
             assert!(new_balance >= initial);
             assert!(new_balance >= deposit);
@@ -38,17 +43,16 @@ fn test_deposit_bounds(deposit: i128, initial: i128) {
     }
 }
 
+/// Validates withdrawal bounds.  Overdraws should be detected and rejected.
 fn test_withdraw_bounds(withdraw: i128, balance: i128) {
     if withdraw <= 0 {
-        // Non-positive withdraw amounts are rejected
-        assert!(withdraw <= 0);
+        // Non-positive withdraw amounts are rejected by the contract.
         return;
     }
 
     if balance >= 0 {
         if withdraw > balance {
-            // Overdraw should be detected
-            assert!(withdraw > balance, "Cannot withdraw more than balance");
+            // Overdraw should be detected and rejected by the contract.
         } else {
             let remaining = balance.checked_sub(withdraw);
             assert!(remaining.is_some());
@@ -57,6 +61,8 @@ fn test_withdraw_bounds(withdraw: i128, balance: i128) {
     }
 }
 
+/// Validates that the total pool calculation (deposit_amount * member_count)
+/// does not overflow and is at least as large as the individual deposit.
 fn test_payout_calculation(deposit_amount: i128, member_count: u32) {
     if deposit_amount > 0 && member_count > 0 && member_count <= 50 {
         if let Some(total_pool) = deposit_amount.checked_mul(member_count as i128) {
@@ -65,6 +71,7 @@ fn test_payout_calculation(deposit_amount: i128, member_count: u32) {
     }
 }
 
+/// Validates that fee deduction leaves a non-negative net amount.
 fn test_fee_deduction(amount: i128, fee_bps: u32) {
     if amount > 0 && fee_bps <= 10_000 {
         let fee = (amount as i128)
@@ -80,6 +87,8 @@ fn test_fee_deduction(amount: i128, fee_bps: u32) {
     }
 }
 
+/// Validates that a deposit-then-withdraw roundtrip leaves a non-negative
+/// balance.
 fn test_deposit_withdraw_roundtrip(deposit: i128, withdraw: i128, initial: i128) {
     if deposit > 0 && withdraw > 0 && initial >= 0 {
         if let Some(after_deposit) = initial.checked_add(deposit) {

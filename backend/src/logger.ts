@@ -9,53 +9,39 @@
  * current request ID and trace ID from async context to every log line.
  * Use `runWithRequestContext` / `getRequestContext` to populate that context
  * from middleware, and `getPropagationHeaders` to forward it on outgoing calls.
+ *
+ * Structured logging (issue #2053): ad-hoc `console.*` calls should be replaced
+ * with the structured `logger` below. Use `createLogger(scope)` to obtain a
+ * child logger bound to a module/component name so log lines carry a stable
+ * `scope` field instead of interpolated strings.
  */
 export * from './lib/logger';
 export { logger as default } from './lib/logger';
 
-import { AsyncLocalStorage } from 'async_hooks';
-
-export interface RequestContext {
-  requestId: string;
-  traceId: string;
-  spanId?: string;
-}
-
-const requestContextStorage = new AsyncLocalStorage<RequestContext>();
+import { logger as baseLogger } from './lib/logger';
 
 /**
- * Run `fn` with the given request correlation context bound to async storage.
- * Every log line emitted within `fn` (and its async descendants) will include
- * the request ID and trace ID.
+ * Create a child logger bound to a module/component scope.
+ *
+ * Prefer this over ad-hoc `console.log`/`console.error` calls so that every
+ * log line is structured (level, message, scope, request/trace context) and
+ * can be filtered or shipped consistently.
+ *
+ * @example
+ *   const log = createLogger('payments');
+ *   log.info('charge created', { chargeId });
  */
-export function runWithRequestContext<T>(context: RequestContext, fn: () => T): T {
-  return requestContextStorage.run(context, fn);
+export function createLogger(scope: string) {
+  return baseLogger.child({ scope });
 }
 
-/** Returns the request correlation context for the current async scope, if any. */
-export function getRequestContext(): RequestContext | undefined {
-  return requestContextStorage.getStore();
-}
-
-/**
- * Build the propagation headers (request ID + W3C traceparent) for outgoing
- * Soroban RPC, Horizon, and webhook calls so correlation flows across services.
- */
-export function getPropagationHeaders(
-  context: RequestContext | undefined = getRequestContext(),
-): Record<string, string> {
-  if (!context) {
-    return {};
-  }
-
-  const headers: Record<string, string> = {
-    'x-request-id': context.requestId,
-  };
-
-  if (context.traceId) {
-    const spanId = context.spanId ?? context.traceId.slice(0, 16);
-    headers['traceparent'] = `00-${context.traceId}-${spanId}-01`;
-  }
-
-  return headers;
-}
+// Request correlation helpers are consolidated in `lib/requestContext` so that
+// there is a single AsyncLocalStorage instance shared across the codebase.
+// Re-exported here to keep existing `import { ... } from './logger'` call sites
+// working; new code should import from `./lib/requestContext` directly.
+export {
+  runWithRequestContext,
+  getRequestContext,
+  getPropagationHeaders,
+} from './lib/requestContext';
+export type { RequestContext } from './lib/requestContext';

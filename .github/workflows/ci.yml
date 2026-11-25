@@ -41,8 +41,9 @@ jobs:
         working-directory: frontend
 
       - name: Frontend - Format check
-        run: npx prettier --check "src/**/*.{ts,tsx,css}"
-        working-directory: frontend
+        run: |
+          version=$(node -p "require('./package.json').devDependencies.prettier")
+          npm exec --yes --package="prettier@$version" -- npm run format:check:frontend
 
       - name: Frontend - Security audit
         run: npm audit --audit-level=high

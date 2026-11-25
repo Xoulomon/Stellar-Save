@@ -54,7 +54,10 @@ export interface NotificationPreferenceDelegate {
     data: NotificationPreferenceUpdate;
   }): Promise<{ count: number }>;
   count(args?: { where?: Record<string, unknown> }): Promise<number>;
-  groupBy(args: { by: string[]; _count: boolean }): Promise<Array<Record<string, unknown>>>;
+  groupBy(args: {
+    by: string[];
+    _count: boolean;
+  }): Promise<Array<{ emailFrequency: string; _count: number }>>;
 }
 
 export interface NotificationPreferencePrisma {
@@ -134,7 +137,7 @@ export class NotificationPreferenceRepository {
     return this.db.notificationPreference.count(where ? { where } : undefined);
   }
 
-  countByEmailFrequency(): Promise<Array<Record<string, unknown>>> {
+  countByEmailFrequency(): Promise<Array<{ emailFrequency: string; _count: number }>> {
     return this.db.notificationPreference.groupBy({ by: ['emailFrequency'], _count: true });
   }
 }

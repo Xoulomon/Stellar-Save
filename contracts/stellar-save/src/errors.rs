@@ -136,6 +136,10 @@ pub enum ContractError {
     /// Error Code: 9004
     ReentrancyDetected = 9004,
 
+    /// The contract is paused by the admin; contributions and payouts are rejected.
+    /// Error Code: 9005
+    ContractPaused = 9005,
+
     /// The cycle deadline has passed; contributions are no longer accepted.
     /// Error Code: 3009
     CycleDeadlineExpired = 3009,
@@ -310,6 +314,9 @@ impl ContractError {
             }
             ContractError::ReentrancyDetected => {
                 "Reentrancy detected during function execution."
+            }
+            ContractError::ContractPaused => {
+                "The contract is paused by an admin. Retry after it is unpaused."
             }
             ContractError::AlreadyVoted => {
                 "You have already raised a dispute for this group. Each member may only vote once per dispute round."
@@ -521,6 +528,9 @@ impl ErrorRecoveryStrategy {
             }
             ContractError::ReentrancyDetected => {
                 "Ensure no reentrant calls are performed during execution."
+            }
+            ContractError::ContractPaused => {
+                "Wait for the admin to unpause the contract, then retry."
             }
         }
     }

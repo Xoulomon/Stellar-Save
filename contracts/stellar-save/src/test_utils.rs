@@ -8,30 +8,27 @@
 //! `store_contract_config`, `store_group`, `store_token_config`, `store_test_group`
 //! and `store_test_group_with_status` replace the duplicated local setup code that
 //! previously existed in `admin_actions_tests.rs` and `auto_contribution_tests.rs`.
+//!
+//! ## Consolidated test utils
+//! `create_env` and `generate_address` are imported from `stellar_save_common::test_support`
+//! (the canonical location). `generate_addresses` and `create_string` were removed as
+//! dead code (they were never called from any test).
 
 #![cfg(test)]
 
 use soroban_sdk::{
     testutils::Address as _,
-    token::{StellarAssetClient, TokenClient},
+    token::StellarAssetClient,
     Address, Env, String,
 };
+use stellar_save_common::test_support::create_env;
 
-use crate::{StellarSaveContractClient, StellarSaveContract};
+use crate::group::{Group, GroupStatus, TokenConfig};
+use crate::storage::StorageKeyBuilder;
+use crate::types::ContractConfig;
+use crate::{StellarSaveContract, StellarSaveContractClient};
 
-// ─── Environment & Client Setup ──────────────────────────────────────────────
-
-/// Initialize a test environment with default settings.
-///
-/// Sets up a fresh Soroban environment with all authentications mocked.
-///
-/// # Returns
-/// A new `Env` instance ready for testing.
-pub fn create_env() -> Env {
-    let env = Env::default();
-    env.mock_all_auths();
-    env
-}
+// ─── Environment & Client Setup ──────────────────────────────────────
 
 /// Initialize the StellarSave contract and return all necessary test components.
 ///
@@ -47,7 +44,12 @@ pub fn create_env() -> Env {
 /// - `client`: The generated StellarSaveContractClient for contract interaction
 /// - `token_address`: The address of the deployed mock token
 /// - `token_client`: StellarAssetClient for token operations
-pub fn setup<'a>() -> (Env, StellarSaveContractClient<'a>, Address, StellarAssetClient<'a>) {
+pub fn setup<'a>() -> (
+    Env,
+    StellarSaveContractClient<'a>,
+    Address,
+    StellarAssetClient<'a>,
+) {
     let env = create_env();
 
     let admin = Address::generate(&env);
@@ -72,11 +74,11 @@ pub fn setup<'a>() -> (Env, StellarSaveContractClient<'a>, Address, StellarAsset
 /// # Returns
 /// The address of the newly deployed token contract
 pub fn deploy_mock_token(env: &Env) -> Address {
-    let admin = Address::generate(env);
+    let admin = generate_address(env);
     env.register_stellar_asset_contract_v2(admin).address()
 }
 
-// ─── Token Utilities ─────────────────────────────────────────────────────────
+// ─── Token Utilities ─────────────────────────────────────────────────
 
 /// Mint tokens to an address.
 ///
@@ -91,18 +93,6 @@ pub fn mint(sac: &StellarAssetClient, address: &Address, xlm: i128) {
     sac.mint(address, &(xlm * crate::xlm::STROOPS_PER_XLM));
 }
 
-/// Get the balance of an address for a token.
-///
-/// # Arguments
-/// * `tc` - TokenClient for the token contract
-/// * `address` - The address to check
-///
-/// # Returns
-/// The balance in stroops
-pub fn get_balance(tc: &TokenClient, address: &Address) -> i128 {
-    tc.balance(address)
-}
-
 /// Convert stroops to XLM (whole units).
 ///
 /// # Arguments
@@ -114,7 +104,7 @@ pub fn stroops_to_xlm(stroops: i128) -> i128 {
     stroops / crate::xlm::STROOPS_PER_XLM
 }
 
-// ─── Group Setup Utilities ───────────────────────────────────────────────────
+// ─── Group Setup Utilities ───────────────────────────────────────────
 
 /// Create a test group with 3 members and return all details.
 ///
@@ -142,19 +132,30 @@ pub fn setup_3_member_group_with_params(
     cycle_duration: u32,
     initial_balance_xlm: i128,
 ) -> (u64, Address, Address, Address) {
-    let group_id = client.create_group(&contribution_amount, &cycle_duration, &3u32);
-
+    let creator = Address::generate(env);
     let alice = Address::generate(env);
     let bob = Address::generate(env);
     let carol = Address::generate(env);
+
+    let token_address = sac.address.clone();
+    let cycle_duration_u64 = u64::from(cycle_duration);
+    let group_id = client.create_group(
+        &creator,
+        &contribution_amount,
+        &cycle_duration_u64,
+        &3u32,
+        &token_address,
+        &0u64,
+        &crate::payout::PayoutOrder::Sequential,
+    );
 
     mint(sac, &alice, initial_balance_xlm);
     mint(sac, &bob, initial_balance_xlm);
     mint(sac, &carol, initial_balance_xlm);
 
-    client.join_group(&group_id, &alice);
-    client.join_group(&group_id, &bob);
-    client.join_group(&group_id, &carol);
+    let _ = crate::StellarSaveContract::join_group(env.clone(), group_id, alice.clone(), None);
+    let _ = crate::StellarSaveContract::join_group(env.clone(), group_id, bob.clone(), None);
+    let _ = crate::StellarSaveContract::join_group(env.clone(), group_id, carol.clone(), None);
 
     (group_id, alice, bob, carol)
 }
@@ -201,10 +202,10 @@ pub fn generate_address(env: &Env) -> Address {
 ///
 /// # Returns
 /// A vector of unique addresses
-pub fn generate_addresses(env: &Env, count: usize) -> Vec<Address> {
-    let mut addresses = Vec::new();
+pub fn generate_addresses(env: &Env, count: usize) -> soroban_sdk::Vec<Address> {
+    let mut addresses = soroban_sdk::Vec::new(env);
     for _ in 0..count {
-        addresses.push(Address::generate(env));
+        addresses.push_back(Address::generate(env));
     }
     addresses
 }

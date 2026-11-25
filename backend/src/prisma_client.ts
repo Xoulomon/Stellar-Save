@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import { Gauge } from 'prom-client';
 
 import { config } from './config';
+import { PrismaClient } from './generated/prisma/client';
 import { logger } from './logger';
 import { registry } from './metrics';
 
@@ -75,4 +75,66 @@ export const prisma = new Proxy(prismaSingleton.getClient(), {
 /** Call on process shutdown to gracefully close all DB connections. */
 export async function disconnectPrisma(): Promise<void> {
   await prismaSingleton.disconnect();
+}
+
+// ── Repository layer over Prisma ─────────────────────────────────────────────
+//
+// Before: callers reached into the raw `prisma` proxy directly, duplicating
+// read/write routing decisions and scattering query construction across the
+// codebase. After: a thin repository layer centralises client selection and
+// exposes typed, intention-revealing methods. The `prisma` export above is
+// preserved unchanged for backwards compatibility.
+
+/** Minimal delegate surface shared by every Prisma model delegate. */
+export interface PrismaDelegate<T> {
+  findUnique(args: unknown): Promise<T | null>;
+  findMany(args?: unknown): Promise<T[]>;
+  create(args: unknown): Promise<T>;
+  update(args: unknown): Promise<T>;
+  delete(args: unknown): Promise<T>;
+}
+
+/**
+ * Generic repository wrapping a single Prisma model delegate.
+ * Reads are routed to the replica when healthy; writes always hit the primary.
+ */
+export class PrismaRepository<T> {
+  constructor(private readonly delegateName: string) {}
+
+  private delegate(isWrite: boolean): PrismaDelegate<T> {
+    const client = prismaSingleton.getClient(isWrite) as unknown as Record<
+      string,
+      PrismaDelegate<T>
+    >;
+    const delegate = client[this.delegateName];
+    if (!delegate) {
+      throw new Error(`Unknown Prisma delegate: ${this.delegateName}`);
+    }
+    return delegate;
+  }
+
+  findUnique(args: unknown): Promise<T | null> {
+    return this.delegate(false).findUnique(args);
+  }
+
+  findMany(args?: unknown): Promise<T[]> {
+    return this.delegate(false).findMany(args);
+  }
+
+  create(args: unknown): Promise<T> {
+    return this.delegate(true).create(args);
+  }
+
+  update(args: unknown): Promise<T> {
+    return this.delegate(true).update(args);
+  }
+
+  delete(args: unknown): Promise<T> {
+    return this.delegate(true).delete(args);
+  }
+}
+
+/** Factory for building a repository bound to a named Prisma model delegate. */
+export function createRepository<T>(delegateName: string): PrismaRepository<T> {
+  return new PrismaRepository<T>(delegateName);
 }

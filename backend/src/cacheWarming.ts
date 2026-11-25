@@ -18,22 +18,41 @@ const warmData = {
   '/api/stats': { totalRetired: 350, totalTransactions: 2 },
 };
 
-export const startWarmingJob = async () => {
-  logger.info('Starting cache warming job');
+let warmingInterval: ReturnType<typeof setInterval> | null = null;
 
+const warmAllEndpoints = async (): Promise<void> => {
   for (const [endpoint, data] of Object.entries(warmData)) {
     const cacheKey = CacheKeyBuilder.cacheWarming(endpoint);
     await set(cacheKey, data, CACHE_TTL_SECONDS.CACHE_WARMING_DEFAULT);
     logger.info('Cache warmed endpoint', { endpoint });
   }
+};
+
+export const startWarmingJob = async (): Promise<void> => {
+  logger.info('Starting cache warming job');
+
+  await warmAllEndpoints();
 
   logger.info('Cache warming completed');
 
-  setInterval(async () => {
+  if (warmingInterval !== null) {
+    clearInterval(warmingInterval);
+  }
+
+  warmingInterval = setInterval(async () => {
     logger.debug('Running scheduled cache warming');
-    for (const [endpoint, data] of Object.entries(warmData)) {
-      const cacheKey = CacheKeyBuilder.cacheWarming(endpoint);
-      await set(cacheKey, data, CACHE_TTL_SECONDS.CACHE_WARMING_DEFAULT);
+    try {
+      await warmAllEndpoints();
+    } catch (error) {
+      logger.error('Scheduled cache warming failed', { error });
     }
   }, CACHE_TTL_SECONDS.CACHE_WARMING_DEFAULT * 1000);
+};
+
+export const stopWarmingJob = (): void => {
+  if (warmingInterval !== null) {
+    clearInterval(warmingInterval);
+    warmingInterval = null;
+    logger.info('Cache warming job stopped');
+  }
 };

@@ -141,21 +141,53 @@ pub fn emit_group_created(
 ) {
     env.events().publish(
         ("group_created",),
-        GroupCreated { schema_version: GROUP_SCHEMA_VERSION, group_id, creator, contribution_amount, cycle_duration, max_members, created_at },
+        GroupCreated {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            creator,
+            contribution_amount,
+            cycle_duration,
+            max_members,
+            created_at,
+        },
     );
 }
 
-pub fn emit_member_joined(env: &Env, group_id: u64, member: Address, member_count: u32, joined_at: u64) {
+pub fn emit_member_joined(
+    env: &Env,
+    group_id: u64,
+    member: Address,
+    member_count: u32,
+    joined_at: u64,
+) {
     env.events().publish(
         ("member_joined",),
-        MemberJoined { schema_version: GROUP_SCHEMA_VERSION, group_id, member, member_count, joined_at },
+        MemberJoined {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            member,
+            member_count,
+            joined_at,
+        },
     );
 }
 
-pub fn emit_member_left(env: &Env, group_id: u64, member: Address, member_count: u32, left_at: u64) {
+pub fn emit_member_left(
+    env: &Env,
+    group_id: u64,
+    member: Address,
+    member_count: u32,
+    left_at: u64,
+) {
     env.events().publish(
         ("member_left",),
-        MemberLeft { schema_version: GROUP_SCHEMA_VERSION, group_id, member, member_count, left_at },
+        MemberLeft {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            member,
+            member_count,
+            left_at,
+        },
     );
 }
 
@@ -169,7 +201,14 @@ pub fn emit_member_removed(
 ) {
     env.events().publish(
         ("member_removed",),
-        MemberRemoved { schema_version: GROUP_SCHEMA_VERSION, group_id, member, removed_by, member_count, removed_at },
+        MemberRemoved {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            member,
+            removed_by,
+            member_count,
+            removed_at,
+        },
     );
 }
 
@@ -183,7 +222,14 @@ pub fn emit_group_completed(
 ) {
     env.events().publish(
         ("group_completed",),
-        GroupCompleted { schema_version: GROUP_SCHEMA_VERSION, group_id, creator, total_cycles, total_distributed, completed_at },
+        GroupCompleted {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            creator,
+            total_cycles,
+            total_distributed,
+            completed_at,
+        },
     );
 }
 
@@ -197,7 +243,14 @@ pub fn emit_group_status_changed(
 ) {
     env.events().publish(
         ("group_status_changed",),
-        GroupStatusChanged { schema_version: GROUP_SCHEMA_VERSION, group_id, old_status, new_status, changed_by, changed_at },
+        GroupStatusChanged {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            old_status,
+            new_status,
+            changed_by,
+            changed_at,
+        },
     );
 }
 
@@ -212,21 +265,39 @@ pub fn emit_group_metadata_updated(
 ) {
     env.events().publish(
         ("group_metadata_updated",),
-        GroupMetadataUpdated { schema_version: GROUP_SCHEMA_VERSION, group_id, updated_by, name, description, image_url, updated_at },
+        GroupMetadataUpdated {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            updated_by,
+            name,
+            description,
+            image_url,
+            updated_at,
+        },
     );
 }
 
 pub fn emit_group_paused(env: &Env, group_id: u64, paused_by: Address, paused_at: u64) {
     env.events().publish(
         ("group_paused",),
-        GroupPaused { schema_version: GROUP_SCHEMA_VERSION, group_id, paused_by, paused_at },
+        GroupPaused {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            paused_by,
+            paused_at,
+        },
     );
 }
 
 pub fn emit_group_unpaused(env: &Env, group_id: u64, unpaused_by: Address, unpaused_at: u64) {
     env.events().publish(
         ("group_unpaused",),
-        GroupUnpaused { schema_version: GROUP_SCHEMA_VERSION, group_id, unpaused_by, unpaused_at },
+        GroupUnpaused {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            unpaused_by,
+            unpaused_at,
+        },
     );
 }
 
@@ -239,7 +310,13 @@ pub fn emit_member_invited(
 ) {
     env.events().publish(
         ("member_invited",),
-        MemberInvited { schema_version: GROUP_SCHEMA_VERSION, group_id, invited, invited_by, invited_at },
+        MemberInvited {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            invited,
+            invited_by,
+            invited_at,
+        },
     );
 }
 
@@ -252,7 +329,13 @@ pub fn emit_invitation_revoked(
 ) {
     env.events().publish(
         ("invitation_revoked",),
-        InvitationRevoked { schema_version: GROUP_SCHEMA_VERSION, group_id, revoked, revoked_by, revoked_at },
+        InvitationRevoked {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            revoked,
+            revoked_by,
+            revoked_at,
+        },
     );
 }
 
@@ -349,12 +432,28 @@ pub struct RewardClaimed {
     pub claimed_at: u64,
 }
 
+/// Event emitted when a group transitions from Pending → Active (i.e. is activated
+/// by its creator once the minimum-member threshold is met).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GroupActivated {
+    pub schema_version: u32,
+    pub group_id: u64,
+    pub timestamp: u64,
+    pub member_count: u32,
+}
+
 // ── Extended emitters ─────────────────────────────────────────────────────────
 
 pub fn emit_group_dissolved(env: &Env, group_id: u64, dissolved_at: u64, total_refunded: i128) {
     env.events().publish(
         ("group_dissolved",),
-        GroupDissolved { schema_version: GROUP_SCHEMA_VERSION, group_id, dissolved_at, total_refunded },
+        GroupDissolved {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            dissolved_at,
+            total_refunded,
+        },
     );
 }
 
@@ -367,7 +466,13 @@ pub fn emit_group_cloned(
 ) {
     env.events().publish(
         ("group_cloned",),
-        GroupCloned { schema_version: GROUP_SCHEMA_VERSION, original_group_id, new_group_id, creator, cloned_at },
+        GroupCloned {
+            schema_version: GROUP_SCHEMA_VERSION,
+            original_group_id,
+            new_group_id,
+            creator,
+            cloned_at,
+        },
     );
 }
 
@@ -382,14 +487,27 @@ pub fn emit_groups_merged(
 ) {
     env.events().publish(
         ("groups_merged",),
-        GroupsMerged { schema_version: GROUP_SCHEMA_VERSION, merged_group_id, source_group_id_1, source_group_id_2, member_count, combined_balance, merged_at },
+        GroupsMerged {
+            schema_version: GROUP_SCHEMA_VERSION,
+            merged_group_id,
+            source_group_id_1,
+            source_group_id_2,
+            member_count,
+            combined_balance,
+            merged_at,
+        },
     );
 }
 
 pub fn emit_group_archived(env: &Env, group_id: u64, archived_by: Address, archived_at: u64) {
     env.events().publish(
         ("group_archived",),
-        GroupArchived { schema_version: GROUP_SCHEMA_VERSION, group_id, archived_by, archived_at },
+        GroupArchived {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            archived_by,
+            archived_at,
+        },
     );
 }
 
@@ -403,7 +521,14 @@ pub fn emit_group_rated(
 ) {
     env.events().publish(
         ("group_rated",),
-        GroupRated { schema_version: GROUP_SCHEMA_VERSION, group_id, member, stars, comment, rated_at },
+        GroupRated {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            member,
+            stars,
+            comment,
+            rated_at,
+        },
     );
 }
 
@@ -416,7 +541,13 @@ pub fn emit_milestone_reached(
 ) {
     env.events().publish(
         ("milestone_reached",),
-        MilestoneReached { schema_version: GROUP_SCHEMA_VERSION, group_id, member, threshold, reached_at_cycle },
+        MilestoneReached {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            member,
+            threshold,
+            reached_at_cycle,
+        },
     );
 }
 
@@ -429,13 +560,43 @@ pub fn emit_member_referred(
 ) {
     env.events().publish(
         ("member_referred",),
-        MemberReferred { schema_version: GROUP_SCHEMA_VERSION, group_id, invitee, referrer, referred_at },
+        MemberReferred {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            invitee,
+            referrer,
+            referred_at,
+        },
     );
 }
 
-pub fn emit_reward_claimed(env: &Env, group_id: u64, member: Address, amount: i128, claimed_at: u64) {
+pub fn emit_reward_claimed(
+    env: &Env,
+    group_id: u64,
+    member: Address,
+    amount: i128,
+    claimed_at: u64,
+) {
     env.events().publish(
         ("reward_claimed",),
-        RewardClaimed { schema_version: GROUP_SCHEMA_VERSION, group_id, member, amount, claimed_at },
+        RewardClaimed {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            member,
+            amount,
+            claimed_at,
+        },
+    );
+}
+
+pub fn emit_group_activated(env: &Env, group_id: u64, timestamp: u64, member_count: u32) {
+    env.events().publish(
+        ("group_activated",),
+        GroupActivated {
+            schema_version: GROUP_SCHEMA_VERSION,
+            group_id,
+            timestamp,
+            member_count,
+        },
     );
 }

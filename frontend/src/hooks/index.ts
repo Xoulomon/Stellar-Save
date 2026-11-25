@@ -2,6 +2,8 @@
 export { useContract } from './useContract';
 export { useDebounce, useDebounceWithCancel } from './useDebounce';
 export type { UseDebounceOptions } from './useDebounce';
+export { useCancellableRequest } from './useCancellableRequest';
+export type { CancellableRequestControls, RequestScope } from './useCancellableRequest';
 export { useAsyncData, useSimulatedLoading, mockDelay } from './useAsyncData';
 export type { UseAsyncDataOptions, UseAsyncDataResult } from './useAsyncData';
 export { useGroup } from './useGroup';

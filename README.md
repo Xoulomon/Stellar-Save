@@ -60,7 +60,9 @@ For detailed architecture documentation, see [docs/architecture.md](docs/archite
 
 ## 🛠️ Quick Start & Workspace Guides
 
-To get started quickly, follow the dedicated setup guides for each component of the Stellar-Save monorepo:
+Start with the [Monorepo Developer Setup](docs/SETUP.md) for prerequisites,
+installation, Docker, and build/test commands. For component-specific details,
+use the guides below:
 
 - 🚀 **Smart Contracts**: See [contracts/stellar-save/src/lib.rs](contracts/stellar-save/src/lib.rs) and the [QUICK_REFERENCE.md](docs/reference/quick-reference.md) for smart contract API documentation.
 - 💻 **Frontend Web App**: See [frontend/README.md](frontend/README.md) for React/TypeScript setup, environment configuration (`VITE_*`), MUI theme tokens, and local development commands.
@@ -75,15 +77,15 @@ To get started quickly, follow the dedicated setup guides for each component of 
 git clone https://github.com/Xoulomon/Stellar-Save.git
 cd Stellar-Save
 
-# Install workspace dependencies & git hooks (pnpm is the only supported package manager)
+# Install workspace dependencies (pnpm is the only supported package manager)
 corepack enable
-pnpm install
+pnpm install --frozen-lockfile
 
-# Build Soroban smart contracts
-./scripts/build.sh
+# Build workspace packages
+pnpm build
 
-# Run all test suites across smart contracts and web frontend
-./scripts/test.sh
+# Run workspace tests
+pnpm test
 create_group(contribution_amount, cycle_duration, max_members) -> u64
 get_group(group_id) -> Group
 list_members(group_id) -> Vec<Address>
@@ -96,3 +98,11 @@ execute_payout(group_id)
 is_complete(group_id) -> bool
 pause_group(group_id, caller)    // Creator-only: halt contributions & payouts
 unpause_group(group_id, caller)  // Creator-only: resume contributions & payouts
+
+## Handsoff notes
+
+<!-- handsoff-issue-2051 -->
+- #2051: [Backend] Split monolithic services into NestJS modules
+
+<!-- handsoff-issue-2104 -->
+- #2104: [Testing] Integration tests for REST API with test DB

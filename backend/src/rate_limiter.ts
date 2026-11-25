@@ -87,6 +87,11 @@ function applyRateLimitHeaders(res: Response, result: RateLimitResult): void {
   res.setHeader('X-RateLimit-Reset', String(Math.ceil(result.resetAtMs / 1000)));
 }
 
+function sendRateLimited(res: Response, result: RateLimitResult, body: Record<string, unknown>): void {
+  res.setHeader('Retry-After', String(result.retryAfterSeconds));
+  res.status(429).json(body);
+}
+
 // 15-minute window constants
 const WINDOW_15_MIN = 15 * 60 * 1000;
 
@@ -119,8 +124,7 @@ export function createRateLimiterMiddleware(options: RateLimiterOptions = {}) {
     applyRateLimitHeaders(res, result);
 
     if (!result.allowed) {
-      res.setHeader('Retry-After', String(result.retryAfterSeconds));
-      res.status(429).json({ error: 'Too many requests' });
+      sendRateLimited(res, result, { error: 'Too many requests' });
       return;
     }
 
@@ -146,8 +150,10 @@ export function createAuthRateLimiterMiddleware(options: Pick<RateLimiterOptions
     applyRateLimitHeaders(res, result);
 
     if (!result.allowed) {
-      res.setHeader('Retry-After', String(result.retryAfterSeconds));
-      res.status(429).json({ error: 'Too many requests', retryAfter: result.retryAfterSeconds });
+      sendRateLimited(res, result, {
+        error: 'Too many requests',
+        retryAfter: result.retryAfterSeconds,
+      });
       return;
     }
 

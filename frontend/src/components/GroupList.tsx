@@ -1,5 +1,6 @@
 import { useState, useMemo, type ChangeEvent } from 'react';
 
+import { OptimizedImage } from '../assets';
 import { Card } from './Card';
 import { Dropdown } from './Dropdown';
 import { EmptyState } from './EmptyState/EmptyState';
@@ -182,7 +183,11 @@ export function GroupList({
     >
       <div className="group-list-item-content">
         {group.avatar && (
-          <img src={group.avatar} alt={group.name} className="group-list-item-avatar" />
+          <OptimizedImage
+            src={group.avatar}
+            alt={group.name}
+            className="group-list-item-avatar"
+          />
         )}
         {!group.avatar && (
           <div className="group-list-item-avatar-placeholder">

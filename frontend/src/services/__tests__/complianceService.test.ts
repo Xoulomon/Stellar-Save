@@ -5,7 +5,7 @@
  * Verifies proper envelope handling and error processing.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
 import {
   screenTransaction,
   getFlaggedTransactions,
@@ -15,9 +15,6 @@ import {
   type AmlCheckResult,
   type ComplianceFlag,
 } from '../complianceService';
-
-// Mock fetch globally
-global.fetch = vi.fn();
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -42,14 +39,16 @@ Object.defineProperty(window, 'localStorage', {
 });
 
 describe('Compliance Service', () => {
+  let fetchMock: MockInstance<typeof fetch>;
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    fetchMock = vi.spyOn(globalThis, 'fetch');
     localStorage.clear();
     localStorage.setItem('auth_token', 'mock-jwt-token');
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    fetchMock.mockRestore();
   });
 
   describe('screenTransaction', () => {
@@ -64,10 +63,7 @@ describe('Compliance Service', () => {
         data: mockResult,
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       const result = await screenTransaction('GBDLJSTEST1', 'txhash123', 100);
 
@@ -75,7 +71,7 @@ describe('Compliance Service', () => {
       expect(result.riskLevel).toBe(RiskLevel.LOW);
       expect(result.reasons).toEqual([]);
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetchMock).toHaveBeenCalledWith(
         expect.stringContaining('/compliance/screen'),
         expect.objectContaining({
           method: 'POST',
@@ -102,10 +98,7 @@ describe('Compliance Service', () => {
         data: mockResult,
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       const result = await screenTransaction('GBDLJSTEST1', 'txhash123', 15000);
 
@@ -126,10 +119,7 @@ describe('Compliance Service', () => {
         data: mockResult,
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       const result = await screenTransaction('GBADsanctioned1X', 'txhash123', 100);
 
@@ -145,14 +135,13 @@ describe('Compliance Service', () => {
         'Authentication required'
       );
 
-      expect(global.fetch).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('should throw error on API failure', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Bad Request',
-      });
+      fetchMock.mockResolvedValueOnce(
+        new Response(null, { status: 400, statusText: 'Bad Request' })
+      );
 
       await expect(screenTransaction('GBDLJSTEST1', 'txhash123', 100)).rejects.toThrow(
         'Failed to screen transaction: Bad Request'
@@ -170,10 +159,7 @@ describe('Compliance Service', () => {
         ],
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       await expect(screenTransaction('INVALID', 'txhash123', 100)).rejects.toThrow(
         'Invalid Stellar address format'
@@ -209,10 +195,7 @@ describe('Compliance Service', () => {
         meta: { count: 2 },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       const result = await getFlaggedTransactions();
 
@@ -227,10 +210,7 @@ describe('Compliance Service', () => {
         meta: { count: 0 },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       const result = await getFlaggedTransactions();
 
@@ -242,14 +222,13 @@ describe('Compliance Service', () => {
 
       await expect(getFlaggedTransactions()).rejects.toThrow('Authentication required');
 
-      expect(global.fetch).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('should throw error on API failure', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Unauthorized',
-      });
+      fetchMock.mockResolvedValueOnce(
+        new Response(null, { status: 401, statusText: 'Unauthorized' })
+      );
 
       await expect(getFlaggedTransactions()).rejects.toThrow(
         'Failed to fetch flagged transactions: Unauthorized'
@@ -266,16 +245,13 @@ describe('Compliance Service', () => {
         meta: { action: 'approved' },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       const result = await reviewFlag('flag-1', 'approved', 'Legitimate transaction');
 
       expect(result).toBe(true);
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetchMock).toHaveBeenCalledWith(
         expect.stringContaining('/compliance/flags/flag-1/review'),
         expect.objectContaining({
           method: 'POST',
@@ -298,16 +274,13 @@ describe('Compliance Service', () => {
         meta: { action: 'rejected' },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       const result = await reviewFlag('flag-1', 'rejected', 'Suspicious activity detected');
 
       expect(result).toBe(true);
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetchMock).toHaveBeenCalledWith(
         expect.stringContaining('/compliance/flags/flag-1/review'),
         expect.objectContaining({
           body: JSON.stringify({
@@ -325,16 +298,13 @@ describe('Compliance Service', () => {
         },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       const result = await reviewFlag('flag-1', 'approved');
 
       expect(result).toBe(true);
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetchMock).toHaveBeenCalledWith(
         expect.stringContaining('/compliance/flags/flag-1/review'),
         expect.objectContaining({
           body: JSON.stringify({
@@ -350,16 +320,15 @@ describe('Compliance Service', () => {
 
       await expect(reviewFlag('flag-1', 'approved')).rejects.toThrow('Authentication required');
 
-      expect(global.fetch).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('should throw error on API failure', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Not Found',
-      });
+      fetchMock.mockResolvedValueOnce(new Response(null, { status: 404, statusText: 'Not Found' }));
 
-      await expect(reviewFlag('flag-1', 'approved')).rejects.toThrow('Failed to review flag: Not Found');
+      await expect(reviewFlag('flag-1', 'approved')).rejects.toThrow(
+        'Failed to review flag: Not Found'
+      );
     });
 
     it('should throw error from envelope errors', async () => {
@@ -373,10 +342,7 @@ describe('Compliance Service', () => {
         ],
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       await expect(reviewFlag('flag-999', 'approved')).rejects.toThrow('Flag does not exist');
     });
@@ -416,10 +382,7 @@ describe('Compliance Service', () => {
         meta: { count: 2 },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       const result = await getAuditLog();
 
@@ -436,10 +399,7 @@ describe('Compliance Service', () => {
         meta: { count: 0 },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       const result = await getAuditLog();
 
@@ -451,14 +411,13 @@ describe('Compliance Service', () => {
 
       await expect(getAuditLog()).rejects.toThrow('Authentication required');
 
-      expect(global.fetch).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('should throw error on API failure', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Internal Server Error',
-      });
+      fetchMock.mockResolvedValueOnce(
+        new Response(null, { status: 500, statusText: 'Internal Server Error' })
+      );
 
       await expect(getAuditLog()).rejects.toThrow(
         'Failed to fetch audit log: Internal Server Error'
@@ -481,10 +440,7 @@ describe('Compliance Service', () => {
         ],
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResolvedValueOnce(Response.json(mockResponse));
 
       await expect(screenTransaction('INVALID', 'INVALID', -100)).rejects.toThrow(
         'Multiple validation errors'
@@ -492,7 +448,7 @@ describe('Compliance Service', () => {
     });
 
     it('should handle network errors gracefully', async () => {
-      (global.fetch as any).mockRejectedValueOnce(new Error('Network timeout'));
+      fetchMock.mockRejectedValueOnce(new Error('Network timeout'));
 
       await expect(getFlaggedTransactions()).rejects.toThrow();
     });

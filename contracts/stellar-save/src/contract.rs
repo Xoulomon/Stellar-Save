@@ -5,19 +5,20 @@
 use crate::contribution::{ContributionPage, ContributionRecord};
 use crate::error::StellarSaveError;
 use crate::events::EventEmitter;
-use crate::events::*;
 use crate::group::{Group, GroupStatus};
 use crate::migration::{initialize_storage_version, migrate};
 use crate::payout::PayoutRecord;
-use crate::pool::{PoolCalculator, PoolInfo};
-use crate::rating::{GroupRating, RatingAggregate, RatingEntry};
+use crate::pool::PoolCalculator;
+use crate::rating::{GroupRating, RatingEntry};
 use crate::refund::RefundRecord;
 use crate::search::{SearchParams, SearchResult};
-use crate::storage::{StorageKey, StorageKeyBuilder};
+use crate::storage::StorageKeyBuilder;
 use crate::types::{AssignmentMode, ContractConfig, MemberProfile, PayoutScheduleEntry};
-use soroban_sdk::{contract, contractimpl, Address, Bytes, Env, String, Symbol, Vec, Map, BytesN};
+use crate::{
+    auth, governance, migration, milestones, payout_executor, penalty, rating, refund, search,
+};
 use core::cmp;
-use crate::{auth, governance, milestones, payout_executor, penalty, rating, refund, search, migration};
+use soroban_sdk::{contract, contractimpl, Address, Bytes, BytesN, Env, Map, String, Vec};
 
 #[contract]
 pub struct StellarSaveContract;
@@ -368,6 +369,24 @@ impl StellarSaveContract {
         migration::execute_upgrade(&env, caller, new_wasm, new_version)
     }
 
+    /// Pauses the whole contract. Admin only.
+    ///
+    /// While paused, contributions and payouts return `ContractPaused`. Group-level
+    /// pause (`pause_group`) is separate and unchanged.
+    pub fn pause_contract(env: Env, admin: Address) -> Result<(), StellarSaveError> {
+        crate::pause::set_contract_paused(&env, &admin, true)
+    }
+
+    /// Lifts the contract-wide pause. Admin only.
+    pub fn unpause_contract(env: Env, admin: Address) -> Result<(), StellarSaveError> {
+        crate::pause::set_contract_paused(&env, &admin, false)
+    }
+
+    /// Returns true while the contract-wide pause is set.
+    pub fn is_contract_paused(env: Env) -> bool {
+        crate::pause::is_contract_paused(&env)
+    }
+
     /// Updates the global contribution amount limits.
     ///
     /// Only the contract admin can call this function.
@@ -448,19 +467,21 @@ impl StellarSaveContract {
             .persistent()
             .get::<_, ContractConfig>(&config_key)
         {
-            if rounded_amount < config.min_contribution {
-                return Err(StellarSaveError::ContributionTooLow);
-            }
-            if rounded_amount > config.max_contribution {
-                return Err(StellarSaveError::ContributionTooHigh);
-            }
-            if max_members < config.min_members
-                || max_members > config.max_members
-                || cycle_duration < config.min_cycle_duration
-                || cycle_duration > config.max_cycle_duration
-            {
-                return Err(StellarSaveError::InvalidState);
-            }
+            crate::validation::validate_group_params_with_config(
+                rounded_amount,
+                cycle_duration,
+                max_members,
+                grace_period_seconds,
+                &config,
+            )?;
+        } else {
+            crate::validation::validate_group_params(
+                rounded_amount,
+                cycle_duration,
+                crate::constants::MIN_MEMBERS_FLOOR,
+                max_members,
+                grace_period_seconds,
+            )?;
         }
 
         // 4. Token allowlist check: if an allowlist is configured, verify token_address is present
@@ -536,10 +557,16 @@ impl StellarSaveContract {
             }
         }
 
-        // 11. Emit GroupCreated Event (include token_address as second data field)
-        env.events().publish(
-            (Symbol::new(&env, "GroupCreated"), creator),
-            (group_id, token_address.clone()),
+        // 11. Emit GroupCreated event through the canonical EventEmitter
+        let created_at = env.ledger().timestamp();
+        EventEmitter::emit_group_created(
+            &env,
+            group_id,
+            creator,
+            rounded_amount,
+            cycle_duration,
+            max_members,
+            created_at,
         );
 
         // 12. Return Group ID
@@ -603,8 +630,7 @@ impl StellarSaveContract {
         env.storage().persistent().set(&group_key, &group);
 
         // 6. Task: Emit event
-        env.events()
-            .publish((Symbol::new(&env, "GroupUpdated"), group_id), group.creator);
+        EventEmitter::emit_group_updated(&env, group_id, group.creator);
 
         Ok(())
     }
@@ -1642,6 +1668,7 @@ impl StellarSaveContract {
     /// - `PayoutFailed` - Transfer failed or insufficient balance
     /// - `InvalidRecipient` - Recipient not eligible for payout
     pub fn execute_payout(env: Env, group_id: u64) -> Result<(), StellarSaveError> {
+        crate::pause::require_not_paused(&env)?;
         payout_executor::execute_payout(env, group_id)
     }
 
@@ -1930,7 +1957,9 @@ impl StellarSaveContract {
         caller: Address,
         reason: soroban_sdk::String,
     ) -> Result<(), StellarSaveError> {
-        caller.require_auth();
+        // Authenticate caller and verify active membership in one call.
+        // `require_member` calls `caller.require_auth()` internally.
+        auth::require_member(&env, group_id, &caller)?;
 
         let group_key = StorageKeyBuilder::group_data(group_id);
         let mut group: Group = env
@@ -1938,12 +1967,6 @@ impl StellarSaveContract {
             .persistent()
             .get(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
-
-        // Verify caller is a member
-        let member_key = StorageKeyBuilder::member_profile(group_id, caller.clone());
-        if !env.storage().persistent().has(&member_key) {
-            return Err(StellarSaveError::NotMember);
-        }
 
         // Each member may only vote once per dispute round
         let vote_key = StorageKeyBuilder::group_dispute_vote(group_id, caller.clone());
@@ -2629,8 +2652,8 @@ impl StellarSaveContract {
     /// * `Ok(())` - Address is valid
     /// * `Err(StellarSaveError::InvalidState)` - Address is invalid
     pub fn validate_address(address: &Address) -> Result<(), StellarSaveError> {
-        // Addresses in Soroban are always valid if they can be constructed
-        // This is a placeholder for additional validation if needed
+        // Kept as a backward-compatible contract entry point. Soroban addresses
+        // are valid when they can be constructed.
         let _ = address;
         Ok(())
     }
@@ -2644,10 +2667,7 @@ impl StellarSaveContract {
     /// * `Ok(())` - Amount is valid (positive)
     /// * `Err(StellarSaveError::InvalidAmount)` - Amount is invalid
     pub fn validate_amount(amount: i128) -> Result<(), StellarSaveError> {
-        if amount <= 0 {
-            return Err(StellarSaveError::InvalidAmount);
-        }
-        Ok(())
+        crate::validation::validate_contribution_amount(amount)
     }
 
     /// Validates a cycle duration input.
@@ -2659,10 +2679,7 @@ impl StellarSaveContract {
     /// * `Ok(())` - Duration is valid (positive)
     /// * `Err(StellarSaveError::InvalidState)` - Duration is invalid
     pub fn validate_duration(duration: u64) -> Result<(), StellarSaveError> {
-        if duration == 0 {
-            return Err(StellarSaveError::InvalidState);
-        }
-        Ok(())
+        crate::validation::validate_cycle_duration(duration)
     }
 
     /// Validates member count bounds.
@@ -2678,10 +2695,7 @@ impl StellarSaveContract {
         min_members: u32,
         max_members: u32,
     ) -> Result<(), StellarSaveError> {
-        if min_members < 2 || max_members < min_members {
-            return Err(StellarSaveError::InvalidState);
-        }
-        Ok(())
+        crate::validation::validate_member_bounds(min_members, max_members)
     }
 
     /// Deletes a group from storage.
@@ -2713,8 +2727,7 @@ impl StellarSaveContract {
         env.storage().persistent().remove(&status_key);
 
         // 4. Task: Emit event
-        env.events()
-            .publish((Symbol::new(&env, "GroupDeleted"), group_id), group.creator);
+        EventEmitter::emit_group_deleted(&env, group_id, group.creator);
 
         Ok(())
     }
@@ -2821,10 +2834,7 @@ impl StellarSaveContract {
     /// * `Err(StellarSaveError::GroupNotArchivable)` if the group is not in a terminal state
     /// * `Err(StellarSaveError::InvalidState)` if the group is already archived
     pub fn archive_group(env: Env, caller: Address, group_id: u64) -> Result<(), StellarSaveError> {
-        // 1. Authorization
-        caller.require_auth();
-
-        // 2. Load the group
+        // 1. Load the group
         let group_key = StorageKeyBuilder::group_data(group_id);
         let mut group = env
             .storage()
@@ -2832,17 +2842,16 @@ impl StellarSaveContract {
             .get::<_, Group>(&group_key)
             .ok_or(StellarSaveError::GroupNotFound)?;
 
-        // 3. Only the creator may archive
-        if group.creator != caller {
-            return Err(StellarSaveError::Unauthorized);
-        }
+        // 2. Authorization: only the creator may archive.
+        // `require_creator` calls `caller.require_auth()` and checks identity.
+        auth::require_creator(&caller, &group)?;
 
-        // 4. Group must be in a terminal state
+        // 3. Group must be in a terminal state
         if !group.status.is_terminal() {
             return Err(StellarSaveError::GroupNotArchivable);
         }
 
-        // 5. Guard against double-archiving
+        // 4. Guard against double-archiving
         let archived_key = StorageKeyBuilder::group_archived(group_id);
         let already_archived = env
             .storage()
@@ -2854,7 +2863,7 @@ impl StellarSaveContract {
             return Err(StellarSaveError::InvalidState);
         }
 
-        // 6. Persist the archived flag and update the Group struct
+        // 5. Persist the archived flag and update the Group struct
         env.storage().persistent().set(&archived_key, &true);
         group.archived = true;
         env.storage().persistent().set(&group_key, &group);
@@ -3294,9 +3303,18 @@ impl StellarSaveContract {
 
         // 2. Only report misses after the grace period has elapsed
         if group.started {
-            let cycle_deadline =
-                group.started_at + (group.cycle_duration * (cycle_number as u64 + 1));
-            let grace_end = cycle_deadline + group.grace_period_seconds;
+            let cycle_deadline = group
+                .started_at
+                .checked_add(
+                    group
+                        .cycle_duration
+                        .checked_mul(cycle_number as u64 + 1)
+                        .ok_or(StellarSaveError::Overflow)?,
+                )
+                .ok_or(StellarSaveError::Overflow)?;
+            let grace_end = cycle_deadline
+                .checked_add(group.grace_period_seconds)
+                .ok_or(StellarSaveError::Overflow)?;
             if env.ledger().timestamp() <= grace_end {
                 return Ok(Vec::new(&env));
             }
@@ -3962,9 +3980,11 @@ impl StellarSaveContract {
                 soroban_sdk::token::TokenClient::new(&env, &token_config.token_address);
             token_client.transfer(&env.current_contract_address(), &member, &withdrawal_amount);
 
-            env.events().publish(
-                (Symbol::new(&env, "emergency_withdrawal"),),
-                (group_id, member.clone(), withdrawal_amount),
+            EventEmitter::emit_emergency_withdrawal(
+                &env,
+                group_id,
+                member.clone(),
+                withdrawal_amount,
             );
         } else {
             // Member profile removed even if no funds to withdraw (already received payout)
@@ -4047,7 +4067,13 @@ impl StellarSaveContract {
         // Mark as claimed before transfer (checks-effects-interactions)
         env.storage().persistent().set(&claimed_key, &true);
 
-        // Transfer reward via the group's token
+        // Emit RewardClaimed event before the external transfer so the
+        // on-chain log captures intent even if the token call reverts.
+        // (CEI: Checks ✓ → Effects ✓ → Event ✓ → Interaction last)
+        let timestamp = env.ledger().timestamp();
+        EventEmitter::emit_reward_claimed(&env, group_id, member.clone(), reward_share, timestamp);
+
+        // Transfer reward via the group's token (interaction — happens last)
         let token_config_key = StorageKeyBuilder::group_token_config(group_id);
         if let Some(token_config) = env
             .storage()
@@ -4058,10 +4084,6 @@ impl StellarSaveContract {
                 soroban_sdk::token::TokenClient::new(&env, &token_config.token_address);
             token_client.transfer(&env.current_contract_address(), &member, &reward_share);
         }
-
-        // Emit RewardClaimed event
-        let timestamp = env.ledger().timestamp();
-        EventEmitter::emit_reward_claimed(&env, group_id, member, reward_share, timestamp);
 
         Ok(())
     }
@@ -4292,8 +4314,8 @@ impl StellarSaveContract {
             .persistent()
             .set(&status_key, &GroupStatus::Active);
 
-        // Emit the activation event
-        emit_group_activated(&env, group_id, timestamp, group.member_count);
+        // Emit the activation event via the canonical EventEmitter
+        EventEmitter::emit_group_activated(&env, group_id, timestamp, group.member_count);
 
         Ok(())
     }
@@ -4343,6 +4365,7 @@ impl StellarSaveContract {
         member: Address,
         amount: i128,
     ) -> Result<(), StellarSaveError> {
+        crate::pause::require_not_paused(&env)?;
         // Require authorization from the member
         member.require_auth();
 
@@ -4501,6 +4524,7 @@ impl StellarSaveContract {
         member: Address,
         cycles: Vec<u32>,
     ) -> Result<(), StellarSaveError> {
+        crate::pause::require_not_paused(&env)?;
         member.require_auth();
 
         // Reject empty input early
@@ -5019,14 +5043,17 @@ impl StellarSaveContract {
             return Err(StellarSaveError::InvalidState);
         }
 
-        let proof_key =
-            StorageKeyBuilder::contribution_proof_verified(group_id, cycle, member.clone());
-        env.storage().persistent().set(&proof_key, &true);
+        #[cfg(feature = "zk")]
+        {
+            let proof_key =
+                StorageKeyBuilder::contribution_proof_verified(group_id, cycle, member.clone());
+            env.storage().persistent().set(&proof_key, &true);
 
-        let timestamp = env.ledger().timestamp();
-        EventEmitter::emit_contribution_verified(&env, group_id, member, cycle, timestamp);
+            let timestamp = env.ledger().timestamp();
+            EventEmitter::emit_contribution_verified(&env, group_id, member, cycle, timestamp);
 
-        Ok(())
+            Ok(())
+        }
     }
 
     /// Records a contribution for a group that requires proof verification.
@@ -5039,6 +5066,7 @@ impl StellarSaveContract {
         member: Address,
         amount: i128,
     ) -> Result<(), StellarSaveError> {
+        crate::pause::require_not_paused(&env)?;
         member.require_auth();
 
         let group_key = StorageKeyBuilder::group_data(group_id);
@@ -5404,10 +5432,3 @@ impl StellarSaveContract {
         Ok(())
     }
 } // close impl StellarSaveContract (proof/dynamic contributions block)
-
-fn emit_group_activated(env: &Env, group_id: u64, timestamp: u64, member_count: u32) {
-    env.events().publish(
-        (Symbol::new(env, "group_activated"), group_id),
-        (timestamp, member_count),
-    );
-}

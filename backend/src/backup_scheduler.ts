@@ -14,11 +14,53 @@ const DEFAULT_CONFIG: SchedulerConfig = {
   incrementalIntervalMs: 6 * 60 * 60 * 1000,
 };
 
+/**
+ * Pure helper: decide whether a full backup is due given the last run time.
+ * Returns true when no previous run is recorded (lastRunTime === 0).
+ */
+export function isFullBackupDue(
+  lastRunTime: number,
+  intervalMs: number,
+  now: number = Date.now(),
+): boolean {
+  if (lastRunTime <= 0) return true;
+  return now - lastRunTime >= intervalMs;
+}
+
+/**
+ * Pure helper: decide whether an incremental backup is due given the last run time.
+ * Returns true when no previous run is recorded (lastRunTime === 0).
+ */
+export function isIncrementalBackupDue(
+  lastRunTime: number,
+  intervalMs: number,
+  now: number = Date.now(),
+): boolean {
+  if (lastRunTime <= 0) return true;
+  return now - lastRunTime >= intervalMs;
+}
+
+/**
+ * Pure helper: compute ms remaining until the next scheduled run.
+ */
+export function msUntilNextRun(
+  lastRunTime: number,
+  intervalMs: number,
+  now: number = Date.now(),
+): number {
+  if (lastRunTime <= 0) return 0;
+  return Math.max(0, intervalMs - (now - lastRunTime));
+}
+
+/**
+ * @deprecated Scheduling, monitoring, drilling and pruning are owned by
+ * `lib/backup-orchestrator.ts`. This class is retained only for backwards
+ * compatibility and delegates all scheduling decisions to pure helpers.
+ * New code should use the orchestrator as the single entry point.
+ */
 export class BackupScheduler {
   private config: SchedulerConfig;
   private service: BackupService;
-  private lastFullBackupTime = 0;
-  private lastIncrementalBackupTime = 0;
 
   constructor(service: BackupService, config: Partial<SchedulerConfig> = {}) {
     this.service = service;
@@ -27,41 +69,37 @@ export class BackupScheduler {
 
   /**
    * Check if it's time for a full backup.
-   * Called by BackupOrchestrator on its timer.
+   * Pure decision helper; last-run bookkeeping lives in the orchestrator.
    */
-  shouldRunFullBackup(): boolean {
-    const elapsed = Date.now() - this.lastFullBackupTime;
-    return elapsed >= this.config.fullBackupIntervalMs;
+  shouldRunFullBackup(lastRunTime: number = 0, now: number = Date.now()): boolean {
+    return isFullBackupDue(lastRunTime, this.config.fullBackupIntervalMs, now);
   }
 
   /**
    * Check if it's time for an incremental backup.
-   * Called by BackupOrchestrator on its timer.
+   * Pure decision helper; last-run bookkeeping lives in the orchestrator.
    */
-  shouldRunIncrementalBackup(): boolean {
-    const elapsed = Date.now() - this.lastIncrementalBackupTime;
-    return elapsed >= this.config.incrementalIntervalMs;
+  shouldRunIncrementalBackup(lastRunTime: number = 0, now: number = Date.now()): boolean {
+    return isIncrementalBackupDue(lastRunTime, this.config.incrementalIntervalMs, now);
   }
 
   /**
    * Get next scheduled time for full backup (ms from now).
    */
-  getNextFullBackupTime(): number {
-    const elapsed = Date.now() - this.lastFullBackupTime;
-    return Math.max(0, this.config.fullBackupIntervalMs - elapsed);
+  getNextFullBackupTime(lastRunTime: number = 0, now: number = Date.now()): number {
+    return msUntilNextRun(lastRunTime, this.config.fullBackupIntervalMs, now);
   }
 
   /**
    * Get next scheduled time for incremental backup (ms from now).
    */
-  getNextIncrementalBackupTime(): number {
-    const elapsed = Date.now() - this.lastIncrementalBackupTime;
-    return Math.max(0, this.config.incrementalIntervalMs - elapsed);
+  getNextIncrementalBackupTime(lastRunTime: number = 0, now: number = Date.now()): number {
+    return msUntilNextRun(lastRunTime, this.config.incrementalIntervalMs, now);
   }
 
   /**
    * Trigger a manual backup outside the schedule.
-   * Returns the queued job.
+   * Returns the queued job. Last-run bookkeeping is owned by the orchestrator.
    */
   async triggerManual(type: 'full' | 'incremental'): Promise<BackupJob> {
     if (type === 'full') return this.runFull();
@@ -69,24 +107,22 @@ export class BackupScheduler {
   }
 
   /**
-   * Internal: Execute full backup and update last run time.
+   * Internal: Execute full backup.
    */
   private async runFull(): Promise<BackupJob> {
     logger.info('[BackupScheduler] Starting full backup');
-    this.lastFullBackupTime = Date.now();
     const job = await this.service.createBackup('full');
     logger.info('[BackupScheduler] Full backup queued:', job.id);
     return job;
   }
 
   /**
-   * Internal: Execute incremental backup and update last run time.
+   * Internal: Execute incremental backup.
    */
   private async runIncremental(): Promise<BackupJob> {
     const base = this.service.getLatestCompleted('full');
     const baseId = base?.id;
     logger.info('[BackupScheduler] Starting incremental backup, base:', baseId ?? 'none');
-    this.lastIncrementalBackupTime = Date.now();
     const job = await this.service.createBackup('incremental', baseId);
     logger.info('[BackupScheduler] Incremental backup queued:', job.id);
     return job;

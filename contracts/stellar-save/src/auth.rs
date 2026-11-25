@@ -70,11 +70,32 @@ pub fn is_active_member(env: &Env, group_id: u64, address: &Address) -> bool {
 mod tests {
     use super::*;
     use soroban_sdk::testutils::Address as _;
-    use soroban_sdk::Env;
+    use soroban_sdk::{contract, contractimpl, Env};
+
+    #[contract]
+    pub struct AuthTestContract;
+
+    #[contractimpl]
+    impl AuthTestContract {
+        pub fn test_admin(env: Env, caller: Address) -> Result<(), StellarSaveError> {
+            require_admin(&env, &caller)
+        }
+
+        pub fn test_creator(_env: Env, caller: Address, group: Group) -> Result<(), StellarSaveError> {
+            require_creator(&caller, &group)
+        }
+
+        pub fn test_member(env: Env, group_id: u64, caller: Address) -> Result<(), StellarSaveError> {
+            require_member(&env, group_id, &caller)
+        }
+    }
 
     #[test]
     fn test_auth_creator_guard() {
         let env = Env::default();
+        let contract_id = env.register(AuthTestContract, ());
+        let client = AuthTestContractClient::new(&env, &contract_id);
+
         let creator = Address::generate(&env);
         let non_creator = Address::generate(&env);
 
@@ -83,17 +104,17 @@ mod tests {
         env.mock_all_auths();
 
         // Positive case
-        assert!(require_creator(&creator, &group).is_ok());
+        assert!(client.try_test_creator(&creator, &group).is_ok());
 
         // Negative case
         assert_eq!(
-            require_creator(&non_creator, &group),
-            Err(StellarSaveError::Unauthorized)
+            client.try_test_creator(&non_creator, &group),
+            Err(Ok(StellarSaveError::Unauthorized))
         );
     }
 
     /// Build a minimal valid MemberProfile for test setup.
-    fn make_profile(env: &Env, address: Address, group_id: u64) -> crate::types::MemberProfile {
+    fn make_profile(_env: &Env, address: Address, group_id: u64) -> crate::types::MemberProfile {
         crate::types::MemberProfile {
             address,
             group_id,
@@ -106,23 +127,28 @@ mod tests {
     #[test]
     fn test_auth_member_guard() {
         let env = Env::default();
+        let contract_id = env.register(AuthTestContract, ());
+        let client = AuthTestContractClient::new(&env, &contract_id);
+
         let member = Address::generate(&env);
         let non_member = Address::generate(&env);
         let group_id = 1u64;
 
         env.mock_all_auths();
 
-        let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
-        let profile = make_profile(&env, member.clone(), group_id);
-        env.storage().persistent().set(&member_key, &profile);
+        env.as_contract(&contract_id, || {
+            let member_key = StorageKeyBuilder::member_profile(group_id, member.clone());
+            let profile = make_profile(&env, member.clone(), group_id);
+            env.storage().persistent().set(&member_key, &profile);
+        });
 
         // Positive case
-        assert!(require_member(&env, group_id, &member).is_ok());
+        assert!(client.try_test_member(&group_id, &member).is_ok());
 
         // Negative case
         assert_eq!(
-            require_member(&env, group_id, &non_member),
-            Err(StellarSaveError::NotMember)
+            client.try_test_member(&group_id, &non_member),
+            Err(Ok(StellarSaveError::NotMember))
         );
     }
 
@@ -131,92 +157,166 @@ mod tests {
     #[test]
     fn test_is_active_member_returns_true_for_stored_profile() {
         let env = Env::default();
-        let address = Address::generate(&env);
-        let group_id = 42u64;
+        let contract_id = env.register(crate::StellarSaveContract, ());
+        env.as_contract(&contract_id, || {
+            let address = Address::generate(&env);
+            let group_id = 42u64;
 
-        let key = StorageKeyBuilder::member_profile(group_id, address.clone());
-        env.storage()
-            .persistent()
-            .set(&key, &make_profile(&env, address.clone(), group_id));
+            let key = StorageKeyBuilder::member_profile(group_id, address.clone());
+            env.storage()
+                .persistent()
+                .set(&key, &make_profile(&env, address.clone(), group_id));
 
-        assert!(is_active_member(&env, group_id, &address));
+            assert!(is_active_member(&env, group_id, &address));
+        });
     }
 
     #[test]
     fn test_is_active_member_returns_false_for_non_member() {
         let env = Env::default();
-        let address = Address::generate(&env);
-        let group_id = 42u64;
+        let contract_id = env.register(crate::StellarSaveContract, ());
+        env.as_contract(&contract_id, || {
+            let address = Address::generate(&env);
+            let group_id = 42u64;
 
-        // No profile stored
-        assert!(!is_active_member(&env, group_id, &address));
+            // No profile stored
+            assert!(!is_active_member(&env, group_id, &address));
+        });
     }
 
     #[test]
     fn test_is_active_member_non_existent_group_returns_false() {
         let env = Env::default();
-        let address = Address::generate(&env);
-        // group_id 9999 was never created
-        assert!(!is_active_member(&env, 9999, &address));
+        let contract_id = env.register(crate::StellarSaveContract, ());
+        env.as_contract(&contract_id, || {
+            let address = Address::generate(&env);
+            // group_id 9999 was never created
+            assert!(!is_active_member(&env, 9999, &address));
+        });
     }
 
     #[test]
     fn test_is_active_member_zero_group_id_returns_false() {
         let env = Env::default();
-        let address = Address::generate(&env);
-        // group_id 0 is invalid — no member profile can be stored there
-        assert!(!is_active_member(&env, 0, &address));
+        let contract_id = env.register(crate::StellarSaveContract, ());
+        env.as_contract(&contract_id, || {
+            let address = Address::generate(&env);
+            // group_id 0 is invalid — no member profile can be stored there
+            assert!(!is_active_member(&env, 0, &address));
+        });
     }
 
     #[test]
     fn test_is_active_member_no_auth_required() {
         // Calling is_active_member without mock_all_auths must not panic.
         let env = Env::default();
-        let address = Address::generate(&env);
-        // Should succeed (returns false) without any authentication setup
-        assert!(!is_active_member(&env, 1, &address));
+        let contract_id = env.register(crate::StellarSaveContract, ());
+        env.as_contract(&contract_id, || {
+            let address = Address::generate(&env);
+            // Should succeed (returns false) without any authentication setup
+            assert!(!is_active_member(&env, 1, &address));
+        });
     }
 
     #[test]
     fn test_is_active_member_different_group_same_address_isolated() {
         let env = Env::default();
-        let address = Address::generate(&env);
+        let contract_id = env.register(crate::StellarSaveContract, ());
+        env.as_contract(&contract_id, || {
+            let address = Address::generate(&env);
 
-        // Store profile only for group 1
-        let key = StorageKeyBuilder::member_profile(1, address.clone());
-        env.storage()
-            .persistent()
-            .set(&key, &make_profile(&env, address.clone(), 1));
+            // Store profile only for group 1
+            let key = StorageKeyBuilder::member_profile(1, address.clone());
+            env.storage()
+                .persistent()
+                .set(&key, &make_profile(&env, address.clone(), 1));
 
-        assert!(is_active_member(&env, 1, &address));
-        // Group 2 should return false even though address is in group 1
-        assert!(!is_active_member(&env, 2, &address));
+            assert!(is_active_member(&env, 1, &address));
+            // Group 2 should return false even though address is in group 1
+            assert!(!is_active_member(&env, 2, &address));
+        });
     }
 
     #[test]
     fn test_auth_admin_guard() {
         let env = Env::default();
+        let contract_id = env.register(AuthTestContract, ());
+        let client = AuthTestContractClient::new(&env, &contract_id);
+
         let admin = Address::generate(&env);
         let non_admin = Address::generate(&env);
 
         env.mock_all_auths();
 
-        let config = ContractConfig {
-            admin: admin.clone(),
-            treasury: admin.clone(),
-            creation_fee: 0,
-        };
-        env.storage()
-            .persistent()
-            .set(&StorageKeyBuilder::contract_config(), &config);
+        env.as_contract(&contract_id, || {
+            let config = ContractConfig {
+                admin: admin.clone(),
+                min_contribution: 1,
+                max_contribution: i128::MAX,
+                min_members: 2,
+                max_members: 20,
+                min_cycle_duration: 1,
+                max_cycle_duration: u64::MAX,
+                treasury: Some(admin.clone()),
+                creation_fee: 0,
+            };
+            env.storage()
+                .persistent()
+                .set(&StorageKeyBuilder::contract_config(), &config);
+        });
 
         // Positive case
-        assert!(require_admin(&env, &admin).is_ok());
+        assert!(client.try_test_admin(&admin).is_ok());
 
         // Negative case
         assert_eq!(
-            require_admin(&env, &non_admin),
-            Err(StellarSaveError::Unauthorized)
+            client.try_test_admin(&non_admin),
+            Err(Ok(StellarSaveError::Unauthorized))
+        );
+    }
+
+    #[test]
+    fn test_auth_admin_guard_missing_config_returns_unauthorized() {
+        let env = Env::default();
+        let contract_id = env.register(AuthTestContract, ());
+        let client = AuthTestContractClient::new(&env, &contract_id);
+
+        let caller = Address::generate(&env);
+        env.mock_all_auths();
+
+        // Config is not stored in persistent storage
+        assert_eq!(
+            client.try_test_admin(&caller),
+            Err(Ok(StellarSaveError::Unauthorized))
+        );
+    }
+
+    #[test]
+    fn test_auth_member_guard_cross_group_leakage_prevented() {
+        let env = Env::default();
+        let contract_id = env.register(AuthTestContract, ());
+        let client = AuthTestContractClient::new(&env, &contract_id);
+
+        let member = Address::generate(&env);
+        env.mock_all_auths();
+
+        // Setup member profile strictly for group 100
+        let group_id_100 = 100u64;
+        let group_id_200 = 200u64;
+
+        env.as_contract(&contract_id, || {
+            let member_key = StorageKeyBuilder::member_profile(group_id_100, member.clone());
+            let profile = make_profile(&env, member.clone(), group_id_100);
+            env.storage().persistent().set(&member_key, &profile);
+        });
+
+        // Allowed in group 100
+        assert!(client.try_test_member(&group_id_100, &member).is_ok());
+
+        // Rejected in group 200 (auth isolation)
+        assert_eq!(
+            client.try_test_member(&group_id_200, &member),
+            Err(Ok(StellarSaveError::NotMember))
         );
     }
 }

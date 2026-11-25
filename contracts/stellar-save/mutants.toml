@@ -14,7 +14,6 @@ minimum_test_timeout = 120
 exclude_globs = [
     # Test-only modules
     "src/*_tests.rs",
-    "src/fuzz_tests.rs",
     "src/test_*.rs",
 
     # Benchmarks and non-logic helpers

@@ -1,11 +1,8 @@
 use crate::{
     error::StellarSaveError,
-    group::Group,
-    status::GroupStatus,
     storage::{StorageKeyBuilder, STORAGE_VERSION},
-    ContractConfig,
 };
-use soroban_sdk::{contracttype, symbol_short, Address, BytesN, Env, Symbol, Vec};
+use soroban_sdk::{symbol_short, Address, Env, Symbol};
 
 /// Migration utilities for handling storage schema upgrades.
 ///
@@ -232,11 +229,17 @@ mod tests {
         let guard_key = StorageKeyBuilder::reentrancy_guard();
 
         assert_eq!(
-            env.storage().persistent().get::<bool>(&pause_key).unwrap(),
+            env.storage()
+                .persistent()
+                .get::<_, bool>(&pause_key)
+                .unwrap(),
             false
         );
         assert_eq!(
-            env.storage().persistent().get::<bool>(&guard_key).unwrap(),
+            env.storage()
+                .persistent()
+                .get::<_, bool>(&guard_key)
+                .unwrap(),
             false
         );
     }
@@ -248,7 +251,17 @@ mod tests {
 
         // Simulate v1 contract with existing groups
         let group_id = 1u64;
-        let group = Group::new(group_id, creator, 100_000_000, 604800, 5, 2, 1234567890);
+        let group = Group::new(
+            &env,
+            group_id,
+            creator,
+            100_000_000,
+            604800,
+            5,
+            2,
+            1234567890,
+            0,
+        );
 
         // Store group in v1 format (without balance tracking)
         let group_key = StorageKeyBuilder::group_data(group_id);
@@ -271,14 +284,14 @@ mod tests {
         assert_eq!(
             env.storage()
                 .persistent()
-                .get::<i128>(&balance_key)
+                .get::<_, i128>(&balance_key)
                 .unwrap(),
             0
         );
         assert_eq!(
             env.storage()
                 .persistent()
-                .get::<i128>(&paid_out_key)
+                .get::<_, i128>(&paid_out_key)
                 .unwrap(),
             0
         );
@@ -302,14 +315,20 @@ mod tests {
 
         // Should preserve existing pause state
         assert_eq!(
-            env.storage().persistent().get::<bool>(&pause_key).unwrap(),
+            env.storage()
+                .persistent()
+                .get::<_, bool>(&pause_key)
+                .unwrap(),
             true
         );
 
         // Should initialize missing guard
         let guard_key = StorageKeyBuilder::reentrancy_guard();
         assert_eq!(
-            env.storage().persistent().get::<bool>(&guard_key).unwrap(),
+            env.storage()
+                .persistent()
+                .get::<_, bool>(&guard_key)
+                .unwrap(),
             false
         );
     }
@@ -439,103 +458,17 @@ mod tests {
     }
 }
 
-// # Migration Framework
-//
-// Version-tracked, admin-gated schema migrations for the Stellar-Save contract.
-//
-// ## Design
-// - `SCHEMA_VERSION` key in persistent storage tracks the current on-chain schema.
-// - Each migration has a `from_version` and `to_version`; only the matching
-//   migration runs, preventing double-application.
-// - `migrate(env, admin)` applies the next pending migration.
-// - `rollback(env, admin)` reverses the last applied migration (if reversible).
-// - Both functions are no-ops when the schema is already at the target version.
-
-// ─── Storage key ─────────────────────────────────────────────────────────────
-
-/// Persistent storage key for the on-chain schema version.
-pub const SCHEMA_VERSION_KEY: Symbol = symbol_short!("SCH_VER");
-
-// ─── Version constants ────────────────────────────────────────────────────────
-
-/// Schema version shipped with the original contract (no `schema_version` field).
-pub const V1: u32 = 1;
-/// Schema version after the v1→v2 migration (adds `schema_version` to Group,
-/// backfills `TokenConfig` defaults for XLM-only groups).
-pub const V2: u32 = 2;
-
-/// Latest schema version understood by this binary.
-pub const CURRENT_SCHEMA_VERSION: u32 = V2;
-
 // ─── Contract binary version (upgrade guard — Issue #72) ─────────────────────
 
 /// On-chain contract binary version, incremented on every upgrade.
 ///
-/// This is distinct from `STORAGE_VERSION` / `CURRENT_SCHEMA_VERSION` which
-/// track the storage *schema*.  The binary version is written to persistent
+/// This is distinct from `STORAGE_VERSION`, which tracks the storage *schema*.  The binary version is written to persistent
 /// storage at init time and checked by `require_upgrade_version_guard` before
 /// any upgrade is accepted, preventing accidental downgrade or double-upgrade.
 pub const CONTRACT_VERSION: u32 = 1;
 
 /// Persistent storage key for the on-chain contract binary version.
 pub const CONTRACT_VERSION_KEY: Symbol = symbol_short!("CON_VER");
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-/// Describes a single schema migration step.
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MigrationMeta {
-    pub from_version: u32,
-    pub to_version: u32,
-    /// Human-readable description stored on-chain for auditability.
-    pub description: soroban_sdk::String,
-}
-
-/// Result written to storage after a migration completes.
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MigrationRecord {
-    pub from_version: u32,
-    pub to_version: u32,
-    pub applied_at: u64,
-    pub applied_by: Address,
-}
-
-// ─── Storage helpers ──────────────────────────────────────────────────────────
-
-/// Returns the current on-chain schema version (defaults to V1 if unset).
-pub fn get_schema_version(env: &Env) -> u32 {
-    env.storage()
-        .persistent()
-        .get::<Symbol, u32>(&SCHEMA_VERSION_KEY)
-        .unwrap_or(V1)
-}
-
-/// Persists the schema version.
-pub fn set_schema_version(env: &Env, version: u32) {
-    env.storage()
-        .persistent()
-        .set(&SCHEMA_VERSION_KEY, &version);
-}
-
-/// Storage key for the last migration record (used by rollback).
-pub fn migration_record_key(env: &Env) -> soroban_sdk::Symbol {
-    let _ = env; // env needed for Symbol construction in no_std
-    symbol_short!("MIG_REC")
-}
-
-pub fn save_migration_record(env: &Env, record: &MigrationRecord) {
-    env.storage()
-        .persistent()
-        .set(&migration_record_key(env), record);
-}
-
-pub fn load_migration_record(env: &Env) -> Option<MigrationRecord> {
-    env.storage()
-        .persistent()
-        .get::<soroban_sdk::Symbol, MigrationRecord>(&migration_record_key(env))
-}
 
 // ─── Contract binary version guard (Issue #72) ───────────────────────────────
 
@@ -622,13 +555,4 @@ pub fn execute_upgrade(
     );
 
     Ok(())
-}
-
-// ─── Admin guard ─────────────────────────────────────────────────────────────
-
-/// Panics if `caller` is not the contract admin.
-pub fn require_admin(env: &Env, caller: &Address) {
-    if crate::auth::require_admin(env, caller).is_err() {
-        panic!("migration: caller is not admin");
-    }
 }

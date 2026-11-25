@@ -1,6 +1,7 @@
 import { Redis } from 'ioredis';
 import { logger } from '../utils/logger';
 import { metrics } from '../metrics';
+import { jobRetryPolicy, RetryPolicy } from '../lib/retry_policies';
 
 /**
  * Common background-job abstraction.
@@ -22,17 +23,14 @@ export interface JobRunnerOptions {
   redis: Redis;
   /** Lock TTL in milliseconds. Defaults to 5 minutes. */
   lockTtlMs?: number;
-  /** Max attempts per run (including the first). Defaults to 3. */
-  maxAttempts?: number;
-  /** Base backoff in milliseconds between retries. Defaults to 1000. */
-  retryBackoffMs?: number;
+  /** Retry policy used for job runs. Defaults to `jobRetryPolicy`. */
+  retryPolicy?: RetryPolicy;
+  /** Idempotency window in milliseconds. Defaults to 5 minutes. */
+  idempotencyWindowMs?: number;
 }
 
 const DEFAULT_LOCK_TTL_MS = 5 * 60 * 1000;
-const DEFAULT_MAX_ATTEMPTS = 3;
-const DEFAULT_RETRY_BACKOFF_MS = 1000;
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const DEFAULT_IDEMPOTENCY_WINDOW_MS = 5 * 60 * 1000;
 
 /**
  * Runs registered jobs on their schedules, guaranteeing that at most one
@@ -41,8 +39,8 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export class JobRunner {
   private readonly redis: Redis;
   private readonly lockTtlMs: number;
-  private readonly maxAttempts: number;
-  private readonly retryBackoffMs: number;
+  private readonly retryPolicy: RetryPolicy;
+  private readonly idempotencyWindowMs: number;
   private readonly jobs = new Map<string, Job>();
   private readonly timers = new Map<string, NodeJS.Timeout>();
   private started = false;
@@ -50,8 +48,8 @@ export class JobRunner {
   constructor(options: JobRunnerOptions) {
     this.redis = options.redis;
     this.lockTtlMs = options.lockTtlMs ?? DEFAULT_LOCK_TTL_MS;
-    this.maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
-    this.retryBackoffMs = options.retryBackoffMs ?? DEFAULT_RETRY_BACKOFF_MS;
+    this.retryPolicy = options.retryPolicy ?? jobRetryPolicy;
+    this.idempotencyWindowMs = options.idempotencyWindowMs ?? DEFAULT_IDEMPOTENCY_WINDOW_MS;
   }
 
   register(job: Job): void {
@@ -83,8 +81,10 @@ export class JobRunner {
   }
 
   /**
-   * Execute a job once, guarded by a distributed lock and wrapped in the
-   * common retry/failure-reporting path. Exposed for tests and manual runs.
+   * Execute a job once, guarded by a distributed lock, an idempotency key and
+   * the shared retry policy. Re-running the same job within the idempotency
+   * window is a no-op, making handlers safe to retry. Exposed for tests and
+   * manual runs.
    */
   async execute(job: Job): Promise<void> {
     const lockKey = `job:lock:${job.name}`;
@@ -97,35 +97,39 @@ export class JobRunner {
     }
 
     try {
+      const idempotencyKey = this.idempotencyKey(job);
+      const firstRun = await this.redis.set(
+        idempotencyKey,
+        '1',
+        'PX',
+        this.idempotencyWindowMs,
+        'NX',
+      );
+      if (firstRun !== 'OK') {
+        logger.debug(`Job ${job.name} skipped: already executed in this window`);
+        return;
+      }
+
       await this.runWithRetry(job);
     } finally {
       await this.releaseLock(lockKey, lockValue);
     }
   }
 
+  private idempotencyKey(job: Job): string {
+    const window = Math.floor(Date.now() / this.idempotencyWindowMs);
+    return `job:idempotency:${job.name}:${window}`;
+  }
+
   private async runWithRetry(job: Job): Promise<void> {
-    let attempt = 0;
-    while (attempt < this.maxAttempts) {
-      attempt += 1;
-      try {
-        await job.run();
-        metrics.recordJobSuccess(job.name);
-        logger.info(`Job ${job.name} succeeded`);
-        return;
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        if (attempt >= this.maxAttempts) {
-          metrics.recordJobFailure(job.name);
-          logger.error(`Job ${job.name} failed after ${attempt} attempt(s)`, {
-            error: err.message,
-          });
-          return;
-        }
-        logger.warn(`Job ${job.name} attempt ${attempt} failed, retrying`, {
-          error: err.message,
-        });
-        await sleep(this.retryBackoffMs * attempt);
-      }
+    try {
+      await this.retryPolicy.execute(() => job.run());
+      metrics.recordJobSuccess(job.name);
+      logger.info(`Job ${job.name} succeeded`);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      metrics.recordJobFailure(job.name);
+      logger.error(`Job ${job.name} failed after retries`, { error: err.message });
     }
   }
 
@@ -145,6 +149,9 @@ export class JobRunner {
 
 /**
  * Reconciliation job migrated onto the shared runner.
+ *
+ * The handler is idempotent: the runner dedupes repeated executions within the
+ * idempotency window, so re-running reconciliation is safe.
  */
 export function createReconciliationJob(
   reconcile: () => Promise<void>,

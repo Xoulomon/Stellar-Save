@@ -40,26 +40,40 @@ export interface CursorParams {
   limit: number;
 }
 
+/**
+ * Standard pagination metadata shared by both pagination modes.
+ *
+ * This is the single source of truth for the `pagination` block of the
+ * response envelope. Both offset and cursor envelopes extend it, keeping the
+ * envelope shape consistent across list endpoints.
+ */
+export interface PaginationMeta {
+  limit: number;
+  hasMore: boolean;
+}
+
+/** Offset-pagination metadata block. */
+export interface OffsetPaginationMeta extends PaginationMeta {
+  offset: number;
+  total: number;
+}
+
+/** Cursor-pagination metadata block. */
+export interface CursorPaginationMeta extends PaginationMeta {
+  cursor: string;
+  nextCursor: string | null;
+}
+
 /** Standard envelope returned by offset-paginated list endpoints. */
 export interface PaginatedResult<T> {
   data: T[];
-  pagination: {
-    limit: number;
-    offset: number;
-    total: number;
-    hasMore: boolean;
-  };
+  pagination: OffsetPaginationMeta;
 }
 
 /** Standard envelope returned by cursor-paginated list endpoints. */
 export interface CursorPaginatedResult<T> {
   data: T[];
-  pagination: {
-    limit: number;
-    cursor: string;
-    nextCursor: string | null;
-    hasMore: boolean;
-  };
+  pagination: CursorPaginationMeta;
 }
 
 // ---------------------------------------------------------------------------
@@ -154,12 +168,7 @@ export function paginate<T>(data: T[], total: number, params: OffsetParams): Pag
   const safeTotal = Math.max(0, total);
   return {
     data,
-    pagination: {
-      limit,
-      offset,
-      total: safeTotal,
-      hasMore: offset + data.length < safeTotal,
-    },
+    pagination: buildOffsetMeta(limit, offset, data.length, safeTotal),
   };
 }
 
@@ -207,12 +216,7 @@ export function paginateCursor<T>(
 
   return {
     data,
-    pagination: {
-      limit,
-      cursor,
-      nextCursor: resolvedNextCursor,
-      hasMore,
-    },
+    pagination: buildCursorMeta(limit, cursor, resolvedNextCursor, hasMore),
   };
 }
 
@@ -275,4 +279,40 @@ function computeHasMore<T>(data: T[], limit: number, total?: number): boolean {
   }
   // Without total, fall back to: if we got a full page there may be more
   return data.length >= limit;
+}
+
+/**
+ * Build the offset-pagination metadata block. Single place where the
+ * `hasMore` rule for offset mode is expressed.
+ */
+function buildOffsetMeta(
+  limit: number,
+  offset: number,
+  pageLength: number,
+  total: number
+): OffsetPaginationMeta {
+  return {
+    limit,
+    offset,
+    total,
+    hasMore: offset + pageLength < total,
+  };
+}
+
+/**
+ * Build the cursor-pagination metadata block. Single place where the
+ * cursor envelope shape is assembled.
+ */
+function buildCursorMeta(
+  limit: number,
+  cursor: string,
+  nextCursor: string | null,
+  hasMore: boolean
+): CursorPaginationMeta {
+  return {
+    limit,
+    cursor,
+    nextCursor,
+    hasMore,
+  };
 }

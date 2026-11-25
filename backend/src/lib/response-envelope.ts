@@ -58,7 +58,7 @@ export function createEnvelope<T>(
 ): ApiResponseEnvelope<T> {
   return {
     data,
-    ...(meta && { meta }),
+    ...(meta !== undefined && { meta }),
   };
 }
 
@@ -133,7 +133,7 @@ export function errorEnvelopeMulti(
 export function createEmptyEnvelope(meta?: ResponseMeta): ApiResponseEnvelope<null> {
   return {
     data: null,
-    ...(meta && { meta }),
+    ...(meta !== undefined && { meta }),
   };
 }
 
@@ -146,13 +146,8 @@ export function createEmptyEnvelope(meta?: ResponseMeta): ApiResponseEnvelope<nu
  */
 export function normalizeResponse(response: unknown): ApiResponseEnvelope {
   // Already an envelope
-  if (
-    response &&
-    typeof response === 'object' &&
-    'data' in response &&
-    ('meta' in response || 'errors' in response)
-  ) {
-    return response as ApiResponseEnvelope;
+  if (isEnvelope(response)) {
+    return response;
   }
 
   // Array → wrap in envelope with count
@@ -162,4 +157,19 @@ export function normalizeResponse(response: unknown): ApiResponseEnvelope {
 
   // Plain object or primitive → wrap in envelope
   return createEnvelope(response);
+}
+
+/**
+ * Type guard: is the value already a standard response envelope?
+ *
+ * An envelope is a non-null object with a `data` key and at least one of
+ * `meta` or `errors`.
+ */
+export function isEnvelope(value: unknown): value is ApiResponseEnvelope {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    'data' in value &&
+    ('meta' in value || 'errors' in value)
+  );
 }

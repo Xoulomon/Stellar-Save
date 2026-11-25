@@ -1,52 +1,106 @@
-import { PrismaClient } from '@prisma/client';
-
-import { NotificationService } from '../src/notification_service';
-import { NotificationTemplateManager, NotificationEventType } from '../src/notification_template_manager';
-import { PushNotificationService, FirebaseProvider, OneSignalProvider } from '../src/push_notification_service';
-import { UserPreferenceManager } from '../src/user_preference_manager';
 import { NotificationFactory } from '../../test/fixtures/factory';
+import { NotificationService } from '../notification_service';
+import {
+  NotificationTemplateManager,
+  NotificationEventType,
+} from '../notification_template_manager';
+import {
+  PushNotificationService,
+  FirebasePushProvider,
+  OneSignalPushProvider,
+} from '../push_notification_service';
+import { UserPreferenceManager } from '../user_preference_manager';
 
-// Mock Prisma
-jest.mock('@prisma/client', () => ({
-  PrismaClient: jest.fn(() =>
-    require('../../tests/helpers/prismaMock').createPrismaMock()
-  ),
+jest.mock('../prisma_client', () => ({
+  prisma: {
+    notificationTemplate: {
+      findUnique: jest.fn(),
+    },
+    notification: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
+      deleteMany: jest.fn(),
+    },
+    notificationQueue: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+      count: jest.fn(),
+    },
+    mobileDeviceToken: {
+      upsert: jest.fn(),
+      updateMany: jest.fn(),
+      findMany: jest.fn(),
+    },
+  },
+}));
+
+jest.mock('../config', () => ({
+  config: {
+    logging: { level: 'error' },
+    sendgrid: { apiKey: 'test-sendgrid-key', fromEmail: 'noreply@stellar-save.com' },
+    push: {
+      provider: 'firebase',
+      firebase: { projectId: undefined, serviceAccount: undefined },
+      onesignal: { appId: undefined, apiKey: undefined },
+      oneSignal: { appId: undefined, apiKey: undefined },
+    },
+    apns: { keyId: undefined, teamId: undefined, key: undefined, bundleId: undefined },
+    nodeEnv: 'test',
+  },
 }));
 
 // Mock SendGrid
 jest.mock('@sendgrid/mail', () => ({
-  setApiKey: jest.fn(),
-  send: jest.fn(),
+  __esModule: true,
+  default: {
+    setApiKey: jest.fn(),
+    send: jest.fn(),
+  },
 }));
 
 describe('Notification Service', () => {
   let notificationService: NotificationService;
-  let prismaClient: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    prismaClient = new PrismaClient();
-    notificationService = new NotificationService({ db: prismaClient });
+    notificationService = new NotificationService();
   });
 
   describe('Email Notifications', () => {
     it('should send an email notification', async () => {
-      const mockTemplate = NotificationFactory.buildTemplate('email_contribution_reminder', {
+      const mockTemplate = {
         id: 'template-1',
+        templateKey: 'email_contribution_reminder',
+        templateType: 'email',
         subject: 'Reminder: Contribution due for {{groupName}}',
         htmlContent: '<h1>Hello {{userName}}</h1>',
         textContent: 'Hello {{userName}}',
-      });
+        active: true,
+      };
+      const { prisma } = jest.requireMock('../prisma_client');
+      prisma.notificationTemplate.findUnique.mockResolvedValue(mockTemplate);
+      prisma.notification.create.mockResolvedValue({ id: 'notification-1' });
+      const sgMail = jest.requireMock('@sendgrid/mail').default;
+      sgMail.send.mockResolvedValue([{ statusCode: 202, headers: {} }]);
 
-      jest.spyOn(prismaClient.notificationTemplate, 'findUnique').mockResolvedValue(mockTemplate as any);
+      await notificationService.sendEmail(
+        'test@example.com',
+        'email_contribution_reminder',
+        { userName: 'Ada', groupName: 'Builders' },
+        'Reminder'
+      );
 
-      // Test email sending logic
-      expect(notificationService).toBeDefined();
+      expect(sgMail.send).toHaveBeenCalledWith(
+        expect.objectContaining({ to: 'test@example.com', subject: 'Reminder' })
+      );
+      expect(prisma.notification.create).toHaveBeenCalled();
     });
 
     it('should handle email template not found', async () => {
-      jest.spyOn(prismaClient.notificationTemplate, 'findUnique').mockResolvedValue(null);
-
+      const { prisma } = jest.requireMock('../prisma_client');
+      prisma.notificationTemplate.findUnique.mockResolvedValue(null);
       await expect(
         notificationService.sendEmail('test@example.com', 'invalid_template', {}, 'Test')
       ).rejects.toThrow('template not found');
@@ -62,7 +116,7 @@ describe('Notification Service', () => {
 
   describe('Push Notifications', () => {
     it('should initialize Firebase provider', () => {
-      const provider = new FirebaseProvider(
+      const provider = new FirebasePushProvider(
         'test-project',
         JSON.stringify({ type: 'service_account' })
       );
@@ -72,12 +126,12 @@ describe('Notification Service', () => {
 
     it('should throw error for invalid Firebase credentials', () => {
       expect(() => {
-        new FirebaseProvider('test-project', 'invalid-json');
+        new FirebasePushProvider('test-project', 'invalid-json');
       }).toThrow('Invalid Firebase service account JSON');
     });
 
     it('should initialize OneSignal provider', () => {
-      const provider = new OneSignalProvider('app-id-123', 'api-key-456');
+      const provider = new OneSignalPushProvider('app-id-123', 'api-key-456');
 
       expect(provider).toBeDefined();
     });
@@ -85,17 +139,15 @@ describe('Notification Service', () => {
     it('should send push notification via default provider', async () => {
       const pushService = new PushNotificationService();
 
-      const providers = pushService.getAvailableProviders();
-
-      expect(Array.isArray(providers)).toBe(true);
+      expect(typeof pushService.getProvider().send).toBe('function');
     });
 
     it('should check provider availability', async () => {
       const pushService = new PushNotificationService();
 
-      const isAvailable = pushService.isProviderAvailable('firebase');
-
-      expect(typeof isAvailable).toBe('boolean');
+      expect(() => pushService.getProvider('firebase')).toThrow(
+        'Push provider not configured: firebase'
+      );
     });
   });
 
@@ -199,22 +251,42 @@ describe('Notification Service', () => {
     });
 
     it('should register device token', async () => {
+      const { prisma } = jest.requireMock('../prisma_client');
+      prisma.mobileDeviceToken.upsert.mockResolvedValue({
+        userId: 'user-123',
+        token: 'device-token-abc',
+        platform: 'iOS',
+      });
+
       const registered = await UserPreferenceManager.registerDeviceToken(
         'user-123',
         'device-token-abc',
         'iOS'
       );
 
+      expect(prisma.mobileDeviceToken.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { token: 'device-token-abc' },
+          update: expect.objectContaining({ isValid: true }),
+        })
+      );
       expect(registered.userId).toBe('user-123');
       expect(registered.platform).toBe('iOS');
     });
 
     it('should unregister device token', async () => {
+      const { prisma } = jest.requireMock('../prisma_client');
+      prisma.mobileDeviceToken.updateMany.mockResolvedValue({ count: 1 });
+
       const unregistered = await UserPreferenceManager.unregisterDeviceToken(
         'user-123',
         'device-token-abc'
       );
 
+      expect(prisma.mobileDeviceToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'user-123', token: 'device-token-abc' },
+        data: { isValid: false },
+      });
       expect(unregistered.userId).toBe('user-123');
     });
   });
@@ -254,7 +326,7 @@ describe('Notification Service', () => {
 
       const templates = await NotificationTemplateManager.getActiveTemplates();
 
-      expect(templates.length).toBe(2);
+      expect(templates.length).toBe(4);
     });
 
     it('should create custom template', async () => {

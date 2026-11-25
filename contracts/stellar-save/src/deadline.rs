@@ -1,7 +1,10 @@
 use soroban_sdk::{Address, Env};
 
 use crate::{
-    error::StellarSaveError, events::EventEmitter, group::Group, storage::StorageKeyBuilder,
+    error::StellarSaveError,
+    events::EventEmitter,
+    group::Group,
+    storage::StorageKeyBuilder,
     time_source::{LedgerTimeSource, TimeSource},
 };
 
@@ -127,11 +130,9 @@ pub fn effective_deadline(env: &Env, group_id: u64, cycle: u32) -> Option<u64> {
     let group_key = StorageKeyBuilder::group_data(group_id);
     let group: Group = env.storage().persistent().get(&group_key)?;
 
-    let base_deadline = group.created_at.checked_add(
-        group
-            .cycle_duration
-            .checked_mul(cycle as u64 + 1)?,
-    )?;
+    let base_deadline = group
+        .created_at
+        .checked_add(group.cycle_duration.checked_mul(cycle as u64 + 1)?)?;
     let extension = get_deadline_extension(env, group_id, cycle);
     base_deadline.checked_add(extension)
 }
@@ -172,12 +173,15 @@ mod tests {
     fn setup_group(env: &Env, creator: &Address) -> u64 {
         let group_id = 1u64;
         let group = Group::new(
+            env,
             group_id,
             creator.clone(),
-            STROOPS_PER_XLM,        // 1 XLM in stroops
-            ONE_WEEK_SECONDS,       // 1 week duration
+            STROOPS_PER_XLM,  // 1 XLM in stroops
+            ONE_WEEK_SECONDS, // 1 week duration
             5,
+            2,
             DEFAULT_TEST_TIMESTAMP, // created_at
+            0,
         );
         let key = StorageKeyBuilder::group_data(group_id);
         env.storage().persistent().set(&key, &group);
@@ -326,8 +330,7 @@ mod tests {
 
         // Use a fixed timestamp far in the past to distinguish it from ledger time.
         let ts = FixedTimeSource::new(500_000);
-        let result =
-            extend_deadline_with_time(&env, creator.clone(), group_id, 0, 3600, &ts);
+        let result = extend_deadline_with_time(&env, creator.clone(), group_id, 0, 3600, &ts);
         assert!(result.is_ok(), "should succeed with injected time source");
 
         let ext = get_deadline_extension(&env, group_id, 0);

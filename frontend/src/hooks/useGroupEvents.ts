@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 import { useEventService } from './useEventService';
 import { useEventTrigger } from './useEventTrigger';
-import { useToast } from '../components/Toast';
+import { useNotification } from './useNotification';
 
 import type {
   AppEvent,
@@ -21,7 +21,7 @@ import type {
 export function useGroupEvents() {
   const { on } = useEventService();
   const { triggerRefresh } = useEventTrigger();
-  const { showToast } = useToast(); // Assuming useToast hook from ToastProvider
+  const { notify } = useNotification();
 
   useEffect(() => {
     // Subscribe to ContributionMade events
@@ -29,7 +29,7 @@ export function useGroupEvents() {
       const contributionEvent = event as ContributionMadeEvent;
       const groupId = String(contributionEvent.groupId); // Convert bigint to string
       triggerRefresh(groupId);
-      showToast({
+      notify({
         message: `New contribution made in group ${groupId} by ${contributionEvent.contributor}!`,
         type: 'success',
       });
@@ -40,7 +40,7 @@ export function useGroupEvents() {
       const payoutEvent = event as PayoutExecutedEvent;
       const groupId = String(payoutEvent.groupId); // Convert bigint to string
       triggerRefresh(groupId);
-      showToast({
+      notify({
         message: `Payout executed for group ${groupId} to ${payoutEvent.recipient}!`,
         type: 'info',
       });
@@ -51,7 +51,7 @@ export function useGroupEvents() {
       const groupPausedEvent = event as GroupPausedEvent;
       const groupId = String(groupPausedEvent.groupId); // Convert bigint to string
       triggerRefresh(groupId);
-      showToast({
+      notify({
         message: `Group ${groupId} has been paused!`,
         type: 'warning',
       });
@@ -63,5 +63,5 @@ export function useGroupEvents() {
       unsubscribePayout();
       unsubscribeGroupPaused();
     };
-  }, [on, triggerRefresh, showToast]);
+  }, [on, triggerRefresh, notify]);
 }

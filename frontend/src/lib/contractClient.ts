@@ -6,27 +6,30 @@
  * and submission to the RPC node.
  */
 
-import * as freighterApi from '@stellar/freighter-api';
-import { withRetry } from '@stellar-save/shared-utils/src/retry';
 import {
   Contract,
-  Networks,
   SorobanRpc,
   TransactionBuilder,
-  BASE_FEE,
   nativeToScVal,
   scValToNative,
   xdr,
   Address,
 } from '@stellar/stellar-sdk';
 
+import { withRetry } from '@stellar-save/shared-utils/src/retry';
+
+
 import { env } from './env';
 import { rpcServer } from './rpcClient';
+import {
+  buildTransaction,
+  createFreighterSigner,
+  DUMMY_ADDRESS,
+  NETWORK_PASSPHRASE,
+  signTransactionXdr,
+} from '../services/transactionSigningService';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-
-const NETWORK_PASSPHRASE: string =
-  env.VITE_STELLAR_NETWORK === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
 
 export const CONTRACT_ID: string = env.VITE_STELLAR_SAVE_CONTRACT_ID;
 
@@ -120,13 +123,7 @@ async function signAndSubmit(sourceAddress: string, operation: xdr.Operation): P
   const account = await server.getAccount(sourceAddress);
 
   // 2. Build transaction
-  const tx = new TransactionBuilder(account, {
-    fee: BASE_FEE,
-    networkPassphrase: NETWORK_PASSPHRASE,
-  })
-    .addOperation(operation)
-    .setTimeout(30)
-    .build();
+  const tx = buildTransaction(account, [operation]);
 
   // 3. Simulate to get the footprint / resource fees
   const simResult = await server.simulateTransaction(tx);
@@ -143,30 +140,14 @@ async function signAndSubmit(sourceAddress: string, operation: xdr.Operation): P
   const preparedTx = SorobanRpc.assembleTransaction(tx, simResult).build();
 
   // 5. Sign with Freighter
-  const freighter = freighterApi as unknown as Record<string, unknown>;
-  const signFn = freighter['signTransaction'] as
-    ((xdr: string, opts: { networkPassphrase: string }) => Promise<unknown>) | undefined;
-
-  if (!signFn) {
-    throw new ContractError(null, 'Freighter signTransaction is not available.');
-  }
-
-  const signResult = await signFn(preparedTx.toXDR(), {
-    networkPassphrase: NETWORK_PASSPHRASE,
-  });
-
-  // Handle both old and new Freighter API shapes
   let signedXdr: string;
-  if (typeof signResult === 'string') {
-    signedXdr = signResult;
-  } else if (
-    signResult &&
-    typeof signResult === 'object' &&
-    'signedTxXdr' in (signResult as object)
-  ) {
-    signedXdr = (signResult as { signedTxXdr: string }).signedTxXdr;
-  } else {
-    throw new ContractError(null, 'Unexpected response from Freighter.');
+  try {
+    signedXdr = await signTransactionXdr(preparedTx.toXDR(), createFreighterSigner());
+  } catch (error) {
+    throw new ContractError(
+      null,
+      error instanceof Error ? error.message : 'Unexpected response from Freighter.'
+    );
   }
 
   // 6. Submit
@@ -234,20 +215,13 @@ async function simulateRead<T>(operation: xdr.Operation): Promise<T> {
   }
 
   // Dummy account for read-only simulations
-  const DUMMY_ADDRESS = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN';
   const account = await server.getAccount(DUMMY_ADDRESS).catch(() => ({
     accountId: () => DUMMY_ADDRESS,
     sequenceNumber: () => '0',
     incrementSequenceNumber: () => undefined,
   }));
 
-  const tx = new TransactionBuilder(account as Parameters<typeof TransactionBuilder>[0], {
-    fee: BASE_FEE,
-    networkPassphrase: NETWORK_PASSPHRASE,
-  })
-    .addOperation(operation)
-    .setTimeout(30)
-    .build();
+  const tx = buildTransaction(account as Parameters<typeof buildTransaction>[0], [operation]);
 
   const simResult = await server.simulateTransaction(tx);
 

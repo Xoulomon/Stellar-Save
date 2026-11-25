@@ -1,8 +1,7 @@
 import { Box, Stack, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
-import ErrorIllustrationPng from '../img/something_went_wrong.png';
-import ErrorIllustrationWebp from '../img/something_went_wrong.png?format=webp&as=url';
+import { errorIllustration, OptimizedImage } from '../assets';
 import { AppButton, AppCard } from '../ui';
 
 export default function ErrorPage() {
@@ -33,16 +32,10 @@ export default function ErrorPage() {
         }}
       >
         <Stack spacing={0} alignItems="center">
-          <picture>
-            <source srcSet={ErrorIllustrationWebp} type="image/webp" />
-            <Box
-              component="img"
-              src={ErrorIllustrationPng}
-              alt="Error Illustration"
-              loading="lazy"
-              sx={{ width: '100%', maxWidth: 400 }}
-            />
-          </picture>
+          <OptimizedImage
+            {...errorIllustration}
+            style={{ width: '100%', maxWidth: 400 }}
+          />
 
           <Box sx={{ position: 'relative', top: '-30px', textAlign: 'center' }}>
             <Typography variant="h2" gutterBottom>

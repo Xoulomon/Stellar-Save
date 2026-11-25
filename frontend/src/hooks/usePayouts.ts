@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
+import { useCancellableRequest } from './useCancellableRequest';
 import { useContract } from './useContract';
 
 import type { PayoutEntry, PayoutQueueData, PayoutStatus } from '../types/contribution';
@@ -57,7 +58,7 @@ export function usePayouts(groupId: string | number | null | undefined): UsePayo
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchIdRef = useRef(0);
+  const { begin } = useCancellableRequest();
 
   const load = useCallback(
     async (rawGroupId: string | number | null | undefined, bust = false) => {
@@ -92,7 +93,7 @@ export function usePayouts(groupId: string | number | null | undefined): UsePayo
         return;
       }
 
-      const fetchId = ++fetchIdRef.current;
+      const request = begin();
       setIsLoading(true);
       setError(null);
 
@@ -100,7 +101,7 @@ export function usePayouts(groupId: string | number | null | undefined): UsePayo
         const schedule = await getPayoutSchedule(groupIdBigInt);
         const groupData = await getGroup(groupIdBigInt);
 
-        if (fetchId !== fetchIdRef.current) return;
+        if (!request.isActive()) return;
 
         const currentCycle = Math.max(0, toNumber(groupData.current_cycle, 0));
         const contributionAmountStroops = toBigInt(groupData.contribution_amount, 0n);
@@ -154,16 +155,17 @@ export function usePayouts(groupId: string | number | null | undefined): UsePayo
           fetchedAt: Date.now(),
         });
       } catch (err) {
+        if (!request.isActive()) return;
         setError(err instanceof Error && err.message ? err.message : 'Unable to load payout data');
         setQueue(null);
         setHistory([]);
       } finally {
-        if (fetchId === fetchIdRef.current) {
+        if (request.isActive()) {
           setIsLoading(false);
         }
       }
     },
-    [getGroup, getPayoutSchedule]
+    [begin, getGroup, getPayoutSchedule]
   );
 
   useEffect(() => {

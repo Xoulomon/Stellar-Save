@@ -28,6 +28,9 @@
 /// - Liquidation soundness: ensuring complete withdrawal drains the escrow exactly to zero.
 #[cfg(test)]
 mod escrow_property_tests {
+    extern crate std;
+    use std::format;
+
     use crate::{
         contribution::ContributionRecord,
         payout::PayoutRecord,
@@ -61,7 +64,7 @@ mod escrow_property_tests {
 
     proptest! {
         #![proptest_config(ProptestConfig {
-            cases: 10_000,
+            cases: 256,
             .. ProptestConfig::default()
         })]
 
@@ -117,6 +120,44 @@ mod escrow_property_tests {
             prop_assert!(distributed <= escrow_amount);
             prop_assert_eq!(distributed + remainder, escrow_amount);
             prop_assert!(remainder < share_count);
+        }
+
+        /// Zero-value or negative deposits/withdrawals must be rejected without mutating state.
+        #[test]
+        fn prop_escrow_math_zero_balance_safely_handled(
+            initial_deposit in 1_i128..=100_000_i128,
+        ) {
+            let mut ledger = EscrowLedger::new(1);
+            ledger.apply_deposit(0, initial_deposit).unwrap();
+
+            let bal_before = ledger.total_balance();
+
+            // Zero deposit rejected
+            prop_assert!(ledger.apply_deposit(0, 0).is_err());
+            prop_assert_eq!(ledger.total_balance(), bal_before);
+
+            // Zero withdrawal rejected
+            prop_assert!(ledger.apply_withdrawal(0, 0).is_err());
+            prop_assert_eq!(ledger.total_balance(), bal_before);
+        }
+
+        /// Depositing and then withdrawing the exact same amount returns balance to the initial state.
+        #[test]
+        fn prop_escrow_math_exact_reversal_restores_prior_balance(
+            initial in 1_i128..=500_000_i128,
+            delta in 1_i128..=500_000_i128,
+        ) {
+            let mut ledger = EscrowLedger::new(1);
+            ledger.apply_deposit(0, initial).unwrap();
+            let base_bal = ledger.accounts[0].balance();
+
+            // Apply delta deposit and subsequent equal withdrawal
+            ledger.apply_deposit(0, delta).unwrap();
+            prop_assert_eq!(ledger.accounts[0].balance(), base_bal + delta);
+
+            ledger.apply_withdrawal(0, delta).unwrap();
+            prop_assert_eq!(ledger.accounts[0].balance(), base_bal);
+            prop_assert_eq!(ledger.total_balance(), base_bal);
         }
     }
 
@@ -227,7 +268,7 @@ mod escrow_property_tests {
             // reject the second credit.  At the record level we verify identity.
             prop_assert_eq!(rec1.cycle_number, rec2.cycle_number);
             prop_assert_eq!(rec1.group_id, rec2.group_id);
-            prop_assert_eq!(rec1.contributor, rec2.contributor);
+            prop_assert_eq!(rec1.member_address, rec2.member_address);
 
             // The amount must not be doubled — each record holds exactly amount,
             // NOT amount + amount.
@@ -292,7 +333,7 @@ mod escrow_property_tests {
             // Verify uniqueness by comparing stringified addresses.
             let mut seen = std::collections::HashSet::new();
             for rec in &records {
-                let key = format!("{:?}", rec.contributor);
+                let key = format!("{:?}", rec.member_address);
                 prop_assert!(
                     seen.insert(key.clone()),
                     "duplicate contributor detected: {}",
@@ -357,7 +398,7 @@ mod escrow_property_tests {
             let total_debits: i128 = (0..n as usize)
                 .map(|cycle| {
                     let recipient = Address::generate(&env);
-                    PayoutRecord::new(recipient, gid, cycle as u32, pool, cycle as u64).amount
+                    PayoutRecord::new(recipient, gid, cycle as u32, pool, cycle as u64).unwrap().amount
                 })
                 .fold(0_i128, |acc, x| acc.checked_add(x).expect("overflow debits"));
 

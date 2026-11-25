@@ -43,12 +43,3 @@ declare module 'jest-axe' {
     ): { pass: boolean; message(): string };
   };
 }
-
-declare module 'vitest' {
-  interface Assertion {
-    toHaveNoViolations(): void;
-  }
-  interface AsymmetricMatchersContaining {
-    toHaveNoViolations(): void;
-  }
-}

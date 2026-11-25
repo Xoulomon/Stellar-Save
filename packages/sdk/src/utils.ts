@@ -1,44 +1,31 @@
 /**
- * Shared formatting, validation, and date utilities for Stellar Save.
+ * SDK utilities — Stellar-Save.
  *
- * Platform-agnostic — works in React (web), React Native (mobile), and Node.js.
- * Both the frontend (frontend/src) and mobile (mobile/src) import from here
- * instead of maintaining independent copies.
+ * Generic display formatting (formatAmount, formatDate, formatAddress) has
+ * moved to @stellar-save/shared-utils/formatting, which is the single source
+ * of truth used by this package, the frontend, and the backend.
+ *
+ * Re-exporting from here preserves full backwards compatibility for existing
+ * SDK consumers — no import paths need to change.
+ *
+ * Only Stellar-specific helpers (CRC16 address validation, stroops conversion)
+ * remain implemented in this file.
  */
 
-// ── Amount formatting ─────────────────────────────────────────────────────────
+// ── Re-exports from shared-utils (single source of truth) ────────────────────
 
-export interface FormatAmountOptions {
-  /** Decimal places to display (default: 7) */
-  decimals?: number;
-  /** Currency symbol to append (default: 'XLM') */
-  symbol?: string;
-  /** Whether to append the symbol (default: true) */
-  showSymbol?: boolean;
-}
+export {
+  formatAmount,
+  type FormatAmountOptions,
+  formatDate,
+  type FormatDateOptions,
+  formatAddress,
+  type FormatAddressOptions,
+} from '@stellar-save/shared-utils';
 
-/**
- * Format a raw numeric amount for display.
- *
- * @example
- * formatAmount(100.5)              // "100.5 XLM"
- * formatAmount(100, { symbol: 'USDC' }) // "100 USDC"
- * formatAmount('invalid')          // "0 XLM"
- */
-export function formatAmount(
-  amount: number | string,
-  { decimals = 7, symbol = 'XLM', showSymbol = true }: FormatAmountOptions = {}
-): string {
-  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-  if (isNaN(num)) return showSymbol ? `0 ${symbol}` : '0';
+// ── Stellar-specific: stroops conversion ──────────────────────────────────────
 
-  const formatted = num.toLocaleString('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: decimals,
-  });
-
-  return showSymbol ? `${formatted} ${symbol}` : formatted;
-}
+import { formatAmount } from '@stellar-save/shared-utils';
 
 /**
  * Convert stroops (1e-7 XLM) to XLM and format for display.
@@ -48,37 +35,13 @@ export function formatAmount(
  */
 export function formatStroops(
   stroops: bigint | number,
-  options: FormatAmountOptions = {}
+  options: import('@stellar-save/shared-utils').FormatAmountOptions = {},
 ): string {
   const xlm = Number(stroops) / 1e7;
   return formatAmount(xlm, { decimals: 2, ...options });
 }
 
-// ── Address formatting ────────────────────────────────────────────────────────
-
-export interface FormatAddressOptions {
-  /** Characters to show at the start (default: 6) */
-  prefixChars?: number;
-  /** Characters to show at the end (default: 4) */
-  suffixChars?: number;
-}
-
-/**
- * Truncate a Stellar public key for compact display.
- *
- * @example
- * formatAddress('GAAZI4TCR3TY5OJHCTJC2A4QSY5MGZTPVAJFO3T55V3L7RPLM3U6VJ6Q')
- * // "GAAZI4...J6Q"
- */
-export function formatAddress(
-  address: string,
-  { prefixChars = 6, suffixChars = 4 }: FormatAddressOptions = {}
-): string {
-  if (!address || address.length <= prefixChars + suffixChars) return address;
-  return `${address.slice(0, prefixChars)}...${address.slice(-suffixChars)}`;
-}
-
-// ── Address validation ────────────────────────────────────────────────────────
+// ── Stellar-specific: address validation (CRC16-XMODEM + StrKey) ─────────────
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
@@ -86,7 +49,6 @@ const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 function crc16(data: Uint8Array): number {
   let crc = 0;
   for (let i = 0; i < data.length; i++) {
-    // noUncheckedIndexedAccess: byte is always defined because `i < data.length`
     const byte = data[i] ?? 0;
     crc ^= byte << 8;
     for (let j = 0; j < 8; j++) {
@@ -103,14 +65,12 @@ function base32Decode(input: string): Uint8Array | null {
 
   let bits = '';
   for (let i = 0; i < input.length; i++) {
-    // noUncheckedIndexedAccess: char is always defined because `i < input.length`
     const char = input[i] ?? '';
     const value = BASE32_ALPHABET.indexOf(char);
     if (value === -1) return null;
     bits += value.toString(2).padStart(5, '0');
   }
 
-  // 56 chars × 5 bits = 280 bits → 35 bytes (version + 32-byte key + 2-byte CRC)
   if (bits.length !== 280) return null;
 
   const bytes = new Uint8Array(35);
@@ -148,13 +108,11 @@ export function validateAddress(address: string): ValidateAddressResult {
     return { valid: false, error: 'Invalid base32 characters' };
   }
 
-  // Version byte for a Stellar account (G-address) is 6 << 3 = 48
   if (bytes[0] !== 6 << 3) {
     return { valid: false, error: 'Invalid version byte' };
   }
 
   const expectedCrc = crc16(bytes.slice(0, 33));
-  // noUncheckedIndexedAccess: indices 33 and 34 are always present (bytes has 35 elements)
   const actualCrc = ((bytes[33] ?? 0) << 8) | (bytes[34] ?? 0);
   if (expectedCrc !== actualCrc) {
     return { valid: false, error: 'Checksum mismatch' };
@@ -168,67 +126,14 @@ export function isValidStellarAddress(address: string): boolean {
   return validateAddress(address).valid;
 }
 
-// ── Date utilities ────────────────────────────────────────────────────────────
-
-export interface FormatDateOptions {
-  /** 'relative' (default) or 'absolute' */
-  mode?: 'relative' | 'absolute';
-  /** Locale for formatting (default: 'en-US') */
-  locale?: string;
-}
+// ── Shared formatDistanceToNow (kept for SDK backwards compat) ────────────────
 
 /**
- * Format a timestamp as a human-readable relative or absolute date.
+ * Format a past date as "X minutes ago", "X hours ago", etc.
  *
- * @example
- * formatDate(Date.now() - 60_000)          // "1 minute ago"
- * formatDate(someDate, { mode: 'absolute' }) // "Jan 15, 2024, 3:45 PM"
- *
- * @throws {Error} if the input cannot be parsed as a valid date
+ * @deprecated Prefer `formatDate` from @stellar-save/shared-utils for new
+ * code. This helper remains for SDK consumers that call it directly.
  */
-export function formatDate(
-  input: string | number | Date,
-  { mode = 'relative', locale = 'en-US' }: FormatDateOptions = {}
-): string {
-  const date = input instanceof Date ? input : new Date(input);
-  if (isNaN(date.getTime())) throw new Error('Invalid date input');
-
-  if (mode === 'absolute') {
-    return date.toLocaleDateString(locale, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: true,
-    });
-  }
-
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSeconds = Math.floor(Math.abs(diffMs) / 1000);
-
-  // Future date within 1 week → compact countdown
-  if (diffMs < 0 && diffSeconds < 7 * 24 * 60 * 60) {
-    const days = Math.floor(diffSeconds / 86400);
-    const hours = Math.floor((diffSeconds % 86400) / 3600);
-    const minutes = Math.floor((diffSeconds % 3600) / 60);
-    if (days > 0) return `${days}d ${hours}h`;
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
-  }
-
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
-  if (diffSeconds < 60) return rtf.format(-Math.floor(diffSeconds), 'second');
-  if (diffSeconds < 3600) return rtf.format(-Math.floor(diffSeconds / 60), 'minute');
-  if (diffSeconds < 86400) return rtf.format(-Math.floor(diffSeconds / 3600), 'hour');
-  if (diffSeconds < 30 * 86400) return rtf.format(-Math.floor(diffSeconds / 86400), 'day');
-  if (diffSeconds < 365 * 86400) return rtf.format(-Math.floor(diffSeconds / (30 * 86400)), 'month');
-
-  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-/** Format a past date as "X minutes ago", "X hours ago", etc. */
 export function formatDistanceToNow(date: Date | number | string): string {
   const past = date instanceof Date ? date : new Date(date);
   const diffSeconds = Math.floor((Date.now() - past.getTime()) / 1000);

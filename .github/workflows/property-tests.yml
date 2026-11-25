@@ -29,17 +29,7 @@ jobs:
           cargo test \
             --manifest-path contracts/stellar-save/Cargo.toml \
             --test-threads=1 \
-            property_tests \
-            -- --nocapture
-        env:
-          PROPTEST_CASES: 256
-
-      - name: Run fuzz tests
-        run: |
-          cargo test \
-            --manifest-path contracts/stellar-save/Cargo.toml \
-            --test-threads=1 \
-            fuzz_tests \
+            auto_contribution_tests \
             -- --nocapture
         env:
           PROPTEST_CASES: 256

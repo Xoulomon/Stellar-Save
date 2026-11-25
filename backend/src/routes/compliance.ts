@@ -9,6 +9,7 @@ import {
 } from '../aml_service';
 import { adminAuthMiddleware, jwtAuthMiddleware } from '../modules/auth/auth_middleware';
 import { AppError } from '../lib/errors';
+import { parseOffsetParams, paginateArray } from '../lib/pagination';
 import {
   createEnvelope,
   createEnvelopeWithPagination,
@@ -46,9 +47,19 @@ export function createComplianceRouter(): Router {
   );
 
   // GET /compliance/queue
-  router.get('/queue', adminAuthMiddleware, (_req: AuthenticatedRequest, res: Response) => {
-    return res.json(createEnvelopeWithPagination(getFlaggedTransactions()));
-  });
+  router.get(
+    '/queue',
+    adminAuthMiddleware,
+    (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      try {
+        const params = parseOffsetParams(req.query as Record<string, unknown>);
+        const result = paginateArray(getFlaggedTransactions(), params);
+        return res.json(createEnvelopeWithPagination(result));
+      } catch (err: unknown) {
+        return next(err);
+      }
+    }
+  );
 
   // POST /compliance/flags/:id/review
   router.post(
@@ -74,9 +85,19 @@ export function createComplianceRouter(): Router {
   );
 
   // GET /compliance/audit-log
-  router.get('/audit-log', adminAuthMiddleware, (_req: AuthenticatedRequest, res: Response) => {
-    return res.json(createEnvelopeWithPagination(getAuditLog()));
-  });
+  router.get(
+    '/audit-log',
+    adminAuthMiddleware,
+    (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      try {
+        const params = parseOffsetParams(req.query as Record<string, unknown>);
+        const result = paginateArray(getAuditLog(), params);
+        return res.json(createEnvelopeWithPagination(result));
+      } catch (err: unknown) {
+        return next(err);
+      }
+    }
+  );
 
   return router;
 }

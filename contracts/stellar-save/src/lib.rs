@@ -51,7 +51,8 @@ pub mod governance;
 pub mod group;
 pub mod helpers;
 pub mod migration;
-pub mod migrations;
+pub mod milestones;
+pub mod pause;
 pub mod payout;
 pub mod payout_executor;
 pub mod penalty;
@@ -67,6 +68,8 @@ pub mod storage_optimization;
 pub mod time_source;
 pub mod token;
 pub mod types;
+pub mod validation;
+pub mod xlm;
 // ZK proof verification (Ed25519 Phase-1 scheme, zk/CIRCUIT_AUDIT.md).
 // Excluded from the default build — enable with `--features zk`.
 // The circuit audit must close (issue #1327) before this ships by default.
@@ -89,6 +92,8 @@ pub mod templates;
 // mod invitation_tests;
 #[cfg(test)]
 pub mod test_utils;
+#[cfg(test)]
+mod escrow_property_tests;
 // mod merge_tests;
 // mod migration_matrix_tests;
 // mod migration_tests;
@@ -100,9 +105,9 @@ pub mod test_utils;
 // ZK test modules — only compiled when the `zk` feature is active.
 // Run with: cargo test -p stellar-save --features zk
 #[cfg(all(test, feature = "zk"))]
-mod zk_tests;
-#[cfg(all(test, feature = "zk"))]
 mod zk_integration_tests;
+#[cfg(all(test, feature = "zk"))]
+mod zk_tests;
 
 // ── Re-exports ────────────────────────────────────────────────────────────────
 pub use auth::{is_active_member, require_admin, require_creator, require_member};
@@ -116,4 +121,3 @@ pub use group::{Group, GroupStatus};
 pub use payout::PayoutRecord;
 pub use storage::StorageKeyBuilder;
 pub use types::{ContractConfig, MemberProfile};
-

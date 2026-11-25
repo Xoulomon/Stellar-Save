@@ -1,3 +1,4 @@
+
 [package]
 name = "stellar-save"
 description = "Rotational Savings and Credit Association (ROSCA) on Stellar Soroban"
@@ -14,10 +15,13 @@ doctest = false
 [dependencies]
 soroban-sdk = { workspace = true }
 stellar-save-common = { workspace = true }
+# Optional: enabled only with the `zk` feature flag (see [features] below).
+ed25519-dalek = { version = "2", optional = true, default-features = false }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
 proptest = { version = "1.4.0", default-features = false, features = ["std"] }
+stellar-save-common = { workspace = true, features = ["testutils"] }
 
 [features]
 # Enable coverage instrumentation (used by cargo-tarpaulin / cargo-llvm-cov)
@@ -46,7 +50,7 @@ coverage = []
 #                        • zk_proof.rs and its verify_contribution_proof call site in
 #                          contract.rs are compiled in.
 #                        • zk_tests.rs and zk_integration_tests.rs are compiled and run.
-#                        • ed25519-dalek dev-dependency becomes available.
+#                        • ed25519-dalek optional dependency becomes available.
 #                      To run the ZK test suite:
 #                        cargo test -p stellar-save --features zk
 group-templates = []

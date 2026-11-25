@@ -11,6 +11,8 @@
  *   import { config } from './config';
  *   config.port          // number
  *   config.backup.bucket // string
+ *
+ * See backend/docs/environment-configuration.md for the environment-variable matrix.
  */
 
 import dotenv from 'dotenv';
@@ -331,14 +333,8 @@ function getDatabaseUrl(envData: z.infer<typeof envSchema>): string {
     return `postgresql://${envData.DB_USERNAME}:${envData.DB_PASSWORD}@${envData.DB_HOST}:${envData.DB_PORT}/${envData.DB_NAME}`;
   }
 
-  // Fallback for local development
-  process.stderr.write(
-    JSON.stringify({
-      level: 'warn',
-      message:
-        'Neither DATABASE_URL nor complete DB_* variables provided; using default local connection',
-    }) + '\n'
-  );
+  // Fallback for local development. This is the single source of truth for the
+  // default local connection string; callers must not duplicate it.
   return 'postgresql://user:pass@localhost:5432/stellar_save';
 }
 
@@ -562,11 +558,12 @@ export const config: Config = buildConfig(env);
 /**
  * Updates a sensitive secret in memory (e.g. when pulled from AWS Secrets Manager)
  * without directly mutating process.env.
+ *
+ * Note: `DB_PASSWORD` is intentionally not supported here. It is only consumed
+ * once at startup to construct `database.url`; mutating it afterwards would have
+ * no effect on the already-built connection string.
  */
-export function updateConfigSecret(
-  key: 'JWT_SECRET' | 'ADMIN_SECRET' | 'DB_PASSWORD',
-  value: string
-): void {
+export function updateConfigSecret(key: 'JWT_SECRET' | 'ADMIN_SECRET', value: string): void {
   if (key === 'JWT_SECRET') {
     (config.auth as { jwtSecret: string }).jwtSecret = value;
   } else if (key === 'ADMIN_SECRET') {

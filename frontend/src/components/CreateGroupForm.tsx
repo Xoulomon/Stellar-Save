@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { Button } from './Button';
+import { FormField } from './FormField';
 import { Input } from './Input';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import {
@@ -218,14 +219,13 @@ export function CreateGroupForm({
             aria-required="true"
             disabled={isSubmitting}
           />
-          <div className="input-wrapper">
-            <label htmlFor="cycleDuration" className="input-label">
-              Cycle Duration <span aria-hidden="true">*</span>
-            </label>
-            <p className="input-helper">
-              How often contributions are collected — weekly works well for small groups, monthly
-              for larger ones
-            </p>
+          <FormField
+            id="cycleDuration"
+            label="Cycle Duration"
+            required
+            error={errors['cycleDuration']}
+            helperText="How often contributions are collected — weekly works well for small groups, monthly for larger ones"
+          >
             <select
               id="cycleDuration"
               className={`cycle-select${errors['cycleDuration'] ? ' cycle-select--error' : ''}`}
@@ -233,6 +233,11 @@ export function CreateGroupForm({
               onChange={(e) => updateField('cycleDuration', e.target.value)}
               aria-required="true"
               aria-invalid={errors['cycleDuration'] ? 'true' : undefined}
+              aria-describedby={
+                errors['cycleDuration']
+                  ? 'cycleDuration-error'
+                  : 'cycleDuration-helper'
+              }
               disabled={isSubmitting}
             >
               <option value="">Select cycle duration</option>
@@ -242,12 +247,7 @@ export function CreateGroupForm({
                 </option>
               ))}
             </select>
-            {errors['cycleDuration'] && (
-              <span className="input-error" role="alert">
-                {errors['cycleDuration']}
-              </span>
-            )}
-          </div>
+          </FormField>
         </div>
       )}
 

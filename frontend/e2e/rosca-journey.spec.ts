@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { injectMockWallet, TEST_ACCOUNTS } from './helpers/stellar-standalone';
+import { injectMockWallet } from './helpers/stellar-standalone';
 
 import type { Page } from '@playwright/test';
 
@@ -31,7 +31,9 @@ test.describe.serial('@journey ROSCA full journey', () => {
   test('landing page loads and shows key content', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle(/stellar.save/i);
-    await expect(page.getByRole('heading', { name: /save together|stellar save/i }).first()).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /save together|stellar save/i }).first()
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: /get started/i }).first()).toBeVisible();
   });
 
@@ -44,49 +46,35 @@ test.describe.serial('@journey ROSCA full journey', () => {
     await connectWallet(page);
 
     const nameField = page.getByLabel(/group name/i);
-    if (!(await nameField.isVisible({ timeout: 5_000 }).catch(() => false))) {
-      test.skip(true, 'Group creation UI not yet implemented');
-      return;
-    }
+    await expect(nameField).toBeVisible({ timeout: 5_000 });
 
     // Step 1: group details
     await nameField.fill('E2E Savings Circle');
-    const descField = page.getByLabel(/description/i);
-    if (await descField.isVisible().catch(() => false)) {
-      await descField.fill('Automated E2E test group');
-    }
-    await page.getByRole('button', { name: /next/i }).click();
+    await page.getByLabel(/description/i).fill('Automated E2E test group');
+    await page.getByRole('button', { name: /^next$/i }).click();
 
-    // Step 2: contribution settings
+    // Step 2: financial settings
     const amountField = page.getByLabel(/contribution amount/i);
     await expect(amountField).toBeVisible({ timeout: 5_000 });
-    await amountField.fill('100');
+    await amountField.fill('50');
+    await page.getByRole('combobox').selectOption('604800');
+    await page.getByRole('button', { name: /^next$/i }).click();
 
-    const maxMembersField = page.getByLabel(/max members/i);
-    if (await maxMembersField.isVisible().catch(() => false)) {
-      await maxMembersField.fill('2');
-    }
+    // Step 3: member settings
+    await page.getByLabel(/maximum members/i).fill('8');
+    await page.getByLabel(/minimum members/i).fill('2');
+    await page.getByRole('button', { name: /^next$/i }).click();
 
-    const cycleDurationField = page.getByLabel(/cycle duration/i);
-    if (await cycleDurationField.isVisible().catch(() => false)) {
-      await cycleDurationField.fill('7');
-    }
+    // Step 4: insurance (disabled by default)
+    await page.getByRole('button', { name: /^next$/i }).click();
 
-    await page.getByRole('button', { name: /next|create|submit/i }).last().click();
+    // Step 5: review and submit
+    await expect(page.getByRole('heading', { name: /review & confirm/i })).toBeVisible();
+    await page.getByRole('button', { name: /create group/i }).click();
+    await expect(page.getByRole('status')).toContainText(/group created successfully/i);
 
-    // Wait for success — either a redirect to the group page or a success message
-    await page.waitForLoadState('networkidle');
-    const successMsg = page.getByText(/group created|success/i);
-    const groupUrl = page.url();
-
-    const succeeded = await successMsg.isVisible({ timeout: 10_000 }).catch(() => false)
-      || groupUrl.includes('/groups/');
-
-    expect(succeeded, 'Expected group creation to succeed').toBe(true);
-
-    // Capture group ID from URL if available
-    const match = page.url().match(/\/groups\/([^/?#]+)/);
-    if (match) groupId = match[1];
+    await expect(page).toHaveURL(/\/groups\/mock-group-id$/, { timeout: 5_000 });
+    groupId = 'mock-group-id';
   });
 
   test('member: join the created group', async ({ page }) => {
@@ -117,9 +105,9 @@ test.describe.serial('@journey ROSCA full journey', () => {
       await page.waitForLoadState('networkidle');
     }
 
-    await expect(
-      page.getByText(/joined|member|you are a member/i).first()
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/joined|member|you are a member/i).first()).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
   test('creator: contribute to the group', async ({ page }) => {
@@ -148,9 +136,9 @@ test.describe.serial('@journey ROSCA full journey', () => {
     await confirmBtn.click();
     await page.waitForLoadState('networkidle');
 
-    await expect(
-      page.getByText(/contributed|success|transaction/i).first()
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/contributed|success|transaction/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   test('member: contribute to the group', async ({ page }) => {
@@ -178,9 +166,9 @@ test.describe.serial('@journey ROSCA full journey', () => {
     await confirmBtn.click();
     await page.waitForLoadState('networkidle');
 
-    await expect(
-      page.getByText(/contributed|success|transaction/i).first()
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/contributed|success|transaction/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   test('payout executes after all members contribute', async ({ page }) => {
@@ -209,8 +197,8 @@ test.describe.serial('@journey ROSCA full journey', () => {
     }
 
     // Either a payout success message or the cycle advancing is sufficient
-    await expect(
-      page.getByText(/payout|cycle|recipient|distributed/i).first()
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/payout|cycle|recipient|distributed/i).first()).toBeVisible({
+      timeout: 20_000,
+    });
   });
 });

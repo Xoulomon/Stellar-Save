@@ -1,26 +1,16 @@
-import {
-  TransactionBuilder,
-  BASE_FEE,
-  Operation,
-  Networks,
-  SorobanRpc,
-  Contract,
-  Asset,
-} from '@stellar/stellar-sdk';
+import { Operation, SorobanRpc, Contract, Asset } from '@stellar/stellar-sdk';
+
+import { buildTransaction, DUMMY_ADDRESS } from './transactionSigningService';
+import { logger } from '../lib/logger';
+import { rpcServer } from '../lib/rpcClient';
 
 import type {
   TransactionBuilderStep,
   SimulationResult,
   TransactionTemplate,
 } from '../types/transactionBuilder';
-import { env } from '../lib/env';
-import { rpcServer } from '../lib/rpcClient';
-
-const NETWORK_PASSPHRASE =
-  env.VITE_STELLAR_NETWORK === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
 
 const TEMPLATES_STORAGE_KEY = 'stellar-save:tx-templates';
-const DUMMY_ADDRESS = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN';
 
 function buildOperations(steps: TransactionBuilderStep[]) {
   const ops: ReturnType<typeof Operation.payment>[] = [];
@@ -98,16 +88,7 @@ export async function simulateTransaction(
       incrementSequenceNumber: () => undefined,
     }));
 
-    const builder = new TransactionBuilder(account as Parameters<typeof TransactionBuilder>[0], {
-      fee: BASE_FEE,
-      networkPassphrase: NETWORK_PASSPHRASE,
-    });
-
-    for (const op of ops) {
-      builder.addOperation(op);
-    }
-
-    const built = builder.setTimeout(30).build();
+    const built = buildTransaction(account as Parameters<typeof buildTransaction>[0], ops);
     const simResult = await server.simulateTransaction(built);
 
     if (SorobanRpc.Api.isSimulationError(simResult)) {
@@ -211,7 +192,7 @@ export function saveTemplate(template: TransactionTemplate): void {
     }
     localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
   } catch {
-    console.warn('Failed to save template');
+    logger.warn('Failed to save template');
   }
 }
 
@@ -233,7 +214,7 @@ export function deleteTemplate(id: string): void {
       JSON.stringify(templates.filter((t) => t.id !== id))
     );
   } catch {
-    console.warn('Failed to delete template');
+    logger.warn('Failed to delete template');
   }
 }
 
