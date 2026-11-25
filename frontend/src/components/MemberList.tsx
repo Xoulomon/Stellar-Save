@@ -1,4 +1,5 @@
 import { formatAddress } from '@shared-utils/formatting';
+import { memo, useState, useMemo } from 'react';
 import { useState, useMemo } from 'react';
 
 import './MemberList.css';
@@ -24,6 +25,33 @@ function truncateAddress(address: string): string {
   if (address.length <= 12) return address;
   return formatAddress(address);
 }
+
+/**
+ * A single row. Memoized so that re-sorting or a parent re-render with
+ * unchanged member objects does not re-render every row.
+ */
+const MemberRow = memo(function MemberRow({ member }: { member: Member }) {
+  return (
+    <div className="member-row">
+      <div className="member-info">
+        <Avatar name={member.address} size="sm" />
+        <span className="member-address" title={member.address}>
+          {truncateAddress(member.address)}
+        </span>
+      </div>
+      <div className="member-status">
+        <Badge variant={member.hasContributed ? 'success' : 'secondary'} size="sm">
+          {member.hasContributed ? '✓' : '○'}
+        </Badge>
+      </div>
+      <div className="member-status">
+        <Badge variant={member.hasPaidOut ? 'success' : 'secondary'} size="sm">
+          {member.hasPaidOut ? '✓' : '○'}
+        </Badge>
+      </div>
+    </div>
+  );
+});
 
 export function MemberList({ members, className = '' }: MemberListProps) {
   const [sortField, setSortField] = useState<SortField>('address');
@@ -96,24 +124,7 @@ export function MemberList({ members, className = '' }: MemberListProps) {
 
         <div className="member-list-body">
           {sortedMembers.map((member) => (
-            <div key={member.address} className="member-row">
-              <div className="member-info">
-                <Avatar name={member.address} size="sm" />
-                <span className="member-address" title={member.address}>
-                  {truncateAddress(member.address)}
-                </span>
-              </div>
-              <div className="member-status">
-                <Badge variant={member.hasContributed ? 'success' : 'secondary'} size="sm">
-                  {member.hasContributed ? '✓' : '○'}
-                </Badge>
-              </div>
-              <div className="member-status">
-                <Badge variant={member.hasPaidOut ? 'success' : 'secondary'} size="sm">
-                  {member.hasPaidOut ? '✓' : '○'}
-                </Badge>
-              </div>
-            </div>
+            <MemberRow key={member.address} member={member} />
           ))}
         </div>
       </div>
