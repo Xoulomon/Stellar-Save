@@ -1,10 +1,20 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { makeMember } from './factories';
 import { MemberList } from '../components/MemberList';
 
+
 import type { Member } from '../components/MemberList';
+
+const avatarRenders = vi.hoisted(() => vi.fn());
+vi.mock('../components/Avatar', () => ({
+  Avatar: ({ name }: { name: string }) => {
+    avatarRenders(name);
+    return <span data-testid="avatar" />;
+  },
+}));
 
 const mockMembers: Member[] = [
   makeMember({ address: 'GABC123DEF456GHI789JKL012MNO345PQR678STU901VWX234YZA567BCD890' }) as unknown as Member,
@@ -94,5 +104,35 @@ describe('MemberList', () => {
       'title',
       'GABC123DEF456GHI789JKL012MNO345PQR678STU901VWX234YZA567BCD890'
     );
+  });
+
+  describe('row memoization', () => {
+    beforeEach(() => avatarRenders.mockClear());
+
+    it('does not re-render rows when re-sorting', async () => {
+      const user = userEvent.setup();
+      render(<MemberList members={mockMembers} />);
+      expect(avatarRenders).toHaveBeenCalledTimes(mockMembers.length);
+
+      await user.click(screen.getByLabelText('Sort by address'));
+      expect(screen.getByLabelText('Sort by address')).toHaveTextContent('↓');
+      expect(avatarRenders).toHaveBeenCalledTimes(mockMembers.length);
+    });
+
+    it('does not re-render unchanged rows when the list is re-rendered', () => {
+      const { rerender } = render(<MemberList members={mockMembers} />);
+      avatarRenders.mockClear();
+      rerender(<MemberList members={[...mockMembers]} className="x" />);
+      expect(avatarRenders).not.toHaveBeenCalled();
+    });
+
+    it('re-renders only the row whose data changed', () => {
+      const { rerender } = render(<MemberList members={mockMembers} />);
+      avatarRenders.mockClear();
+      const changed = { ...mockMembers[1], hasContributed: true };
+      rerender(<MemberList members={[mockMembers[0], changed, mockMembers[2]]} />);
+      expect(avatarRenders).toHaveBeenCalledTimes(1);
+      expect(avatarRenders).toHaveBeenCalledWith(mockMembers[1].address);
+    });
   });
 });
