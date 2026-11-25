@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /** Serialization layer mapping internal DB models to API-facing response shapes. */
 
 /**
@@ -31,26 +33,30 @@ type InferSchema<S extends Record<string, string>> = {
 
 export type ContractEventDTO = InferSchema<typeof contractEventSchema>;
 
+const schemaValidators = {
+  string: z.string(),
+  number: z.number(),
+  unknown: z.custom<unknown>((value) => value !== undefined),
+} as const;
+
+const contractEventShape = Object.fromEntries(
+  Object.entries(contractEventSchema).map(([field, type]) => [field, schemaValidators[type]])
+) as z.ZodRawShape;
+
+const contractEventRecordSchema = z.object({
+  ...contractEventShape,
+  timestamp: z.date(),
+}) as unknown as z.ZodType<Omit<ContractEventDTO, 'timestamp'> & { timestamp: Date }>;
+
 /**
  * Maps a raw `ContractEvent` DB row to its public response shape, omitting
  * internal-only fields (`id`, `createdAt`, `blockTime`) that consumers don't need.
  */
-export function toContractEventDTO(event: {
-  contractId: string;
-  eventType: string;
-  topics: unknown;
-  data: unknown;
-  txHash: string;
-  ledgerSeq: number;
-  timestamp: Date;
-}): ContractEventDTO {
+export function toContractEventDTO(event: unknown): ContractEventDTO {
+  const record = contractEventRecordSchema.parse(event);
+
   return {
-    contractId: event.contractId,
-    eventType: event.eventType,
-    topics: event.topics,
-    data: event.data,
-    txHash: event.txHash,
-    ledgerSeq: event.ledgerSeq,
-    timestamp: event.timestamp.toISOString(),
+    ...record,
+    timestamp: record.timestamp.toISOString(),
   };
 }

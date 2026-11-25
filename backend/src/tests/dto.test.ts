@@ -1,4 +1,4 @@
-import { toContractEventDTO } from '../dto';
+import { contractEventSchema, toContractEventDTO } from '../dto';
 
 describe('toContractEventDTO', () => {
   const dbRow = {
@@ -31,5 +31,36 @@ describe('toContractEventDTO', () => {
     expect(dto).not.toHaveProperty('id');
     expect(dto).not.toHaveProperty('createdAt');
     expect(dto).not.toHaveProperty('blockTime');
+  });
+
+  it('preserves the exported schema descriptor for existing consumers', () => {
+    expect(contractEventSchema).toEqual({
+      contractId: 'string',
+      eventType: 'string',
+      topics: 'unknown',
+      data: 'unknown',
+      txHash: 'string',
+      ledgerSeq: 'number',
+      timestamp: 'string',
+    });
+  });
+
+  it.each([
+    ['missing contractId', { ...dbRow, contractId: undefined }],
+    ['invalid eventType', { ...dbRow, eventType: 42 }],
+    ['invalid ledgerSeq', { ...dbRow, ledgerSeq: '42' }],
+    ['missing topics', { ...dbRow, topics: undefined }],
+    ['invalid timestamp', { ...dbRow, timestamp: '2026-01-01T00:00:00.000Z' }],
+    ['invalid Date', { ...dbRow, timestamp: new Date(Number.NaN) }],
+  ])('rejects invalid records (%s)', (_label, record) => {
+    expect(() => toContractEventDTO(record)).toThrow();
+  });
+
+  it('allows nullable JSON fields and unknown database columns', () => {
+    const dto = toContractEventDTO({ ...dbRow, topics: null, data: null, extra: 'internal' });
+
+    expect(dto.topics).toBeNull();
+    expect(dto.data).toBeNull();
+    expect(dto).not.toHaveProperty('extra');
   });
 });
