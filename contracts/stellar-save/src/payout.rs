@@ -23,7 +23,7 @@
 //!       (see payout_executor module doc for the full step list)
 //! ```
 
-use crate::error::StellarSaveError;
+use crate::errors::ContractError as StellarSaveError;
 use soroban_sdk::{contracttype, Address};
 
 /// Determines how the payout recipient is selected each cycle.

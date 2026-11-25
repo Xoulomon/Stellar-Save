@@ -1,6 +1,6 @@
 use soroban_sdk::{contracttype, vec, Env, String, Vec};
 
-use crate::error::{ContractResult, StellarSaveError};
+use crate::errors::{ContractError as StellarSaveError, ContractResult};
 use crate::group::Group;
 
 /// Template IDs for predefined group configurations.

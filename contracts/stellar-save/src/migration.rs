@@ -1,5 +1,5 @@
 use crate::{
-    error::StellarSaveError,
+    errors::ContractError as StellarSaveError,
     storage::{StorageKeyBuilder, STORAGE_VERSION},
 };
 use soroban_sdk::{symbol_short, Address, Env, Symbol};
@@ -506,10 +506,10 @@ pub fn initialize_contract_version(env: &Env) {
 pub fn require_upgrade_version_guard(
     env: &Env,
     new_version: u32,
-) -> Result<(), crate::error::StellarSaveError> {
+) -> Result<(), crate::errors::ContractError> {
     let current = get_contract_version(env);
     if new_version <= current {
-        return Err(crate::error::StellarSaveError::InvalidState);
+        return Err(crate::errors::ContractError::InvalidState);
     }
     Ok(())
 }
@@ -533,7 +533,7 @@ pub fn execute_upgrade(
     admin: Address,
     new_wasm: soroban_sdk::BytesN<32>,
     new_version: u32,
-) -> Result<(), crate::error::StellarSaveError> {
+) -> Result<(), crate::errors::ContractError> {
     let old_version = get_contract_version(env);
 
     // Guard: reject downgrade or double-upgrade

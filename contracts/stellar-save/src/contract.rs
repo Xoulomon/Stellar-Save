@@ -3,7 +3,7 @@
 //! All public methods delegate to the domain modules. This file is kept as
 //! a thin façade – no business logic should be added here.
 use crate::contribution::{ContributionPage, ContributionRecord};
-use crate::error::StellarSaveError;
+use crate::errors::ContractError as StellarSaveError;
 use crate::events::EventEmitter;
 use crate::group::{Group, GroupStatus};
 use crate::migration::{initialize_storage_version, migrate};

@@ -146,7 +146,7 @@ mod penalty_mutation_tests {
 
 #[cfg(test)]
 mod pool_mutation_tests {
-    use crate::error::StellarSaveError;
+    use crate::errors::ContractError as StellarSaveError;
     use crate::pool::{PoolCalculator, PoolInfo};
 
     fn make_pool(member_count: u32, contributors_count: u32, total: i128, current: i128) -> PoolInfo {

@@ -1,5 +1,5 @@
 use crate::contribution::ContributionRecord;
-use crate::error::StellarSaveError;
+use crate::errors::ContractError as StellarSaveError;
 use crate::events::EventEmitter;
 use crate::group::{Group, GroupStatus};
 use crate::storage::StorageKeyBuilder;

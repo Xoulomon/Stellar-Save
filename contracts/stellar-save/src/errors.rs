@@ -1,3 +1,16 @@
+//! Shared error module for the Stellar-Save contract.
+//!
+//! This is the **single source of truth** for all contract error types.
+//! All domain modules should import directly from this module:
+//!
+//! ```rust,ignore
+//! use crate::errors::{ContractError, ContractResult};
+//! ```
+//!
+//! [`StellarSaveError`] is a stable type alias for [`ContractError`] kept for
+//! backward compatibility with callers that already depend on that name.
+//! Prefer [`ContractError`] in new code.
+
 use soroban_sdk::{contracterror, contracttype};
 
 /// Comprehensive error types for Stellar-Save contract operations.
@@ -552,5 +565,385 @@ impl ErrorRecoveryStrategy {
             error.category(),
             ErrorCategory::Member | ErrorCategory::Contribution | ErrorCategory::Payout
         )
+    }
+}
+
+/// Backward-compatible type alias for [`ContractError`].
+///
+/// New code should use [`ContractError`] directly. This alias exists so that
+/// callers compiled against an earlier version of the crate continue to work
+/// without changes.
+pub type StellarSaveError = ContractError;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Category bucketing ────────────────────────────────────────────────────
+
+    #[test]
+    fn group_errors_map_to_group_category() {
+        let group_errors = [
+            ContractError::GroupNotFound,
+            ContractError::GroupFull,
+            ContractError::InvalidState,
+            ContractError::InvalidMetadata,
+            ContractError::MaxMembersExceeded,
+            ContractError::MergeIncompatible,
+            ContractError::DisputeActive,
+            ContractError::GroupNotArchivable,
+        ];
+        for e in group_errors {
+            assert_eq!(
+                e.category(),
+                ErrorCategory::Group,
+                "{e:?} should be ErrorCategory::Group"
+            );
+        }
+    }
+
+    #[test]
+    fn member_errors_map_to_member_category() {
+        let member_errors = [
+            ContractError::AlreadyMember,
+            ContractError::NotMember,
+            ContractError::Unauthorized,
+            ContractError::NotInvited,
+            ContractError::AlreadyVoted,
+        ];
+        for e in member_errors {
+            assert_eq!(
+                e.category(),
+                ErrorCategory::Member,
+                "{e:?} should be ErrorCategory::Member"
+            );
+        }
+    }
+
+    #[test]
+    fn contribution_errors_map_to_contribution_category() {
+        let contribution_errors = [
+            ContractError::InvalidAmount,
+            ContractError::AlreadyContributed,
+            ContractError::CycleNotComplete,
+            ContractError::ContributionNotFound,
+            ContractError::DeadlineNotReached,
+            ContractError::ContributionTooLow,
+            ContractError::ContributionTooHigh,
+            ContractError::InsufficientBalance,
+            ContractError::InvalidProof,
+            ContractError::CycleDeadlineExpired,
+        ];
+        for e in contribution_errors {
+            assert_eq!(
+                e.category(),
+                ErrorCategory::Contribution,
+                "{e:?} should be ErrorCategory::Contribution"
+            );
+        }
+    }
+
+    #[test]
+    fn payout_errors_map_to_payout_category() {
+        let payout_errors = [
+            ContractError::PayoutFailed,
+            ContractError::PayoutAlreadyProcessed,
+            ContractError::InvalidRecipient,
+        ];
+        for e in payout_errors {
+            assert_eq!(
+                e.category(),
+                ErrorCategory::Payout,
+                "{e:?} should be ErrorCategory::Payout"
+            );
+        }
+    }
+
+    #[test]
+    fn token_errors_map_to_token_category() {
+        assert_eq!(ContractError::InvalidToken.category(), ErrorCategory::Token);
+        assert_eq!(
+            ContractError::TokenTransferFailed.category(),
+            ErrorCategory::Token
+        );
+    }
+
+    #[test]
+    fn reward_errors_map_to_reward_category() {
+        let reward_errors = [
+            ContractError::RewardAlreadyClaimed,
+            ContractError::RewardNotEligible,
+            ContractError::AlreadyRefunded,
+            ContractError::RefundNotEligible,
+        ];
+        for e in reward_errors {
+            assert_eq!(
+                e.category(),
+                ErrorCategory::Reward,
+                "{e:?} should be ErrorCategory::Reward"
+            );
+        }
+    }
+
+    #[test]
+    fn system_errors_map_to_system_category() {
+        let system_errors = [
+            ContractError::InternalError,
+            ContractError::DataCorruption,
+            ContractError::Overflow,
+            ContractError::ReentrancyDetected,
+            ContractError::ContractPaused,
+        ];
+        for e in system_errors {
+            assert_eq!(
+                e.category(),
+                ErrorCategory::System,
+                "{e:?} should be ErrorCategory::System"
+            );
+        }
+    }
+
+    #[test]
+    fn deadline_errors_map_to_deadline_category() {
+        let deadline_errors = [
+            ContractError::DeadlineExtensionExceedsMax,
+            ContractError::AlreadyVotedDissolve,
+            ContractError::GroupAlreadyDissolved,
+        ];
+        for e in deadline_errors {
+            assert_eq!(
+                e.category(),
+                ErrorCategory::Deadline,
+                "{e:?} should be ErrorCategory::Deadline"
+            );
+        }
+    }
+
+    // ── Error codes are stable ────────────────────────────────────────────────
+
+    #[test]
+    fn error_codes_are_stable() {
+        // These codes are part of the public ABI; changing them breaks clients.
+        assert_eq!(ContractError::GroupNotFound.code(), 1001);
+        assert_eq!(ContractError::GroupFull.code(), 1002);
+        assert_eq!(ContractError::InvalidState.code(), 1003);
+        assert_eq!(ContractError::InvalidMetadata.code(), 1004);
+        assert_eq!(ContractError::MaxMembersExceeded.code(), 1005);
+        assert_eq!(ContractError::AlreadyMember.code(), 2001);
+        assert_eq!(ContractError::NotMember.code(), 2002);
+        assert_eq!(ContractError::Unauthorized.code(), 2003);
+        assert_eq!(ContractError::InvalidAmount.code(), 3001);
+        assert_eq!(ContractError::AlreadyContributed.code(), 3002);
+        assert_eq!(ContractError::CycleNotComplete.code(), 3003);
+        assert_eq!(ContractError::ContributionNotFound.code(), 3004);
+        assert_eq!(ContractError::DeadlineNotReached.code(), 3005);
+        assert_eq!(ContractError::ContributionTooLow.code(), 3006);
+        assert_eq!(ContractError::ContributionTooHigh.code(), 3007);
+        assert_eq!(ContractError::InsufficientBalance.code(), 3008);
+        assert_eq!(ContractError::CycleDeadlineExpired.code(), 3009);
+        assert_eq!(ContractError::InvalidProof.code(), 3010);
+        assert_eq!(ContractError::PayoutFailed.code(), 4001);
+        assert_eq!(ContractError::PayoutAlreadyProcessed.code(), 4002);
+        assert_eq!(ContractError::InvalidRecipient.code(), 4003);
+        assert_eq!(ContractError::InvalidToken.code(), 5001);
+        assert_eq!(ContractError::TokenTransferFailed.code(), 5002);
+        assert_eq!(ContractError::RewardAlreadyClaimed.code(), 6001);
+        assert_eq!(ContractError::RewardNotEligible.code(), 6002);
+        assert_eq!(ContractError::AlreadyRefunded.code(), 6003);
+        assert_eq!(ContractError::RefundNotEligible.code(), 6004);
+        assert_eq!(ContractError::DeadlineExtensionExceedsMax.code(), 7001);
+        assert_eq!(ContractError::AlreadyVotedDissolve.code(), 7002);
+        assert_eq!(ContractError::GroupAlreadyDissolved.code(), 7003);
+        assert_eq!(ContractError::InternalError.code(), 9001);
+        assert_eq!(ContractError::DataCorruption.code(), 9002);
+        assert_eq!(ContractError::Overflow.code(), 9003);
+        assert_eq!(ContractError::ReentrancyDetected.code(), 9004);
+        assert_eq!(ContractError::ContractPaused.code(), 9005);
+    }
+
+    // ── Error messages are non-empty ──────────────────────────────────────────
+
+    #[test]
+    fn all_errors_have_non_empty_message() {
+        let all_errors = [
+            ContractError::GroupNotFound,
+            ContractError::GroupFull,
+            ContractError::MaxMembersExceeded,
+            ContractError::InvalidState,
+            ContractError::InvalidMetadata,
+            ContractError::AlreadyMember,
+            ContractError::NotMember,
+            ContractError::Unauthorized,
+            ContractError::NotInvited,
+            ContractError::InvalidAmount,
+            ContractError::AlreadyContributed,
+            ContractError::CycleNotComplete,
+            ContractError::ContributionNotFound,
+            ContractError::DeadlineNotReached,
+            ContractError::ContributionTooLow,
+            ContractError::ContributionTooHigh,
+            ContractError::InsufficientBalance,
+            ContractError::InvalidProof,
+            ContractError::CycleDeadlineExpired,
+            ContractError::PayoutFailed,
+            ContractError::PayoutAlreadyProcessed,
+            ContractError::InvalidRecipient,
+            ContractError::InvalidToken,
+            ContractError::TokenTransferFailed,
+            ContractError::RewardAlreadyClaimed,
+            ContractError::RewardNotEligible,
+            ContractError::AlreadyRefunded,
+            ContractError::RefundNotEligible,
+            ContractError::InternalError,
+            ContractError::DataCorruption,
+            ContractError::Overflow,
+            ContractError::ReentrancyDetected,
+            ContractError::ContractPaused,
+            ContractError::DeadlineExtensionExceedsMax,
+            ContractError::AlreadyVotedDissolve,
+            ContractError::GroupAlreadyDissolved,
+            ContractError::MergeIncompatible,
+            ContractError::DisputeActive,
+            ContractError::GroupNotArchivable,
+            ContractError::AlreadyVoted,
+        ];
+        for e in all_errors {
+            assert!(!e.message().is_empty(), "{e:?} has an empty message");
+        }
+    }
+
+    // ── ErrorRecoveryStrategy ─────────────────────────────────────────────────
+
+    #[test]
+    fn all_errors_have_recovery_guidance() {
+        let all_errors = [
+            ContractError::GroupNotFound,
+            ContractError::GroupFull,
+            ContractError::MaxMembersExceeded,
+            ContractError::InvalidState,
+            ContractError::InvalidMetadata,
+            ContractError::AlreadyMember,
+            ContractError::NotMember,
+            ContractError::Unauthorized,
+            ContractError::NotInvited,
+            ContractError::InvalidAmount,
+            ContractError::AlreadyContributed,
+            ContractError::CycleNotComplete,
+            ContractError::ContributionNotFound,
+            ContractError::DeadlineNotReached,
+            ContractError::ContributionTooLow,
+            ContractError::ContributionTooHigh,
+            ContractError::InsufficientBalance,
+            ContractError::InvalidProof,
+            ContractError::CycleDeadlineExpired,
+            ContractError::PayoutFailed,
+            ContractError::PayoutAlreadyProcessed,
+            ContractError::InvalidRecipient,
+            ContractError::InvalidToken,
+            ContractError::TokenTransferFailed,
+            ContractError::RewardAlreadyClaimed,
+            ContractError::RewardNotEligible,
+            ContractError::AlreadyRefunded,
+            ContractError::RefundNotEligible,
+            ContractError::InternalError,
+            ContractError::DataCorruption,
+            ContractError::Overflow,
+            ContractError::ReentrancyDetected,
+            ContractError::ContractPaused,
+            ContractError::DeadlineExtensionExceedsMax,
+            ContractError::AlreadyVotedDissolve,
+            ContractError::GroupAlreadyDissolved,
+            ContractError::MergeIncompatible,
+            ContractError::DisputeActive,
+            ContractError::GroupNotArchivable,
+            ContractError::AlreadyVoted,
+        ];
+        for e in all_errors {
+            assert!(
+                !ErrorRecoveryStrategy::recovery_guidance(&e).is_empty(),
+                "{e:?} has no recovery guidance"
+            );
+        }
+    }
+
+    #[test]
+    fn retryable_errors_are_correct_set() {
+        // Only these four should be retryable.
+        assert!(ErrorRecoveryStrategy::is_retryable(
+            &ContractError::PayoutFailed
+        ));
+        assert!(ErrorRecoveryStrategy::is_retryable(
+            &ContractError::InternalError
+        ));
+        assert!(ErrorRecoveryStrategy::is_retryable(
+            &ContractError::CycleNotComplete
+        ));
+        assert!(ErrorRecoveryStrategy::is_retryable(
+            &ContractError::DeadlineNotReached
+        ));
+
+        // Errors that must NOT be retryable.
+        assert!(!ErrorRecoveryStrategy::is_retryable(
+            &ContractError::Unauthorized
+        ));
+        assert!(!ErrorRecoveryStrategy::is_retryable(
+            &ContractError::GroupNotFound
+        ));
+        assert!(!ErrorRecoveryStrategy::is_retryable(
+            &ContractError::AlreadyContributed
+        ));
+        assert!(!ErrorRecoveryStrategy::is_retryable(
+            &ContractError::DataCorruption
+        ));
+    }
+
+    #[test]
+    fn user_errors_are_identified_correctly() {
+        // Member, Contribution, Payout errors are user errors.
+        assert!(ErrorRecoveryStrategy::is_user_error(
+            &ContractError::Unauthorized
+        ));
+        assert!(ErrorRecoveryStrategy::is_user_error(
+            &ContractError::InvalidAmount
+        ));
+        assert!(ErrorRecoveryStrategy::is_user_error(
+            &ContractError::PayoutFailed
+        ));
+
+        // System, Token, Group errors are NOT user errors.
+        assert!(!ErrorRecoveryStrategy::is_user_error(
+            &ContractError::InternalError
+        ));
+        assert!(!ErrorRecoveryStrategy::is_user_error(
+            &ContractError::InvalidToken
+        ));
+        assert!(!ErrorRecoveryStrategy::is_user_error(
+            &ContractError::GroupNotFound
+        ));
+    }
+
+    // ── StellarSaveError alias ────────────────────────────────────────────────
+
+    #[test]
+    fn stellar_save_error_alias_is_same_type() {
+        // The alias must be assignment-compatible with ContractError.
+        let e: StellarSaveError = ContractError::Unauthorized;
+        assert_eq!(e, ContractError::Unauthorized);
+        assert_eq!(e.code(), ContractError::Unauthorized.code());
+        assert_eq!(e.category(), ContractError::Unauthorized.category());
+    }
+
+    // ── ContractResult ────────────────────────────────────────────────────────
+
+    #[test]
+    fn contract_result_ok_variant_works() {
+        let r: ContractResult<u32> = Ok(42);
+        assert_eq!(r.unwrap(), 42);
+    }
+
+    #[test]
+    fn contract_result_err_variant_carries_error() {
+        let r: ContractResult<u32> = Err(ContractError::Overflow);
+        assert_eq!(r.unwrap_err(), ContractError::Overflow);
     }
 }

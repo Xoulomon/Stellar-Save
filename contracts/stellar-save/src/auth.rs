@@ -5,7 +5,7 @@
 //! - `require_creator`: Validates caller is the group creator
 //! - `require_member`: Validates caller is an active group member
 
-use crate::error::StellarSaveError;
+use crate::errors::ContractError as StellarSaveError;
 use crate::group::Group;
 use crate::storage::StorageKeyBuilder;
 use crate::types::ContractConfig;

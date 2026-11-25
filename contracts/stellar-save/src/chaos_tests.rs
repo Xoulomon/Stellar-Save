@@ -53,7 +53,7 @@ mod chaos_tests {
             is_cycle_expired,
         },
         deadline::MAX_EXTENSION_SECONDS,
-        error::StellarSaveError,
+        errors::ContractError as StellarSaveError,
         group::{Group, GroupStatus},
         payout::PayoutRecord,
     };

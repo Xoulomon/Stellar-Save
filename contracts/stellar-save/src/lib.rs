@@ -113,8 +113,11 @@ mod zk_tests;
 pub use auth::{is_active_member, require_admin, require_creator, require_member};
 pub use contract::{StellarSaveContract, StellarSaveContractClient};
 pub use contribution::{ContributionPage, ContributionRecord};
-pub use error::{ContractResult, ErrorCategory, StellarSaveError};
-pub use errors::{ContractError, ErrorRecoveryStrategy};
+// `StellarSaveError` is a type alias for `ContractError`; both are re-exported
+// so callers depending on either name continue to compile.
+pub use errors::{
+    ContractError, ContractResult, ErrorCategory, ErrorRecoveryStrategy, StellarSaveError,
+};
 pub use events::EventEmitter;
 pub use events::*;
 pub use group::{Group, GroupStatus};

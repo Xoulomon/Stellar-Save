@@ -3,7 +3,7 @@
 /// This module provides a centralized repository pattern for all group-related storage reads and writes.
 /// It encapsulates all direct env.storage() calls related to group state, improving testability and
 /// reducing duplication across the codebase.
-use crate::error::StellarSaveError;
+use crate::errors::ContractError as StellarSaveError;
 use crate::group::{Group, TokenConfig};
 use crate::storage::{extend_persistent_ttl, StorageKey, StorageKeyBuilder};
 use soroban_sdk::{Address, Env, Vec};

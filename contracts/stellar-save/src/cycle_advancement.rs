@@ -1,5 +1,5 @@
 use crate::{
-    error::StellarSaveError,
+    errors::ContractError as StellarSaveError,
     events::EventEmitter,
     group::{Group, GroupStatus},
     storage::StorageKeyBuilder,

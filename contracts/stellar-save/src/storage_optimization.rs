@@ -1,4 +1,4 @@
-use crate::error::StellarSaveError;
+use crate::errors::ContractError as StellarSaveError;
 /// Storage Optimization Module for Stellar-Save
 ///
 /// This module implements storage cost reduction strategies for groups with many members
