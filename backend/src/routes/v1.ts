@@ -339,7 +339,7 @@ export function createV1Router(services: V1Services): Router {
           createEnvelopeWithPagination(
             paginate(
               items.map((item) =>
-                toContractEventDTO(item as Parameters<typeof toContractEventDTO>[0])
+                toContractEventDTO(item)
               ),
               total,
               { limit, offset }
@@ -858,7 +858,7 @@ export function createV1Router(services: V1Services): Router {
             limit,
             offset,
             groups: groups.map((g) =>
-              toContractEventDTO(g as Parameters<typeof toContractEventDTO>[0])
+              toContractEventDTO(g)
             ),
           })
         );
