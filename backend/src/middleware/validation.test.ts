@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+jest.mock('../logger', () => ({
+  logger: { warn: jest.fn(), error: jest.fn() },
+}));
+
 import { ValidationMiddleware } from './validation';
 import * as schemas from './validation.schemas';
 
@@ -37,6 +41,7 @@ describe('ValidationMiddleware', () => {
 
       expect(next).toHaveBeenCalled();
       expect(res.status).not.toHaveBeenCalled();
+      expect(req.body).toEqual({ email: 'test@example.com', name: 'Test User' });
     });
 
     it('should reject invalid email', async () => {
@@ -56,6 +61,21 @@ describe('ValidationMiddleware', () => {
       expect(next).not.toHaveBeenCalled();
     });
 
+    it('should use the target name for root-level validation errors', () => {
+      const schema = z.string().superRefine((_value, context) => {
+        context.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid body' });
+      });
+      req.body = 'value';
+
+      ValidationMiddleware.validateBody(schema)(req, res, next);
+
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Validation Error',
+        details: [{ field: 'body', message: 'Invalid body' }],
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+
     it('should return errors for missing required fields', async () => {
       const schema = z.object({
         email: z.string().email(),
@@ -71,6 +91,28 @@ describe('ValidationMiddleware', () => {
       expect(response.details.length).toBeGreaterThan(0);
       expect(response.details[0].field).toContain('name');
     });
+
+    it('should replace the body with the parsed value', () => {
+      const middleware = ValidationMiddleware.validateBody(
+        z.object({ count: z.coerce.number() })
+      );
+      req.body = { count: '3' };
+
+      middleware(req, res, next);
+
+      expect(req.body).toEqual({ count: 3 });
+      expect(next).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return a server error if parsing throws an unexpected error', () => {
+      const schema = { parse: () => { throw new Error('unexpected'); } } as any;
+
+      ValidationMiddleware.validateBody(schema)(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Internal Server Error' });
+      expect(next).not.toHaveBeenCalled();
+    });
   });
 
   describe('validateQuery', () => {
@@ -85,6 +127,7 @@ describe('ValidationMiddleware', () => {
       middleware(req, res, next);
 
       expect(next).toHaveBeenCalled();
+      expect(req.query).toEqual({ page: '1', limit: '10' });
     });
 
     it('should reject invalid query params', async () => {
@@ -97,6 +140,18 @@ describe('ValidationMiddleware', () => {
       middleware(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it('should replace query values with parsed values', () => {
+      const middleware = ValidationMiddleware.validateQuery(
+        z.object({ page: z.coerce.number().default(1) })
+      );
+      req.query = {};
+
+      middleware(req, res, next);
+
+      expect(req.query).toEqual({ page: 1 });
+      expect(next).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -111,6 +166,7 @@ describe('ValidationMiddleware', () => {
       middleware(req, res, next);
 
       expect(next).toHaveBeenCalled();
+      expect(req.params).toEqual({ id: 'user-123' });
     });
 
     it('should reject missing params', async () => {
@@ -123,6 +179,34 @@ describe('ValidationMiddleware', () => {
       middleware(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(400);
+    });
+  });
+
+  describe('validate', () => {
+    it('should preserve legacy merge order and write parsed data to the body', () => {
+      const middleware = ValidationMiddleware.validate(z.object({
+        source: z.string(),
+        count: z.coerce.number(),
+      }));
+      req.body = { source: 'body', count: '1' };
+      req.params = { source: 'params' };
+      req.query = { source: 'query' };
+
+      middleware(req, res, next);
+
+      expect(req.body).toEqual({ source: 'query', count: 1 });
+      expect(next).toHaveBeenCalledTimes(1);
+    });
+
+    it('should report validation errors for merged input', () => {
+      ValidationMiddleware.validate(z.object({ required: z.string() }))(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Validation Error',
+        details: [{ field: 'required', message: expect.any(String) }],
+      });
+      expect(next).not.toHaveBeenCalled();
     });
   });
 

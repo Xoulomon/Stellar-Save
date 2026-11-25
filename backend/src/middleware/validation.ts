@@ -5,7 +5,6 @@ import { logger } from '../logger';
 import type { Request, Response, NextFunction } from 'express';
 import type { ZodSchema } from 'zod';
 
-
 export interface AuthenticatedRequest extends Request {
   user?: Record<string, unknown>;
 }
@@ -15,133 +14,69 @@ export interface ValidationError {
   message: string;
 }
 
-export class ValidationMiddleware {
-  static validate(schema: ZodSchema) {
-    return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      try {
-        const data = { ...req.body, ...req.params, ...req.query };
-        const validated = schema.parse(data);
+type ValidationTarget = 'schema' | 'body' | 'query' | 'params';
+
+function createValidationMiddleware(schema: ZodSchema, target: ValidationTarget) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const input =
+        target === 'schema'
+          ? { ...req.body, ...req.params, ...req.query }
+          : req[target];
+      const validated = schema.parse(input);
+
+      if (target === 'schema' || target === 'body') {
         req.body = validated;
-        next();
-      } catch (err) {
-        if (err instanceof z.ZodError) {
-          const errors: ValidationError[] = err.issues.map((issue) => ({
-            field: issue.path.join('.') || 'unknown',
-            message: issue.message,
-          }));
+      } else if (target === 'query') {
+        req.query = validated;
+      } else {
+        req.params = validated;
+      }
 
-          logger.warn('[validation] Schema validation failed', {
-            errors,
-            endpoint: req.path,
-          });
+      next();
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const fallbackField = target === 'schema' ? 'unknown' : target;
+        const errors: ValidationError[] = err.issues.map((issue) => ({
+          field: issue.path.join('.') || fallbackField,
+          message: issue.message,
+        }));
 
-          return res.status(400).json({
-            error: 'Validation Error',
-            details: errors,
-          });
-        }
+        const targetLabel =
+          target === 'schema' ? 'Schema' : target.charAt(0).toUpperCase() + target.slice(1);
+        logger.warn(`[validation] ${targetLabel} validation failed`, {
+          errors,
+          endpoint: req.path,
+        });
 
-        logger.error('[validation] Unexpected validation error', { error: err });
-        return res.status(500).json({
-          error: 'Internal Server Error',
+        return res.status(400).json({
+          error: 'Validation Error',
+          details: errors,
         });
       }
-    };
+
+      logger.error('[validation] Unexpected validation error', { error: err });
+      return res.status(500).json({
+        error: 'Internal Server Error',
+      });
+    }
+  };
+}
+
+export class ValidationMiddleware {
+  static validate(schema: ZodSchema) {
+    return createValidationMiddleware(schema, 'schema');
   }
 
   static validateBody(schema: ZodSchema) {
-    return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      try {
-        const validated = schema.parse(req.body);
-        req.body = validated;
-        next();
-      } catch (err) {
-        if (err instanceof z.ZodError) {
-          const errors: ValidationError[] = err.issues.map((issue) => ({
-            field: issue.path.join('.') || 'body',
-            message: issue.message,
-          }));
-
-          logger.warn('[validation] Body validation failed', {
-            errors,
-            endpoint: req.path,
-          });
-
-          return res.status(400).json({
-            error: 'Validation Error',
-            details: errors,
-          });
-        }
-
-        logger.error('[validation] Unexpected validation error', { error: err });
-        return res.status(500).json({
-          error: 'Internal Server Error',
-        });
-      }
-    };
+    return createValidationMiddleware(schema, 'body');
   }
 
   static validateQuery(schema: ZodSchema) {
-    return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      try {
-        const validated = schema.parse(req.query);
-        req.query = validated;
-        next();
-      } catch (err) {
-        if (err instanceof z.ZodError) {
-          const errors: ValidationError[] = err.issues.map((issue) => ({
-            field: issue.path.join('.') || 'query',
-            message: issue.message,
-          }));
-
-          logger.warn('[validation] Query validation failed', {
-            errors,
-            endpoint: req.path,
-          });
-
-          return res.status(400).json({
-            error: 'Validation Error',
-            details: errors,
-          });
-        }
-
-        logger.error('[validation] Unexpected validation error', { error: err });
-        return res.status(500).json({
-          error: 'Internal Server Error',
-        });
-      }
-    };
+    return createValidationMiddleware(schema, 'query');
   }
 
   static validateParams(schema: ZodSchema) {
-    return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      try {
-        const validated = schema.parse(req.params);
-        req.params = validated;
-        next();
-      } catch (err) {
-        if (err instanceof z.ZodError) {
-          const errors: ValidationError[] = err.issues.map((issue) => ({
-            field: issue.path.join('.') || 'params',
-            message: issue.message,
-          }));
-
-          logger.warn('[validation] Params validation failed', {
-            errors,
-            endpoint: req.path,
-          });
-
-          return res.status(400).json({
-            error: 'Validation Error',
-            details: errors,
-          });
-        }
-
-        logger.error('[validation] Unexpected validation error', { error: err });
-        return res.status(500).json({
-          error: 'Internal Server Error',
-        });
-      }
-    };
+    return createValidationMiddleware(schema, 'params');
   }
 }
